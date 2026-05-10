@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(git status)",
+      "Exec(eval)",
+      "Exec(true)",
+      "Exec(mkdir)",
+      "Exec(git init)",
+      "Exec(git add)"
+    ]
+  }
+}

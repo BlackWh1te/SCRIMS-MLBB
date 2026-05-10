@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MLBB Scrim Host</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="team_name">Team Name</string>
+    <string name="create_team">Create Team</string>
+    <string name="search_scrims">Search Scrims</string>
+    <string name="post_scrim">Post Scrim</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="profile">Profile</string>
+    <string name="logout">Logout</string>
+</resources>
