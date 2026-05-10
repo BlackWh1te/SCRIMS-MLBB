@@ -6,7 +6,9 @@
       "Exec(true)",
       "Exec(mkdir)",
       "Exec(git init)",
-      "Exec(git add)"
+      "Exec(git add)",
+      "Exec(git commit)",
+      "Exec(./gradlew)"
     ]
   }
 }
