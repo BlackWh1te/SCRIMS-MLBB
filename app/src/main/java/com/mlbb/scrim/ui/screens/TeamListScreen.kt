@@ -24,7 +24,7 @@ import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GradientButton
 import com.mlbb.scrim.ui.components.EmptyState
-import com.mlbb.scrim.ui.components.ShimmerCard
+import com.mlbb.scrim.ui.components.TeamListSkeleton
 import com.mlbb.scrim.ui.components.GlassBackButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -127,20 +127,10 @@ fun TeamListScreen(
             }
 
             if (isLoading) {
-                // Shimmer Loading State
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    repeat(3) {
-                        ShimmerCard(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                    }
-                }
+                TeamListSkeleton(
+                    modifier = Modifier.fillMaxSize(),
+                    itemCount = 4
+                )
             } else if (teams.isEmpty()) {
                 // Empty State
                 EmptyState(

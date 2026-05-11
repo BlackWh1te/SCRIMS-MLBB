@@ -30,7 +30,7 @@ import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.EnhancedStatusBadge
 import com.mlbb.scrim.ui.components.SectionHeader
 import com.mlbb.scrim.ui.components.EmptyState
-import com.mlbb.scrim.ui.components.ShimmerCard
+import com.mlbb.scrim.ui.components.ScrimListSkeleton
 import com.mlbb.scrim.ui.components.GlassBackButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -219,17 +219,24 @@ fun ScrimListScreen(
             }
 
             // Scrim List
-            if (scrims.isEmpty() && !isLoading) {
-                // Empty State
-                EmptyState(
-                    icon = Icons.Default.Search,
-                    title = "No scrims found",
-                    subtitle = "Be the first to post a scrim",
-                    modifier = Modifier.fillMaxSize(),
-                    action = {}
-                )
-            } else {
-                LazyColumn(
+            when {
+                isLoading -> {
+                    ScrimListSkeleton(
+                        modifier = Modifier.fillMaxSize(),
+                        itemCount = 5
+                    )
+                }
+                scrims.isEmpty() -> {
+                    EmptyState(
+                        icon = Icons.Default.Search,
+                        title = "No scrims found",
+                        subtitle = "Be the first to post a scrim",
+                        modifier = Modifier.fillMaxSize(),
+                        action = {}
+                    )
+                }
+                else -> {
+                    LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 20.dp),
@@ -248,6 +255,7 @@ fun ScrimListScreen(
             }
         }
     }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

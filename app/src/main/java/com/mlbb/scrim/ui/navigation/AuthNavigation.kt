@@ -39,6 +39,7 @@ import com.mlbb.scrim.ui.screens.ScrimListScreen
 import com.mlbb.scrim.ui.screens.JoinTeamScreen
 import com.mlbb.scrim.ui.screens.SettingsScreen
 import com.mlbb.scrim.ui.screens.SignupScreen
+import com.mlbb.scrim.ui.screens.SplashScreen
 import com.mlbb.scrim.ui.screens.TeamDetailScreen
 import com.mlbb.scrim.ui.screens.TeamListScreen
 import com.mlbb.scrim.ui.components.AppBottomNav
@@ -52,6 +53,7 @@ import com.mlbb.scrim.viewmodel.SettingsViewModel
 import com.mlbb.scrim.viewmodel.TeamViewModel
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Login : Screen("login")
     object Signup : Screen("signup")
     object Home : Screen("home")
@@ -125,8 +127,8 @@ fun AuthNavigation(
 
     val unreadCount = conversations.sumOf { it.unreadCount }
 
-    // Always start at login screen to ensure clean state
-    val startDestination = Screen.Login.route
+    // Start at splash screen
+    val startDestination = Screen.Splash.route
 
     // Navigate based on auth state changes
     LaunchedEffect(isLoggedIn) {
@@ -161,6 +163,16 @@ fun AuthNavigation(
                 popEnterTransition = { fadeIn() + slideInHorizontally { -it / 8 } },
                 popExitTransition = { fadeOut() + slideOutHorizontally { it / 8 } }
             ) {
+                composable(Screen.Splash.route) {
+                    SplashScreen(
+                        onSplashFinished = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Splash.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
                 composable(Screen.Login.route) {
                     LoginScreen(
                         onLoginSuccess = {},
@@ -215,6 +227,10 @@ fun AuthNavigation(
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
                         },
+                        onNavigateToScrimDetail = { scrimId ->
+                            navController.navigate(Screen.ScrimDetail.createRoute(scrimId))
+                        },
+                        scrims = scrims,
                         notificationCount = notificationUnreadCount
                     )
                 }

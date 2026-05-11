@@ -26,6 +26,7 @@ import com.mlbb.scrim.data.model.NotificationType
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.ui.components.NotificationListSkeleton
 
 @Composable
 fun NotificationScreen(
@@ -79,12 +80,10 @@ fun NotificationScreen(
             }
 
             if (isLoading) {
-                Box(
+                NotificationListSkeleton(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
+                    itemCount = 6
+                )
             } else if (notifications.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

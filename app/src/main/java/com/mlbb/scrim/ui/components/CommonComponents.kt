@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -117,70 +118,6 @@ fun GhostButton(
             letterSpacing = 0.5.sp
         )
     }
-}
-
-// ============================================
-// Shimmer Loading Effect
-// ============================================
-
-fun Modifier.shimmerEffect(
-    widthOfShadowBrush: Int = 500,
-    angleOfAxisY: Float = 270f,
-    durationMillis: Int = 1200
-): Modifier = composed {
-    val shimmerColors = listOf(
-        Color.White.copy(alpha = 0.05f),
-        Color.White.copy(alpha = 0.15f),
-        Color.White.copy(alpha = 0.05f)
-    )
-
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnimation = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = (durationMillis + widthOfShadowBrush).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = durationMillis,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerTranslate"
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(x = translateAnimation.value - widthOfShadowBrush, y = 0f),
-        end = Offset(x = translateAnimation.value, y = angleOfAxisY)
-    )
-
-    this.background(brush)
-}
-
-@Composable
-fun ShimmerCard(
-    modifier: Modifier = Modifier,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .shimmerEffect()
-            .background(DarkNavy, shape = shape)
-    )
-}
-
-@Composable
-fun ShimmerBox(
-    modifier: Modifier = Modifier,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp)
-) {
-    Box(
-        modifier = modifier
-            .shimmerEffect()
-            .background(DarkNavy, shape = shape)
-    )
 }
 
 // ============================================
@@ -559,6 +496,217 @@ fun GradientFAB(
                 tint = White,
                 modifier = Modifier.size(24.dp)
             )
+        }
+    }
+}
+
+// ============================================
+// Shimmer Loading Skeletons
+// ============================================
+
+@Composable
+fun ShimmerBox(
+    modifier: Modifier = Modifier,
+    shape: RoundedCornerShape = RoundedCornerShape(8.dp)
+) {
+    val shimmerColors = listOf(
+        MidGray.copy(alpha = 0.15f),
+        MidGray.copy(alpha = 0.3f),
+        MidGray.copy(alpha = 0.15f)
+    )
+
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerTranslate"
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateAnim - 200f, translateAnim - 200f),
+        end = Offset(translateAnim, translateAnim)
+    )
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(brush)
+    )
+}
+
+@Composable
+fun ScrimListSkeleton(
+    modifier: Modifier = Modifier,
+    itemCount: Int = 5
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        repeat(itemCount) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.size(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(18.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(200.dp)
+                                .height(14.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row {
+                            ShimmerBox(
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .height(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            ShimmerBox(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TeamListSkeleton(
+    modifier: Modifier = Modifier,
+    itemCount: Int = 4
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        repeat(itemCount) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.size(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(18.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(100.dp)
+                                .height(14.dp)
+                        )
+                    }
+                    ShimmerBox(
+                        modifier = Modifier
+                            .width(56.dp)
+                            .height(28.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationListSkeleton(
+    modifier: Modifier = Modifier,
+    itemCount: Int = 6
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        repeat(itemCount) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(76.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .height(16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(12.dp)
+                        )
+                    }
+                    ShimmerBox(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(12.dp)
+                    )
+                }
+            }
         }
     }
 }

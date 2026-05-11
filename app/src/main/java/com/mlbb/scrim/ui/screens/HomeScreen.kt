@@ -3,8 +3,10 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,6 +37,8 @@ fun HomeScreen(
     onNavigateToMatchHistory: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
+    onNavigateToScrimDetail: (String) -> Unit = {},
+    scrims: List<com.mlbb.scrim.data.model.Scrim> = emptyList(),
     notificationCount: Int = 0
 ) {
     Box(
@@ -168,6 +172,60 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Upcoming Scrims Carousel
+            val upcomingScrims = scrims.filter { it.status == com.mlbb.scrim.data.model.ScrimStatus.OPEN || it.status == com.mlbb.scrim.data.model.ScrimStatus.FILLED }
+                .sortedBy { it.scheduledTime }
+                .take(5)
+
+            if (upcomingScrims.isNotEmpty()) {
+                AnimatedEntrance(delayMillis = 180) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Upcoming Scrims",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
+                        )
+                        TextButton(onClick = onNavigateToSchedule) {
+                            Text(
+                                text = "See all",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BluePrimary
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                AnimatedEntrance(delayMillis = 200) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        upcomingScrims.forEach { scrim ->
+                            ScrimCarouselCard(
+                                scrim = scrim,
+                                onClick = { onNavigateToScrimDetail(scrim.id) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // Quick Actions
             AnimatedEntrance(delayMillis = 200) {
@@ -505,6 +563,110 @@ private fun XpProgressCard(userProfile: com.mlbb.scrim.data.model.UserProfile?) 
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 12.sp,
                     color = MidGray
+                )
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScrimCarouselCard(
+    scrim: com.mlbb.scrim.data.model.Scrim,
+    onClick: () -> Unit
+) {
+    val statusColor = when (scrim.status) {
+        com.mlbb.scrim.data.model.ScrimStatus.OPEN -> SuccessGreen
+        com.mlbb.scrim.data.model.ScrimStatus.FILLED -> WarningOrange
+        else -> MidGray
+    }
+
+    Card(
+        modifier = Modifier
+            .width(200.dp)
+            .shadow(
+                elevation = 6.dp,
+                spotColor = BluePrimary.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = DarkNavy
+        ),
+        shape = RoundedCornerShape(16.dp),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = scrim.teamName,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = White
+                    ),
+                    maxLines = 1
+                )
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(statusColor, CircleShape)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.SportsEsports,
+                    contentDescription = null,
+                    tint = MidGray,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = scrim.gameMode.name.lowercase().replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        color = MidGray
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.People,
+                    contentDescription = null,
+                    tint = MidGray,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${scrim.currentPlayers}/${scrim.maxPlayers}",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        color = MidGray
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = scrim.region.name,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BluePrimary
                 )
             )
         }
