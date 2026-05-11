@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <include domain="sharedpref" path="."/>
-    <exclude domain="sharedpref" path="device.xml"/>
+    <!-- Exclude sensitive data from backup -->
+    <exclude domain="sharedpref" path="auth_token.xml"/>
+    <exclude domain="database" path="user.db"/>
 </full-backup-content>

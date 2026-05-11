@@ -6,32 +6,30 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mlbb.scrim.ui.navigation.AuthNavigation
 import com.mlbb.scrim.ui.theme.MLBBScrimHostTheme
+import com.mlbb.scrim.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            MLBBScrimHostTheme {
+            MLBBScrimHostTheme(darkTheme = true) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Text("MLBB Scrim Host - Coming Soon")
+                    val authViewModel: AuthViewModel = viewModel()
+                    AuthNavigation(
+                        viewModel = authViewModel,
+                        context = this@MainActivity
+                    )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    MLBBScrimHostTheme {
-        Text("MLBB Scrim Host")
     }
 }

@@ -1,39 +1,50 @@
 package com.mlbb.scrim.data.model
 
-import java.util.UUID
-
 data class Scrim(
-    val id: UUID,
-    val teamId: UUID,
-    val teamName: String,
-    val teamTier: String,
-    val teamDivision: Int,
-    val scheduledDate: String,
-    val scheduledTime: String,
-    val status: String,
-    val description: String? = null,
-    val createdAt: String
+    val id: String = "",
+    val teamId: String = "",
+    val teamName: String = "",
+    val teamLeader: String = "",
+    val gameMode: GameMode = GameMode.RANKED,
+    val region: Region = Region.EU,
+    val skillLevel: SkillLevel = SkillLevel.ALL,
+    val scheduledTime: Long = System.currentTimeMillis(),
+    val maxPlayers: Int = 10,
+    val currentPlayers: Int = 0,
+    val status: ScrimStatus = ScrimStatus.OPEN,
+    val description: String = "",
+    val createdAt: Long = System.currentTimeMillis()
 )
 
-enum class ScrimStatus(val displayName: String) {
-    OPEN("Open"),
-    PENDING("Pending"),
-    MATCHED("Matched"),
-    COMPLETED("Completed"),
-    CANCELLED("Cancelled")
+enum class GameMode {
+    RANKED,
+    CUSTOM,
+    TOURNAMENT,
+    CASUAL
 }
 
-data class ScrimApplication(
-    val id: UUID,
-    val scrimId: UUID,
-    val applicantTeamId: UUID,
-    val applicantTeamName: String,
-    val status: String,
-    val appliedAt: String
-)
+enum class Region {
+    NA,
+    EU,
+    ASIA,
+    SA,
+    MCK,
+    KRD,
+    EKB
+}
 
-enum class ApplicationStatus(val displayName: String) {
-    PENDING("Pending"),
-    ACCEPTED("Accepted"),
-    REJECTED("Rejected")
+enum class SkillLevel {
+    ALL,
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED,
+    PRO
+}
+
+enum class ScrimStatus {
+    OPEN,
+    FILLED,
+    IN_PROGRESS,
+    COMPLETED,
+    CANCELLED
 }

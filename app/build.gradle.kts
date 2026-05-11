@@ -21,6 +21,15 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = "21"
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -32,12 +41,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "21"
     }
 
     buildFeatures {
@@ -45,7 +54,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     packaging {
@@ -76,14 +85,15 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
 
-    // Supabase
-    implementation("io.github.jan-tennert.supabase:supabase-android:2.1.2")
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.1.2")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.1.2")
-    implementation("io.github.jan-tennert.supabase:storage-kt:2.1.2")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.1.2")
-    implementation("io.ktor:ktor-client-android:2.3.4")
-    implementation("io.ktor:ktor-client-cio:2.3.4")
+    // Supabase - Temporarily commented out, will add with correct dependencies
+    // TODO: Add Supabase dependencies with correct artifact coordinates
+//    implementation("io.github.jan-tennert.supabase:supabase-android:2.4.0")
+//    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.4.0")
+//    implementation("io.github.jan-tennert.supabase:auth-kt:2.4.0")
+//    implementation("io.github.jan-tennert.supabase:storage-kt:2.4.0")
+//    implementation("io.github.jan-tennert.supabase:realtime-kt:2.4.0")
+//    implementation("io.ktor:ktor-client-android:2.3.7")
+//    implementation("io.ktor:ktor-client-cio:2.3.7")
 
     // Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")

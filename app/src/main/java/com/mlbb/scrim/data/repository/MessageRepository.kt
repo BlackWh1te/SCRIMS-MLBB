@@ -1,0 +1,265 @@
+package com.mlbb.scrim.data.repository
+
+import com.mlbb.scrim.data.model.Conversation
+import com.mlbb.scrim.data.model.Message
+import com.mlbb.scrim.data.model.MessageType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
+class MessageRepository {
+
+    private val conversations = mutableListOf<Conversation>()
+
+    init {
+        // Mock conversation for demo
+        val convId = java.util.UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+        conversations.add(
+            Conversation(
+                id = convId,
+                scrimId = "scrim1",
+                scrimTitle = "Ranked Scrim - Elite Squad vs Phoenix Rising",
+                participantAId = "player1",
+                participantAName = "EliteLeader",
+                participantATeamId = "team1",
+                participantATeamName = "Elite Squad",
+                participantBId = "player2",
+                participantBName = "PhoenixLeader",
+                participantBTeamId = "team2",
+                participantBTeamName = "Phoenix Rising",
+                lastMessage = "We are ready for the match at 8PM!",
+                lastMessageTime = now - 3600000,
+                unreadCount = 2,
+                messages = listOf(
+                    Message(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = convId,
+                        senderId = "player2",
+                        senderName = "PhoenixLeader",
+                        content = "Hey! We saw your scrim post. Our team is interested.",
+                        timestamp = now - 7200000,
+                        type = MessageType.TEXT
+                    ),
+                    Message(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = convId,
+                        senderId = "system",
+                        senderName = "System",
+                        content = "Phoenix Rising has applied to join your scrim.",
+                        timestamp = now - 7000000,
+                        type = MessageType.SYSTEM
+                    ),
+                    Message(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = convId,
+                        senderId = "player2",
+                        senderName = "PhoenixLeader",
+                        content = "Team ID: team2 | Team Name: Phoenix Rising | Players: 5/7",
+                        timestamp = now - 6900000,
+                        type = MessageType.APPLY
+                    ),
+                    Message(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = convId,
+                        senderId = "player1",
+                        senderName = "EliteLeader",
+                        content = "Great! What time works for you?",
+                        timestamp = now - 5000000,
+                        type = MessageType.TEXT
+                    ),
+                    Message(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = convId,
+                        senderId = "player2",
+                        senderName = "PhoenixLeader",
+                        content = "We are ready for the match at 8PM!",
+                        timestamp = now - 3600000,
+                        type = MessageType.TEXT
+                    )
+                )
+            )
+        )
+    }
+
+    suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
+        kotlinx.coroutines.delay(300)
+        val userConversations = conversations.filter {
+            it.participantAId == userId || it.participantBId == userId
+        }.sortedByDescending { it.lastMessageTime }
+        emit(Result.success(userConversations))
+    }
+
+    suspend fun getConversationById(conversationId: String): Flow<Result<Conversation?>> = flow {
+        kotlinx.coroutines.delay(200)
+        val conversation = conversations.find { it.id == conversationId }
+        emit(Result.success(conversation))
+    }
+
+    suspend fun getOrCreateConversation(
+        scrimId: String,
+        scrimTitle: String,
+        participantAId: String,
+        participantAName: String,
+        participantATeamId: String,
+        participantATeamName: String,
+        participantBId: String,
+        participantBName: String,
+        participantBTeamId: String,
+        participantBTeamName: String
+    ): Flow<Result<Conversation>> = flow {
+        kotlinx.coroutines.delay(300)
+
+        val existing = conversations.find { it.scrimId == scrimId }
+        if (existing != null) {
+            emit(Result.success(existing))
+            return@flow
+        }
+
+        val newConversation = Conversation(
+            id = java.util.UUID.randomUUID().toString(),
+            scrimId = scrimId,
+            scrimTitle = scrimTitle,
+            participantAId = participantAId,
+            participantAName = participantAName,
+            participantATeamId = participantATeamId,
+            participantATeamName = participantATeamName,
+            participantBId = participantBId,
+            participantBName = participantBName,
+            participantBTeamId = participantBTeamId,
+            participantBTeamName = participantBTeamName
+        )
+        conversations.add(newConversation)
+        emit(Result.success(newConversation))
+    }
+
+    suspend fun sendMessage(
+        conversationId: String,
+        senderId: String,
+        senderName: String,
+        content: String,
+        type: MessageType = MessageType.TEXT
+    ): Flow<Result<Message>> = flow {
+        kotlinx.coroutines.delay(300)
+
+        val index = conversations.indexOfFirst { it.id == conversationId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Conversation not found")))
+            return@flow
+        }
+
+        val message = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = senderId,
+            senderName = senderName,
+            content = content,
+            type = type
+        )
+
+        val conversation = conversations[index]
+        val updatedMessages = conversation.messages + message
+        val updatedConversation = conversation.copy(
+            messages = updatedMessages,
+            lastMessage = content,
+            lastMessageTime = System.currentTimeMillis()
+        )
+        conversations[index] = updatedConversation
+
+        emit(Result.success(message))
+    }
+
+    suspend fun sendApplyMessage(
+        scrimId: String,
+        scrimTitle: String,
+        applicantId: String,
+        applicantName: String,
+        applicantTeamId: String,
+        applicantTeamName: String,
+        scrimCreatorId: String,
+        scrimCreatorName: String,
+        scrimCreatorTeamId: String,
+        scrimCreatorTeamName: String,
+        teamPlayerCount: Int,
+        teamMaxPlayers: Int
+    ): Flow<Result<Conversation>> = flow {
+        kotlinx.coroutines.delay(500)
+
+        // Get or create conversation
+        val convResult = getOrCreateConversation(
+            scrimId = scrimId,
+            scrimTitle = scrimTitle,
+            participantAId = scrimCreatorId,
+            participantAName = scrimCreatorName,
+            participantATeamId = scrimCreatorTeamId,
+            participantATeamName = scrimCreatorTeamName,
+            participantBId = applicantId,
+            participantBName = applicantName,
+            participantBTeamId = applicantTeamId,
+            participantBTeamName = applicantTeamName
+        )
+
+        var conversation: Conversation? = null
+        convResult.collect { result ->
+            result.onSuccess { conv ->
+                conversation = conv
+            }
+        }
+
+        if (conversation == null) {
+            emit(Result.failure(Exception("Failed to create conversation")))
+            return@flow
+        }
+
+        val convId = conversation!!.id
+
+        // Send system message
+        sendMessage(
+            conversationId = convId,
+            senderId = "system",
+            senderName = "System",
+            content = "$applicantTeamName has applied to join your scrim.",
+            type = MessageType.SYSTEM
+        ).collect {}
+
+        // Send apply info message with team details
+        sendMessage(
+            conversationId = convId,
+            senderId = applicantId,
+            senderName = applicantName,
+            content = "Team ID: $applicantTeamId | Team Name: $applicantTeamName | Players: $teamPlayerCount/$teamMaxPlayers",
+            type = MessageType.APPLY
+        ).collect {}
+
+        // Update unread count for the scrim creator
+        val idx = conversations.indexOfFirst { it.id == convId }
+        if (idx != -1) {
+            conversations[idx] = conversations[idx].copy(
+                unreadCount = conversations[idx].unreadCount + 2
+            )
+        }
+
+        emit(Result.success(conversations.find { it.id == convId }!!))
+    }
+
+    suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
+        kotlinx.coroutines.delay(200)
+
+        val index = conversations.indexOfFirst { it.id == conversationId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Conversation not found")))
+            return@flow
+        }
+
+        val conversation = conversations[index]
+        val updatedMessages = conversation.messages.map { msg ->
+            if (msg.senderId != userId) msg.copy(isRead = true) else msg
+        }
+
+        conversations[index] = conversation.copy(
+            messages = updatedMessages,
+            unreadCount = 0
+        )
+
+        emit(Result.success(Unit))
+    }
+}
