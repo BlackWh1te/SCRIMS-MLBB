@@ -1,15 +1,28 @@
 package com.mlbb.scrim.data.repository
 
+import com.mlbb.scrim.data.model.ApplicationStatus
+import com.mlbb.scrim.data.model.BestOf
 import com.mlbb.scrim.data.model.Scrim
+import com.mlbb.scrim.data.model.ScrimApplication
+import com.mlbb.scrim.data.model.ScrimRosterEntry
+import com.mlbb.scrim.data.model.ScrimStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 
-// Mock ScrimRepository for UI testing without Supabase
+// Optimized Mock ScrimRepository for UI testing without Supabase
 // TODO: Replace with actual Supabase implementation when dependencies are resolved
 class ScrimRepository {
-    
+
     private val scrims = mutableListOf<Scrim>()
-    
+
+    // Points configuration
+    companion object {
+        const val PTS_PER_WIN = 25
+        const val PTS_PER_LOSS = 15
+    }
+
     init {
         // Add some sample scrims for testing
         scrims.addAll(
@@ -19,136 +32,116 @@ class ScrimRepository {
                     teamId = "team1",
                     teamName = "Elite Squad",
                     teamLeader = "player1",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.RANKED,
+                    bestOf = BestOf.BO3,
                     region = com.mlbb.scrim.data.model.Region.EU,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.ADVANCED,
-                    scheduledTime = System.currentTimeMillis() + 3600000, // 1 hour from now
-                    maxPlayers = 10,
-                    currentPlayers = 6,
+                    scheduledTime = System.currentTimeMillis() + 3600000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
-                    description = "Looking for 4 more players for ranked scrim"
+                    description = "Looking for a BO3 scrim"
                 ),
                 Scrim(
                     id = java.util.UUID.randomUUID().toString(),
                     teamId = "team2",
                     teamName = "Phoenix Rising",
                     teamLeader = "player2",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.CUSTOM,
+                    bestOf = BestOf.BO1,
                     region = com.mlbb.scrim.data.model.Region.NA,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.INTERMEDIATE,
-                    scheduledTime = System.currentTimeMillis() + 7200000, // 2 hours from now
-                    maxPlayers = 10,
-                    currentPlayers = 8,
+                    scheduledTime = System.currentTimeMillis() + 7200000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
-                    description = "Custom game scrim, all welcome"
+                    description = "BO1 custom scrim, all welcome"
                 ),
                 Scrim(
                     id = java.util.UUID.randomUUID().toString(),
                     teamId = "team3",
                     teamName = "Moscow Wolves",
                     teamLeader = "player3",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.RANKED,
+                    bestOf = BestOf.BO5,
                     region = com.mlbb.scrim.data.model.Region.MCK,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.PRO,
-                    scheduledTime = System.currentTimeMillis() + 86400000, // tomorrow
-                    maxPlayers = 10,
-                    currentPlayers = 5,
+                    scheduledTime = System.currentTimeMillis() + 86400000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
-                    description = "Looking for a scrim tomorrow evening in Moscow"
+                    description = "BO5 practice match tomorrow"
                 ),
                 Scrim(
                     id = java.util.UUID.randomUUID().toString(),
                     teamId = "team4",
                     teamName = "Night Owls",
                     teamLeader = "player4",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.CUSTOM,
+                    bestOf = BestOf.BO1,
                     region = com.mlbb.scrim.data.model.Region.ASIA,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.ALL,
-                    scheduledTime = System.currentTimeMillis() + 18000000, // 5 hours from now
-                    maxPlayers = 10,
-                    currentPlayers = 3,
+                    scheduledTime = System.currentTimeMillis() + 18000000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
-                    description = "Late night custom scrim"
+                    description = "Late night BO1 scrim"
                 ),
                 Scrim(
                     id = java.util.UUID.randomUUID().toString(),
                     teamId = "team5",
                     teamName = "Apex Predators",
                     teamLeader = "player5",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.TOURNAMENT,
+                    bestOf = BestOf.BO3,
                     region = com.mlbb.scrim.data.model.Region.NA,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.ADVANCED,
-                    scheduledTime = System.currentTimeMillis() + 172800000, // day after tomorrow
-                    maxPlayers = 10,
-                    currentPlayers = 10,
+                    scheduledTime = System.currentTimeMillis() + 172800000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.FILLED,
-                    description = "Tournament practice match"
+                    description = "BO3 tournament practice",
+                    opponentTeamId = "team6",
+                    opponentTeamName = "Storm Riders"
                 ),
                 Scrim(
                     id = java.util.UUID.randomUUID().toString(),
                     teamId = "team6",
                     teamName = "Storm Riders",
                     teamLeader = "player6",
-                    gameMode = com.mlbb.scrim.data.model.GameMode.RANKED,
+                    bestOf = BestOf.BO1,
                     region = com.mlbb.scrim.data.model.Region.EU,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.INTERMEDIATE,
-                    scheduledTime = System.currentTimeMillis() + 259200000, // 3 days from now
-                    maxPlayers = 10,
-                    currentPlayers = 7,
+                    scheduledTime = System.currentTimeMillis() + 259200000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
-                    description = "Weekend ranked scrim"
+                    description = "Weekend BO1 scrim"
                 )
             )
         )
     }
-    
-    suspend fun getAllScrims(): Flow<Result<List<Scrim>>> = flow {
-        emit(Result.success(scrims.toList()))
-    }
-    
-    suspend fun getScrimById(id: String): Flow<Result<Scrim?>> = flow {
-        emit(Result.success(scrims.find { it.id == id }))
-    }
-    
-    suspend fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>> = flow {
-        emit(Result.success(scrims.filter { it.teamId == teamId }))
-    }
-    
-    suspend fun searchScrims(
+
+    fun getAllScrims(): Flow<Result<List<Scrim>>> = flowOf(Result.success(scrims.toList()))
+
+    fun getScrimById(id: String): Flow<Result<Scrim?>> = flowOf(Result.success(scrims.find { it.id == id }))
+
+    fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>> =
+        flowOf(Result.success(scrims.filter { it.teamId == teamId || it.opponentTeamId == teamId }))
+
+    fun searchScrims(
+        query: String = "",
         gameMode: com.mlbb.scrim.data.model.GameMode? = null,
         region: com.mlbb.scrim.data.model.Region? = null,
         skillLevel: com.mlbb.scrim.data.model.SkillLevel? = null,
         status: com.mlbb.scrim.data.model.ScrimStatus? = null
-    ): Flow<Result<List<Scrim>>> = flow {
-        var results = scrims.toList()
-        
-        if (gameMode != null) {
-            results = results.filter { it.gameMode == gameMode }
+    ): Flow<Result<List<Scrim>>> {
+        val queryLower = query.lowercase().trim()
+        val results = scrims.filter { scrim ->
+            val matchesText = queryLower.isEmpty() ||
+                scrim.teamName.lowercase().contains(queryLower) ||
+                scrim.description.lowercase().contains(queryLower)
+            matchesText &&
+            (gameMode == null || scrim.gameMode == gameMode) &&
+            (region == null || scrim.region == region) &&
+            (skillLevel == null || scrim.skillLevel == skillLevel) &&
+            (status == null || scrim.status == status)
         }
-        if (region != null) {
-            results = results.filter { it.region == region }
-        }
-        if (skillLevel != null) {
-            results = results.filter { it.skillLevel == skillLevel }
-        }
-        if (status != null) {
-            results = results.filter { it.status == status }
-        }
-        
-        emit(Result.success(results))
+        return flowOf(Result.success(results))
     }
-    
+
     suspend fun createScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
-        kotlinx.coroutines.delay(500) // Simulate network delay
-        
+        delay(500)
         val newScrim = scrim.copy(id = java.util.UUID.randomUUID().toString())
         scrims.add(newScrim)
         emit(Result.success(newScrim))
     }
-    
+
     suspend fun updateScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
-        kotlinx.coroutines.delay(500) // Simulate network delay
-        
+        delay(500)
         val index = scrims.indexOfFirst { it.id == scrim.id }
         if (index != -1) {
             scrims[index] = scrim
@@ -157,10 +150,9 @@ class ScrimRepository {
             emit(Result.failure(Exception("Scrim not found")))
         }
     }
-    
+
     suspend fun deleteScrim(id: String): Flow<Result<Unit>> = flow {
-        kotlinx.coroutines.delay(500) // Simulate network delay
-        
+        delay(500)
         val removed = scrims.removeIf { it.id == id }
         if (removed) {
             emit(Result.success(Unit))
@@ -168,42 +160,359 @@ class ScrimRepository {
             emit(Result.failure(Exception("Scrim not found")))
         }
     }
-    
-    suspend fun joinScrim(scrimId: String, playerId: String): Flow<Result<Scrim>> = flow {
-        kotlinx.coroutines.delay(500) // Simulate network delay
-        
-        scrimId?.let { id ->
-            val index = scrims.indexOfFirst { it.id == id }
-            if (index != -1) {
-                val scrim = scrims[index]
-                if (scrim.currentPlayers < scrim.maxPlayers) {
-                    scrims[index] = scrim.copy(currentPlayers = scrim.currentPlayers + 1)
-                    emit(Result.success(scrims[index]))
-                } else {
-                    emit(Result.failure(Exception("Scrim is already full")))
-                }
-            } else {
-                emit(Result.failure(Exception("Scrim not found")))
+
+    // ═══════════════════════════════════════════════════════════════
+    // TEAM VS TEAM APPLICATION FLOW
+    // ═══════════════════════════════════════════════════════════════
+
+    suspend fun applyToScrim(scrimId: String, application: ScrimApplication): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            if (scrim.status != ScrimStatus.OPEN) {
+                emit(Result.failure(Exception("Scrim is no longer open for applications")))
+                return@flow
             }
+            val newApp = application.copy(id = java.util.UUID.randomUUID().toString())
+            val updatedApps = scrim.applications + newApp
+            scrims[index] = scrim.copy(applications = updatedApps)
+            emit(Result.success(scrims[index]))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
         }
     }
-    
-    suspend fun leaveScrim(scrimId: String, playerId: String): Flow<Result<Scrim>> = flow {
-        kotlinx.coroutines.delay(500) // Simulate network delay
-        
-        scrimId?.let { id ->
-            val index = scrims.indexOfFirst { it.id == id }
-            if (index != -1) {
-                val scrim = scrims[index]
-                if (scrim.currentPlayers > 0) {
-                    scrims[index] = scrim.copy(currentPlayers = scrim.currentPlayers - 1)
-                    emit(Result.success(scrims[index]))
-                } else {
-                    emit(Result.failure(Exception("Scrim is already empty")))
-                }
-            } else {
-                emit(Result.failure(Exception("Scrim not found")))
+
+    suspend fun approveApplication(scrimId: String, applicationId: String, conversationId: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            val app = scrim.applications.find { it.id == applicationId }
+            if (app == null) {
+                emit(Result.failure(Exception("Application not found")))
+                return@flow
             }
+            val updatedApps = scrim.applications.map {
+                if (it.id == applicationId) it.copy(status = ApplicationStatus.APPROVED, respondedAt = System.currentTimeMillis())
+                else if (it.status == ApplicationStatus.PENDING) it.copy(status = ApplicationStatus.CANCELLED)
+                else it
+            }
+            scrims[index] = scrim.copy(
+                status = ScrimStatus.FILLED,
+                opponentTeamId = app.applicantTeamId,
+                opponentTeamName = app.applicantTeamName,
+                opponentTeamLeader = app.applicantTeamLeader,
+                applications = updatedApps,
+                conversationId = conversationId
+            )
+            emit(Result.success(scrims[index]))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
         }
+    }
+
+    suspend fun rejectApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            val updatedApps = scrim.applications.map {
+                if (it.id == applicationId) it.copy(status = ApplicationStatus.REJECTED, respondedAt = System.currentTimeMillis())
+                else it
+            }
+            scrims[index] = scrim.copy(applications = updatedApps)
+            emit(Result.success(scrims[index]))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
+        }
+    }
+
+    suspend fun cancelApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            val updatedApps = scrim.applications.map {
+                if (it.id == applicationId) it.copy(status = ApplicationStatus.CANCELLED)
+                else it
+            }
+            scrims[index] = scrim.copy(applications = updatedApps)
+            emit(Result.success(scrims[index]))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SCRIM ROSTER — Captain assigns active/substitute players
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Captain sets the roster for their team in a scrim */
+    suspend fun setScrimRoster(
+        scrimId: String,
+        teamId: String,
+        roster: List<ScrimRosterEntry>
+    ): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+        val isTeamA = scrim.teamId == teamId
+
+        // Validate: minimum 5 active players
+        val activeCount = roster.count { it.isActive }
+        if (activeCount < 5) {
+            emit(Result.failure(Exception("Minimum 5 active players required for scrim")))
+            return@flow
+        }
+
+        val updatedScrim = if (isTeamA) {
+            scrim.copy(teamARoster = roster)
+        } else {
+            scrim.copy(teamBRoster = roster)
+        }
+        scrims[index] = updatedScrim
+        emit(Result.success(updatedScrim))
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // READY FLOW — Captains press Ready at match start time
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Transition scrim to READY_CHECK status at match time */
+    suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>> = flow {
+        delay(300)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+        if (scrim.status != ScrimStatus.FILLED) {
+            emit(Result.failure(Exception("Scrim must be in FILLED status to start ready check")))
+            return@flow
+        }
+        scrims[index] = scrim.copy(status = ScrimStatus.READY_CHECK)
+        emit(Result.success(scrims[index]))
+    }
+
+    /** Captain presses Ready button */
+    suspend fun markReady(scrimId: String, teamId: String): Flow<Result<Scrim>> = flow {
+        delay(300)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+        val isTeamA = scrim.teamId == teamId
+
+        val updatedScrim = if (isTeamA) {
+            scrim.copy(teamAReady = true, teamAReadyAt = System.currentTimeMillis())
+        } else {
+            scrim.copy(teamBReady = true, teamBReadyAt = System.currentTimeMillis())
+        }
+
+        // If both ready, transition to IN_PROGRESS
+        val finalScrim = if (updatedScrim.teamAReady && updatedScrim.teamBReady) {
+            updatedScrim.copy(status = ScrimStatus.IN_PROGRESS)
+        } else {
+            updatedScrim
+        }
+
+        scrims[index] = finalScrim
+        emit(Result.success(finalScrim))
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SCREENSHOT FLOW — Attach screenshot before completing
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Captain uploads a screenshot */
+    suspend fun uploadScreenshot(scrimId: String, teamId: String, screenshotUrl: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+        if (scrim.status != ScrimStatus.IN_PROGRESS) {
+            emit(Result.failure(Exception("Scrim must be in progress to upload screenshot")))
+            return@flow
+        }
+        val isTeamA = scrim.teamId == teamId
+
+        val updatedScrim = if (isTeamA) {
+            scrim.copy(
+                teamAScreenshotUrl = screenshotUrl,
+                teamAScreenshotUploadedAt = System.currentTimeMillis()
+            )
+        } else {
+            scrim.copy(
+                teamBScreenshotUrl = screenshotUrl,
+                teamBScreenshotUploadedAt = System.currentTimeMillis()
+            )
+        }
+        scrims[index] = updatedScrim
+        emit(Result.success(updatedScrim))
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // COMPLETE SCRIM — Select winner, award/deduct points
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Complete scrim: must have screenshot uploaded, select winner */
+    suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+
+        // Validate: must have at least one screenshot
+        if (scrim.teamAScreenshotUrl == null && scrim.teamBScreenshotUrl == null) {
+            emit(Result.failure(Exception("At least one screenshot must be uploaded before completing")))
+            return@flow
+        }
+
+        // Validate: winner must be one of the two teams
+        if (winnerTeamId != scrim.teamId && winnerTeamId != scrim.opponentTeamId) {
+            emit(Result.failure(Exception("Winner must be one of the participating teams")))
+            return@flow
+        }
+
+        val completedScrim = scrim.copy(
+            status = ScrimStatus.COMPLETED,
+            winnerTeamId = winnerTeamId,
+            resultSubmittedAt = System.currentTimeMillis()
+        )
+        scrims[index] = completedScrim
+        emit(Result.success(completedScrim))
+    }
+
+    /** Calculate and return points changes for active roster players */
+    fun calculatePointsChanges(scrim: Scrim): PointsResult {
+        val winnerTeamId = scrim.winnerTeamId ?: return PointsResult.empty()
+
+        val teamAChanges = scrim.teamAActiveRoster.map { entry ->
+            val isWinner = entry.teamId == winnerTeamId
+            PlayerPointsChange(
+                playerId = entry.playerId,
+                playerName = entry.playerName,
+                teamId = entry.teamId,
+                pointsChange = if (isWinner) PTS_PER_WIN else -PTS_PER_LOSS,
+                isWinner = isWinner
+            )
+        }
+
+        val teamBChanges = scrim.teamBActiveRoster.map { entry ->
+            val isWinner = entry.teamId == winnerTeamId
+            PlayerPointsChange(
+                playerId = entry.playerId,
+                playerName = entry.playerName,
+                teamId = entry.teamId,
+                pointsChange = if (isWinner) PTS_PER_WIN else -PTS_PER_LOSS,
+                isWinner = isWinner
+            )
+        }
+
+        // Substitutes get 0 points change
+        val teamASubs = scrim.teamASubstitutes.map { entry ->
+            PlayerPointsChange(
+                playerId = entry.playerId,
+                playerName = entry.playerName,
+                teamId = entry.teamId,
+                pointsChange = 0,
+                isWinner = false,
+                isSubstitute = true
+            )
+        }
+        val teamBSubs = scrim.teamBSubstitutes.map { entry ->
+            PlayerPointsChange(
+                playerId = entry.playerId,
+                playerName = entry.playerName,
+                teamId = entry.teamId,
+                pointsChange = 0,
+                isWinner = false,
+                isSubstitute = true
+            )
+        }
+
+        return PointsResult(
+            teamAChanges = teamAChanges,
+            teamBChanges = teamBChanges,
+            teamASubstitutes = teamASubs,
+            teamBSubstitutes = teamBSubs,
+            winnerTeamId = winnerTeamId
+        )
+    }
+
+    suspend fun submitResult(
+        scrimId: String,
+        reporterId: String,
+        winnerTeamId: String,
+        notes: String?,
+        screenshotUrl: String?
+    ): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            scrims[index] = scrim.copy(
+                status = ScrimStatus.COMPLETED,
+                winnerTeamId = winnerTeamId,
+                resultSubmittedAt = System.currentTimeMillis()
+            )
+            emit(Result.success(scrims[index]))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
+        }
+    }
+
+    suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
+        delay(300)
+        emit(Result.success(Unit))
     }
 }
+
+/** Result of points calculation for a completed scrim */
+data class PointsResult(
+    val teamAChanges: List<PlayerPointsChange>,
+    val teamBChanges: List<PlayerPointsChange>,
+    val teamASubstitutes: List<PlayerPointsChange>,
+    val teamBSubstitutes: List<PlayerPointsChange>,
+    val winnerTeamId: String
+) {
+    val allActiveChanges: List<PlayerPointsChange>
+        get() = teamAChanges + teamBChanges
+
+    val allSubstitutes: List<PlayerPointsChange>
+        get() = teamASubstitutes + teamBSubstitutes
+
+    companion object {
+        fun empty() = PointsResult(
+            teamAChanges = emptyList(),
+            teamBChanges = emptyList(),
+            teamASubstitutes = emptyList(),
+            teamBSubstitutes = emptyList(),
+            winnerTeamId = ""
+        )
+    }
+}
+
+/** Points change for a single player */
+data class PlayerPointsChange(
+    val playerId: String,
+    val playerName: String,
+    val teamId: String,
+    val pointsChange: Int,      // positive = gain, negative = loss, 0 = substitute
+    val isWinner: Boolean,
+    val isSubstitute: Boolean = false
+)

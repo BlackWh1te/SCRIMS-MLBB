@@ -25,6 +25,8 @@ import com.mlbb.scrim.data.model.Scrim
 import com.mlbb.scrim.data.model.ScrimStatus
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -61,7 +63,7 @@ fun ScheduleScreen(
                 ) {
                     GlassBackButton(onClick = onNavigateBack)
                     Text(
-                        text = "Schedule",
+                        text = stringResource(R.string.schedule),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -86,7 +88,7 @@ fun ScheduleScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No upcoming scrims",
+                            text = stringResource(R.string.no_upcoming_scrims),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 color = LightGray,
                                 fontWeight = FontWeight.SemiBold
@@ -94,7 +96,7 @@ fun ScheduleScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Create or join a scrim to see it here",
+                            text = stringResource(R.string.create_join_scrim_hint),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = MidGray
                             )
@@ -171,6 +173,7 @@ private fun ScheduleCard(
     val statusColor = when (scrim.status) {
         ScrimStatus.OPEN -> SuccessGreen
         ScrimStatus.FILLED -> BluePrimary
+        ScrimStatus.READY_CHECK -> WarningOrange
         ScrimStatus.IN_PROGRESS -> WarningOrange
         ScrimStatus.COMPLETED -> MidGray
         ScrimStatus.CANCELLED -> ErrorRed
@@ -251,7 +254,7 @@ private fun ScheduleCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${scrim.gameMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${scrim.region.name}",
+                        text = "${scrim.gameMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${scrim.region.displayName} ${scrim.region.utcOffset}",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 13.sp,
                             color = MidGray
@@ -268,7 +271,7 @@ private fun ScheduleCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${scrim.currentPlayers}/${scrim.maxPlayers} players",
+                        text = stringResource(R.string.players_count, scrim.currentPlayers, scrim.maxPlayers),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 13.sp,
                             color = MidGray

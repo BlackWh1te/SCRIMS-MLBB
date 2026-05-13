@@ -25,11 +25,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.GradientButton
-import com.mlbb.scrim.ui.components.TierBadge
+import com.mlbb.scrim.ui.components.RankBadge
+import com.mlbb.scrim.ui.components.RankBadgeSize
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ProfileScreen(
@@ -40,7 +46,9 @@ fun ProfileScreen(
     onUpdatePassword: (String, String, String) -> Unit = { _, _, _ -> },
     authResult: com.mlbb.scrim.data.model.AuthResult? = null,
     onResetAuthState: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToAchievements: () -> Unit = {},
+    unlockedAchievements: List<com.mlbb.scrim.data.model.Achievement> = emptyList()
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf(userProfile?.username ?: "") }
@@ -91,12 +99,8 @@ fun ProfileScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "My Profile",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        text = stringResource(R.string.my_profile),
+                        style = iOSTitle2.copy(color = White)
                     )
 
                     IconButton(
@@ -168,7 +172,7 @@ fun ProfileScreen(
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            TierBadge(tierName = userProfile.currentTier.displayName)
+                            RankBadge(tier = userProfile.currentTier, size = RankBadgeSize.LARGE)
                         }
                     }
                 }
@@ -237,7 +241,7 @@ fun ProfileScreen(
                         )
                     } else {
                         Text(
-                            text = "In-Game ID: $inGameId",
+                            text = stringResource(R.string.in_game_id_label, inGameId),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = 16.sp,
                                 color = LightGray
@@ -286,12 +290,8 @@ fun ProfileScreen(
                 // Stats Section
                 AnimatedEntrance(delayMillis = 375) {
                     Text(
-                        text = "Player Stats",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        text = stringResource(R.string.player_stats),
+                        style = iOSTitle3.copy(color = White)
                     )
                 }
 
@@ -342,6 +342,54 @@ fun ProfileScreen(
                             color = Purple,
                             modifier = Modifier.weight(1f)
                         )
+                        ProfileStatBox(
+                            label = "PTS",
+                            value = userProfile?.ptsDisplay ?: "0",
+                            color = if ((userProfile?.pts ?: 0) >= 0) SuccessGreen else ErrorRed,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Achievements Section
+                AnimatedEntrance(delayMillis = 388) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.achievements),
+                            style = iOSTitle3.copy(color = White)
+                        )
+                        TextButton(onClick = onNavigateToAchievements) {
+                            Text(
+                                text = stringResource(R.string.view_all),
+                                color = BluePrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                AnimatedEntrance(delayMillis = 389) {
+                    if (unlockedAchievements.isNotEmpty()) {
+                        com.mlbb.scrim.ui.components.AchievementBadgeRow(
+                            achievements = unlockedAchievements,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.no_achievements_yet),
+                            fontSize = 13.sp,
+                            color = LightGray.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
 
@@ -350,12 +398,8 @@ fun ProfileScreen(
                 // App Settings Section
                 AnimatedEntrance(delayMillis = 390) {
                     Text(
-                        text = "App Settings",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        text = stringResource(R.string.app_settings),
+                        style = iOSTitle3.copy(color = White)
                     )
                 }
 
@@ -364,10 +408,27 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 395) {
                     AccountActionCard(
                         icon = Icons.Default.Settings,
-                        title = "Settings",
-                        subtitle = "Notifications, privacy & more",
+                        title = stringResource(R.string.settings),
+                        subtitle = stringResource(R.string.settings_sub),
                         color = BluePrimary,
                         onClick = onNavigateToSettings
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Support Button — opens JotForm support request
+                AnimatedEntrance(delayMillis = 398) {
+                    val context = LocalContext.current
+                    AccountActionCard(
+                        icon = Icons.Default.HelpOutline,
+                        title = stringResource(R.string.support),
+                        subtitle = stringResource(R.string.support_sub),
+                        color = SuccessGreen,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://form.jotform.com/shukhratmamatkulov1999/support-request-form"))
+                            context.startActivity(intent)
+                        }
                     )
                 }
 
@@ -376,12 +437,8 @@ fun ProfileScreen(
                 // Account Security Section
                 AnimatedEntrance(delayMillis = 400) {
                     Text(
-                        text = "Account Security",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        text = stringResource(R.string.account_security),
+                        style = iOSTitle3.copy(color = White)
                     )
                 }
 
@@ -609,7 +666,7 @@ fun ChangeEmailDialog(
         containerColor = DarkNavy,
         title = {
             Text(
-                text = "Change Email",
+                text = stringResource(R.string.change_email),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -620,7 +677,7 @@ fun ChangeEmailDialog(
         text = {
             Column {
                 Text(
-                    text = "Current: $currentEmail",
+                    text = stringResource(R.string.current_email, currentEmail),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
                         color = LightGray
@@ -687,7 +744,7 @@ fun ChangeEmailDialog(
         },
         confirmButton = {
             GradientButton(
-                text = "Update Email",
+                text = stringResource(R.string.update_email),
                 onClick = {
                     when {
                         newEmail.isBlank() -> errorMessage = "Please enter a new email"
@@ -724,7 +781,7 @@ fun ChangePasswordDialog(
         containerColor = DarkNavy,
         title = {
             Text(
-                text = "Change Password",
+                text = stringResource(R.string.change_password),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -819,7 +876,7 @@ fun ChangePasswordDialog(
         },
         confirmButton = {
             GradientButton(
-                text = "Update Password",
+                text = stringResource(R.string.update_password),
                 onClick = {
                     when {
                         currentPassword.isBlank() -> errorMessage = "Please enter your current password"
@@ -869,16 +926,12 @@ fun ProfileStatBox(
         ) {
             Text(
                 text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
+                style = StatsTextStyle.copy(color = color)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
-                fontSize = 12.sp,
-                color = MidGray,
-                fontWeight = FontWeight.Medium
+                style = iOSCaption1.copy(color = MidGray)
             )
         }
     }

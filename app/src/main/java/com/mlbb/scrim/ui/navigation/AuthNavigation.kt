@@ -1,19 +1,31 @@
 package com.mlbb.scrim.ui.navigation
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +41,7 @@ import com.mlbb.scrim.ui.screens.MatchHistoryScreen
 import com.mlbb.scrim.ui.screens.MatchResultDetailScreen
 import com.mlbb.scrim.ui.screens.MatchResultListScreen
 import com.mlbb.scrim.ui.screens.MessageListScreen
+import com.mlbb.scrim.ui.screens.NewsScreen
 import com.mlbb.scrim.ui.screens.NotificationScreen
 import com.mlbb.scrim.ui.screens.OnboardingScreen
 import com.mlbb.scrim.ui.screens.ScheduleScreen
@@ -36,17 +49,20 @@ import com.mlbb.scrim.ui.screens.ProfileScreen
 import com.mlbb.scrim.ui.screens.ReportMatchResultScreen
 import com.mlbb.scrim.ui.screens.ScrimDetailScreen
 import com.mlbb.scrim.ui.screens.ScrimListScreen
+import com.mlbb.scrim.ui.screens.ScrimRosterScreen
 import com.mlbb.scrim.ui.screens.JoinTeamScreen
 import com.mlbb.scrim.ui.screens.SettingsScreen
 import com.mlbb.scrim.ui.screens.SignupScreen
 import com.mlbb.scrim.ui.screens.SplashScreen
 import com.mlbb.scrim.ui.screens.TeamDetailScreen
 import com.mlbb.scrim.ui.screens.TeamListScreen
+import com.mlbb.scrim.ui.screens.LfgBoardScreen
 import com.mlbb.scrim.ui.components.AppBottomNav
 import com.mlbb.scrim.viewmodel.AuthViewModel
 import com.mlbb.scrim.viewmodel.LeaderboardViewModel
 import com.mlbb.scrim.viewmodel.MatchResultViewModel
 import com.mlbb.scrim.viewmodel.MessageViewModel
+import com.mlbb.scrim.viewmodel.NewsViewModel
 import com.mlbb.scrim.viewmodel.NotificationViewModel
 import com.mlbb.scrim.viewmodel.ScrimViewModel
 import com.mlbb.scrim.viewmodel.SettingsViewModel
@@ -87,6 +103,15 @@ sealed class Screen(val route: String) {
     object Notifications : Screen("notifications")
     object Onboarding : Screen("onboarding")
     object Schedule : Screen("schedule")
+    object News : Screen("news")
+    object Verification : Screen("verification/{email}") {
+        fun createRoute(email: String) = "verification/${Uri.encode(email)}"
+    }
+    object Achievements : Screen("achievements")
+    object LfgBoard : Screen("lfg_board")
+    object ScrimRoster : Screen("scrim_roster/{scrimId}/{teamId}") {
+        fun createRoute(scrimId: String, teamId: String) = "scrim_roster/$scrimId/$teamId"
+    }
 }
 
 @Composable
@@ -99,6 +124,7 @@ fun AuthNavigation(
     leaderboardViewModel: LeaderboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     notificationViewModel: NotificationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     settingsViewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    newsViewModel: NewsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     navController: NavHostController = rememberNavController(),
     context: Context
 ) {
@@ -116,31 +142,46 @@ fun AuthNavigation(
     val leaderboard by leaderboardViewModel.leaderboard.collectAsState()
     val leaderboardIsLoading by leaderboardViewModel.isLoading.collectAsState()
     val leaderboardTier by leaderboardViewModel.selectedTier.collectAsState()
+    val leaderboardError by leaderboardViewModel.error.collectAsState()
     val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
     val matchNotifications by settingsViewModel.matchNotifications.collectAsState()
     val messageNotifications by settingsViewModel.messageNotifications.collectAsState()
     val soundEnabled by settingsViewModel.soundEnabled.collectAsState()
     val vibrationEnabled by settingsViewModel.vibrationEnabled.collectAsState()
+    val languageCode by settingsViewModel.languageCode.collectAsState()
+    val darkMode by settingsViewModel.darkMode.collectAsState()
     val notifications by notificationViewModel.notifications.collectAsState()
     val notificationUnreadCount by notificationViewModel.unreadCount.collectAsState()
     val notificationIsLoading by notificationViewModel.isLoading.collectAsState()
+    val notificationError by notificationViewModel.error.collectAsState()
 
     val unreadCount = conversations.sumOf { it.unreadCount }
 
     // Start at splash screen
     val startDestination = Screen.Splash.route
 
+    // Dialog states
+    var showInviteDialog by remember { mutableStateOf(false) }
+
     // Navigate based on auth state changes
+    // Only navigate on actual transitions, not on initial composition,
+    // to avoid race conditions with SplashScreen navigation.
+    var previousIsLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+
     LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn) {
-            navController.navigate(Screen.Home.route) {
-                popUpTo(Screen.Login.route) { inclusive = true }
+        when {
+            isLoggedIn && previousIsLoggedIn != true -> {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
             }
-        } else {
-            navController.navigate(Screen.Login.route) {
-                popUpTo(Screen.Home.route) { inclusive = true }
+            !isLoggedIn && previousIsLoggedIn == true -> {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
+                }
             }
         }
+        previousIsLoggedIn = isLoggedIn
     }
 
     Scaffold(
@@ -158,14 +199,58 @@ fun AuthNavigation(
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                enterTransition = { fadeIn() + slideInHorizontally { it / 8 } },
-                exitTransition = { fadeOut() + slideOutHorizontally { -it / 8 } },
-                popEnterTransition = { fadeIn() + slideInHorizontally { -it / 8 } },
-                popExitTransition = { fadeOut() + slideOutHorizontally { it / 8 } }
+                // Enter: subtle slide + smooth scale + gentle fade — modern feel
+                enterTransition = {
+                    fadeIn(
+                        animationSpec = tween(300, easing = com.mlbb.scrim.ui.theme.AppEaseOutCubic)
+                    ) + slideInHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        initialOffsetX = { it / 12 }
+                    ) + scaleIn(
+                        animationSpec = tween(300, easing = com.mlbb.scrim.ui.theme.AppEaseOutCubic),
+                        initialScale = 0.97f
+                    )
+                },
+                // Exit: faster fade-out with subtle slide away
+                exitTransition = {
+                    fadeOut(
+                        animationSpec = tween(200, easing = com.mlbb.scrim.ui.theme.AppEaseInCubic)
+                    ) + slideOutHorizontally(
+                        animationSpec = tween(250, easing = com.mlbb.scrim.ui.theme.AppEaseInCubic),
+                        targetOffsetX = { -it / 16 }
+                    )
+                },
+                // Pop enter (back navigation): reverse direction
+                popEnterTransition = {
+                    fadeIn(
+                        animationSpec = tween(300, easing = com.mlbb.scrim.ui.theme.AppEaseOutCubic)
+                    ) + slideInHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        initialOffsetX = { -it / 12 }
+                    ) + scaleIn(
+                        animationSpec = tween(300, easing = com.mlbb.scrim.ui.theme.AppEaseOutCubic),
+                        initialScale = 0.97f
+                    )
+                },
+                // Pop exit: slide out to the right
+                popExitTransition = {
+                    fadeOut(
+                        animationSpec = tween(200, easing = com.mlbb.scrim.ui.theme.AppEaseInCubic)
+                    ) + slideOutHorizontally(
+                        animationSpec = tween(250, easing = com.mlbb.scrim.ui.theme.AppEaseInCubic),
+                        targetOffsetX = { it / 16 }
+                    )
+                }
             ) {
                 composable(Screen.Splash.route) {
                     SplashScreen(
-                        onSplashFinished = {
+                        onFinish = {
                             navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.Splash.route) { inclusive = true }
                             }
@@ -174,6 +259,16 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.Login.route) {
+                    val authState by viewModel.authState.collectAsState()
+                    LaunchedEffect(authState) {
+                        if (authState is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified) {
+                            val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
+                            navController.navigate(Screen.Verification.createRoute(email)) {
+                                popUpTo(Screen.Login.route) { inclusive = false }
+                            }
+                            viewModel.resetAuthState()
+                        }
+                    }
                     LoginScreen(
                         onLoginSuccess = {},
                         onNavigateToSignup = {
@@ -190,6 +285,16 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.Signup.route) {
+                    val authState by viewModel.authState.collectAsState()
+                    LaunchedEffect(authState) {
+                        if (authState is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified) {
+                            val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
+                            navController.navigate(Screen.Verification.createRoute(email)) {
+                                popUpTo(Screen.Signup.route) { inclusive = true }
+                            }
+                            viewModel.resetAuthState()
+                        }
+                    }
                     SignupScreen(
                         onSignupSuccess = {},
                         onNavigateToLogin = {
@@ -199,12 +304,49 @@ fun AuthNavigation(
                     )
                 }
 
+                composable(
+                    route = Screen.Verification.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("email") { type = androidx.navigation.NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val email = Uri.decode(backStackEntry.arguments?.getString("email") ?: "")
+                    val authState by viewModel.authState.collectAsState()
+                    val resentSuccess by viewModel.resentSuccess.collectAsState()
+
+                    LaunchedEffect(authState) {
+                        if (authState is com.mlbb.scrim.data.model.AuthResult.Success) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Verification.route) { inclusive = true }
+                            }
+                            viewModel.resetAuthState()
+                        }
+                    }
+
+                    val deletionSeconds = viewModel.secondsUntilDeletion()
+                    val accountDeleted = authState is com.mlbb.scrim.data.model.AuthResult.Error
+                            && (authState as? com.mlbb.scrim.data.model.AuthResult.Error)?.message?.contains("deleted", ignoreCase = true) == true
+
+                    com.mlbb.scrim.ui.screens.VerificationScreen(
+                        email = email,
+                        initialSecondsUntilDeletion = deletionSeconds,
+                        onResendEmail = { viewModel.resendVerificationEmail(it) },
+                        onConfirmed = { viewModel.confirmEmail() },
+                        onBackToLogin = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Verification.route) { inclusive = true }
+                            }
+                        },
+                        isLoading = authState is com.mlbb.scrim.data.model.AuthResult.Loading,
+                        resentSuccess = resentSuccess,
+                        accountDeleted = accountDeleted
+                    )
+                }
+
                 composable(Screen.Home.route) {
+                    val isHomeRefreshing by remember { mutableStateOf(false) }
                     HomeScreen(
                         userProfile = userProfile,
-                        onLogout = {
-                            viewModel.signOut()
-                        },
                         onNavigateToCreateTeam = {
                             navController.navigate(Screen.CreateTeam.route)
                         },
@@ -224,14 +366,26 @@ fun AuthNavigation(
                         onNavigateToSchedule = {
                             navController.navigate(Screen.Schedule.route)
                         },
+                        onNavigateToLfgBoard = {
+                            navController.navigate(Screen.LfgBoard.route)
+                        },
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
+                        },
+                        onNavigateToProfile = {
+                            navController.navigate(Screen.Profile.route)
                         },
                         onNavigateToScrimDetail = { scrimId ->
                             navController.navigate(Screen.ScrimDetail.createRoute(scrimId))
                         },
                         scrims = scrims,
-                        notificationCount = notificationUnreadCount
+                        notificationCount = notificationUnreadCount,
+                        isRefreshing = scrimIsLoading,
+                        onRefresh = {
+                            scrimViewModel.loadScrims()
+                            teamViewModel.loadTeams()
+                            notificationViewModel.loadNotifications()
+                        }
                     )
                 }
 
@@ -255,7 +409,62 @@ fun AuthNavigation(
                         onResetAuthState = { viewModel.resetAuthState() },
                         onNavigateToSettings = {
                             navController.navigate(Screen.Settings.route)
-                        }
+                        },
+                        onNavigateToAchievements = {
+                            navController.navigate(Screen.Achievements.route)
+                        },
+                        unlockedAchievements = listOf(
+                            com.mlbb.scrim.data.model.Achievement.FIRST_SCRIM,
+                            com.mlbb.scrim.data.model.Achievement.SCRIM_HOST_10,
+                            com.mlbb.scrim.data.model.Achievement.TEAM_CREATOR
+                        )
+                    )
+                }
+
+                composable(Screen.Achievements.route) {
+                    com.mlbb.scrim.ui.screens.AchievementsScreen(
+                        achievements = com.mlbb.scrim.data.model.PlayerAchievements(
+                            playerId = userProfile?.id ?: "",
+                            unlockedAchievements = listOf(
+                                com.mlbb.scrim.data.model.Achievement.FIRST_SCRIM.id,
+                                com.mlbb.scrim.data.model.Achievement.SCRIM_HOST_10.id,
+                                com.mlbb.scrim.data.model.Achievement.TEAM_CREATOR.id
+                            ),
+                            matchesPlayed = 12,
+                            scrimsCreated = 15,
+                            teamsCreated = 1
+                        ),
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(Screen.LfgBoard.route) {
+                    LfgBoardScreen(
+                        posts = listOf(
+                            com.mlbb.scrim.data.model.LfgPost(
+                                id = "1", playerId = "p1", playerName = "ShadowSlayer",
+                                role = com.mlbb.scrim.data.model.GameRole.ASSASSIN,
+                                region = com.mlbb.scrim.data.model.Region.ASIA,
+                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.ADVANCED,
+                                message = "Looking for a competitive team. Main assassin, can flex to marksman."
+                            ),
+                            com.mlbb.scrim.data.model.LfgPost(
+                                id = "2", playerId = "p2", playerName = "TankMaster",
+                                role = com.mlbb.scrim.data.model.GameRole.TANK,
+                                region = com.mlbb.scrim.data.model.Region.EU,
+                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.INTERMEDIATE,
+                                message = "Tank main, experienced in team play. Available evenings."
+                            ),
+                            com.mlbb.scrim.data.model.LfgPost(
+                                id = "3", playerId = "p3", playerName = "SupportGoddess",
+                                role = com.mlbb.scrim.data.model.GameRole.SUPPORT,
+                                region = com.mlbb.scrim.data.model.Region.NA,
+                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.PRO,
+                                message = "Pro support player, shot-caller, looking for a serious team."
+                            )
+                        ),
+                        isLoading = false,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
@@ -325,7 +534,11 @@ fun AuthNavigation(
                                 navController.popBackStack()
                             },
                             onInvitePlayer = {
-                                // TODO: Show invite dialog or copy link
+                                // Show invite dialog with copy link option
+                                showInviteDialog = true
+                            },
+                            onAddPlayer = { name, email, role ->
+                                teamViewModel.addPlayer(teamId, name, email)
                             }
                         )
                     }
@@ -344,8 +557,8 @@ fun AuthNavigation(
                         onNavigateToScrimDetail = { scrim ->
                             navController.navigate(Screen.ScrimDetail.createRoute(scrim.id))
                         },
-                        onSearch = { gameMode, region, skillLevel, status ->
-                            scrimViewModel.searchScrims(gameMode, region, skillLevel, status)
+                        onSearch = { query, gameMode, region, skillLevel, status ->
+                            scrimViewModel.searchScrims(query, gameMode, region, skillLevel, status)
                         },
                         onRefresh = {
                             scrimViewModel.loadScrims()
@@ -361,7 +574,7 @@ fun AuthNavigation(
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onCreateScrim = { gameMode, region, skillLevel, scheduledTime, description ->
+                        onCreateScrim = { gameMode, region, skillLevel, bestOf, scheduledTime, description ->
                             scrimViewModel.createScrim(
                                 teamId = teams.firstOrNull()?.id ?: "",
                                 teamName = teams.firstOrNull()?.name ?: "My Team",
@@ -369,6 +582,7 @@ fun AuthNavigation(
                                 gameMode = gameMode,
                                 region = region,
                                 skillLevel = skillLevel,
+                                bestOf = bestOf,
                                 scheduledTime = scheduledTime,
                                 description = description
                             )
@@ -387,42 +601,101 @@ fun AuthNavigation(
                     val scrimId = backStackEntry.arguments?.getString("scrimId") ?: ""
                     val scrim = scrims.find { it.id == scrimId }
                     if (scrim != null) {
+                        val myTeam = teams.firstOrNull()
+                        val isTeamLeader = myTeam?.leaderId == userProfile?.email
+                        val teamHasMinPlayers = myTeam?.meetsMinPlayers ?: false
+
                         ScrimDetailScreen(
                             scrim = scrim,
                             currentUserId = userProfile?.email ?: "",
-                            applicantTeamId = teams.firstOrNull()?.id,
-                            applicantTeamName = teams.firstOrNull()?.name,
+                            currentUserTeamId = myTeam?.id,
+                            currentUserTeamName = myTeam?.name,
+                            isTeamLeader = isTeamLeader,
+                            teamHasMinPlayers = teamHasMinPlayers,
                             onNavigateBack = {
                                 navController.popBackStack()
                             },
-                            onJoinScrim = { sid ->
-                                scrimViewModel.joinScrim(sid, userProfile?.email ?: "")
-                            },
-                            onLeaveScrim = { sid ->
-                                scrimViewModel.leaveScrim(sid, userProfile?.email ?: "")
-                            },
                             onApplyScrim = { appliedScrim ->
-                                val myTeam = teams.firstOrNull()
-                                if (myTeam != null) {
-                                    messageViewModel.sendApplyMessage(
+                                if (myTeam != null && isTeamLeader && teamHasMinPlayers) {
+                                    scrimViewModel.applyToScrim(
                                         scrimId = appliedScrim.id,
-                                        scrimTitle = "${appliedScrim.teamName} - ${appliedScrim.gameMode.name}",
-                                        applicantId = userProfile?.email ?: "",
-                                        applicantName = userProfile?.username ?: "",
                                         applicantTeamId = myTeam.id,
                                         applicantTeamName = myTeam.name,
-                                        scrimCreatorId = appliedScrim.teamLeader,
-                                        scrimCreatorName = appliedScrim.teamLeader,
-                                        scrimCreatorTeamId = appliedScrim.teamId,
-                                        scrimCreatorTeamName = appliedScrim.teamName,
-                                        teamPlayerCount = myTeam.players.size,
-                                        teamMaxPlayers = myTeam.maxPlayers
+                                        applicantTeamLeader = myTeam.leaderId,
+                                        applicantTeamLeaderName = userProfile?.username ?: ""
                                     )
-                                    navController.navigate(Screen.MessageList.route)
                                 }
+                            },
+                            onApproveApplication = { sid, appId ->
+                                val convId = java.util.UUID.randomUUID().toString()
+                                scrimViewModel.approveApplication(sid, appId, convId)
+                                // Create conversation for the two team leaders
+                                messageViewModel.sendApplyMessage(
+                                    scrimId = sid,
+                                    scrimTitle = scrim.teamName,
+                                    applicantId = userProfile?.email ?: "",
+                                    applicantName = userProfile?.username ?: "",
+                                    applicantTeamId = myTeam?.id ?: "",
+                                    applicantTeamName = myTeam?.name ?: "",
+                                    scrimCreatorId = scrim.teamLeader,
+                                    scrimCreatorName = scrim.teamLeader,
+                                    scrimCreatorTeamId = scrim.teamId,
+                                    scrimCreatorTeamName = scrim.teamName,
+                                    teamPlayerCount = myTeam?.players?.size ?: 0,
+                                    teamMaxPlayers = myTeam?.maxPlayers ?: 7
+                                )
+                            },
+                            onRejectApplication = { sid, appId ->
+                                scrimViewModel.rejectApplication(sid, appId)
+                            },
+                            onCancelApplication = { sid, appId ->
+                                scrimViewModel.cancelApplication(sid, appId)
                             },
                             onCancelScrim = { sid ->
                                 scrimViewModel.cancelScrim(sid)
+                            },
+                            onNavigateToChat = { convId ->
+                                navController.navigate(Screen.Chat.createRoute(convId))
+                            },
+                            onNavigateToRoster = { sid, tid ->
+                                navController.navigate(Screen.ScrimRoster.createRoute(sid, tid))
+                            },
+                            onMarkReady = { sid, tid ->
+                                scrimViewModel.markReady(sid, tid)
+                            },
+                            onUploadScreenshot = { sid, tid, url ->
+                                scrimViewModel.uploadScreenshot(sid, tid, url)
+                            },
+                            onCompleteScrim = { sid, winnerId ->
+                                scrimViewModel.completeScrim(sid, winnerId)
+                            }
+                        )
+                    }
+                }
+
+                composable(
+                    route = Screen.ScrimRoster.route,
+                    arguments = listOf(
+                        androidx.navigation.navArgument("scrimId") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("teamId") { type = androidx.navigation.NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val scrimId = backStackEntry.arguments?.getString("scrimId") ?: ""
+                    val teamId = backStackEntry.arguments?.getString("teamId") ?: ""
+                    val scrim = scrims.find { it.id == scrimId }
+                    val team = teams.find { it.id == teamId }
+                    if (scrim != null && team != null) {
+                        val isTeamA = scrim.teamId == teamId
+                        val existingRoster = if (isTeamA) scrim.teamARoster else scrim.teamBRoster
+                        ScrimRosterScreen(
+                            teamName = team.name,
+                            teamId = teamId,
+                            players = team.players,
+                            existingRoster = existingRoster,
+                            onNavigateBack = { navController.popBackStack() },
+                            onConfirmRoster = { roster ->
+                                scrimViewModel.setScrimRoster(scrimId, teamId, roster)
+                                navController.popBackStack()
                             }
                         )
                     }
@@ -568,6 +841,7 @@ fun AuthNavigation(
                     LeaderboardScreen(
                         entries = leaderboard,
                         isLoading = leaderboardIsLoading,
+                        error = leaderboardError,
                         selectedTier = leaderboardTier,
                         onTierFilter = { tier ->
                             leaderboardViewModel.filterByTier(tier)
@@ -577,6 +851,9 @@ fun AuthNavigation(
                         },
                         onRefresh = {
                             leaderboardViewModel.loadLeaderboard()
+                        },
+                        onDismissError = {
+                            leaderboardViewModel.clearError()
                         }
                     )
                 }
@@ -586,16 +863,35 @@ fun AuthNavigation(
                         onNavigateBack = {
                             navController.popBackStack()
                         },
+                        onDeleteAccount = {
+                            viewModel.signOut()
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Home.route) { inclusive = true }
+                            }
+                        },
+                        context = context,
                         notificationsEnabled = notificationsEnabled,
                         matchNotifications = matchNotifications,
                         messageNotifications = messageNotifications,
                         soundEnabled = soundEnabled,
                         vibrationEnabled = vibrationEnabled,
+                        languageCode = languageCode,
+                        darkMode = darkMode,
                         onToggleNotifications = { settingsViewModel.toggleNotifications(it) },
                         onToggleMatchNotifications = { settingsViewModel.toggleMatchNotifications(it) },
                         onToggleMessageNotifications = { settingsViewModel.toggleMessageNotifications(it) },
                         onToggleSound = { settingsViewModel.toggleSound(it) },
-                        onToggleVibration = { settingsViewModel.toggleVibration(it) }
+                        onToggleVibration = { settingsViewModel.toggleVibration(it) },
+                        onSetLanguage = { code ->
+                            settingsViewModel.setLanguage(code)
+                            // Restart activity to apply new locale
+                            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                            (context as? android.app.Activity)?.finish()
+                        },
+                        onToggleDarkMode = { settingsViewModel.toggleDarkMode(it) },
+                        onLogout = { viewModel.signOut() }
                     )
                 }
 
@@ -631,7 +927,7 @@ fun AuthNavigation(
                             navController.popBackStack()
                         },
                         onJoinTeam = {
-                            // TODO: Actually join team via repository
+                            // Join team - mock implementation
                             navController.popBackStack()
                         }
                     )
@@ -641,6 +937,7 @@ fun AuthNavigation(
                     NotificationScreen(
                         notifications = notifications,
                         isLoading = notificationIsLoading,
+                        error = notificationError,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -652,6 +949,12 @@ fun AuthNavigation(
                         },
                         onDelete = { id ->
                             notificationViewModel.deleteNotification(id)
+                        },
+                        onRefresh = {
+                            notificationViewModel.loadNotifications()
+                        },
+                        onDismissError = {
+                            notificationViewModel.clearError()
                         }
                     )
                 }
@@ -675,6 +978,39 @@ fun AuthNavigation(
                         }
                     )
                 }
+
+                composable(Screen.News.route) {
+                    NewsScreen(
+                        viewModel = newsViewModel,
+                        languageCode = languageCode
+                    )
+                }
+            }
+            
+            // Invite Dialog
+            if (showInviteDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showInviteDialog = false },
+                    title = { Text("Invite Player") },
+                    text = { Text("Share invite link with other players to join your team.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { 
+                                showInviteDialog = false
+                                // Copy link functionality would go here
+                            }
+                        ) {
+                            Text("Copy Link")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showInviteDialog = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
         }
     }
