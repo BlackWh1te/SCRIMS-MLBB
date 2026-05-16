@@ -155,6 +155,18 @@ class SupabaseAuthRepository(
     override suspend fun sendOtp(email: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
+            // Check if MLBB ID is already taken or banned
+            val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+            if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                val profile = checkResponse.body()!!.first()
+                if (profile.isBanned) {
+                    emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
+                } else {
+                    emit(AuthResult.Error("This Game ID is already linked to another account."))
+                }
+                return@flow
+            }
+
             pendingUsername = username
             pendingInGameId = inGameId
             val response = otpApi.sendOtp(SendOtpBackendRequest(email))
@@ -226,6 +238,18 @@ class SupabaseAuthRepository(
     override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
+            // Check if MLBB ID is already taken or banned
+            val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+            if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                val profile = checkResponse.body()!!.first()
+                if (profile.isBanned) {
+                    emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
+                } else {
+                    emit(AuthResult.Error("This Game ID is already linked to another account."))
+                }
+                return@flow
+            }
+
             val response = authApi.signUp(SignUpRequest(
                 email = email,
                 password = password,
@@ -242,17 +266,15 @@ class SupabaseAuthRepository(
                         }
                     }
 
-                    // Create profile in database (trigger should auto-create, but let's ensure)
+                    // Update profile in database (trigger auto-creates, we just update it)
                     authData.user.id.let { userId ->
                         try {
-                            api.createProfile(ProfileDto(
-                                id = userId,
-                                username = username,
-                                email = email,
-                                mlbbId = inGameId
+                            api.updateProfile(PostgrestFilter.eq(userId), mapOf(
+                                "username" to username,
+                                "email" to email,
+                                "mlbb_id" to inGameId
                             ))
                         } catch (_: Exception) {
-                            // Profile may already exist from trigger
                         }
                     }
 

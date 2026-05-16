@@ -372,6 +372,12 @@ interface SupabaseApiService {
         @Query("select") select: String = "*"
     ): Response<List<ProfileDto>>
 
+    @GET("profiles")
+    suspend fun getProfileByMlbbId(
+        @Query("mlbb_id") mlbbId: String,
+        @Query("select") select: String = "id,is_banned"
+    ): Response<List<ProfileDto>>
+
     @POST("profiles")
     suspend fun createProfile(@Body profile: ProfileDto): Response<List<ProfileDto>>
 
