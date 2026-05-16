@@ -24,10 +24,13 @@ import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.MatchResult
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.EmptyState
 import com.mlbb.scrim.ui.components.SectionHeader
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -60,7 +63,7 @@ fun MatchResultListScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Match History",
+                        text = stringResource(R.string.match_history_title),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -87,50 +90,60 @@ fun MatchResultListScreen(
                 }
             }
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
-            } else if (matchResults.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    EmptyState(
-                        icon = Icons.Default.SportsEsports,
-                        title = "No matches yet",
-                        subtitle = "Complete a scrim to see match results here."
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
-                ) {
-                    item {
-                        SectionHeader(
-                            title = "Recent Matches (${matchResults.size})"
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+            PullToRefreshContainer(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    isLoading && matchResults.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = GoldPrimary)
+                        }
                     }
-
-                    itemsIndexed(matchResults) { index, result ->
-                        AnimatedEntrance(delayMillis = index * 80) {
-                            MatchResultCard(
-                                matchResult = result,
-                                onClick = { onNavigateToMatchResultDetail(result) },
-                                onReportClick = onNavigateToReportResult?.let { cb ->
-                                    { cb(result) }
-                                },
-                                currentUserTeamId = currentUserTeamId
+                    matchResults.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyState(
+                                icon = Icons.Default.SportsEsports,
+                                title = "No matches yet",
+                                subtitle = "Complete a scrim to see match results here."
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp)
+                        ) {
+                            item {
+                                SectionHeader(
+                                    title = "Recent Matches (${matchResults.size})"
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+
+                            itemsIndexed(matchResults) { index, result ->
+                                AnimatedEntrance(delayMillis = index * 60) {
+                                    MatchResultCard(
+                                        matchResult = result,
+                                        onClick = { onNavigateToMatchResultDetail(result) },
+                                        onReportClick = onNavigateToReportResult?.let { cb ->
+                                            { cb(result) }
+                                        },
+                                        currentUserTeamId = currentUserTeamId
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -183,7 +196,7 @@ private fun MatchResultCard(
                 )
 
                 Text(
-                    text = "VS",
+                    text = stringResource(R.string.vs_label),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -250,7 +263,7 @@ private fun MatchResultCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Report Result",
+                        text = stringResource(R.string.report_result),
                         color = GoldPrimary,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -289,7 +302,7 @@ private fun TeamNameWithStatus(
         if (hasReported) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "reported",
+                text = stringResource(R.string.reported),
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 10.sp,
                     color = SuccessGreen.copy(alpha = 0.8f)
@@ -317,6 +330,8 @@ private fun statusColor(status: VerificationStatus): Color {
         VerificationStatus.CONFIRMED -> SuccessGreen
         VerificationStatus.DISPUTED -> ErrorRed
         VerificationStatus.ADMIN_REVIEW -> Purple
+        VerificationStatus.AUTO_CANCELLED -> ErrorRed
+        VerificationStatus.ADMIN_RESOLVED -> LightGray
     }
 }
 
@@ -326,6 +341,8 @@ private fun formatStatus(status: VerificationStatus): String {
         VerificationStatus.CONFIRMED -> "Confirmed"
         VerificationStatus.DISPUTED -> "Disputed"
         VerificationStatus.ADMIN_REVIEW -> "Review"
+        VerificationStatus.AUTO_CANCELLED -> "Cancelled"
+        VerificationStatus.ADMIN_RESOLVED -> "Resolved"
     }
 }
 

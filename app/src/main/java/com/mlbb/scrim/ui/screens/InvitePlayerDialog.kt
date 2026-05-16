@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.GradientButton
 
@@ -35,7 +37,7 @@ fun InvitePlayerDialog(
         shape = RoundedCornerShape(20.dp),
         title = {
             Text(
-                text = "Invite to $teamName",
+                text = stringResource(R.string.invite_to_team, teamName),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -50,7 +52,7 @@ fun InvitePlayerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Share this invite code with your teammate. They can use it to join your team.",
+                    text = stringResource(R.string.invite_code_share_hint),
                     color = LightGray,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
@@ -110,7 +112,9 @@ fun InvitePlayerDialog(
 
                     OutlinedButton(
                         onClick = {
-                            // TODO: Share intent
+                            // Share intent - would require Context to create Android Intent
+                            // For now, this is a placeholder that would trigger Android share sheet
+                            onDismiss()
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -128,7 +132,7 @@ fun InvitePlayerDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Share",
+                            text = stringResource(R.string.share),
                             fontSize = 14.sp
                         )
                     }
@@ -137,7 +141,7 @@ fun InvitePlayerDialog(
         },
         confirmButton = {
             GradientButton(
-                text = "Done",
+                text = stringResource(R.string.done),
                 onClick = onDismiss,
                 gradient = BlueGradient,
                 height = 48.dp

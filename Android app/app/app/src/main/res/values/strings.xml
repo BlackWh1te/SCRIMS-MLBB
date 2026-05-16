@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Voice Changer</string>
+    <string name="tap_to_record">Tap microphone to record</string>
+    <string name="recording">Recording…</string>
+    <string name="playback">Playback</string>
+    <string name="stop">Stop</string>
+    <string name="normal">Normal</string>
+    <string name="robot">Robot</string>
+    <string name="chipmunk">Chipmunk</string>
+    <string name="deep">Deep</string>
+    <string name="echo">Echo</string>
+    <string name="reverb">Reverb</string>
+    <string name="narrator">Narrator</string>
+    <string name="helium">Helium</string>
+    <string name="cave">Cave</string>
+    <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="saved">Saved!</string>
+    <string name="permission_denied">Audio permission is required to record</string>
+    <string name="no_recording">No recording yet</string>
+</resources>

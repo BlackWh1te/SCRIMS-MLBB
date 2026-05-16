@@ -6,23 +6,102 @@ import com.mlbb.scrim.data.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-// Mock AuthRepository for UI testing without Supabase
-// TODO: Replace with actual Supabase implementation when dependencies are resolved
-class AuthRepository {
-    
+/**
+ * Authentication repository handling user sign-up, sign-in, and profile management.
+ *
+ * Current implementation: In-memory mock for UI development and testing.
+ * Next step: Integrate with Supabase Auth (see SupabaseClient.kt for configuration).
+ * The Supabase dependencies are prepared in build.gradle.kts and ready to be enabled.
+ */
+class AuthRepository : AuthRepositoryInterface {
+
+    companion object {
+        /** Unverified accounts are auto-deleted after 1 hour. */
+        const val VERIFICATION_WINDOW_MS = 3_600_000L // 1 hour
+    }
+
     private var currentUser: String? = null
     private var userProfile: UserProfile? = null
-    
+
     init {
         // Reset to logged out state on initialization
         currentUser = null
         userProfile = null
     }
+
+    /**
+     * Returns true if the unverified account has exceeded the 1-hour window.
+     */
+    override fun isVerificationExpired(): Boolean {
+        val profile = userProfile ?: return false
+        if (profile.emailVerified) return false
+        val elapsed = System.currentTimeMillis() - profile.createdAt
+        return elapsed > VERIFICATION_WINDOW_MS
+    }
+
+    /**
+     * Returns remaining seconds before the unverified account is auto-deleted.
+     * Returns 0 if already expired or not applicable.
+     */
+    override fun secondsUntilDeletion(): Long {
+        val profile = userProfile ?: return 0L
+        if (profile.emailVerified) return 0L
+        val elapsed = System.currentTimeMillis() - profile.createdAt
+        val remaining = VERIFICATION_WINDOW_MS - elapsed
+        return if (remaining > 0) remaining / 1000 else 0L
+    }
+
+    /**
+     * Deletes the unverified account if the verification window has expired.
+     * Returns true if the account was deleted.
+     */
+    override fun purgeIfExpired(): Boolean {
+        if (isVerificationExpired()) {
+            currentUser = null
+            userProfile = null
+            return true
+        }
+        return false
+    }
     
-    suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
+    override suspend fun sendOtp(email: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
-        kotlinx.coroutines.delay(1000) // Simulate network delay
-        
+        kotlinx.coroutines.delay(800)
+        if (email.contains("@")) {
+            currentUser = email
+            userProfile = UserProfile(
+                id = java.util.UUID.randomUUID().toString(),
+                username = username,
+                email = email,
+                inGameId = inGameId,
+                xp = 2450,
+                totalMatches = 12,
+                wins = 8,
+                losses = 4,
+                currentTier = RankTier.GOLD,
+                emailVerified = false
+            )
+            emit(AuthResult.EmailNotVerified(email))
+        } else {
+            emit(AuthResult.Error("Invalid email address"))
+        }
+    }
+
+    override suspend fun verifyOtp(email: String, token: String, password: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(1000)
+        if (token.length == 6 && token.all { it.isDigit() }) {
+            userProfile = userProfile?.copy(emailVerified = true)
+            emit(AuthResult.Success)
+        } else {
+            emit(AuthResult.Error("Invalid code. Please enter the 6-digit code from your email."))
+        }
+    }
+
+    override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(1200) // Simulate network delay
+
         // Mock validation
         if (email.contains("@") && password.length >= 6 && username.isNotBlank()) {
             currentUser = email
@@ -35,21 +114,22 @@ class AuthRepository {
                 totalMatches = 12,
                 wins = 8,
                 losses = 4,
-                currentTier = RankTier.GOLD
+                currentTier = RankTier.GOLD,
+                emailVerified = false
             )
-            emit(AuthResult.Success)
+            // Require email verification before full access
+            emit(AuthResult.EmailNotVerified(email))
         } else {
             emit(AuthResult.Error("Invalid email, password (min 6 characters), or username"))
         }
     }
-    
-    suspend fun signIn(email: String, password: String): Flow<AuthResult> = flow {
+
+    override suspend fun signIn(email: String, password: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(1000) // Simulate network delay
-        
+
         // Mock validation - accept any valid email format
         if (email.contains("@") && password.length >= 6) {
-            currentUser = email
             // Set a mock profile on sign in if none exists
             if (userProfile == null) {
                 userProfile = UserProfile(
@@ -61,31 +141,77 @@ class AuthRepository {
                     totalMatches = 12,
                     wins = 8,
                     losses = 4,
-                    currentTier = RankTier.GOLD
+                    currentTier = RankTier.GOLD,
+                    emailVerified = true // Assume verified for mock sign-in flow
                 )
             }
-            emit(AuthResult.Success)
+            currentUser = email
+
+            // Check if email is verified before allowing access
+            if (userProfile?.emailVerified == false) {
+                emit(AuthResult.EmailNotVerified(email))
+            } else {
+                emit(AuthResult.Success)
+            }
         } else {
             emit(AuthResult.Error("Invalid email or password"))
         }
     }
+
+    /**
+     * Simulates confirming the email via a confirmation link.
+     * In a real Supabase app, this would be triggered by a deep link
+     * when the user taps the confirmation email.
+     * If the 1-hour window has expired, the account is deleted.
+     */
+    override suspend fun confirmEmail(): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(800)
+        if (purgeIfExpired()) {
+            emit(AuthResult.Error("Verification window expired. Your account has been deleted. Please sign up again."))
+            return@flow
+        }
+        userProfile = userProfile?.copy(emailVerified = true)
+        emit(AuthResult.Success)
+    }
+
+    /**
+     * Simulates resending the confirmation email.
+     * In a real Supabase app, this calls auth.resend().
+     */
+    override suspend fun resendVerificationEmail(email: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(1000)
+        emit(AuthResult.Success)
+    }
     
-    suspend fun signOut(): Flow<AuthResult> = flow {
+    override suspend fun signOut(): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(500) // Simulate network delay
         currentUser = null
         userProfile = null
         emit(AuthResult.Success)
     }
+
+    override suspend fun deleteAccount(): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(800) // Simulate network delay
+        currentUser = null
+        userProfile = null
+        emit(AuthResult.Success)
+    }
     
-    suspend fun updateProfile(username: String, inGameId: String): Flow<AuthResult> = flow {
+    override suspend fun updateProfile(username: String, inGameId: String, role: String?, bio: String?, mainHeroes: List<String>?): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(500) // Simulate network delay
 
         if (userProfile != null) {
             userProfile = userProfile!!.copy(
                 username = username,
-                inGameId = inGameId
+                inGameId = inGameId,
+                role = role ?: userProfile!!.role,
+                bio = bio ?: userProfile!!.bio,
+                mainHeroes = mainHeroes ?: userProfile!!.mainHeroes
             )
             emit(AuthResult.Success)
         } else {
@@ -93,7 +219,15 @@ class AuthRepository {
         }
     }
 
-    suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
+    override suspend fun updateAvatar(avatarUrl: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(500)
+
+        // Avatar feature not implemented in current UserProfile model
+        emit(AuthResult.Error("Avatar update not supported"))
+    }
+
+    override suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
 
@@ -119,7 +253,7 @@ class AuthRepository {
         emit(AuthResult.Success)
     }
 
-    suspend fun updatePassword(currentPassword: String, newPassword: String, confirmPassword: String): Flow<AuthResult> = flow {
+    override suspend fun updatePassword(currentPassword: String, newPassword: String, confirmPassword: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
 
@@ -152,15 +286,21 @@ class AuthRepository {
         emit(AuthResult.Success)
     }
 
-    fun getCurrentUser(): String? {
+    override fun getCurrentUser(): String? {
         return currentUser
     }
     
-    fun getUserProfile(): UserProfile? {
+    override suspend fun getUserProfile(): UserProfile? {
         return userProfile
     }
     
-    fun isLoggedIn(): Boolean {
+    override fun isLoggedIn(): Boolean {
+        purgeIfExpired() // silently clean up expired unverified accounts
         return currentUser != null
+    }
+
+    override suspend fun updateLocationAndLastSeen() {
+        // Mock implementation: do nothing for the local mock repo
+        kotlinx.coroutines.delay(100)
     }
 }

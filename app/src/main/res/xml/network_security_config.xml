@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Base configuration: release builds trust only system CAs (P3-3 FIX) -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- P3-3 FIX: 'user' certificates removed from release config.
+                 Trusting user CAs in production enables MITM via proxy cert injection.
+                 User certs are still allowed in debug-overrides below for development. -->
+        </trust-anchors>
+    </base-config>
+
+    <!-- Supabase domain configuration with certificate pinning -->
+    <domain-config>
+        <domain includeSubdomains="true">supabase.co</domain>
+        <domain includeSubdomains="true">efhbyrhxtsadbqjsfogc.supabase.co</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- Add your Supabase certificate pinning here for additional security -->
+            <!-- <certificates src="@raw/supabase_certificate" /> -->
+        </trust-anchors>
+        <!-- TODO: Pin the Supabase certificate (get the actual hash from Supabase) -->
+        <!-- For production, uncomment and fill in when certificate pinning is configured:
+        <pin-set>
+            <pin digest="SHA-256">BASE64_HASH_HERE</pin>
+        </pin-set>
+        -->
+    </domain-config>
+
+    <!-- Local development backend on the Android emulator -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+
+    <!-- Debug configuration: allow cleartext for debugging only -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

@@ -7,11 +7,20 @@ import com.mlbb.scrim.data.preferences.AppSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appSettings = AppSettings(application.applicationContext)
+
+    private var toggleNotificationsJob: Job? = null
+    private var toggleMatchNotificationsJob: Job? = null
+    private var toggleMessageNotificationsJob: Job? = null
+    private var toggleSoundJob: Job? = null
+    private var toggleVibrationJob: Job? = null
+    private var setLanguageJob: Job? = null
+    private var toggleDarkModeJob: Job? = null
 
     private val _notificationsEnabled = MutableStateFlow(true)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
@@ -27,6 +36,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _vibrationEnabled = MutableStateFlow(true)
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
+
+    private val _languageCode = MutableStateFlow("en")
+    val languageCode: StateFlow<String> = _languageCode.asStateFlow()
+
+    private val _darkMode = MutableStateFlow(true)
+    val darkMode: StateFlow<Boolean> = _darkMode.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -44,25 +59,46 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             appSettings.vibrationEnabled.collect { _vibrationEnabled.value = it }
         }
+        viewModelScope.launch {
+            appSettings.languageCode.collect { _languageCode.value = it }
+        }
+        viewModelScope.launch {
+            appSettings.darkMode.collect { _darkMode.value = it }
+        }
     }
 
     fun toggleNotifications(enabled: Boolean) {
-        viewModelScope.launch { appSettings.setNotifications(enabled) }
+        toggleNotificationsJob?.cancel()
+        toggleNotificationsJob = viewModelScope.launch { appSettings.setNotifications(enabled) }
     }
 
     fun toggleMatchNotifications(enabled: Boolean) {
-        viewModelScope.launch { appSettings.setMatchNotifications(enabled) }
+        toggleMatchNotificationsJob?.cancel()
+        toggleMatchNotificationsJob = viewModelScope.launch { appSettings.setMatchNotifications(enabled) }
     }
 
     fun toggleMessageNotifications(enabled: Boolean) {
-        viewModelScope.launch { appSettings.setMessageNotifications(enabled) }
+        toggleMessageNotificationsJob?.cancel()
+        toggleMessageNotificationsJob = viewModelScope.launch { appSettings.setMessageNotifications(enabled) }
     }
 
     fun toggleSound(enabled: Boolean) {
-        viewModelScope.launch { appSettings.setSound(enabled) }
+        toggleSoundJob?.cancel()
+        toggleSoundJob = viewModelScope.launch { appSettings.setSound(enabled) }
     }
 
     fun toggleVibration(enabled: Boolean) {
-        viewModelScope.launch { appSettings.setVibration(enabled) }
+        toggleVibrationJob?.cancel()
+        toggleVibrationJob = viewModelScope.launch { appSettings.setVibration(enabled) }
+    }
+
+    fun setLanguage(code: String) {
+        setLanguageJob?.cancel()
+        setLanguageJob = viewModelScope.launch { appSettings.setLanguageCode(code) }
+    }
+
+    fun toggleDarkMode(enabled: Boolean) {
+        toggleDarkModeJob?.cancel()
+        toggleDarkModeJob = viewModelScope.launch { appSettings.setDarkMode(enabled) }
     }
 }

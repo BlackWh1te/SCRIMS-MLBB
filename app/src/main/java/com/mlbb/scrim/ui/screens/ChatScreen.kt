@@ -3,9 +3,11 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,44 +15,52 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
 import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
-import com.mlbb.scrim.data.model.Player
 import com.mlbb.scrim.data.model.Team
-import com.mlbb.scrim.ui.theme.*
-import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
-import com.mlbb.scrim.ui.components.GradientButton
+import com.mlbb.scrim.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun ChatScreen(
-    conversation: Conversation,
-    currentUserId: String,
-    currentUserName: String,
-    onNavigateBack: () -> Unit,
-    onSendMessage: (String) -> Unit,
-    onViewTeamInfo: (teamId: String, teamName: String) -> Unit,
-    isLoading: Boolean = false,
-    teamInfo: Team? = null
+    conversation    : Conversation,
+    currentUserId   : String,
+    currentUserName : String,
+    onNavigateBack  : () -> Unit,
+    onSendMessage   : (String) -> Unit,
+    onSendImage     : () -> Unit,
+    onSendVoice     : () -> Unit,
+    onUpdateTyping  : (Boolean) -> Unit,
+    onViewTeamInfo  : (teamId: String, teamName: String) -> Unit,
+    isLoading       : Boolean = false,
+    teamInfo        : Team? = null
 ) {
     var messageText by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
+    val listState   = rememberLazyListState()
+    val scope       = rememberCoroutineScope()
 
     LaunchedEffect(conversation.messages.size) {
         if (conversation.messages.isNotEmpty()) {
@@ -58,10 +68,21 @@ fun ChatScreen(
         }
     }
 
+    LaunchedEffect(messageText) {
+        if (messageText.isNotEmpty()) {
+            onUpdateTyping(true)
+            kotlinx.coroutines.delay(3000)
+            onUpdateTyping(false)
+        } else {
+            onUpdateTyping(false)
+        }
+    }
+
     val isCurrentUserParticipantA = conversation.participantAId == currentUserId
-    val otherName = if (isCurrentUserParticipantA) conversation.participantBName else conversation.participantAName
-    val otherTeam = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
+    val otherName   = if (isCurrentUserParticipantA) conversation.participantBName  else conversation.participantAName
+    val otherTeam   = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
     val otherTeamId = if (isCurrentUserParticipantA) conversation.participantBTeamId else conversation.participantATeamId
+    val isOtherTyping = conversation.isOtherTyping(currentUserId)
 
     Box(
         modifier = Modifier
@@ -69,472 +90,591 @@ fun ChatScreen(
             .background(brush = heroGradientBrush())
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            AnimatedEntrance(delayMillis = 0) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .padding(top = 20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        GlassBackButton(onClick = onNavigateBack)
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = otherName,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = White
-                                )
-                            )
-                            Text(
-                                text = otherTeam,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 12.sp,
-                                    color = BluePrimary
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(44.dp))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = conversation.scrimTitle,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 12.sp,
-                            color = MidGray,
-                            textAlign = TextAlign.Center
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // Messages
-            LazyColumn(
+            // ── Header ──────────────────────────────────────────
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-                state = listState,
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .statusBarsPadding()
+                    .drawBehind {
+                        // Bottom separator line
+                        drawLine(
+                            color       = GlassBorder,
+                            start       = Offset(0f, size.height),
+                            end         = Offset(size.width, size.height),
+                            strokeWidth = 1f
+                        )
+                    }
+                    .background(DarkNavy.copy(alpha = 0.92f))
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                items(conversation.messages, key = { it.id }) { message ->
-                    MessageBubble(
-                        message = message,
-                        isFromMe = message.senderId == currentUserId,
-                        onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
-                    )
-                }
-            }
-
-            // Team Info Card (if available)
-            if (teamInfo != null) {
-                TeamInfoCard(
-                    team = teamInfo,
-                    onViewTeamInfo = { onViewTeamInfo(teamInfo.id, teamInfo.name) }
-                )
-            }
-
-            // Input
-            AnimatedEntrance(delayMillis = 0) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                        .padding(bottom = 8.dp),
+                    modifier          = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        placeholder = {
+                    // Back
+                    GlassBackButton(onClick = onNavigateBack)
+
+                    Spacer(Modifier.width(12.dp))
+
+                    // Avatar
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    brush = Brush.linearGradient(BlueGradient),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Type a message...",
-                                color = MidGray
+                                text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                color      = White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize   = 18.sp
                             )
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GoldPrimary,
-                            unfocusedBorderColor = White.copy(alpha = 0.2f),
-                            focusedContainerColor = DarkNavy,
-                            unfocusedContainerColor = DarkNavy,
-                            focusedTextColor = White,
-                            unfocusedTextColor = White,
-                            cursorColor = GoldPrimary
-                        ),
-                        shape = RoundedCornerShape(20.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                if (messageText.isNotBlank()) {
-                                    onSendMessage(messageText)
-                                    messageText = ""
+                        }
+                        // Online dot
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .align(Alignment.BottomEnd)
+                                .background(DarkNavy, CircleShape)
+                                .padding(2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(SuccessGreen, CircleShape)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text     = otherName,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color    = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        AnimatedContent(
+                            targetState = isOtherTyping,
+                            label       = "typingStatus",
+                            transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) }
+                        ) { typing ->
+                            if (typing) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TypingDots()
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("typing…", fontSize = 12.sp, color = GoldPrimary)
                                 }
+                            } else {
+                                Text(
+                                    text     = if (otherTeam.isNotBlank()) otherTeam else "Online",
+                                    fontSize = 12.sp,
+                                    color    = SuccessGreen,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                        ),
-                        maxLines = 3
-                    )
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    IconButton(
-                        onClick = {
-                            if (messageText.isNotBlank()) {
-                                onSendMessage(messageText)
-                                messageText = ""
-                            }
-                        },
+                    // Info button
+                    Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(colors = GoldGradient),
-                                shape = CircleShape
-                            )
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceOverlay)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .clickable { onViewTeamInfo(otherTeamId, otherTeam) },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Send",
-                            tint = DarkBlue,
-                            modifier = Modifier.size(22.dp)
+                            Icons.Default.Info, null,
+                            tint     = TextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun MessageBubble(
-    message: Message,
-    isFromMe: Boolean,
-    onViewTeamInfo: () -> Unit
-) {
-    val backgroundColor = when (message.type) {
-        MessageType.SYSTEM -> DarkSurface.copy(alpha = 0.6f)
-        MessageType.APPLY -> DarkSurface.copy(alpha = 0.9f)
-        else -> if (isFromMe) BluePrimary else DarkSurface
-    }
-
-    val textColor = when (message.type) {
-        MessageType.SYSTEM -> MidGray
-        MessageType.APPLY -> White
-        else -> White
-    }
-
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = when {
-            message.type == MessageType.SYSTEM -> Alignment.Center
-            isFromMe -> Alignment.CenterEnd
-            else -> Alignment.CenterStart
-        }
-    ) {
-        when (message.type) {
-            MessageType.SYSTEM -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(
-                            color = backgroundColor,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+            // ── Messages List ───────────────────────────────────
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    modifier       = Modifier.fillMaxSize(),
+                    state          = listState,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = WarningOrange,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 12.sp,
-                            color = textColor
+                    itemsIndexed(conversation.messages, key = { _, msg -> msg.id }) { index, message ->
+                        val isFromMe = message.senderId == currentUserId
+
+                        val prevMessage = if (index > 0) conversation.messages[index - 1] else null
+                        val nextMessage = if (index < conversation.messages.size - 1) conversation.messages[index + 1] else null
+
+                        val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
+                        val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
+                        val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
+
+                        if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
+
+                        MessageBubble(
+                            message        = message,
+                            isFromMe       = isFromMe,
+                            isFirstInGroup = isFirstInGroup,
+                            isLastInGroup  = isLastInGroup,
+                            onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
                         )
-                    )
+                    }
+                }
+
+                // Scroll FAB
+                val showScrollFab by remember { derivedStateOf { listState.firstVisibleItemIndex > 2 } }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible  = showScrollFab,
+                    enter    = fadeIn() + scaleIn(),
+                    exit     = fadeOut() + scaleOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 12.dp, end = 16.dp)
+                ) {
+                    SmallFloatingActionButton(
+                        onClick        = { scope.launch { listState.animateScrollToItem(conversation.messages.size - 1) } },
+                        containerColor = GoldPrimary,
+                        contentColor   = DarkBlue,
+                        shape          = CircleShape,
+                        modifier       = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
 
-            MessageType.APPLY -> {
-                Card(
+            // ── Input Area ──────────────────────────────────────
+            if (conversation.isChatOpenNow) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .shadow(
-                            elevation = 4.dp,
-                            spotColor = GoldPrimary.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    colors = CardDefaults.cardColors(containerColor = DarkNavy),
-                    shape = RoundedCornerShape(16.dp)
+                        .fillMaxWidth()
+                        .drawBehind {
+                            drawLine(
+                                color       = GlassBorder,
+                                start       = Offset(0f, 0f),
+                                end         = Offset(size.width, 0f),
+                                strokeWidth = 1f
+                            )
+                        }
+                        .background(Color(0xFF0A1525).copy(alpha = 0.97f))
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
+                    Row(
+                        modifier          = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Bottom
                     ) {
+                        // Media buttons
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(
-                                        brush = Brush.verticalGradient(colors = GoldGradient),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ),
+                                    .clip(CircleShape)
+                                    .background(SurfaceOverlay)
+                                    .border(1.dp, GlassBorder, CircleShape)
+                                    .clickable { onSendImage() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Group,
-                                    contentDescription = null,
-                                    tint = DarkBlue,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                                Icon(Icons.Outlined.Image, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Team Application",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = GoldPrimary
-                                    )
-                                )
-                                Text(
-                                    text = "From: ${message.senderName}",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                )
+                            Spacer(Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceOverlay)
+                                    .border(1.dp, GlassBorder, CircleShape)
+                                    .clickable { onSendVoice() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Mic, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(Modifier.width(8.dp))
 
-                        Divider(color = White.copy(alpha = 0.1f))
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Parse and display team info
-                        val parts = message.content.split(" | ")
-                        parts.forEach { part ->
-                            val kv = part.split(": ", limit = 2)
-                            if (kv.size == 2) {
-                                Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Text(
-                                        text = "${kv[0]}: ",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = 13.sp,
-                                            color = MidGray
-                                        )
-                                    )
-                                    Text(
-                                        text = kv[1],
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = White
-                                        )
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        GradientButton(
-                            text = "View Team Players",
-                            onClick = onViewTeamInfo,
-                            gradient = GoldGradient,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            else -> {
-                Column(horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start) {
-                    if (!isFromMe) {
-                        Text(
-                            text = message.senderName,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.sp,
-                                color = MidGray
+                        // Text field
+                        OutlinedTextField(
+                            value         = messageText,
+                            onValueChange = { messageText = it },
+                            placeholder   = {
+                                Text("Message…", color = TextTertiary, fontSize = 15.sp)
+                            },
+                            modifier      = Modifier.weight(1f),
+                            colors        = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
+                                unfocusedBorderColor    = GlassBorder,
+                                focusedContainerColor   = SurfaceOverlay,
+                                unfocusedContainerColor = SurfaceOverlay,
+                                focusedTextColor        = TextPrimary,
+                                unfocusedTextColor      = TextPrimary,
+                                cursorColor             = GoldPrimary
                             ),
-                            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                            shape         = RoundedCornerShape(22.dp),
+                            textStyle     = iOSBody.copy(fontSize = 15.sp),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(
+                                onSend = {
+                                    if (messageText.isNotBlank()) {
+                                        onSendMessage(messageText)
+                                        messageText = ""
+                                    }
+                                }
+                            ),
+                            maxLines = 5
                         )
-                    }
 
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = backgroundColor,
-                                shape = RoundedCornerShape(
-                                    topStart = if (isFromMe) 16.dp else 4.dp,
-                                    topEnd = if (isFromMe) 4.dp else 16.dp,
-                                    bottomStart = 16.dp,
-                                    bottomEnd = 16.dp
-                                )
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = message.content,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 14.sp,
-                                color = textColor
-                            )
+                        Spacer(Modifier.width(8.dp))
+
+                        // Send button
+                        val sendEnabled = messageText.isNotBlank()
+                        val sendBg by animateColorAsState(
+                            targetValue   = if (sendEnabled) GoldPrimary else SurfaceOverlay,
+                            animationSpec = tween(200),
+                            label         = "sendBg"
                         )
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(sendBg)
+                                .clickable {
+                                    if (sendEnabled) {
+                                        onSendMessage(messageText)
+                                        messageText = ""
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Send, null,
+                                tint     = if (sendEnabled) DarkBlue else TextTertiary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
-
-                    Text(
-                        text = formatChatTime(message.timestamp),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 10.sp,
-                            color = MidGray
-                        ),
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
                 }
+            } else {
+                ChatLockedOverlay(timeUntilOpens = conversation.timeUntilChatOpens)
             }
         }
     }
 }
 
+// ── Typing Indicator ────────────────────────────────────────
+
 @Composable
-private fun TeamInfoCard(
-    team: Team,
+private fun TypingDots() {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        repeat(3) { index ->
+            val alpha by infiniteTransition.animateFloat(
+                initialValue  = 0.3f,
+                targetValue   = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation  = tween(600, delayMillis = index * 200),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "dot$index"
+            )
+            Box(
+                modifier = Modifier
+                    .size(5.dp)
+                    .background(GoldPrimary.copy(alpha = alpha), CircleShape)
+            )
+        }
+    }
+}
+
+// ── Message Bubble ──────────────────────────────────────────
+
+@Composable
+private fun MessageBubble(
+    message       : Message,
+    isFromMe      : Boolean,
+    isFirstInGroup: Boolean,
+    isLastInGroup : Boolean,
     onViewTeamInfo: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
+    val topStartR = if (isFromMe || !isFirstInGroup) 18.dp else 4.dp
+    val topEndR   = if (!isFromMe || !isFirstInGroup) 18.dp else 4.dp
+    val bubbleShape = RoundedCornerShape(
+        topStart    = topStartR,
+        topEnd      = topEndR,
+        bottomStart = 18.dp,
+        bottomEnd   = 18.dp
+    )
+
+    val myBubbleBrush = Brush.linearGradient(
+        colors = listOf(BluePrimary, Color(0xFF1565C0)),
+        start  = Offset(0f, 0f),
+        end    = Offset(0f, Float.POSITIVE_INFINITY)
+    )
+
+    Box(
+        modifier         = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .shadow(
-                elevation = 6.dp,
-                spotColor = BluePrimary.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(16.dp)
+            .padding(top = if (isFirstInGroup) 8.dp else 1.dp),
+        contentAlignment = if (isFromMe) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start,
+            modifier            = Modifier.widthIn(max = 300.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Sender name for group messages
+            if (!isFromMe && isFirstInGroup) {
                 Text(
-                    text = team.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = White
-                    )
-                )
-                Text(
-                    text = "${team.players.size}/${team.maxPlayers} players",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp,
-                        color = BluePrimary
-                    )
+                    text     = message.senderName,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color    = BluePrimary,
+                    modifier = Modifier.padding(start = 12.dp, bottom = 4.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Bubble
+            Box(
+                modifier = Modifier
+                    .clip(bubbleShape)
+                    .background(
+                        if (isFromMe) myBubbleBrush
+                        else Brush.linearGradient(listOf(SurfaceCard, SurfaceCard))
+                    )
+                    .then(
+                        if (!isFromMe) Modifier.border(1.dp, GlassBorder, bubbleShape)
+                        else Modifier
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                when (message.type) {
+                    MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
+                    MessageType.VOICE -> VoiceContent(duration = message.voiceDuration ?: 0)
+                    MessageType.APPLY -> ApplyContent(message.content, onViewTeamInfo)
+                    else              -> Text(
+                        text       = message.content,
+                        color      = if (isFromMe) White else TextPrimary,
+                        fontSize   = 15.sp,
+                        lineHeight = 21.sp
+                    )
+                }
+            }
 
-            team.players.forEach { player ->
-                PlayerRow(player = player)
+            // Timestamp + read receipts
+            if (isLastInGroup) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier          = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        formatChatTime(message.timestamp),
+                        fontSize = 10.sp,
+                        color    = TextTertiary
+                    )
+                    if (isFromMe) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            imageVector        = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Done,
+                            contentDescription = null,
+                            tint               = if (message.isRead) AndroidTeal else TextTertiary,
+                            modifier           = Modifier.size(12.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// ── Media Components ────────────────────────────────────────
+
 @Composable
-private fun PlayerRow(player: Player) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+private fun ImageContent(url: String) {
+    SubcomposeAsyncImage(
+        model            = url,
+        contentDescription = "Shared image",
+        modifier         = Modifier
+            .widthIn(max = 230.dp)
+            .heightIn(max = 280.dp)
+            .clip(RoundedCornerShape(12.dp)),
+        contentScale     = ContentScale.FillWidth,
+        loading          = {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(SurfaceOverlay),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = GoldPrimary, strokeWidth = 2.dp)
+            }
+        }
+    )
+}
+
+@Composable
+private fun VoiceContent(duration: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = if (player.role == com.mlbb.scrim.data.model.PlayerRole.LEADER)
-                            GoldGradient
-                        else
-                            listOf(DarkSurface, DarkNavy)
-                    )
-                ),
+                .size(34.dp)
+                .background(White.copy(alpha = 0.18f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.PlayArrow, null, tint = White, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(10.dp))
+        // Waveform
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.width(90.dp)) {
+            val bars = listOf(6, 12, 18, 14, 20, 10, 16, 8, 22, 12, 18, 6, 14, 10, 8)
+            bars.forEach { h ->
+                Box(
+                    Modifier
+                        .width(3.dp)
+                        .height(h.dp)
+                        .clip(RoundedCornerShape(1.5.dp))
+                        .background(White.copy(alpha = 0.55f))
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text("${duration}s", fontSize = 12.sp, color = White.copy(alpha = 0.8f))
+    }
+}
+
+@Composable
+private fun ApplyContent(content: String, onView: () -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Scrim Application", fontWeight = FontWeight.Bold, color = GoldPrimary, fontSize = 13.sp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(content, color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(White.copy(alpha = 0.14f))
+                .clickable { onView() }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = White
+                "Review Application",
+                color      = White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize   = 13.sp
             )
         }
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = player.name,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 13.sp,
-                    color = White
-                )
-            )
-        }
-
-        val roleColor = when (player.role) {
-            com.mlbb.scrim.data.model.PlayerRole.LEADER -> GoldPrimary
-            com.mlbb.scrim.data.model.PlayerRole.CO_LEADER -> BluePrimary
-            else -> MidGray
-        }
-
-        Text(
-            text = player.role.name.replace("_", " "),
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = 10.sp,
-                color = roleColor,
-                fontWeight = FontWeight.Medium
-            ),
-            modifier = Modifier
-                .background(
-                    color = roleColor.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(6.dp)
-                )
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-        )
     }
 }
 
-private fun formatChatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+// ── Date Separator ──────────────────────────────────────────
+
+@Composable
+private fun DateSeparator(timestamp: Long) {
+    Box(
+        modifier         = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .background(SurfaceOverlay, CircleShape)
+                .border(1.dp, GlassBorder, CircleShape)
+                .padding(horizontal = 16.dp, vertical = 5.dp)
+        ) {
+            Text(
+                formatDateHeader(timestamp),
+                fontSize   = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color      = TextSecondary,
+                letterSpacing = 0.5.sp
+            )
+        }
+    }
 }
+
+// ── Chat Locked Overlay ─────────────────────────────────────
+
+@Composable
+private fun ChatLockedOverlay(timeUntilOpens: Long) {
+    var remaining by remember { mutableLongStateOf(timeUntilOpens) }
+    LaunchedEffect(timeUntilOpens) {
+        while (remaining > 0) {
+            kotlinx.coroutines.delay(1000)
+            remaining = (remaining - 1000).coerceAtLeast(0)
+        }
+    }
+    val hours   = remaining / 3600000
+    val minutes = (remaining / 60000) % 60
+    val seconds = (remaining / 1000) % 60
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0A1525).copy(alpha = 0.98f))
+            .navigationBarsPadding()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(WarningOrange.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                    .border(1.dp, WarningOrange.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Lock, null, tint = WarningOrange, modifier = Modifier.size(28.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("Chat opens in", fontSize = 13.sp, color = TextSecondary)
+            Text(
+                String.format("%02d:%02d:%02d", hours, minutes, seconds),
+                fontSize   = 34.sp,
+                fontWeight = FontWeight.Black,
+                color      = WarningOrange,
+                letterSpacing = (-0.5).sp
+            )
+        }
+    }
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+
+private fun isSameDay(t1: Long, t2: Long): Boolean {
+    val c1 = Calendar.getInstance().apply { timeInMillis = t1 }
+    val c2 = Calendar.getInstance().apply { timeInMillis = t2 }
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
+           c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+}
+
+private fun formatDateHeader(timestamp: Long): String {
+    val now = Calendar.getInstance()
+    return when {
+        isSameDay(timestamp, now.timeInMillis)           -> "TODAY"
+        isSameDay(timestamp, now.timeInMillis - 86400000) -> "YESTERDAY"
+        else -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                    .format(Date(timestamp)).uppercase()
+    }
+}
+
+private fun formatChatTime(timestamp: Long): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))

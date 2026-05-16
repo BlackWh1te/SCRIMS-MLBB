@@ -8,28 +8,32 @@ import com.mlbb.scrim.data.model.TeamInvite
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-// Mock TeamRepository for UI testing
-// TODO: Replace with actual Supabase implementation when dependencies are resolved
-class TeamRepository {
+/**
+ * Team repository managing team creation, member invites, and roster management.
+ *
+ * Current implementation: In-memory mock for UI development.
+ * Next step: Integrate with Supabase (table: teams, team_members, team_invitations).
+ */
+class TeamRepository : TeamRepositoryInterface {
     
     private val teams = mutableListOf<Team>()
     private val invites = mutableListOf<TeamInvite>()
     private var currentTeamId: String? = null
     
-    suspend fun createTeam(name: String, leaderEmail: String): Flow<Result<Team>> = flow {
+    override suspend fun createTeam(name: String, leaderId: String, description: String): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
             val team = Team(
                 id = java.util.UUID.randomUUID().toString(),
                 name = name,
-                leaderId = leaderEmail,
+                leaderId = leaderId,
                 players = listOf(
                     Player(
                         id = java.util.UUID.randomUUID().toString(),
                         name = "Leader",
                         role = PlayerRole.LEADER,
-                        email = leaderEmail
+                        email = leaderId
                     )
                 )
             )
@@ -41,12 +45,12 @@ class TeamRepository {
         }
     }
     
-    suspend fun getTeams(): Flow<Result<List<Team>>> = flow {
+    override suspend fun getTeams(): Flow<Result<List<Team>>> = flow {
         kotlinx.coroutines.delay(300) // Simulate network delay
         emit(Result.success(teams.toList()))
     }
     
-    suspend fun getTeam(teamId: String): Flow<Result<Team>> = flow {
+    override suspend fun getTeam(teamId: String): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(300) // Simulate network delay
         val team = teams.find { it.id == teamId }
         if (team != null) {
@@ -56,7 +60,7 @@ class TeamRepository {
         }
     }
     
-    suspend fun addPlayer(teamId: String, playerName: String, playerEmail: String): Flow<Result<Team>> = flow {
+    override suspend fun addPlayer(teamId: String, playerName: String, playerEmail: String): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
@@ -88,7 +92,7 @@ class TeamRepository {
         }
     }
     
-    suspend fun removePlayer(teamId: String, playerId: String): Flow<Result<Team>> = flow {
+    override suspend fun removePlayer(teamId: String, playerId: String): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
@@ -117,7 +121,7 @@ class TeamRepository {
         }
     }
     
-    suspend fun updatePlayerRole(teamId: String, playerId: String, newRole: PlayerRole): Flow<Result<Team>> = flow {
+    override suspend fun updatePlayerRole(teamId: String, playerId: String, newRole: PlayerRole): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(300)
 
         val teamIndex = teams.indexOfFirst { it.id == teamId }
@@ -148,7 +152,7 @@ class TeamRepository {
         emit(Result.success(updatedTeam))
     }
     
-    suspend fun deleteTeam(teamId: String): Flow<Result<Unit>> = flow {
+    override suspend fun deleteTeam(teamId: String): Flow<Result<Unit>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
@@ -175,7 +179,7 @@ class TeamRepository {
     // ═══════════════════════════════════════════════════════════════
 
     /** Captain sends an invite to a player */
-    suspend fun sendInvite(
+    override suspend fun sendInvite(
         teamId: String,
         teamName: String,
         invitedBy: String,
@@ -229,7 +233,7 @@ class TeamRepository {
     }
 
     /** Player accepts an invite → added to team */
-    suspend fun acceptInvite(inviteId: String): Flow<Result<Team>> = flow {
+    override suspend fun acceptInvite(inviteId: String): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500)
         try {
             val inviteIndex = invites.indexOfFirst { it.id == inviteId }
@@ -276,7 +280,7 @@ class TeamRepository {
     }
 
     /** Player declines an invite */
-    suspend fun declineInvite(inviteId: String): Flow<Result<Unit>> = flow {
+    override suspend fun declineInvite(inviteId: String): Flow<Result<Unit>> = flow {
         kotlinx.coroutines.delay(300)
         try {
             val inviteIndex = invites.indexOfFirst { it.id == inviteId }
@@ -316,7 +320,7 @@ class TeamRepository {
     }
 
     /** Get pending invites for a player */
-    suspend fun getInvitesForPlayer(userId: String): Flow<Result<List<TeamInvite>>> = flow {
+    override suspend fun getInvitesForPlayer(userId: String): Flow<Result<List<TeamInvite>>> = flow {
         kotlinx.coroutines.delay(300)
         val playerInvites = invites.filter {
             it.invitedUserId == userId && it.status == InviteStatus.PENDING
@@ -325,7 +329,7 @@ class TeamRepository {
     }
 
     /** Get all invites for a team (captain view) */
-    suspend fun getInvitesForTeam(teamId: String): Flow<Result<List<TeamInvite>>> = flow {
+    override suspend fun getInvitesForTeam(teamId: String): Flow<Result<List<TeamInvite>>> = flow {
         kotlinx.coroutines.delay(300)
         val teamInvites = invites.filter { it.teamId == teamId }
         emit(Result.success(teamInvites))

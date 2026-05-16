@@ -14,7 +14,8 @@ import com.mlbb.scrim.data.model.SkillLevel
 import com.mlbb.scrim.data.model.Player
 import com.mlbb.scrim.data.repository.PlayerPointsChange
 import com.mlbb.scrim.data.repository.PointsResult
-import com.mlbb.scrim.data.repository.ScrimRepository
+import com.mlbb.scrim.data.repository.ScrimRepositoryInterface
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,10 +23,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ScrimViewModel : ViewModel() {
-
-    private val scrimRepository = ScrimRepository()
+@HiltViewModel
+class ScrimViewModel @Inject constructor(
+    private val scrimRepository: ScrimRepositoryInterface
+) : ViewModel() {
 
     private val _scrims = MutableStateFlow<List<Scrim>>(emptyList())
     val scrims: StateFlow<List<Scrim>> = _scrims.asStateFlow()

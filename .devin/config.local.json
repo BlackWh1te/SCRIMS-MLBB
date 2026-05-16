@@ -14,7 +14,28 @@
       "Exec(adb devices)",
       "Exec(find)",
       "Exec(adb)",
-      "Exec(git log)"
+      "Exec(git log)",
+      "Exec(.\\gradlew.bat)",
+      "Exec(unzip)",
+      "Exec(jar xf)",
+      "Exec(javap)",
+      "Exec(rm)",
+      "Exec(cat)",
+      "Exec(supabase)",
+      "Exec(curl)",
+      "Exec(psql)",
+      "Exec(npm install)",
+      "Exec(npx supabase)",
+      "Exec(python)",
+      "Exec(node)",
+      "Exec(tar)",
+      "Exec(./supabase.exe db)",
+      "Exec(./supabase.exe)",
+      "Exec(./gradlew.bat)",
+      "Exec(python3)",
+      "Exec(py)",
+      "Exec(ls)",
+      "Exec(sed)"
     ]
   }
 }

@@ -19,24 +19,32 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.Notification
 import com.mlbb.scrim.data.model.NotificationType
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.NotificationListSkeleton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
+import com.mlbb.scrim.ui.components.SwipeToAction
 
 @Composable
 fun NotificationScreen(
     notifications: List<Notification>,
     isLoading: Boolean,
+    error: String?,
     onNavigateBack: () -> Unit,
     onMarkAsRead: (String) -> Unit,
     onMarkAllAsRead: () -> Unit,
     onDelete: (String) -> Unit,
-    onNotificationClick: (Notification) -> Unit = {}
+    onNotificationClick: (Notification) -> Unit = {},
+    onRefresh: () -> Unit = {},
+    onDismissError: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -49,15 +57,14 @@ fun NotificationScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
-                        .padding(top = 20.dp),
+                        .padding(start = 20.dp, top = 20.dp, end = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Notifications",
+                        text = stringResource(R.string.notifications),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -68,7 +75,7 @@ fun NotificationScreen(
                     if (notifications.any { !it.isRead }) {
                         TextButton(onClick = onMarkAllAsRead) {
                             Text(
-                                text = "Mark all read",
+                                text = stringResource(R.string.mark_all_read),
                                 color = BluePrimary,
                                 fontSize = 13.sp
                             )
@@ -79,51 +86,129 @@ fun NotificationScreen(
                 }
             }
 
-            if (isLoading) {
-                NotificationListSkeleton(
-                    modifier = Modifier.fillMaxSize(),
-                    itemCount = 6
-                )
-            } else if (notifications.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsNone,
-                            contentDescription = null,
-                            tint = LightGray.copy(alpha = 0.5f),
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No notifications",
-                            color = LightGray,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+            // Error display
+            if (error != null) {
+                AnimatedEntrance(delayMillis = 0) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = "Error",
+                                    tint = ErrorRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = error,
+                                    color = White,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            IconButton(
+                                onClick = onDismissError,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    itemsIndexed(notifications) { index, notification ->
-                        AnimatedEntrance(delayMillis = index * 60) {
-                            NotificationRow(
-                                notification = notification,
-                                onClick = {
-                                    onMarkAsRead(notification.id)
-                                    onNotificationClick(notification)
-                                },
-                                onDismiss = { onDelete(notification.id) }
+            }
+
+            PullToRefreshContainer(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    isLoading && notifications.isEmpty() -> {
+                        NotificationListSkeleton(
+                            modifier = Modifier.fillMaxSize(),
+                            itemCount = 6
+                        )
+                    }
+                    notifications.isEmpty() -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsNone,
+                                contentDescription = null,
+                                tint = LightGray.copy(alpha = 0.4f),
+                                modifier = Modifier.size(72.dp)
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = stringResource(R.string.no_notifications),
+                                style = iOSTitle3.copy(color = White)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "You'll receive notifications when someone invites you to a team or scrim, or when match results are ready",
+                                style = iOSFootnote.copy(color = MidGray),
+                                textAlign = TextAlign.Center
                             )
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            itemsIndexed(notifications) { index, notification ->
+                                AnimatedEntrance(delayMillis = index * 60) {
+                                    SwipeToAction(
+                                        actions = {
+                                            IconButton(
+                                                onClick = { onDelete(notification.id) },
+                                                modifier = Modifier.size(48.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete",
+                                                    tint = ErrorRed,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        NotificationRow(
+                                            notification = notification,
+                                            onClick = {
+                                                onMarkAsRead(notification.id)
+                                                onNotificationClick(notification)
+                                            },
+                                            onDismiss = { onDelete(notification.id) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+                        }
                     }
                 }
             }

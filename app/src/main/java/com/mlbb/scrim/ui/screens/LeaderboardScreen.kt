@@ -3,6 +3,8 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,24 +22,31 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.LeaderboardEntry
 import com.mlbb.scrim.data.model.RankTier
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
-import com.mlbb.scrim.ui.components.TierBadge
+import com.mlbb.scrim.ui.components.RankBadge
+import com.mlbb.scrim.ui.components.RankBadgeSize
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaderboardScreen(
     entries: List<LeaderboardEntry>,
     isLoading: Boolean,
+    error: String?,
     selectedTier: RankTier? = null,
     onTierFilter: (RankTier?) -> Unit = {},
     onNavigateBack: () -> Unit,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onDismissError: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -50,20 +59,15 @@ fun LeaderboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
-                        .padding(top = 20.dp),
+                        .padding(start = 20.dp, top = 20.dp, end = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Leaderboard",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        text = stringResource(R.string.leaderboard),
+                        style = iOSTitle2.copy(color = White)
                     )
 
                     IconButton(
@@ -85,59 +89,123 @@ fun LeaderboardScreen(
                 }
             }
 
-            // Tier Filter Chips
-            AnimatedEntrance(delayMillis = 100) {
-                ScrollableTierFilter(
-                    selectedTier = selectedTier,
-                    onTierSelected = onTierFilter
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
-            } else if (entries.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = LightGray.copy(alpha = 0.5f),
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No entries yet",
-                            color = LightGray,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+            // Error display
+            if (error != null) {
+                AnimatedEntrance(delayMillis = 0) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = "Error",
+                                    tint = ErrorRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = error,
+                                    color = White,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            IconButton(
+                                onClick = onDismissError,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    itemsIndexed(entries) { index, entry ->
-                        AnimatedEntrance(delayMillis = 150 + index * 80) {
-                            LeaderboardRow(
-                                entry = entry,
-                                isTopThree = entry.rank <= 3
-                            )
+            }
+
+            PullToRefreshContainer(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Tier Filter Chips
+                    AnimatedEntrance(delayMillis = 100) {
+                        ScrollableTierFilter(
+                            selectedTier = selectedTier,
+                            onTierSelected = onTierFilter
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    when {
+                        isLoading && entries.isEmpty() -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = GoldPrimary)
+                            }
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                        entries.isEmpty() -> {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(40.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = LightGray.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Text(
+                                    text = stringResource(R.string.no_entries),
+                                    style = iOSTitle3.copy(color = White)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Complete scrims to earn points and climb the ranks",
+                                    style = iOSFootnote.copy(color = MidGray),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 20.dp),
+                                contentPadding = PaddingValues(vertical = 12.dp)
+                            ) {
+                                itemsIndexed(entries) { index, entry ->
+                                    AnimatedEntrance(delayMillis = 150 + index * 60) {
+                                        LeaderboardRow(
+                                            entry = entry,
+                                            isTopThree = entry.rank <= 3
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -151,11 +219,13 @@ private fun ScrollableTierFilter(
     onTierSelected: (RankTier?) -> Unit
 ) {
     val tiers = listOf(null) + RankTier.values().toList()
+    val scrollState = rememberScrollState()
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         tiers.forEach { tier ->
@@ -163,12 +233,12 @@ private fun ScrollableTierFilter(
             val display = tier?.displayName ?: "All"
             val chipColor = when (tier) {
                 RankTier.BRONZE -> Bronze
-                RankTier.SILVER -> Silver
-                RankTier.GOLD -> GoldPrimary
-                RankTier.PLATINUM -> Platinum
-                RankTier.DIAMOND -> Diamond
-                RankTier.MASTER -> Purple
-                RankTier.GRANDMASTER -> ErrorRed
+                RankTier.SOLVER -> SolverBlue
+                RankTier.GOLD -> GoldRank
+                RankTier.GRANDMASTER -> GrandmasterPurple
+                RankTier.EPIC -> EpicCyan
+                RankTier.LEGEND -> LegendRed
+                RankTier.MYTHIC -> MythicCrimson
                 null -> BluePrimary
             }
 
@@ -308,7 +378,7 @@ private fun LeaderboardRow(
 
             // Stats
             Column(horizontalAlignment = Alignment.End) {
-                TierBadge(tierName = entry.currentTier.displayName)
+                RankBadge(tier = entry.currentTier, size = RankBadgeSize.MEDIUM)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "${entry.xp} XP",

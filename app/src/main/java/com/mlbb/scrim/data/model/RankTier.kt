@@ -3,14 +3,76 @@ package com.mlbb.scrim.data.model
 import androidx.compose.ui.graphics.Color
 import com.mlbb.scrim.ui.theme.*
 
-enum class RankTier(val displayName: String, val minXp: Int, val maxXp: Int, val tierColor: Color) {
-    BRONZE("Bronze", 0, 999, Bronze),
-    SILVER("Silver", 1000, 2499, Silver),
-    GOLD("Gold", 2500, 4999, Gold),
-    PLATINUM("Platinum", 5000, 7999, Platinum),
-    DIAMOND("Diamond", 8000, 11999, Diamond),
-    MASTER("Master", 12000, 16999, Master),
-    GRANDMASTER("Grandmaster", 17000, Int.MAX_VALUE, Grandmaster);
+/**
+ * Custom 7-Tier Rank System for MLBB Scrim Host
+ * Bronze → Solver → Gold → Grandmaster → Epic → Legend → Mythic
+ */
+enum class RankTier(
+    val displayName: String,
+    val shortName: String,
+    val minXp: Int,
+    val maxXp: Int,
+    val tierColor: Color,
+    val badgeGradient: List<Color>,
+    val textColor: Color = Color.White
+) {
+    BRONZE(
+        displayName = "Bronze",
+        shortName = "B",
+        minXp = 0,
+        maxXp = 999,
+        tierColor = Bronze,
+        badgeGradient = listOf(Color(0xFFCD7F32), Color(0xFF8B4513)),
+    ),
+    SOLVER(
+        displayName = "Solver",
+        shortName = "S",
+        minXp = 1000,
+        maxXp = 2499,
+        tierColor = SolverBlue,
+        badgeGradient = listOf(Color(0xFF4A90D9), Color(0xFF1A5490)),
+    ),
+    GOLD(
+        displayName = "Gold",
+        shortName = "G",
+        minXp = 2500,
+        maxXp = 4999,
+        tierColor = GoldRank,
+        badgeGradient = listOf(Color(0xFFFFD700), Color(0xFFFF8C00)),
+        textColor = DarkBlue
+    ),
+    GRANDMASTER(
+        displayName = "Grandmaster",
+        shortName = "GM",
+        minXp = 5000,
+        maxXp = 7999,
+        tierColor = GrandmasterPurple,
+        badgeGradient = listOf(Color(0xFF9B59B6), Color(0xFF6C3483)),
+    ),
+    EPIC(
+        displayName = "Epic",
+        shortName = "E",
+        minXp = 8000,
+        maxXp = 11999,
+        tierColor = EpicCyan,
+        badgeGradient = listOf(Color(0xFF00CED1), Color(0xFF008B8B)),
+    ),
+    LEGEND(
+        displayName = "Legend",
+        shortName = "L",
+        minXp = 12000,
+        maxXp = 16999,
+        tierColor = LegendRed,
+        badgeGradient = listOf(Color(0xFFFF4757), Color(0xFF8B0000)),
+    ),
+    MYTHIC(
+        displayName = "Mythic",
+        shortName = "M",
+        minXp = 17000,
+        maxXp = Int.MAX_VALUE,
+        tierColor = MythicCrimson,
+        badgeGradient = listOf(Color(0xFFFF1B1B), Color(0xFF0A0A0A), Color(0xFFFFD700)),
+    );
 
     companion object {
         fun fromXp(xp: Int): RankTier {
@@ -33,6 +95,31 @@ enum class RankTier(val displayName: String, val minXp: Int, val maxXp: Int, val
             val range = current.maxXp - current.minXp + 1
             val progress = xp - current.minXp
             return (progress.toFloat() / range).coerceIn(0f, 1f)
+        }
+    }
+}
+
+/**
+ * Regional ranking badge for top performers in specific regions.
+ * Tracks TOP1, TOP2, TOP3 in RU scrims (KRD, MSK, EKB).
+ */
+enum class RegionalRank(val displayPrefix: String, val rank: Int, val badgeColor: Color) {
+    TOP1("TOP 1", 1, GoldPrimary),
+    TOP2("TOP 2", 2, Silver),
+    TOP3("TOP 3", 3, Bronze);
+
+    companion object {
+        fun fromWins(wins: Int, region: String): RegionalRank? {
+            // KRD = Korea, MSK = Moscow, EKB = East KB
+            // These are RU-region scrim servers
+            val ruRegions = listOf("KRD", "MSK", "EKB", "MCK")
+            if (region !in ruRegions) return null
+            return when {
+                wins >= 50 -> TOP1
+                wins >= 30 -> TOP2
+                wins >= 15 -> TOP3
+                else -> null
+            }
         }
     }
 }

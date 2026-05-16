@@ -3,6 +3,7 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,7 @@ fun CreateScrimScreen(
     teamName: String,
     teamId: String,
     teamLeader: String,
+    currentPlayerCount: Int = 0,
     onNavigateBack: () -> Unit,
     onCreateScrim: (
         gameMode: GameMode,
@@ -197,7 +199,7 @@ fun CreateScrimScreen(
                                 FilterChip(
                                     selected = selectedGameMode == mode,
                                     onClick = { selectedGameMode = mode },
-                                    label = { Text(mode.name, fontSize = 13.sp) },
+                                    label = { Text(mode.name, fontSize = 11.sp) },
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = BluePrimary.copy(alpha = 0.2f),
@@ -218,15 +220,15 @@ fun CreateScrimScreen(
                 AnimatedEntrance(delayMillis = 200) {
                     SelectionCard(title = "Region") {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Region.values().forEach { region ->
                                 FilterChip(
                                     selected = selectedRegion == region,
                                     onClick = { selectedRegion = region },
-                                    label = { Text(region.displayName + " " + region.utcOffset, fontSize = 12.sp) },
-                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    label = { Text(region.displayName, fontSize = 11.sp) },
+                                    modifier = Modifier.width(80.dp).height(48.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
                                         selectedLabelColor = GoldPrimary,
@@ -613,6 +615,38 @@ fun CreateScrimScreen(
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
+                }
+
+                // Team size warning
+                if (currentPlayerCount < 5) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = WarningOrange.copy(alpha = 0.15f)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = WarningOrange,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Your team has $currentPlayerCount/5 players. Post scrims requires at least 5 players.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = WarningOrange,
+                                    fontSize = 13.sp
+                                )
+                            )
+                        }
+                    }
                 }
 
                 // Post Button

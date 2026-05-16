@@ -26,10 +26,15 @@ import com.mlbb.scrim.ui.components.GradientButton
 import com.mlbb.scrim.ui.components.EmptyState
 import com.mlbb.scrim.ui.components.TeamListSkeleton
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
+import com.mlbb.scrim.ui.utils.HapticFeedback
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun TeamListScreen(
@@ -60,7 +65,7 @@ fun TeamListScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "My Teams",
+                        text = stringResource(R.string.my_teams),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -126,50 +131,58 @@ fun TeamListScreen(
                 }
             }
 
-            if (isLoading) {
-                TeamListSkeleton(
-                    modifier = Modifier.fillMaxSize(),
-                    itemCount = 4
-                )
-            } else if (teams.isEmpty()) {
-                // Empty State
-                EmptyState(
-                    icon = Icons.Default.GroupAdd,
-                    title = "No teams yet",
-                    subtitle = "Create your first team or join one with an invite code",
-                    modifier = Modifier.fillMaxSize(),
-                    action = {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            GradientButton(
-                                text = "Create Team",
-                                onClick = onNavigateToCreateTeam,
-                                gradient = GoldGradient
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            com.mlbb.scrim.ui.components.GhostButton(
-                                text = "Join Team",
-                                onClick = onNavigateToJoinTeam,
-                                borderColor = SuccessGreen,
-                                contentColor = SuccessGreen
-                            )
-                        }
+            PullToRefreshContainer(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    isLoading && teams.isEmpty() -> {
+                        TeamListSkeleton(
+                            modifier = Modifier.fillMaxSize(),
+                            itemCount = 4
+                        )
                     }
-                )
-            } else {
-                // Team List
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    itemsIndexed(teams) { index, team ->
-                        AnimatedEntrance(delayMillis = index * 60) {
-                            TeamCard(
-                                team = team,
-                                onClick = { onNavigateToTeamDetail(team) }
-                            )
+                    teams.isEmpty() -> {
+                        EmptyState(
+                            icon = Icons.Default.GroupAdd,
+                            title = "No teams yet",
+                            subtitle = "Create your first team or join one with an invite code",
+                            modifier = Modifier.fillMaxSize(),
+                            action = {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    GradientButton(
+                                        text = stringResource(R.string.create_team),
+                                        onClick = onNavigateToCreateTeam,
+                                        gradient = GoldGradient
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    com.mlbb.scrim.ui.components.GhostButton(
+                                        text = stringResource(R.string.join_team),
+                                        onClick = onNavigateToJoinTeam,
+                                        borderColor = SuccessGreen,
+                                        contentColor = SuccessGreen
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            contentPadding = PaddingValues(vertical = 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            itemsIndexed(teams) { index, team ->
+                                AnimatedEntrance(delayMillis = index * 60) {
+                                    TeamCard(
+                                        team = team,
+                                        onClick = { onNavigateToTeamDetail(team) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -186,6 +199,14 @@ fun TeamCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            HapticFeedback.performClick(context)
+        }
+    }
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = tween(100, easing = AppEaseOutCubic),
@@ -255,7 +276,7 @@ fun TeamCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${team.players.size} / ${team.maxPlayers} players",
+                        text = stringResource(R.string.players_count, team.players.size, team.maxPlayers),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 14.sp,
                             color = LightGray

@@ -3,7 +3,10 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,8 +43,9 @@ import androidx.compose.ui.res.stringResource
 @Composable
 fun ProfileScreen(
     userProfile: com.mlbb.scrim.data.model.UserProfile?,
-    onNavigateBack: () -> Unit,
-    onUpdateProfile: (String, String) -> Unit,
+    onNavigateBack: () -> Unit = {},
+    isTab: Boolean = false,
+    onUpdateProfile: (String, String, String?, String?, List<String>?) -> Unit,
     onUpdateEmail: (String, String) -> Unit = { _, _ -> },
     onUpdatePassword: (String, String, String) -> Unit = { _, _, _ -> },
     authResult: com.mlbb.scrim.data.model.AuthResult? = null,
@@ -53,6 +57,9 @@ fun ProfileScreen(
     var isEditing by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf(userProfile?.username ?: "") }
     var inGameId by remember { mutableStateOf(userProfile?.inGameId ?: "") }
+    var role by remember { mutableStateOf(userProfile?.role ?: "") }
+    var bio by remember { mutableStateOf(userProfile?.bio ?: "") }
+    var mainHeroesInput by remember { mutableStateOf(userProfile?.mainHeroes?.joinToString(", ") ?: "") }
 
     // Account security dialog states
     var showEmailDialog by remember { mutableStateOf(false) }
@@ -78,6 +85,7 @@ fun ProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(
                 brush = heroGradientBrush()
             )
@@ -91,37 +99,41 @@ fun ProfileScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
-                        .padding(top = 20.dp),
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GlassBackButton(onClick = onNavigateBack)
+                    if (!isTab) {
+                        GlassBackButton(onClick = onNavigateBack)
+                    } else {
+                        Spacer(modifier = Modifier.size(44.dp))
+                    }
 
                     Text(
                         text = stringResource(R.string.my_profile),
-                        style = iOSTitle2.copy(color = White)
+                        style = iOSTitle2.copy(color = TextPrimary)
                     )
 
-                    IconButton(
-                        onClick = {
-                            if (isEditing) {
-                                onUpdateProfile(username, inGameId)
-                            }
-                            isEditing = !isEditing
-                        },
+                    Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .background(
-                                color = if (isEditing) BluePrimary else Color.White.copy(alpha = 0.08f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isEditing) BluePrimary else SurfaceOverlay)
+                            .border(1.dp, if (isEditing) Color.Transparent else GlassBorder, RoundedCornerShape(12.dp))
+                            .clickable {
+                                if (isEditing) {
+                                    val heroesList = mainHeroesInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(3)
+                                    onUpdateProfile(username, inGameId, role.takeIf { it.isNotBlank() }, bio.takeIf { it.isNotBlank() }, heroesList)
+                                }
+                                isEditing = !isEditing
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
                             contentDescription = if (isEditing) "Save" else "Edit",
                             tint = White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -182,33 +194,18 @@ fun ProfileScreen(
                 // Username
                 AnimatedEntrance(delayMillis = 150) {
                     if (isEditing) {
-                        OutlinedTextField(
+                        com.mlbb.scrim.ui.components.iOSInput(
                             value = username,
                             onValueChange = { username = it },
-                            label = { Text("Username") },
+                            placeholder = "Username",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = White.copy(alpha = 0.3f),
-                                focusedLabelColor = GoldPrimary,
-                                unfocusedLabelColor = White.copy(alpha = 0.7f),
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
+                                .padding(bottom = 16.dp)
                         )
                     } else {
                         Text(
                             text = username,
-                            style = MaterialTheme.typography.displaySmall.copy(
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = White
-                            ),
+                            style = iOSTitle1.copy(color = TextPrimary),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -220,10 +217,94 @@ fun ProfileScreen(
                 // In-Game ID
                 AnimatedEntrance(delayMillis = 200) {
                     if (isEditing) {
-                        OutlinedTextField(
+                        com.mlbb.scrim.ui.components.iOSInput(
                             value = inGameId,
                             onValueChange = { inGameId = it },
-                            label = { Text("In-Game ID") },
+                            placeholder = "In-Game ID",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.in_game_id_label, inGameId),
+                            style = iOSBody.copy(color = TextSecondary),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Bio
+                AnimatedEntrance(delayMillis = 210) {
+                    if (isEditing) {
+                        com.mlbb.scrim.ui.components.iOSInput(
+                            value = bio,
+                            onValueChange = { bio = it },
+                            placeholder = "Bio (Something about yourself)",
+                            singleLine = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 80.dp)
+                                .padding(bottom = 16.dp)
+                        )
+                    } else if (bio.isNotBlank()) {
+                        Text(
+                            text = bio,
+                            style = iOSCallout.copy(
+                                color = TextSecondary,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Role
+                AnimatedEntrance(delayMillis = 220) {
+                    if (isEditing) {
+                        com.mlbb.scrim.ui.components.iOSInput(
+                            value = role,
+                            onValueChange = { role = it },
+                            placeholder = "Main Role (e.g., Jungler, Roamer)",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        )
+                    } else if (!userProfile?.role.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(top = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(GoldPrimary.copy(alpha = 0.12f))
+                                .border(1.dp, GoldPrimary.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = (userProfile?.role ?: "").uppercase(),
+                                style = iOSCaption1.copy(
+                                    color = GoldPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            )
+                        }
+                    }
+                }
+                
+                // Main Heroes
+                AnimatedEntrance(delayMillis = 230) {
+                    if (isEditing) {
+                        OutlinedTextField(
+                            value = mainHeroesInput,
+                            onValueChange = { mainHeroesInput = it },
+                            label = { Text("Top 3 Main Heroes (comma separated)") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp),
@@ -239,16 +320,22 @@ fun ProfileScreen(
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
                         )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.in_game_id_label, inGameId),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 16.sp,
-                                color = LightGray
-                            ),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    } else if (!userProfile?.mainHeroes.isNullOrEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            userProfile?.mainHeroes?.forEach { hero ->
+                                Box(
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .background(BluePrimary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(text = hero, color = White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -505,67 +592,44 @@ fun ProfileScreen(
 
 @Composable
 fun ProfileInfoCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon : androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
     ) {
         Row(
-            modifier = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = BluePrimary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(12.dp)
-                    ),
+                    .size(44.dp)
+                    .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = BluePrimary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(icon, label, tint = BluePrimary, modifier = Modifier.size(20.dp))
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp,
-                        color = LightGray,
-                        fontWeight = FontWeight.Medium
-                    )
+                    label,
+                    style = iOSCaption1.copy(color = TextSecondary, fontWeight = FontWeight.Medium)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        color = White,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    value,
+                    style = iOSHeadline.copy(color = TextPrimary)
                 )
             }
         }
@@ -575,77 +639,56 @@ fun ProfileInfoCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountActionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
+    icon    : androidx.compose.ui.graphics.vector.ImageVector,
+    title   : String,
     subtitle: String,
-    color: Color,
-    onClick: () -> Unit
+    color   : Color,
+    onClick : () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = color.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
-        ),
-        shape = RoundedCornerShape(16.dp),
-        onClick = onClick
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.dp, color.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
+            .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = color.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(12.dp)
-                    ),
+                    .size(44.dp)
+                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .border(1.dp, color.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(icon, title, tint = color, modifier = Modifier.size(20.dp))
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = White
-                    )
+                    title,
+                    style = iOSHeadline.copy(color = TextPrimary)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
-                        color = LightGray
-                    )
+                    subtitle,
+                    style = iOSCaption1.copy(color = TextSecondary),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
             Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Navigate",
-                tint = LightGray.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
+                Icons.Default.ChevronRight, null,
+                tint     = DimGray,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

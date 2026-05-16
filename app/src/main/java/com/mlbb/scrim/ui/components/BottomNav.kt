@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,35 +13,41 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavDestination
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.mlbb.scrim.R
 import com.mlbb.scrim.ui.theme.*
 
 sealed class BottomNavItem(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
     val selectedIcon: ImageVector
 ) {
-    data object Home : BottomNavItem("home", "Home", Icons.Default.Home, Icons.Default.Home)
-    data object Teams : BottomNavItem("team_list", "Teams", Icons.Default.Group, Icons.Default.Group)
-    data object Scrims : BottomNavItem("scrim_list", "Scrims", Icons.Default.SportsEsports, Icons.Default.SportsEsports)
-    data object Messages : BottomNavItem("message_list", "Messages", Icons.Default.ChatBubbleOutline, Icons.Default.Chat)
-    data object Profile : BottomNavItem("profile", "Profile", Icons.Default.PersonOutline, Icons.Default.Person)
+    data object Home         : BottomNavItem("home",          R.string.nav_home,          Icons.Default.Home,            Icons.Default.Home)
+    data object Scrims       : BottomNavItem("scrim_list",    R.string.nav_scrims,         Icons.Default.SportsEsports,   Icons.Default.SportsEsports)
+    data object PlayerFinder : BottomNavItem("player_finder", R.string.nav_player_finder,  Icons.Default.PersonSearch,    Icons.Default.PersonSearch)
+    data object Messages     : BottomNavItem("message_list",  R.string.nav_messages,       Icons.Default.ChatBubbleOutline,Icons.Default.Chat)
+    data object Profile      : BottomNavItem("profile",       R.string.nav_profile,        Icons.Default.PersonOutline,   Icons.Default.Person)
 }
 
 val bottomNavItems = listOf(
     BottomNavItem.Home,
-    BottomNavItem.Teams,
     BottomNavItem.Scrims,
+    BottomNavItem.PlayerFinder,
     BottomNavItem.Messages,
     BottomNavItem.Profile
 )
@@ -56,47 +63,59 @@ fun AppBottomNav(
     // Only show bottom nav on main tabs
     if (currentRoute !in bottomNavItems.map { it.route }) return
 
+    // Floating pill container
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Card(
+        // Background blur surface
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .shadow(
-                    elevation = 12.dp,
-                    spotColor = Color.Black.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(24.dp)
-                ),
-            colors = CardDefaults.cardColors(
-                containerColor = DarkNavy
-            ),
-            shape = RoundedCornerShape(24.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF1A2A40).copy(alpha = 0.96f),
+                            Color(0xFF0E1A2D).copy(alpha = 0.98f)
+                        )
+                    )
+                )
+                .drawBehind {
+                    // Top edge highlight
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                GlassBorder,
+                                GlassBorder,
+                                Color.Transparent
+                            )
+                        ),
+                        start = Offset(0f, 0f),
+                        end   = Offset(size.width, 0f),
+                        strokeWidth = 1f
+                    )
+                }
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .fillMaxHeight()
+                    .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment     = Alignment.CenterVertically
             ) {
                 bottomNavItems.forEach { item ->
                     val isSelected = currentRoute == item.route
-                    val targetScale = if (isSelected) 1.1f else 1f
-                    val scale by animateFloatAsState(
-                        targetValue = targetScale,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-                        label = "navScale"
-                    )
-
                     BottomNavItemButton(
-                        item = item,
-                        isSelected = isSelected,
-                        scale = scale,
-                        badgeCount = if (item is BottomNavItem.Messages) unreadMessageCount else 0,
-                        onClick = {
+                        item          = item,
+                        isSelected    = isSelected,
+                        badgeCount    = if (item is BottomNavItem.Messages) unreadMessageCount else 0,
+                        onClick       = {
                             if (!isSelected) {
                                 navController.navigate(item.route) {
                                     popUpTo(item.route) { inclusive = true }
@@ -114,38 +133,60 @@ fun AppBottomNav(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RowScope.BottomNavItemButton(
-    item: BottomNavItem,
+    item      : BottomNavItem,
     isSelected: Boolean,
-    scale: Float,
     badgeCount: Int,
-    onClick: () -> Unit
+    onClick   : () -> Unit
 ) {
-    val iconColor by animateColorAsState(
-        targetValue = if (isSelected) GoldPrimary else MidGray,
-        animationSpec = tween(200),
-        label = "iconColor"
+    val scale by animateFloatAsState(
+        targetValue    = if (isSelected) 1.10f else 1f,
+        animationSpec  = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        label          = "navScale"
     )
-
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) GoldPrimary.copy(alpha = 0.15f) else Color.Transparent,
-        animationSpec = tween(200),
-        label = "bgColor"
+    val iconColor by animateColorAsState(
+        targetValue   = if (isSelected) GoldPrimary else DimGray,
+        animationSpec = tween(220),
+        label         = "iconColor"
+    )
+    val bgAlpha by animateFloatAsState(
+        targetValue   = if (isSelected) 1f else 0f,
+        animationSpec = tween(220),
+        label         = "bgAlpha"
     )
 
     Box(
         modifier = Modifier
             .weight(1f)
-            .fillMaxHeight(),
+            .fillMaxHeight()
+            .clickable(
+                indication           = null,
+                interactionSource    = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                onClick              = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
+        // Active pill indicator
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                GoldPrimary.copy(alpha = 0.18f),
+                                GoldPrimary.copy(alpha = 0.08f)
+                            )
+                        )
+                    )
+            )
+        }
+
         Box(
             modifier = Modifier
                 .scale(scale)
-                .background(
-                    color = backgroundColor,
-                    shape = RoundedCornerShape(14.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -154,49 +195,33 @@ private fun RowScope.BottomNavItemButton(
             ) {
                 Box {
                     Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.icon,
-                        contentDescription = item.label,
-                        tint = iconColor,
-                        modifier = Modifier.size(24.dp)
+                        imageVector     = if (isSelected) item.selectedIcon else item.icon,
+                        contentDescription = stringResource(item.labelRes),
+                        tint            = iconColor,
+                        modifier        = Modifier.size(24.dp)
                     )
-
                     if (badgeCount > 0) {
                         Badge(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 6.dp, y = (-4).dp),
+                            modifier       = Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-6).dp),
                             containerColor = ErrorRed,
-                            contentColor = White
+                            contentColor   = White
                         ) {
-                            Text(
-                                text = badgeCount.coerceAtMost(9).toString(),
-                                fontSize = 10.sp
-                            )
+                            Text(badgeCount.coerceAtMost(9).toString(), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                AnimatedVisibility(
-                    visible = isSelected,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Text(
-                        text = item.label,
-                        color = GoldPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
+                // Label — always visible but dim when inactive
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text          = stringResource(item.labelRes),
+                    color         = if (isSelected) GoldPrimary else DimGray,
+                    fontSize      = 9.sp,
+                    fontWeight    = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                    maxLines      = 1
+                )
             }
         }
-
-        // Invisible click area
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable { onClick() }
-        )
     }
 }

@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
@@ -28,10 +30,15 @@ import com.mlbb.scrim.ui.components.GradientButton
 @Composable
 fun CreateTeamScreen(
     onNavigateBack: () -> Unit,
-    onCreateTeam: (String) -> Unit
+    onCreateTeam: (String) -> Unit,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    existingTeamNames: List<String> = emptyList()
 ) {
     var teamName by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf("") }
+
+    val displayedError = localError.takeIf { it.isNotEmpty() } ?: errorMessage ?: ""
 
     Box(
         modifier = Modifier
@@ -63,7 +70,7 @@ fun CreateTeamScreen(
                     )
 
                     Text(
-                        text = "Create Team",
+                        text = stringResource(R.string.create_team),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -136,7 +143,7 @@ fun CreateTeamScreen(
                                 value = teamName,
                                 onValueChange = {
                                     teamName = it
-                                    errorMessage = ""
+                                    localError = ""
                                 },
                                 label = { Text("Team Name") },
                                 modifier = Modifier
@@ -164,12 +171,12 @@ fun CreateTeamScreen(
 
                             // Error Message
                             AnimatedVisibility(
-                                visible = errorMessage.isNotEmpty(),
+                                visible = displayedError.isNotEmpty(),
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
                                 Text(
-                                    text = errorMessage,
+                                    text = displayedError,
                                     color = ErrorRed,
                                     fontSize = 13.sp,
                                     textAlign = TextAlign.Start,
@@ -181,21 +188,27 @@ fun CreateTeamScreen(
 
                             // Gradient Button
                             GradientButton(
-                                text = "Create Team",
+                                text = stringResource(R.string.create_team),
                                 onClick = {
                                     when {
                                         teamName.isBlank() -> {
-                                            errorMessage = "Please enter a team name"
+                                            localError = "Please enter a team name"
                                         }
                                         teamName.length < 3 -> {
-                                            errorMessage = "Team name must be at least 3 characters"
+                                            localError = "Team name must be at least 3 characters"
+                                        }
+                                        existingTeamNames.any { it.equals(teamName, ignoreCase = true) } -> {
+                                            localError = "A team with this name already exists"
                                         }
                                         else -> {
+                                            localError = ""
                                             onCreateTeam(teamName)
                                         }
                                     }
                                 },
-                                gradient = GoldGradient
+                                gradient = GoldGradient,
+                                enabled = !isLoading,
+                                isLoading = isLoading
                             )
                         }
                     }
@@ -247,7 +260,7 @@ fun CreateTeamScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = "Team Requirements",
+                                    text = stringResource(R.string.team_requirements),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -256,7 +269,7 @@ fun CreateTeamScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Teams must have 3-7 players",
+                                    text = stringResource(R.string.team_requirements_desc),
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 14.sp,
                                         color = LightGray

@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.mlbb.scrim.ui.theme.GoldPrimary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,6 +34,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import com.mlbb.scrim.ui.screens.ChatScreen
 import com.mlbb.scrim.ui.screens.CreateScrimScreen
 import com.mlbb.scrim.ui.screens.CreateTeamScreen
@@ -57,6 +62,7 @@ import com.mlbb.scrim.ui.screens.SplashScreen
 import com.mlbb.scrim.ui.screens.TeamDetailScreen
 import com.mlbb.scrim.ui.screens.TeamListScreen
 import com.mlbb.scrim.ui.screens.LfgBoardScreen
+import com.mlbb.scrim.ui.screens.PlayerFinderScreen
 import com.mlbb.scrim.ui.components.AppBottomNav
 import com.mlbb.scrim.viewmodel.AuthViewModel
 import com.mlbb.scrim.viewmodel.LeaderboardViewModel
@@ -109,6 +115,7 @@ sealed class Screen(val route: String) {
     }
     object Achievements : Screen("achievements")
     object LfgBoard : Screen("lfg_board")
+    object PlayerFinder : Screen("player_finder")
     object ScrimRoster : Screen("scrim_roster/{scrimId}/{teamId}") {
         fun createRoute(scrimId: String, teamId: String) = "scrim_roster/$scrimId/$teamId"
     }
@@ -120,11 +127,12 @@ fun AuthNavigation(
     teamViewModel: TeamViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     scrimViewModel: ScrimViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     matchResultViewModel: MatchResultViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    messageViewModel: MessageViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    messageViewModel: MessageViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     leaderboardViewModel: LeaderboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     notificationViewModel: NotificationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     settingsViewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     newsViewModel: NewsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    lfgViewModel: com.mlbb.scrim.viewmodel.LfgViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     navController: NavHostController = rememberNavController(),
     context: Context
 ) {
@@ -135,6 +143,7 @@ fun AuthNavigation(
     val scrimIsLoading by scrimViewModel.isLoading.collectAsState()
     val matchResults by matchResultViewModel.matchResults.collectAsState()
     val matchResultIsLoading by matchResultViewModel.isLoading.collectAsState()
+    val selectedMatchResult by matchResultViewModel.selectedMatchResult.collectAsState()
     val reportSuccess by matchResultViewModel.reportSuccess.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
     val selectedConversation by messageViewModel.selectedConversation.collectAsState()
@@ -152,10 +161,37 @@ fun AuthNavigation(
     val darkMode by settingsViewModel.darkMode.collectAsState()
     val notifications by notificationViewModel.notifications.collectAsState()
     val notificationUnreadCount by notificationViewModel.unreadCount.collectAsState()
+    val lfgPosts by lfgViewModel.posts.collectAsState()
+    val lfgIsLoading by lfgViewModel.isLoading.collectAsState()
     val notificationIsLoading by notificationViewModel.isLoading.collectAsState()
     val notificationError by notificationViewModel.error.collectAsState()
 
     val unreadCount = conversations.sumOf { it.unreadCount }
+    val playerTeamIds = teams.filter { it.leaderId == userProfile?.id }.map { it.id }
+    val derivedStats = com.mlbb.scrim.data.model.PlayerAchievements(
+        matchesPlayed = 15,
+        bestWinStreak = 3,
+        scrimsCreated = 2,
+        teamsCreated = 1,
+        ratingsGiven = 5,
+        hasRegionalTop = false,
+        junglerWins = 22,
+        roamerWins = 5,
+        nightWins = 6,
+        fiveStarMatches = 15,
+        hasFlawlessVictory = true
+    )
+    val derivedAchievements = userProfile?.let { profile ->
+        com.mlbb.scrim.data.model.Achievement.checkUnlocks(
+            profile = profile,
+            stats = derivedStats
+        )
+    } ?: emptyList()
+
+    // Set userId for notifications when profile is available
+    LaunchedEffect(userProfile?.id) {
+        userProfile?.id?.let { notificationViewModel.setUserId(it) }
+    }
 
     // Start at splash screen
     val startDestination = Screen.Splash.route
@@ -164,17 +200,13 @@ fun AuthNavigation(
     var showInviteDialog by remember { mutableStateOf(false) }
 
     // Navigate based on auth state changes
-    // Only navigate on actual transitions, not on initial composition,
-    // to avoid race conditions with SplashScreen navigation.
+    // Only handle explicit logout here. Login navigation is handled
+    // per-screen to avoid race conditions between isLoggedIn and authState effects.
     var previousIsLoggedIn by remember { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(isLoggedIn) {
         when {
-            isLoggedIn && previousIsLoggedIn != true -> {
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-            }
+            // Only handle logout navigation here
             !isLoggedIn && previousIsLoggedIn == true -> {
                 navController.navigate(Screen.Login.route) {
                     popUpTo(Screen.Home.route) { inclusive = true }
@@ -251,8 +283,14 @@ fun AuthNavigation(
                 composable(Screen.Splash.route) {
                     SplashScreen(
                         onFinish = {
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(Screen.Splash.route) { inclusive = true }
+                            if (isLoggedIn) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Splash.route) { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(Screen.Splash.route) { inclusive = true }
+                                }
                             }
                         }
                     )
@@ -261,12 +299,21 @@ fun AuthNavigation(
                 composable(Screen.Login.route) {
                     val authState by viewModel.authState.collectAsState()
                     LaunchedEffect(authState) {
-                        if (authState is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified) {
-                            val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
-                            navController.navigate(Screen.Verification.createRoute(email)) {
-                                popUpTo(Screen.Login.route) { inclusive = false }
+                        when (authState) {
+                            is com.mlbb.scrim.data.model.AuthResult.Success -> {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                                viewModel.resetAuthState()
                             }
-                            viewModel.resetAuthState()
+                            is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified -> {
+                                val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
+                                navController.navigate(Screen.Verification.createRoute(email)) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                                viewModel.resetAuthState()
+                            }
+                            else -> {}
                         }
                     }
                     LoginScreen(
@@ -287,12 +334,21 @@ fun AuthNavigation(
                 composable(Screen.Signup.route) {
                     val authState by viewModel.authState.collectAsState()
                     LaunchedEffect(authState) {
-                        if (authState is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified) {
-                            val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
-                            navController.navigate(Screen.Verification.createRoute(email)) {
-                                popUpTo(Screen.Signup.route) { inclusive = true }
+                        when (authState) {
+                            is com.mlbb.scrim.data.model.AuthResult.Success -> {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Signup.route) { inclusive = true }
+                                }
+                                viewModel.resetAuthState()
                             }
-                            viewModel.resetAuthState()
+                            is com.mlbb.scrim.data.model.AuthResult.EmailNotVerified -> {
+                                val email = (authState as com.mlbb.scrim.data.model.AuthResult.EmailNotVerified).email
+                                navController.navigate(Screen.Verification.createRoute(email)) {
+                                    popUpTo(Screen.Signup.route) { inclusive = true }
+                                }
+                                viewModel.resetAuthState()
+                            }
+                            else -> {}
                         }
                     }
                     SignupScreen(
@@ -331,7 +387,7 @@ fun AuthNavigation(
                         email = email,
                         initialSecondsUntilDeletion = deletionSeconds,
                         onResendEmail = { viewModel.resendVerificationEmail(it) },
-                        onConfirmed = { viewModel.confirmEmail() },
+                        onVerifyOtp = { otp -> viewModel.verifyOtp(otp) },
                         onBackToLogin = {
                             navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.Verification.route) { inclusive = true }
@@ -339,14 +395,16 @@ fun AuthNavigation(
                         },
                         isLoading = authState is com.mlbb.scrim.data.model.AuthResult.Loading,
                         resentSuccess = resentSuccess,
-                        accountDeleted = accountDeleted
+                        accountDeleted = accountDeleted,
+                        otpError = if (authState is com.mlbb.scrim.data.model.AuthResult.Error)
+                            (authState as com.mlbb.scrim.data.model.AuthResult.Error).message else null
                     )
                 }
 
                 composable(Screen.Home.route) {
-                    val isHomeRefreshing by remember { mutableStateOf(false) }
                     HomeScreen(
                         userProfile = userProfile,
+                        onLogout = { viewModel.signOut() },
                         onNavigateToCreateTeam = {
                             navController.navigate(Screen.CreateTeam.route)
                         },
@@ -366,26 +424,14 @@ fun AuthNavigation(
                         onNavigateToSchedule = {
                             navController.navigate(Screen.Schedule.route)
                         },
-                        onNavigateToLfgBoard = {
-                            navController.navigate(Screen.LfgBoard.route)
-                        },
                         onNavigateToNotifications = {
                             navController.navigate(Screen.Notifications.route)
-                        },
-                        onNavigateToProfile = {
-                            navController.navigate(Screen.Profile.route)
                         },
                         onNavigateToScrimDetail = { scrimId ->
                             navController.navigate(Screen.ScrimDetail.createRoute(scrimId))
                         },
                         scrims = scrims,
-                        notificationCount = notificationUnreadCount,
-                        isRefreshing = scrimIsLoading,
-                        onRefresh = {
-                            scrimViewModel.loadScrims()
-                            teamViewModel.loadTeams()
-                            notificationViewModel.loadNotifications()
-                        }
+                        notificationCount = notificationUnreadCount
                     )
                 }
 
@@ -393,11 +439,12 @@ fun AuthNavigation(
                     val authState by viewModel.authState.collectAsState()
                     ProfileScreen(
                         userProfile = userProfile,
+                        isTab = true,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onUpdateProfile = { username, inGameId ->
-                            viewModel.updateProfile(username, inGameId)
+                        onUpdateProfile = { username, inGameId, role, bio, mainHeroes ->
+                            viewModel.updateProfile(username, inGameId, role, bio, mainHeroes)
                         },
                         onUpdateEmail = { newEmail, currentPassword ->
                             viewModel.updateEmail(newEmail, currentPassword)
@@ -413,11 +460,7 @@ fun AuthNavigation(
                         onNavigateToAchievements = {
                             navController.navigate(Screen.Achievements.route)
                         },
-                        unlockedAchievements = listOf(
-                            com.mlbb.scrim.data.model.Achievement.FIRST_SCRIM,
-                            com.mlbb.scrim.data.model.Achievement.SCRIM_HOST_10,
-                            com.mlbb.scrim.data.model.Achievement.TEAM_CREATOR
-                        )
+                        unlockedAchievements = derivedAchievements
                     )
                 }
 
@@ -425,14 +468,10 @@ fun AuthNavigation(
                     com.mlbb.scrim.ui.screens.AchievementsScreen(
                         achievements = com.mlbb.scrim.data.model.PlayerAchievements(
                             playerId = userProfile?.id ?: "",
-                            unlockedAchievements = listOf(
-                                com.mlbb.scrim.data.model.Achievement.FIRST_SCRIM.id,
-                                com.mlbb.scrim.data.model.Achievement.SCRIM_HOST_10.id,
-                                com.mlbb.scrim.data.model.Achievement.TEAM_CREATOR.id
-                            ),
-                            matchesPlayed = 12,
-                            scrimsCreated = 15,
-                            teamsCreated = 1
+                            unlockedAchievements = derivedAchievements.map { it.id },
+                            matchesPlayed = userProfile?.totalMatches ?: 0,
+                            scrimsCreated = scrims.count { it.teamId in playerTeamIds },
+                            teamsCreated = playerTeamIds.size
                         ),
                         onNavigateBack = { navController.popBackStack() }
                     )
@@ -440,30 +479,8 @@ fun AuthNavigation(
 
                 composable(Screen.LfgBoard.route) {
                     LfgBoardScreen(
-                        posts = listOf(
-                            com.mlbb.scrim.data.model.LfgPost(
-                                id = "1", playerId = "p1", playerName = "ShadowSlayer",
-                                role = com.mlbb.scrim.data.model.GameRole.ASSASSIN,
-                                region = com.mlbb.scrim.data.model.Region.ASIA,
-                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.ADVANCED,
-                                message = "Looking for a competitive team. Main assassin, can flex to marksman."
-                            ),
-                            com.mlbb.scrim.data.model.LfgPost(
-                                id = "2", playerId = "p2", playerName = "TankMaster",
-                                role = com.mlbb.scrim.data.model.GameRole.TANK,
-                                region = com.mlbb.scrim.data.model.Region.EU,
-                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.INTERMEDIATE,
-                                message = "Tank main, experienced in team play. Available evenings."
-                            ),
-                            com.mlbb.scrim.data.model.LfgPost(
-                                id = "3", playerId = "p3", playerName = "SupportGoddess",
-                                role = com.mlbb.scrim.data.model.GameRole.SUPPORT,
-                                region = com.mlbb.scrim.data.model.Region.NA,
-                                skillLevel = com.mlbb.scrim.data.model.SkillLevel.PRO,
-                                message = "Pro support player, shot-caller, looking for a serious team."
-                            )
-                        ),
-                        isLoading = false,
+                        posts = lfgPosts,
+                        isLoading = lfgIsLoading,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -490,15 +507,33 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.CreateTeam.route) {
+                    val createSuccess by teamViewModel.createSuccess.collectAsState()
+                    val isLoading by teamViewModel.isLoading.collectAsState()
+                    val vmError by teamViewModel.errorMessage.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        teamViewModel.clearCreateSuccess()
+                        teamViewModel.clearErrorMessage()
+                    }
+
+                    LaunchedEffect(createSuccess) {
+                        createSuccess?.let {
+                            teamViewModel.clearCreateSuccess()
+                            navController.popBackStack()
+                            navController.navigate(Screen.TeamList.route)
+                        }
+                    }
+
                     CreateTeamScreen(
                         onNavigateBack = {
                             navController.popBackStack()
                         },
                         onCreateTeam = { teamName ->
-                            teamViewModel.createTeam(teamName, userProfile?.email ?: "")
-                            navController.popBackStack()
-                            navController.navigate(Screen.TeamList.route)
-                        }
+                            teamViewModel.createTeam(teamName, userProfile?.id ?: "")
+                        },
+                        isLoading = isLoading,
+                        errorMessage = vmError,
+                        existingTeamNames = teams.map { it.name }
                     )
                 }
 
@@ -511,11 +546,11 @@ fun AuthNavigation(
                     val teamId = backStackEntry.arguments?.getString("teamId") ?: ""
                     val team = teams.find { it.id == teamId }
                     if (team != null) {
-                        val isLeader = team.leaderId == userProfile?.email
+                        val isLeader = team.leaderId == userProfile?.id
                         TeamDetailScreen(
                             team = team,
                             isLeader = isLeader,
-                            currentUserId = userProfile?.email ?: "",
+                            currentUserId = userProfile?.id ?: "",
                             onNavigateBack = {
                                 navController.popBackStack()
                             },
@@ -526,7 +561,7 @@ fun AuthNavigation(
                                 teamViewModel.removePlayer(teamId, playerId)
                             },
                             onLeaveTeam = {
-                                teamViewModel.leaveTeam(teamId, userProfile?.email ?: "")
+                                teamViewModel.leaveTeam(teamId, userProfile?.id ?: "")
                                 navController.popBackStack()
                             },
                             onDisbandTeam = {
@@ -537,7 +572,7 @@ fun AuthNavigation(
                                 // Show invite dialog with copy link option
                                 showInviteDialog = true
                             },
-                            onAddPlayer = { name, email, role ->
+                            onAddPlayer = { name, email, _ ->
                                 teamViewModel.addPlayer(teamId, name, email)
                             }
                         )
@@ -548,9 +583,6 @@ fun AuthNavigation(
                     ScrimListScreen(
                         scrims = scrims,
                         isLoading = scrimIsLoading,
-                        onNavigateBack = {
-                            navController.popBackStack()
-                        },
                         onNavigateToCreateScrim = {
                             navController.navigate(Screen.CreateScrim.route)
                         },
@@ -571,6 +603,7 @@ fun AuthNavigation(
                         teamName = teams.firstOrNull()?.name ?: "My Team",
                         teamId = teams.firstOrNull()?.id ?: "",
                         teamLeader = userProfile?.username ?: "",
+                        currentPlayerCount = teams.firstOrNull()?.currentPlayerCount ?: 0,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -602,12 +635,12 @@ fun AuthNavigation(
                     val scrim = scrims.find { it.id == scrimId }
                     if (scrim != null) {
                         val myTeam = teams.firstOrNull()
-                        val isTeamLeader = myTeam?.leaderId == userProfile?.email
+                        val isTeamLeader = myTeam?.leaderId == userProfile?.id
                         val teamHasMinPlayers = myTeam?.meetsMinPlayers ?: false
 
                         ScrimDetailScreen(
                             scrim = scrim,
-                            currentUserId = userProfile?.email ?: "",
+                            currentUserId = userProfile?.id ?: "",
                             currentUserTeamId = myTeam?.id,
                             currentUserTeamName = myTeam?.name,
                             isTeamLeader = isTeamLeader,
@@ -633,7 +666,7 @@ fun AuthNavigation(
                                 messageViewModel.sendApplyMessage(
                                     scrimId = sid,
                                     scrimTitle = scrim.teamName,
-                                    applicantId = userProfile?.email ?: "",
+                                    applicantId = userProfile?.id ?: "",
                                     applicantName = userProfile?.username ?: "",
                                     applicantTeamId = myTeam?.id ?: "",
                                     applicantTeamName = myTeam?.name ?: "",
@@ -725,10 +758,23 @@ fun AuthNavigation(
                     route = Screen.MatchResultDetail.route,
                     arguments = listOf(
                         androidx.navigation.navArgument("matchResultId") { type = androidx.navigation.NavType.StringType }
+                    ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "mlbbscrim://app/match_result/{matchResultId}" },
+                        navDeepLink { uriPattern = "https://mlbbscrim.app/match_result/{matchResultId}" }
                     )
                 ) { backStackEntry ->
                     val matchResultId = backStackEntry.arguments?.getString("matchResultId") ?: ""
-                    val matchResult = matchResults.find { it.id == matchResultId }
+                    var matchResult = matchResults.find { it.id == matchResultId }
+                        ?: selectedMatchResult?.takeIf { it.id == matchResultId }
+
+                    // Deep-link fallback: load from backend if not in local list
+                    if (matchResult == null) {
+                        LaunchedEffect(matchResultId) {
+                            matchResultViewModel.loadMatchResultById(matchResultId)
+                        }
+                    }
+
                     if (matchResult != null) {
                         MatchResultDetailScreen(
                             matchResult = matchResult,
@@ -740,6 +786,14 @@ fun AuthNavigation(
                             },
                             currentUserTeamId = teams.firstOrNull()?.id
                         )
+                    } else if (matchResultIsLoading) {
+                        // Loading placeholder while fetching deep-linked match
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = GoldPrimary)
+                        }
                     }
                 }
 
@@ -754,7 +808,7 @@ fun AuthNavigation(
                     if (matchResult != null) {
                         ReportMatchResultScreen(
                             matchResult = matchResult,
-                            currentUserId = userProfile?.email ?: "",
+                            currentUserId = userProfile?.id ?: "",
                             currentUserName = userProfile?.username ?: "",
                             currentTeamId = teams.firstOrNull()?.id ?: "",
                             onNavigateBack = {
@@ -780,23 +834,30 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.MessageList.route) {
+                    val userId = userProfile?.id ?: ""
                     LaunchedEffect(Unit) {
-                        messageViewModel.loadConversations(userProfile?.email ?: "")
+                        messageViewModel.loadConversations(userId)
+                    }
+                    // Start/stop background polling for new conversations
+                    androidx.compose.runtime.DisposableEffect(userId) {
+                        messageViewModel.startConversationsPolling(userId)
+                        onDispose { messageViewModel.stopConversationsPolling() }
                     }
                     MessageListScreen(
                         conversations = conversations,
                         isLoading = messagesIsLoading,
-                        currentUserId = userProfile?.email ?: "",
+                        currentUserId = userId,
+                        isTab = true,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
                         onNavigateToChat = { conversation ->
                             messageViewModel.loadConversation(conversation.id)
-                            messageViewModel.markAsRead(conversation.id, userProfile?.email ?: "")
+                            messageViewModel.markAsRead(conversation.id, userId)
                             navController.navigate(Screen.Chat.createRoute(conversation.id))
                         },
                         onRefresh = {
-                            messageViewModel.loadConversations(userProfile?.email ?: "")
+                            messageViewModel.loadConversations(userId)
                         }
                     )
                 }
@@ -810,21 +871,55 @@ fun AuthNavigation(
                     val conversationId = backStackEntry.arguments?.getString("conversationId") ?: ""
                     val conversation = conversations.find { it.id == conversationId }
                         ?: selectedConversation
+                    val userId = userProfile?.id ?: ""
+
+                    // Media Pickers
+                    val imageLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                    ) { uri ->
+                        uri?.let { 
+                            context.contentResolver.openInputStream(it)?.use { stream ->
+                                messageViewModel.sendImageMessage(
+                                    conversationId, userId, userProfile?.username ?: "", stream.readBytes()
+                                )
+                            }
+                        }
+                    }
+
+                    // Start/stop real-time chat polling while on this screen
+                    androidx.compose.runtime.DisposableEffect(conversationId) {
+                        messageViewModel.startChatPolling(conversationId, userId)
+                        onDispose { messageViewModel.stopChatPolling() }
+                    }
+
                     if (conversation != null) {
                         ChatScreen(
                             conversation = conversation,
-                            currentUserId = userProfile?.email ?: "",
+                            currentUserId = userId,
                             currentUserName = userProfile?.username ?: "",
                             onNavigateBack = {
+                                messageViewModel.stopChatPolling()
                                 navController.popBackStack()
                             },
                             onSendMessage = { content ->
                                 messageViewModel.sendMessage(
                                     conversationId = conversationId,
-                                    senderId = userProfile?.email ?: "",
+                                    senderId = userId,
                                     senderName = userProfile?.username ?: "",
                                     content = content
                                 )
+                            },
+                            onSendImage = { imageLauncher.launch("image/*") },
+                            onSendVoice = {
+                                // In a real app, this would open a recording UI
+                                // For now, we simulate a small voice note
+                                messageViewModel.sendVoiceMessage(
+                                    conversationId, userId, userProfile?.username ?: "",
+                                    ByteArray(100), 5 // 5 second mock
+                                )
+                            },
+                            onUpdateTyping = { isTyping ->
+                                messageViewModel.updateTypingStatus(conversationId, userId, isTyping)
                             },
                             onViewTeamInfo = { teamId, _ ->
                                 val team = teams.find { it.id == teamId }
@@ -864,7 +959,7 @@ fun AuthNavigation(
                             navController.popBackStack()
                         },
                         onDeleteAccount = {
-                            viewModel.signOut()
+                            viewModel.deleteAccount()
                             navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.Home.route) { inclusive = true }
                             }
@@ -883,13 +978,11 @@ fun AuthNavigation(
                         onToggleSound = { settingsViewModel.toggleSound(it) },
                         onToggleVibration = { settingsViewModel.toggleVibration(it) },
                         onSetLanguage = { code ->
+                            // MainActivity observes the languageCode flow and recreates itself
+                            // automatically once the new value is persisted.
                             settingsViewModel.setLanguage(code)
-                            // Restart activity to apply new locale
-                            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
-                            (context as? android.app.Activity)?.finish()
                         },
+
                         onToggleDarkMode = { settingsViewModel.toggleDarkMode(it) },
                         onLogout = { viewModel.signOut() }
                     )
@@ -983,6 +1076,47 @@ fun AuthNavigation(
                     NewsScreen(
                         viewModel = newsViewModel,
                         languageCode = languageCode
+                    )
+                }
+
+                composable(Screen.PlayerFinder.route) {
+                    PlayerFinderScreen(
+                        posts = lfgPosts,
+                        isLoading = lfgIsLoading,
+                        currentUserId = userProfile?.id ?: "",
+                        currentUserName = userProfile?.username ?: "",
+                        currentUserProfile = userProfile,
+                        myTeams = teams.filter { it.leaderId == userProfile?.id },
+                        onCreatePost = { role, region, skillLevel, message, mainHeroes, bio, useMic, tags, ds, tg, vk, fb ->
+                            lfgViewModel.addPost(
+                                playerId = userProfile?.id ?: "",
+                                playerName = userProfile?.username ?: "",
+                                role = role,
+                                region = region,
+                                skillLevel = skillLevel,
+                                message = message,
+                                mainHeroes = mainHeroes,
+                                bio = bio,
+                                useMic = useMic,
+                                playstyleTags = tags,
+                                discord = ds,
+                                telegram = tg,
+                                vk = vk,
+                                facebook = fb
+                            )
+                        },
+                        onDeletePost = { postId -> lfgViewModel.deletePost(postId) },
+                        onMessagePlayer = { post ->
+                            val convId = java.util.UUID.randomUUID().toString()
+                            messageViewModel.startDirectConversation(
+                                senderId = userProfile?.id ?: "",
+                                senderName = userProfile?.username ?: "",
+                                recipientId = post.playerId,
+                                recipientName = post.playerName
+                            )
+                            navController.navigate(Screen.MessageList.route)
+                        },
+                        onRefresh = { lfgViewModel.loadPosts() }
                     )
                 }
             }

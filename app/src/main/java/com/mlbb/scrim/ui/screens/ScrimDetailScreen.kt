@@ -1,8 +1,12 @@
 package com.mlbb.scrim.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +33,8 @@ import com.mlbb.scrim.data.model.Scrim
 import com.mlbb.scrim.data.model.ScrimApplication
 import com.mlbb.scrim.data.model.ScrimRosterEntry
 import com.mlbb.scrim.data.model.ScrimStatus
+import com.mlbb.scrim.data.service.SupabaseConfig
+import com.mlbb.scrim.data.service.SupabaseStorageUpload
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
@@ -35,6 +42,7 @@ import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.GradientButton
 import com.mlbb.scrim.ui.components.EnhancedStatusBadge
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -299,39 +307,26 @@ fun ScrimDetailScreen(
                         AnimatedEntrance(delayMillis = 500) {
                             Text(
                                 text = stringResource(R.string.description),
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = White
-                                )
+                                style = iOSTitle2.copy(color = TextPrimary)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     item {
                         AnimatedEntrance(delayMillis = 550) {
-                            Card(
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .shadow(
-                                        elevation = 4.dp,
-                                        spotColor = Color.Black.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(16.dp)
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = DarkNavy
-                                ),
-                                shape = RoundedCornerShape(16.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(SurfaceCard)
+                                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                             ) {
                                 Text(
                                     text = scrim.description,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = 16.sp,
-                                        color = LightGray
-                                    ),
-                                    modifier = Modifier.padding(24.dp)
+                                    style = iOSBody.copy(color = TextSecondary),
+                                    modifier = Modifier.padding(20.dp)
                                 )
                             }
                         }
@@ -342,22 +337,16 @@ fun ScrimDetailScreen(
                     }
                 }
 
-                // ═══════════════════════════════════════════════════════
-                // ROSTER DISPLAY — Show active/substitute players
-                // ═══════════════════════════════════════════════════════
+                // Rosters
                 if (scrim.teamARoster.isNotEmpty() || scrim.teamBRoster.isNotEmpty()) {
                     item {
                         AnimatedEntrance(delayMillis = 580) {
                             Text(
                                 text = "Rosters",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = White
-                                )
+                                style = iOSTitle2.copy(color = TextPrimary)
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     // Team A Roster
@@ -532,67 +521,49 @@ fun ScrimDetailScreen(
 
 @Composable
 fun InfoCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon : androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
     ) {
         Row(
-            modifier = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .background(
-                        color = BluePrimary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(14.dp)
-                    ),
+                    .size(44.dp)
+                    .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .border(1.dp, BluePrimary.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector        = icon,
                     contentDescription = label,
-                    tint = BluePrimary,
-                    modifier = Modifier.size(26.dp)
+                    tint               = BluePrimary,
+                    modifier           = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(18.dp))
+            Spacer(Modifier.width(14.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
-                        color = LightGray,
-                        fontWeight = FontWeight.Medium
-                    )
+                    text  = label,
+                    style = iOSCaption1.copy(color = TextSecondary, fontWeight = FontWeight.Medium)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 17.sp,
-                        color = White,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    text  = value,
+                    style = iOSHeadline.copy(color = TextPrimary)
                 )
             }
         }
@@ -745,47 +716,67 @@ private fun HostActions(
 @Composable
 private fun ApplicationCard(
     application: ScrimApplication,
-    onApprove: () -> Unit,
-    onReject: () -> Unit
+    onApprove  : () -> Unit,
+    onReject   : () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(14.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(14.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Team avatar
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(BluePrimary.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Brush.linearGradient(BlueGradient)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Group, null, tint = BluePrimary, modifier = Modifier.size(22.dp))
+                    Text(
+                        application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                        fontSize   = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = White
+                    )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(application.applicantTeamName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = White)
-                    Text("Leader: ${application.applicantTeamLeaderName}", fontSize = 12.sp, color = LightGray.copy(alpha = 0.7f))
+                    Text(
+                        application.applicantTeamName,
+                        style = iOSHeadline.copy(color = TextPrimary)
+                    )
+                    Text(
+                        "Leader: ${application.applicantTeamLeaderName}",
+                        style = iOSCaption1.copy(color = TextSecondary)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(color = GlassBorder)
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 GradientButton(
-                    text = stringResource(R.string.approve),
-                    onClick = onApprove,
+                    text     = stringResource(R.string.approve),
+                    onClick  = onApprove,
                     gradient = SuccessGradient,
                     modifier = Modifier.weight(1f),
-                    height = 44.dp
+                    height   = 44.dp
                 )
                 GradientButton(
-                    text = stringResource(R.string.reject),
-                    onClick = onReject,
-                    gradient = listOf(ErrorRed, ErrorRed.copy(alpha = 0.7f)),
+                    text     = stringResource(R.string.reject),
+                    onClick  = onReject,
+                    gradient = ErrorGradient,
                     modifier = Modifier.weight(1f),
-                    height = 44.dp
+                    height   = 44.dp
                 )
             }
         }
@@ -1173,6 +1164,50 @@ private fun InProgressSection(
     val isTeamA = currentTeamId == scrim.teamId
     val myScreenshotUploaded = if (isTeamA) scrim.teamAScreenshotUrl != null else scrim.teamBScreenshotUrl != null
     var showWinnerDialog by remember { mutableStateOf(false) }
+    var isUploading by remember { mutableStateOf(false) }
+    var uploadError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null && currentTeamId != null) {
+            isUploading = true
+            uploadError = null
+            coroutineScope.launch {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+                    if (bytes != null) {
+                        // Compress image to save bandwidth and storage
+                        val compressedBytes = com.mlbb.scrim.util.ImageUtils.compressImage(bytes)
+                        val path = "screenshots/${scrim.id}_${currentTeamId}_${System.currentTimeMillis()}.jpg"
+                        val contentType = "image/jpeg"
+                        
+                        val result = SupabaseStorageUpload.uploadFile(
+                            bucket = SupabaseConfig.BUCKET_SCREENSHOTS,
+                            path = path,
+                            fileBytes = compressedBytes,
+                            contentType = contentType
+                        )
+                        result.onSuccess { url ->
+                            onUploadScreenshot?.invoke(scrim.id, currentTeamId, url)
+                        }.onFailure { error ->
+                            uploadError = error.message
+                        }
+                    } else {
+                        uploadError = "Failed to read image"
+                    }
+                } catch (e: Exception) {
+                    uploadError = e.message
+                } finally {
+                    isUploading = false
+                }
+            }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -1216,16 +1251,22 @@ private fun InProgressSection(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (!myScreenshotUploaded && currentTeamId != null && onUploadScreenshot != null) {
-                GradientButton(
-                    text = "Attach Screenshot",
-                    onClick = {
-                        // In production: open image picker, upload to Supabase Storage
-                        // For now: mock URL
-                        onUploadScreenshot(scrim.id, currentTeamId, "https://storage.example.com/screenshots/${scrim.id}_${currentTeamId}.png")
-                    },
-                    gradient = BlueGradient,
-                    height = 48.dp
-                )
+                if (isUploading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = BluePrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Uploading...", color = LightGray, fontSize = 13.sp)
+                } else {
+                    GradientButton(
+                        text = "Attach Screenshot",
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        gradient = BlueGradient,
+                        height = 48.dp
+                    )
+                }
             } else if (myScreenshotUploaded) {
                 Card(
                     colors = CardDefaults.cardColors(
@@ -1242,6 +1283,16 @@ private fun InProgressSection(
                         Text("Screenshot uploaded", color = SuccessGreen, fontWeight = FontWeight.Medium)
                     }
                 }
+            }
+
+            uploadError?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    color = ErrorRed,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1325,69 +1376,74 @@ private fun RosterDisplayCard(
     teamName: String,
     roster: List<ScrimRosterEntry>
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(14.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(14.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = teamName,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = White
+                style = iOSHeadline.copy(color = TextPrimary)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Active players
             val activePlayers = roster.filter { it.isActive }
             val substitutes = roster.filter { !it.isActive }
 
             if (activePlayers.isNotEmpty()) {
                 Text(
-                    text = "Active (${activePlayers.size})",
-                    fontSize = 12.sp,
-                    color = SuccessGreen
+                    text = "ACTIVE (${activePlayers.size})",
+                    style = iOSCaption2.copy(color = SuccessGreen, fontWeight = FontWeight.Bold)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 activePlayers.forEach { entry ->
                     Row(
-                        modifier = Modifier.padding(vertical = 2.dp),
+                        modifier = Modifier.padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = SuccessGreen,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(entry.playerName, fontSize = 14.sp, color = White)
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(SuccessGreen.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = SuccessGreen,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(entry.playerName, style = iOSBody.copy(color = TextPrimary, fontSize = 14.sp))
                     }
                 }
             }
 
             if (substitutes.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                if (activePlayers.isNotEmpty()) Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Substitutes (${substitutes.size})",
-                    fontSize = 12.sp,
-                    color = MidGray
+                    text = "SUBSTITUTES (${substitutes.size})",
+                    style = iOSCaption2.copy(color = TextTertiary, fontWeight = FontWeight.Bold)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 substitutes.forEach { entry ->
                     Row(
-                        modifier = Modifier.padding(vertical = 2.dp),
+                        modifier = Modifier.padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.PersonOutline,
                             contentDescription = null,
-                            tint = MidGray,
-                            modifier = Modifier.size(14.dp)
+                            tint = TextTertiary,
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(entry.playerName, fontSize = 14.sp, color = LightGray)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(entry.playerName, style = iOSBody.copy(color = TextSecondary, fontSize = 14.sp))
                     }
                 }
             }

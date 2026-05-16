@@ -5,15 +5,28 @@ import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
-import com.mlbb.scrim.data.repository.MessageRepository
+import com.mlbb.scrim.data.repository.MessageRepositoryInterface
+import com.mlbb.scrim.data.repository.SupabaseMessageRepository
+import com.mlbb.scrim.data.service.SupabaseStorageUpload
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class MessageViewModel : ViewModel() {
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-    private val messageRepository = MessageRepository()
+@HiltViewModel
+class MessageViewModel @Inject constructor(
+    private val messageRepository: MessageRepositoryInterface
+) : ViewModel() {
+
+
+    private var chatPollingJob: Job? = null
+    private var typingStatusJob: Job? = null
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
@@ -27,22 +40,12 @@ class MessageViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _messageSent = MutableStateFlow(false)
-    val messageSent: StateFlow<Boolean> = _messageSent.asStateFlow()
-
     fun loadConversations(userId: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
-
             messageRepository.getConversationsForUser(userId).collect { result ->
-                result.onSuccess { list ->
-                    _conversations.value = list
-                    _isLoading.value = false
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                    _isLoading.value = false
-                }
+                result.onSuccess { _conversations.value = it }
+                _isLoading.value = false
             }
         }
     }
@@ -50,31 +53,75 @@ class MessageViewModel : ViewModel() {
     fun loadConversation(conversationId: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
-
             messageRepository.getConversationById(conversationId).collect { result ->
-                result.onSuccess { conversation ->
-                    _selectedConversation.value = conversation
-                    _isLoading.value = false
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                    _isLoading.value = false
+                result.onSuccess { _selectedConversation.value = it }
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun markAsRead(conversationId: String, userId: String) {
+        viewModelScope.launch {
+            messageRepository.markConversationAsRead(conversationId, userId).collect {}
+        }
+    }
+
+    private var convPollingJob: Job? = null
+    fun startConversationsPolling(userId: String) {
+        convPollingJob?.cancel()
+        convPollingJob = viewModelScope.launch {
+            while (isActive) {
+                messageRepository.getConversationsForUser(userId).collect { result ->
+                    result.onSuccess { _conversations.value = it }
+                }
+                delay(10000) // Poll for new convs every 10s
+            }
+        }
+    }
+
+    fun stopConversationsPolling() {
+        convPollingJob?.cancel()
+    }
+
+    fun startChatPolling(conversationId: String, userId: String) {
+        chatPollingJob?.cancel()
+        chatPollingJob = viewModelScope.launch {
+            // Mark as read when entering
+            messageRepository.markConversationAsRead(conversationId, userId).collect {}
+            
+            launch {
+                messageRepository.subscribeToMessages(conversationId).collect { newMessage ->
+                    val current = _selectedConversation.value
+                    if (current != null && current.id == conversationId) {
+                        if (current.messages.none { it.id == newMessage.id }) {
+                            _selectedConversation.value = current.copy(
+                                messages = current.messages + newMessage
+                            )
+                        }
+                    }
+                }
+            }
+            
+            launch {
+                messageRepository.subscribeToConversation(conversationId).collect { updated ->
+                    val current = _selectedConversation.value
+                    if (current != null && current.id == conversationId) {
+                        _selectedConversation.value = current.copy(
+                            isParticipantATyping = updated.isParticipantATyping,
+                            isParticipantBTyping = updated.isParticipantBTyping
+                        )
+                    }
                 }
             }
         }
     }
 
-    fun sendMessage(
-        conversationId: String,
-        senderId: String,
-        senderName: String,
-        content: String
-    ) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            _messageSent.value = false
+    fun stopChatPolling() {
+        chatPollingJob?.cancel()
+    }
 
+    fun sendMessage(conversationId: String, senderId: String, senderName: String, content: String) {
+        viewModelScope.launch {
             messageRepository.sendMessage(
                 conversationId = conversationId,
                 senderId = senderId,
@@ -82,15 +129,60 @@ class MessageViewModel : ViewModel() {
                 content = content,
                 type = MessageType.TEXT
             ).collect { result ->
-                result.onSuccess { message ->
-                    _messageSent.value = true
-                    loadConversation(conversationId)
-                    _isLoading.value = false
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                    _isLoading.value = false
-                }
+                result.onFailure { _error.value = it.message }
             }
+        }
+    }
+
+    fun sendImageMessage(conversationId: String, senderId: String, senderName: String, imageBytes: ByteArray) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val path = "chat/$conversationId/${System.currentTimeMillis()}.png"
+            val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, imageBytes, "image/png")
+            
+            uploadResult.onSuccess { url ->
+                messageRepository.sendMessage(
+                    conversationId = conversationId,
+                    senderId = senderId,
+                    senderName = senderName,
+                    content = "[Image]",
+                    type = MessageType.IMAGE,
+                    imageUrl = url
+                ).collect { _isLoading.value = false }
+            }.onFailure {
+                _error.value = "Image upload failed: ${it.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun sendVoiceMessage(conversationId: String, senderId: String, senderName: String, voiceBytes: ByteArray, duration: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val path = "chat/$conversationId/${System.currentTimeMillis()}.m4a"
+            val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, voiceBytes, "audio/m4a")
+            
+            uploadResult.onSuccess { url ->
+                messageRepository.sendMessage(
+                    conversationId = conversationId,
+                    senderId = senderId,
+                    senderName = senderName,
+                    content = "[Voice Note]",
+                    type = MessageType.VOICE,
+                    voiceUrl = url,
+                    voiceDuration = duration
+                ).collect { _isLoading.value = false }
+            }.onFailure {
+                _error.value = "Voice upload failed: ${it.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateTypingStatus(conversationId: String, userId: String, isTyping: Boolean) {
+        typingStatusJob?.cancel()
+        typingStatusJob = viewModelScope.launch {
+            messageRepository.setTypingStatus(conversationId, userId, isTyping).collect {}
         }
     }
 
@@ -110,53 +202,37 @@ class MessageViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
-
             messageRepository.sendApplyMessage(
-                scrimId = scrimId,
-                scrimTitle = scrimTitle,
-                applicantId = applicantId,
-                applicantName = applicantName,
-                applicantTeamId = applicantTeamId,
-                applicantTeamName = applicantTeamName,
-                scrimCreatorId = scrimCreatorId,
-                scrimCreatorName = scrimCreatorName,
-                scrimCreatorTeamId = scrimCreatorTeamId,
-                scrimCreatorTeamName = scrimCreatorTeamName,
-                teamPlayerCount = teamPlayerCount,
-                teamMaxPlayers = teamMaxPlayers
+                scrimId, scrimTitle, applicantId, applicantName, applicantTeamId, applicantTeamName,
+                scrimCreatorId, scrimCreatorName, scrimCreatorTeamId, scrimCreatorTeamName,
+                teamPlayerCount, teamMaxPlayers
             ).collect { result ->
-                result.onSuccess { conversation ->
-                    _selectedConversation.value = conversation
-                    loadConversations(scrimCreatorId)
-                    _isLoading.value = false
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                    _isLoading.value = false
-                }
+                result.onSuccess { _selectedConversation.value = it }
+                _isLoading.value = false
             }
         }
     }
 
-    fun markAsRead(conversationId: String, userId: String) {
+    fun startDirectConversation(
+        senderId: String,
+        senderName: String,
+        recipientId: String,
+        recipientName: String
+    ) {
         viewModelScope.launch {
-            messageRepository.markConversationAsRead(conversationId, userId).collect { result ->
-                result.onSuccess {
-                    loadConversations(userId)
+            _isLoading.value = true
+            messageRepository.startDirectConversation(
+                senderId, senderName, recipientId, recipientName
+            ).collect { result ->
+                result.onSuccess { 
+                    _selectedConversation.value = it
+                    // Optionally refresh list
+                    loadConversations(senderId)
                 }
+                _isLoading.value = false
             }
         }
     }
 
-    fun clearSelectedConversation() {
-        _selectedConversation.value = null
-    }
-
-    fun clearError() {
-        _error.value = null
-    }
-
-    fun clearMessageSent() {
-        _messageSent.value = false
-    }
+    fun clearError() { _error.value = null }
 }

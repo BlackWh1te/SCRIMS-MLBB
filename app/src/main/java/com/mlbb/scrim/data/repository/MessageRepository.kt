@@ -6,7 +6,7 @@ import com.mlbb.scrim.data.model.MessageType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class MessageRepository {
+class MessageRepository : MessageRepositoryInterface {
 
     private val conversations = mutableListOf<Conversation>()
 
@@ -81,7 +81,7 @@ class MessageRepository {
         )
     }
 
-    suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
+    override suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
         kotlinx.coroutines.delay(300)
         val userConversations = conversations.filter {
             it.participantAId == userId || it.participantBId == userId
@@ -89,13 +89,13 @@ class MessageRepository {
         emit(Result.success(userConversations))
     }
 
-    suspend fun getConversationById(conversationId: String): Flow<Result<Conversation?>> = flow {
+    override suspend fun getConversationById(conversationId: String): Flow<Result<Conversation?>> = flow {
         kotlinx.coroutines.delay(200)
         val conversation = conversations.find { it.id == conversationId }
         emit(Result.success(conversation))
     }
 
-    suspend fun getOrCreateConversation(
+    override suspend fun getOrCreateConversation(
         scrimId: String,
         scrimTitle: String,
         participantAId: String,
@@ -132,12 +132,15 @@ class MessageRepository {
         emit(Result.success(newConversation))
     }
 
-    suspend fun sendMessage(
+    override suspend fun sendMessage(
         conversationId: String,
         senderId: String,
         senderName: String,
         content: String,
-        type: MessageType = MessageType.TEXT
+        type: MessageType,
+        imageUrl: String?,
+        voiceUrl: String?,
+        voiceDuration: Int?
     ): Flow<Result<Message>> = flow {
         kotlinx.coroutines.delay(300)
 
@@ -153,7 +156,10 @@ class MessageRepository {
             senderId = senderId,
             senderName = senderName,
             content = content,
-            type = type
+            type = type,
+            imageUrl = imageUrl,
+            voiceUrl = voiceUrl,
+            voiceDuration = voiceDuration
         )
 
         val conversation = conversations[index]
@@ -168,7 +174,7 @@ class MessageRepository {
         emit(Result.success(message))
     }
 
-    suspend fun sendApplyMessage(
+    override suspend fun sendApplyMessage(
         scrimId: String,
         scrimTitle: String,
         applicantId: String,
@@ -241,7 +247,7 @@ class MessageRepository {
         emit(Result.success(conversations.find { it.id == convId }!!))
     }
 
-    suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
+    override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
         kotlinx.coroutines.delay(200)
 
         val index = conversations.indexOfFirst { it.id == conversationId }
@@ -261,5 +267,38 @@ class MessageRepository {
         )
 
         emit(Result.success(Unit))
+    }
+
+    override suspend fun startDirectConversation(
+        senderId: String,
+        senderName: String,
+        recipientId: String,
+        recipientName: String
+    ): Flow<Result<Conversation>> = flow {
+        kotlinx.coroutines.delay(300)
+        val convId = java.util.UUID.randomUUID().toString()
+        val newConv = Conversation(
+            id = convId,
+            participantAId = senderId,
+            participantAName = senderName,
+            participantBId = recipientId,
+            participantBName = recipientName,
+            lastMessage = "Direct conversation started",
+            lastMessageTime = System.currentTimeMillis()
+        )
+        conversations.add(newConv)
+        emit(Result.success(newConv))
+    }
+
+    override suspend fun setTypingStatus(conversationId: String, userId: String, isTyping: Boolean): Flow<Result<Unit>> = flow {
+        emit(Result.success(Unit))
+    }
+
+    override fun subscribeToMessages(conversationId: String): Flow<Message> = flow {
+        // No-op for mock
+    }
+
+    override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
+        // No-op for mock
     }
 }

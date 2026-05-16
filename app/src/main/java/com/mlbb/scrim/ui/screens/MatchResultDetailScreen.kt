@@ -21,8 +21,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.MatchResult
+import com.mlbb.scrim.data.model.RosterPlayerInfo
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import java.text.SimpleDateFormat
@@ -63,7 +66,7 @@ fun MatchResultDetailScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Match Details",
+                        text = stringResource(R.string.match_details),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -104,7 +107,7 @@ fun MatchResultDetailScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Match Result",
+                                text = stringResource(R.string.match_result),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = 14.sp,
                                     color = MidGray
@@ -127,7 +130,7 @@ fun MatchResultDetailScreen(
 
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        text = "VS",
+                                        text = stringResource(R.string.vs_label),
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontSize = 20.sp,
                                             fontWeight = FontWeight.Bold,
@@ -154,7 +157,7 @@ fun MatchResultDetailScreen(
                                     else -> "Unknown"
                                 }
                                 Text(
-                                    text = "$winnerName wins!",
+                                    text = stringResource(R.string.wins_exclamation, winnerName),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
@@ -188,7 +191,7 @@ fun MatchResultDetailScreen(
                                     .padding(20.dp)
                             ) {
                                 Text(
-                                    text = "Team Reports",
+                                    text = stringResource(R.string.team_reports),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -253,7 +256,7 @@ fun MatchResultDetailScreen(
                                     .padding(20.dp)
                             ) {
                                 Text(
-                                    text = "Screenshot Evidence",
+                                    text = stringResource(R.string.screenshot_evidence),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -287,7 +290,7 @@ fun MatchResultDetailScreen(
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            text = "Screenshot placeholder",
+                                            text = stringResource(R.string.screenshot_placeholder),
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontSize = 14.sp,
                                                 color = MidGray
@@ -343,7 +346,7 @@ fun MatchResultDetailScreen(
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Admin Decision",
+                                        text = stringResource(R.string.admin_decision),
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
@@ -385,7 +388,7 @@ fun MatchResultDetailScreen(
                                 .padding(20.dp)
                         ) {
                             Text(
-                                text = "Match Info",
+                                text = stringResource(R.string.match_info),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -427,7 +430,7 @@ fun MatchResultDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Report Match Result",
+                                text = stringResource(R.string.report_result),
                                 color = DarkBlue,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -436,8 +439,172 @@ fun MatchResultDetailScreen(
                     }
                 }
 
+                // Team Rosters Section
+                if (matchResult.teamARoster.isNotEmpty() || matchResult.teamBRoster.isNotEmpty()) {
+                    AnimatedEntrance(delayMillis = 380) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(
+                                    elevation = 6.dp,
+                                    spotColor = Color.Black.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(16.dp)
+                                ),
+                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.team_rosters),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = White
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Team A Roster
+                                if (matchResult.teamARoster.isNotEmpty()) {
+                                    Text(
+                                        text = matchResult.teamAName,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = BluePrimary
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    matchResult.teamARoster.forEach { player ->
+                                        RosterPlayerItem(
+                                            player = player,
+                                            isTeamWinner = matchResult.confirmedWinnerId == matchResult.teamAId
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                // Team B Roster
+                                if (matchResult.teamBRoster.isNotEmpty()) {
+                                    Text(
+                                        text = matchResult.teamBName,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = GoldPrimary
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    matchResult.teamBRoster.forEach { player ->
+                                        RosterPlayerItem(
+                                            player = player,
+                                            isTeamWinner = matchResult.confirmedWinnerId == matchResult.teamBId
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun RosterPlayerItem(
+    player: RosterPlayerInfo,
+    isTeamWinner: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = if (player.isActive) 
+                    SuccessGreen.copy(alpha = 0.08f) 
+                else 
+                    Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Role indicator
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        color = if (player.isActive) 
+                            BluePrimary.copy(alpha = 0.2f) 
+                        else 
+                            MidGray.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(6.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = player.role.take(3).uppercase(),
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (player.isActive) BluePrimary else MidGray
+                    )
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(10.dp))
+            
+            Column {
+                Text(
+                    text = player.playerName,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = White
+                    )
+                )
+                if (!player.isActive) {
+                    Text(
+                        text = stringResource(R.string.substitute),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 10.sp,
+                            color = MidGray
+                        )
+                    )
+                }
+            }
+        }
+
+        // Points change indicator
+        if (player.pointsChange != 0) {
+            Text(
+                text = if (player.pointsChange > 0) "+${player.pointsChange}" else "${player.pointsChange}",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (player.pointsChange > 0) SuccessGreen else ErrorRed
+                )
+            )
+        } else if (isTeamWinner && player.isActive) {
+            Icon(
+                imageVector = Icons.Default.EmojiEvents,
+                contentDescription = "Winner",
+                tint = GoldPrimary,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -497,7 +664,7 @@ private fun TeamBlock(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Reported",
+                    text = stringResource(R.string.reported),
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 11.sp,
                         color = SuccessGreen
@@ -530,6 +697,16 @@ private fun VerificationStatusChip(status: VerificationStatus) {
             Icons.Default.Gavel,
             Purple,
             "Review"
+        )
+        VerificationStatus.AUTO_CANCELLED -> Triple(
+            Icons.Default.Cancel,
+            ErrorRed,
+            "Cancelled"
+        )
+        VerificationStatus.ADMIN_RESOLVED -> Triple(
+            Icons.Default.CheckCircle,
+            LightGray,
+            "Resolved"
         )
     }
 
@@ -601,7 +778,7 @@ private fun ReportItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Reporter: $reporterName",
+                text = stringResource(R.string.reporter_label, reporterName),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = LightGray
@@ -611,7 +788,7 @@ private fun ReportItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Claimed winner: $reportedWinner",
+                text = stringResource(R.string.claimed_winner, reportedWinner),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = BluePrimary,
@@ -622,7 +799,7 @@ private fun ReportItem(
             if (!notes.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Notes: $notes",
+                    text = stringResource(R.string.notes_label, notes),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 12.sp,
                         color = MidGray

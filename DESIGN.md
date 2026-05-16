@@ -1,9 +1,19 @@
 # MLBB Scrim Host - Design System
 
 ## Aesthetic Direction
-**Epic Gaming Fantasy** — Inspired by MLBB's heroic fantasy aesthetic with gold/blue color scheme, bold typography, and dynamic elements that convey competitive energy.
+**Epic Gaming Fantasy meets iOS Polish** — Inspired by MLBB's heroic fantasy aesthetic with gold/blue color scheme, bold typography, and dynamic elements that convey competitive energy, now enhanced with iOS-style glassmorphism, refined shadows, and smooth animations for a premium, polished feel.
 
 ## Color Palette
+
+### iOS System Colors
+In addition to MLBB colors, iOS system colors are used for native-feeling UI elements:
+- **iOS Blue**: `#007AFF` — Primary actions, active states
+- **iOS Green**: `#34C759` — Success states
+- **iOS Red**: `#FF3B30` — Destructive actions, errors
+- **iOS Orange**: `#FF9500` — Warnings
+- **iOS Purple**: `#AF52DE` — Special accents
+- **iOS Teal**: `#5AC8FA` — Info states
+- **iOS Indigo**: `#5856D6` — Secondary accents
 
 ### Primary Colors (MLBB Official)
 - **Gold Primary**: `#FFD700` — MLBB gold accents
@@ -29,6 +39,20 @@
 - **Tier Gradient**: Varies by rank (Bronze to Grandmaster)
 
 ## Typography
+
+### iOS-Style Typography
+Typography now follows iOS conventions with refined letter spacing and line heights:
+- **Title 1**: 28sp Bold — Large titles
+- **Title 2**: 22sp Bold — Medium titles
+- **Title 3**: 20sp SemiBold — Small titles
+- **Headline**: 17sp SemiBold — Section headers
+- **Body**: 17sp Regular — Body text
+- **Callout**: 16sp Regular — Secondary text
+- **Footnote**: 13sp Regular — Captions
+- **Caption 1**: 12sp Regular — Small labels
+- **Caption 2**: 11sp Regular — Tiny labels
+
+Letter spacing is slightly negative (-0.1 to -0.4sp) for a modern, tight look similar to iOS.
 
 ### Display Font (Headings)
 - **Font**: Rajdhani or Orbitron (Google Fonts)
@@ -77,6 +101,32 @@
 
 ## Components
 
+### iOS-Style Components
+The app now includes iOS-style components for a premium feel:
+- **iOSGlassCard**: Glassmorphism cards with subtle blur and borders
+- **iOSElevatedCard**: Elevated cards with refined shadows
+- **iOSPrimaryButton**: Full-width primary buttons with iOS styling
+- **iOSSecondaryButton**: Outlined secondary buttons
+- **iOSTextButton**: Text-only buttons for tertiary actions
+- **iOSNavigationBar**: Large title navigation bars
+- **iOSLargeTitleHeader**: 34sp bold headers for screen titles
+- **iOSBottomSheet**: Modal bottom sheets with drag handles
+- **iOSActionSheet**: Action sheet with cancel button
+- **iOSChip**: Selectable filter chips
+- **iOSInput**: Styled text fields with iOS appearance
+
+### Glassmorphism
+- Subtle glass backgrounds (72% opacity)
+- Soft border highlights (8-12% white alpha)
+- Layered depth with multiple shadow colors
+- Blur effects on elevated surfaces
+
+### Shadows
+iOS-style shadow system with three levels:
+- **Light**: 8% alpha black
+- **Medium**: 12% alpha black
+- **Heavy**: 20% alpha black
+
 ### Buttons
 - **Primary**: Gold gradient background, dark blue text, 8dp radius, medium shadow
 - **Secondary**: Blue background, white text, 8dp radius
@@ -117,6 +167,20 @@
 - Tier/rank information prominently displayed
 
 ## Motion Design
+
+**Approach**: iOS-Inspired Smoothness
+Animations follow iOS conventions with cubic bezier easing:
+- **Ease Out Cubic**: Smooth exits (0.33, 1, 0.68, 1)
+- **Ease In Out Cubic**: Balanced transitions (0.65, 0, 0.35, 1)
+- **Ease Out Quart**: Decelerated exits (0.25, 1, 0.5, 1)
+- **Ease In Cubic**: Accelerated entries (0.32, 0, 0.67, 0)
+- **Spring**: Bouncy interactions (medium damping, low stiffness)
+
+**Animation Durations**:
+- **Micro**: 50-100ms (button taps, toggles)
+- **Short**: 150-200ms (list items, chip selection)
+- **Medium**: 250-400ms (screen transitions, modals)
+- **Long**: 400-700ms (hero reveals, celebrations)
 
 **Approach**: Intentional-Expressive
 - **Micro animations**: 50-100ms (button taps, toggles)
@@ -183,6 +247,18 @@
 - Number font for rankings
 - Trophy icons for top positions
 
+## iOS-Style Bottom Navigation
+The bottom navigation bar follows iOS design patterns:
+- **Height**: 72dp (taller for better touch targets)
+- **Corner Radius**: 28dp (generous, organic curve)
+- **Background**: Glassmorphism (72% opacity)
+- **Shadow**: Subtle layered shadows (8dp elevation)
+- **Active State**: iOS Blue with 12% alpha background
+- **Icon Size**: 26dp (larger than standard)
+- **Label**: 10sp SemiBold, appears on selection
+- **Animation**: Spring-based scale (1.15x on active)
+- **Badge**: iOS Red with bold text
+
 ## Tier System Colors
 
 - **Bronze**: `#CD7F32` — Bronze gradient
@@ -198,6 +274,7 @@
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2025-05-10 | Initial design system created | MLBB-themed aesthetic for scrim hosting app |
+| 2026-05-12 | iOS-style design system integration | Enhanced with glassmorphism, refined shadows, iOS typography, and smooth animations for premium feel |
 
 ## Memorable Thing
-"The epic gold and blue fantasy aesthetic that makes every match feel like a championship battle."
+"The epic gold and blue fantasy aesthetic meets iOS polish — every interaction feels premium, smooth, and championship-ready."

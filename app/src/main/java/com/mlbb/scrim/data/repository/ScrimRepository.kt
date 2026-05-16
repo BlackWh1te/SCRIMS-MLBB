@@ -11,9 +11,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
-// Optimized Mock ScrimRepository for UI testing without Supabase
-// TODO: Replace with actual Supabase implementation when dependencies are resolved
-class ScrimRepository {
+/**
+ * Scrim repository managing scrim postings, applications, rosters, and match results.
+ *
+ * Current implementation: In-memory mock for UI development.
+ * Next step: Integrate with Supabase (table: scrims, scrim_applications, scrim_rosters).
+ */
+class ScrimRepository : ScrimRepositoryInterface {
 
     private val scrims = mutableListOf<Scrim>()
 
@@ -105,19 +109,19 @@ class ScrimRepository {
         )
     }
 
-    fun getAllScrims(): Flow<Result<List<Scrim>>> = flowOf(Result.success(scrims.toList()))
+    override fun getAllScrims(): Flow<Result<List<Scrim>>> = flowOf(Result.success(scrims.toList()))
 
-    fun getScrimById(id: String): Flow<Result<Scrim?>> = flowOf(Result.success(scrims.find { it.id == id }))
+    override fun getScrimById(id: String): Flow<Result<Scrim?>> = flowOf(Result.success(scrims.find { it.id == id }))
 
-    fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>> =
+    override fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>> =
         flowOf(Result.success(scrims.filter { it.teamId == teamId || it.opponentTeamId == teamId }))
 
-    fun searchScrims(
-        query: String = "",
-        gameMode: com.mlbb.scrim.data.model.GameMode? = null,
-        region: com.mlbb.scrim.data.model.Region? = null,
-        skillLevel: com.mlbb.scrim.data.model.SkillLevel? = null,
-        status: com.mlbb.scrim.data.model.ScrimStatus? = null
+    override fun searchScrims(
+        query: String,
+        gameMode: com.mlbb.scrim.data.model.GameMode?,
+        region: com.mlbb.scrim.data.model.Region?,
+        skillLevel: com.mlbb.scrim.data.model.SkillLevel?,
+        status: com.mlbb.scrim.data.model.ScrimStatus?
     ): Flow<Result<List<Scrim>>> {
         val queryLower = query.lowercase().trim()
         val results = scrims.filter { scrim ->
@@ -133,14 +137,14 @@ class ScrimRepository {
         return flowOf(Result.success(results))
     }
 
-    suspend fun createScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
+    override suspend fun createScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
         delay(500)
         val newScrim = scrim.copy(id = java.util.UUID.randomUUID().toString())
         scrims.add(newScrim)
         emit(Result.success(newScrim))
     }
 
-    suspend fun updateScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
+    override suspend fun updateScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrim.id }
         if (index != -1) {
@@ -151,7 +155,7 @@ class ScrimRepository {
         }
     }
 
-    suspend fun deleteScrim(id: String): Flow<Result<Unit>> = flow {
+    override suspend fun deleteScrim(id: String): Flow<Result<Unit>> = flow {
         delay(500)
         val removed = scrims.removeIf { it.id == id }
         if (removed) {
@@ -165,7 +169,7 @@ class ScrimRepository {
     // TEAM VS TEAM APPLICATION FLOW
     // ═══════════════════════════════════════════════════════════════
 
-    suspend fun applyToScrim(scrimId: String, application: ScrimApplication): Flow<Result<Scrim>> = flow {
+    override suspend fun applyToScrim(scrimId: String, application: ScrimApplication): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
@@ -183,7 +187,7 @@ class ScrimRepository {
         }
     }
 
-    suspend fun approveApplication(scrimId: String, applicationId: String, conversationId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun approveApplication(scrimId: String, applicationId: String, conversationId: String): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
@@ -212,7 +216,7 @@ class ScrimRepository {
         }
     }
 
-    suspend fun rejectApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun rejectApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
@@ -228,7 +232,7 @@ class ScrimRepository {
         }
     }
 
-    suspend fun cancelApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun cancelApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
@@ -249,7 +253,7 @@ class ScrimRepository {
     // ═══════════════════════════════════════════════════════════════
 
     /** Captain sets the roster for their team in a scrim */
-    suspend fun setScrimRoster(
+    override suspend fun setScrimRoster(
         scrimId: String,
         teamId: String,
         roster: List<ScrimRosterEntry>
@@ -284,7 +288,7 @@ class ScrimRepository {
     // ═══════════════════════════════════════════════════════════════
 
     /** Transition scrim to READY_CHECK status at match time */
-    suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>> = flow {
         delay(300)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index == -1) {
@@ -301,7 +305,7 @@ class ScrimRepository {
     }
 
     /** Captain presses Ready button */
-    suspend fun markReady(scrimId: String, teamId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun markReady(scrimId: String, teamId: String): Flow<Result<Scrim>> = flow {
         delay(300)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index == -1) {
@@ -333,7 +337,7 @@ class ScrimRepository {
     // ═══════════════════════════════════════════════════════════════
 
     /** Captain uploads a screenshot */
-    suspend fun uploadScreenshot(scrimId: String, teamId: String, screenshotUrl: String): Flow<Result<Scrim>> = flow {
+    override suspend fun uploadScreenshot(scrimId: String, teamId: String, screenshotUrl: String): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index == -1) {
@@ -367,7 +371,7 @@ class ScrimRepository {
     // ═══════════════════════════════════════════════════════════════
 
     /** Complete scrim: must have screenshot uploaded, select winner */
-    suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index == -1) {
@@ -398,7 +402,7 @@ class ScrimRepository {
     }
 
     /** Calculate and return points changes for active roster players */
-    fun calculatePointsChanges(scrim: Scrim): PointsResult {
+    override fun calculatePointsChanges(scrim: Scrim): PointsResult {
         val winnerTeamId = scrim.winnerTeamId ?: return PointsResult.empty()
 
         val teamAChanges = scrim.teamAActiveRoster.map { entry ->
@@ -454,7 +458,7 @@ class ScrimRepository {
         )
     }
 
-    suspend fun submitResult(
+    override suspend fun submitResult(
         scrimId: String,
         reporterId: String,
         winnerTeamId: String,
@@ -476,7 +480,7 @@ class ScrimRepository {
         }
     }
 
-    suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
+    override suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
         delay(300)
         emit(Result.success(Unit))
     }

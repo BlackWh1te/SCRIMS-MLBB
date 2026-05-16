@@ -2,9 +2,13 @@ package com.mlbb.scrim.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -14,16 +18,153 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.ui.utils.HapticFeedback
+import androidx.compose.ui.platform.LocalContext
 
 // ============================================
-// Gradient Button (Primary Action)
+// iOS-Style Primary Button
+// ============================================
+
+@Composable
+fun iOSPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
+    backgroundColor: Color = iOSBlue,
+    contentColor: Color = White,
+    height: androidx.compose.ui.unit.Dp = 50.dp
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (enabled) 1f else 0.98f,
+        label = "buttonScale",
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+    val context = LocalContext.current
+
+    Button(
+        onClick = {
+            HapticFeedback.performClick(context)
+            onClick()
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .scale(scale),
+        enabled = enabled && !isLoading,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = backgroundColor,
+            contentColor = contentColor,
+            disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
+            disabledContentColor = contentColor.copy(alpha = 0.7f)
+        ),
+        shape = iOSButtonShape,
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                color = contentColor,
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(
+                text = text,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.3).sp
+            )
+        }
+    }
+}
+
+// ============================================
+// iOS-Style Secondary Button (Outlined)
+// ============================================
+
+@Composable
+fun iOSSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    borderColor: Color = iOSBlue,
+    contentColor: Color = iOSBlue,
+    height: androidx.compose.ui.unit.Dp = 50.dp
+) {
+    val context = LocalContext.current
+    OutlinedButton(
+        onClick = {
+            HapticFeedback.performClick(context)
+            onClick()
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height),
+        enabled = enabled,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = contentColor
+        ),
+        border = ButtonDefaults.outlinedButtonBorder.copy(
+            brush = SolidColor(borderColor),
+            width = 1.5.dp
+        ),
+        shape = iOSButtonShape
+    ) {
+        Text(
+            text = text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.3).sp
+        )
+    }
+}
+
+// ============================================
+// iOS-Style Text Button
+// ============================================
+
+@Composable
+fun iOSTextButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    textColor: Color = iOSBlue
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = textColor
+        )
+    ) {
+        Text(
+            text = text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.3).sp
+        )
+    }
+}
+
+// ============================================
+// Gradient Button (Primary Action - Legacy)
 // ============================================
 
 @Composable
@@ -42,9 +183,13 @@ fun GradientButton(
         targetValue = if (enabled) 1f else 0.5f,
         label = "buttonAlpha"
     )
+    val context = LocalContext.current
 
     Button(
-        onClick = onClick,
+        onClick = {
+            HapticFeedback.performClick(context)
+            onClick()
+        },
         modifier = modifier
             .fillMaxWidth()
             .height(height),
@@ -97,8 +242,12 @@ fun GhostButton(
     borderColor: Color = GoldPrimary,
     contentColor: Color = GoldPrimary
 ) {
+    val context = LocalContext.current
     OutlinedButton(
-        onClick = onClick,
+        onClick = {
+            HapticFeedback.performClick(context)
+            onClick()
+        },
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
@@ -121,7 +270,86 @@ fun GhostButton(
 }
 
 // ============================================
-// Glow Card with Optional Border
+// iOS-Style Glass Card with Blur Effect
+// ============================================
+
+@Composable
+fun iOSGlassCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = iOSCardShape,
+    borderColor: Color? = GlassBorder,
+    backgroundColor: Color = SurfaceGlass,
+    content: @Composable () -> Unit
+) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
+    Card(
+        modifier = modifier
+            .drawWithContent {
+                drawContent()
+                if (borderColor != null) {
+                    drawIntoCanvas { canvas ->
+                        val paint = android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            style = android.graphics.Paint.Style.STROKE
+                            strokeWidth = with(density) { 0.5.dp.toPx() }
+                            color = borderColor.toArgb()
+                            maskFilter = android.graphics.BlurMaskFilter(
+                                with(density) { 1.dp.toPx() },
+                                android.graphics.BlurMaskFilter.Blur.NORMAL
+                            )
+                        }
+                        val rect = androidx.compose.ui.geometry.Rect(
+                            0f, 0f, size.width, size.height
+                        )
+                        val roundedRect = android.graphics.RectF(
+                            rect.left, rect.top, rect.right, rect.bottom
+                        )
+                        val corners = with(density) { 20.dp.toPx() }
+                        canvas.nativeCanvas.drawRoundRect(roundedRect, corners, corners, paint)
+                    }
+                }
+            }
+            .graphicsLayer {
+                shadowElevation = with(density) { 4.dp.toPx() }
+                spotShadowColor = ShadowMedium
+                ambientShadowColor = ShadowLight
+            },
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = shape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        content()
+    }
+}
+
+// ============================================
+// iOS-Style Elevated Card
+// ============================================
+
+@Composable
+fun iOSElevatedCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = iOSCardShape,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .graphicsLayer {
+                shadowElevation = 6.dp.toPx()
+                spotShadowColor = ShadowMedium
+                ambientShadowColor = ShadowLight
+            },
+        colors = CardDefaults.cardColors(containerColor = SurfaceElevated),
+        shape = shape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        content()
+    }
+}
+
+// ============================================
+// Glow Card with Optional Border (Legacy - kept for compatibility)
 // ============================================
 
 @Composable
@@ -194,10 +422,10 @@ fun AnimatedEntrance(
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(
-            animationSpec = tween(durationMillis = 400, delayMillis = 0)
+            animationSpec = tween(durationMillis = 300, delayMillis = 0)
         ) + slideInVertically(
-            animationSpec = tween(durationMillis = 400, easing = AppEaseOutCubic),
-            initialOffsetY = { it / 5 }
+            animationSpec = tween(durationMillis = 300, easing = AppEaseOutCubic),
+            initialOffsetY = { it / 8 }
         ),
         exit = fadeOut() + slideOutVertically(),
         modifier = modifier
@@ -206,42 +434,143 @@ fun AnimatedEntrance(
     }
 }
 
+
 // ============================================
-// Tier Badge Component
+// iOS-Style Chip/Filter
 // ============================================
 
 @Composable
-fun TierBadge(
-    tierName: String,
-    modifier: Modifier = Modifier
+fun iOSChip(
+    text: String,
+    selected: Boolean = false,
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    val (gradient, textColor) = when (tierName.lowercase()) {
-        "bronze" -> listOf(Color(0xFFCD7F32), Color(0xFF8B4513)) to Color.White
-        "silver" -> listOf(Color(0xFFC0C0C0), Color(0xFF808080)) to Color.White
-        "gold" -> listOf(Color(0xFFFFD700), Color(0xFFFFA500)) to DarkBlue
-        "platinum" -> listOf(Color(0xFFE5E4E2), Color(0xFFB0B0B0)) to DarkBlue
-        "diamond" -> listOf(Color(0xFFB9F2FF), Color(0xFF00BFFF)) to DarkBlue
-        "master" -> listOf(Color(0xFFFF00FF), Color(0xFF8B008B)) to Color.White
-        "grandmaster" -> listOf(Color(0xFFFFD700), Color(0xFFFF0000)) to Color.White
-        else -> listOf(Color(0xFF7C4DFF), Color(0xFF4A148C)) to Color.White
-    }
+    val backgroundColor by animateColorAsState(
+        targetValue = if (selected) iOSBlue else GlassLight,
+        animationSpec = tween(200),
+        label = "chipBg"
+    )
 
-    val brush = Brush.horizontalGradient(colors = gradient)
+    val textColor by animateColorAsState(
+        targetValue = if (selected) White else MidGray,
+        animationSpec = tween(200),
+        label = "chipText"
+    )
 
-    Box(
-        modifier = modifier
-            .background(brush = brush, shape = RoundedCornerShape(9999.dp))
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = iOSChipShape,
+        color = backgroundColor,
+        border = if (!selected) {
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                GlassBorder
+            )
+        } else null
     ) {
-        Text(
-            text = tierName.uppercase(),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            letterSpacing = 0.8.sp
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = textColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = textColor,
+                letterSpacing = (-0.2).sp
+            )
+        }
     }
+}
+
+// ============================================
+// iOS-Style Input/TextField
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun iOSInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onTrailingIconClick: () -> Unit = {},
+    isError: Boolean = false,
+    enabled: Boolean = true,
+    singleLine: Boolean = true,
+    keyboardType: KeyboardOptions = KeyboardOptions.Default
+) {
+    val borderColor = when {
+        isError -> ErrorRed
+        else -> Separator
+    }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(SurfaceElevated, shape = iOSInputShape),
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = iOSBody.copy(color = DimGray)
+            )
+        },
+        leadingIcon = if (leadingIcon != null) {
+            {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = DimGray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        } else null,
+        trailingIcon = if (trailingIcon != null) {
+            {
+                IconButton(onClick = onTrailingIconClick) {
+                    Icon(
+                        imageVector = trailingIcon,
+                        contentDescription = null,
+                        tint = DimGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        } else null,
+        enabled = enabled,
+        singleLine = singleLine,
+        keyboardOptions = keyboardType,
+        keyboardActions = KeyboardActions(
+            onDone = { /* Handle IME action */ }
+        ),
+        shape = iOSInputShape,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = iOSBlue,
+            unfocusedBorderColor = borderColor,
+            errorBorderColor = ErrorRed,
+            cursorColor = iOSBlue,
+            focusedTextColor = White,
+            unfocusedTextColor = White
+        ),
+        textStyle = iOSBody
+    )
 }
 
 // ============================================
@@ -380,59 +709,174 @@ fun SectionHeader(
 
 @Composable
 fun EmptyState(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
+    icon    : androidx.compose.ui.graphics.vector.ImageVector,
+    title   : String,
     subtitle: String,
     modifier: Modifier = Modifier,
-    action: @Composable (() -> Unit)? = null
+    action  : @Composable (() -> Unit)? = null
 ) {
     AnimatedEntrance {
         Column(
             modifier = modifier
                 .fillMaxSize()
-            .padding(40.dp),
+                .padding(horizontal = 40.dp, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Surface(
-                modifier = Modifier.size(100.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+            // Icon box
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(SurfaceOverlay)
+                    .drawWithContent {
+                        drawContent()
+                        drawIntoCanvas { canvas ->
+                            val paint = android.graphics.Paint().apply {
+                                isAntiAlias  = true
+                                style        = android.graphics.Paint.Style.STROKE
+                                strokeWidth  = 1f
+                                color        = GlassBorder.toArgb()
+                            }
+                            canvas.nativeCanvas.drawRoundRect(
+                                android.graphics.RectF(0f, 0f, size.width, size.height),
+                                with(androidx.compose.ui.platform.LocalDensity) { 24.dp.value },
+                                with(androidx.compose.ui.platform.LocalDensity) { 24.dp.value },
+                                paint
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = LightGray.copy(alpha = 0.6f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = title,
+                    tint               = DimGray,
+                    modifier           = Modifier.size(44.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
             Text(
-                text = title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = White
+                text       = title,
+                style      = iOSTitle3.copy(color = TextPrimary),
+                textAlign  = androidx.compose.ui.text.style.TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             Text(
-                text = subtitle,
-                fontSize = 15.sp,
-                color = LightGray,
+                text      = subtitle,
+                style     = iOSCallout.copy(color = TextSecondary),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
             if (action != null) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(Modifier.height(32.dp))
                 action()
             }
+        }
+    }
+}
+
+// ============================================
+// iOS-Style Navigation Bar with Large Title
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun iOSNavigationBar(
+    title: String,
+    modifier: Modifier = Modifier,
+    showBackButton: Boolean = false,
+    onBackClick: () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
+    largeTitle: Boolean = true
+) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    TopAppBar(
+        title = {
+            if (largeTitle) {
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    )
+                }
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = White
+                    )
+                )
+            }
+        },
+        modifier = modifier,
+        navigationIcon = {
+            if (showBackButton) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = iOSBlue,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent,
+            titleContentColor = White,
+            navigationIconContentColor = iOSBlue,
+            actionIconContentColor = iOSBlue
+        ),
+        scrollBehavior = scrollBehavior
+    )
+}
+
+// ============================================
+// iOS-Style Large Title Header
+// ============================================
+
+@Composable
+fun iOSLargeTitleHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.displayLarge.copy(
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = White,
+                letterSpacing = (-0.5).sp
+            )
+        )
+        if (subtitle != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 15.sp,
+                    color = MidGray
+                )
+            )
         }
     }
 }
@@ -443,24 +887,152 @@ fun EmptyState(
 
 @Composable
 fun GlassBackButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick : () -> Unit,
+    modifier: Modifier = Modifier,
+    tint    : Color = TextPrimary
 ) {
-    IconButton(
-        onClick = onClick,
+    Box(
         modifier = modifier
             .size(44.dp)
-            .background(
-                color = Color.White.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(12.dp)
-            )
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceOverlay)
+            .drawWithContent {
+                drawContent()
+                drawLine(
+                    brush       = SolidColor(GlassBorder),
+                    start       = Offset(0f, 0f),
+                    end         = Offset(size.width, 0f),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    brush       = SolidColor(GlassBorder),
+                    start       = Offset(0f, 0f),
+                    end         = Offset(0f, size.height),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    brush       = SolidColor(Color.Transparent),
+                    start       = Offset(size.width, 0f),
+                    end         = Offset(size.width, size.height),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    brush       = SolidColor(Color.Transparent),
+                    start       = Offset(0f, size.height),
+                    end         = Offset(size.width, size.height),
+                    strokeWidth = 1f
+                )
+            }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.ArrowBack,
+            imageVector        = Icons.Default.ArrowBack,
             contentDescription = "Back",
-            tint = White,
-            modifier = Modifier.size(22.dp)
+            tint               = tint,
+            modifier           = Modifier.size(20.dp)
         )
+    }
+}
+
+// ============================================
+// iOS-Style Bottom Sheet
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun iOSBottomSheet(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    content: @Composable ColumnScope.() -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        modifier = modifier,
+        shape = iOSSheetShape,
+        containerColor = SurfaceElevated,
+        dragHandle = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(5.dp)
+                        .background(
+                            color = Separator,
+                            shape = RoundedCornerShape(9999.dp)
+                        )
+                )
+            }
+        },
+        windowInsets = WindowInsets(0.dp)
+    ) {
+        content()
+    }
+}
+
+// ============================================
+// iOS-Style Action Sheet (Simple bottom sheet with actions)
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun iOSActionSheet(
+    title: String? = null,
+    actions: List<@Composable () -> Unit>,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    iOSBottomSheet(
+        onDismissRequest = onCancel,
+        modifier = modifier
+    ) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 13.sp,
+                    color = MidGray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            )
+            Divider(
+                color = Separator,
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            actions.forEach { action ->
+                action()
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        iOSTextButton(
+            text = stringResource(R.string.cancel),
+            onClick = onCancel,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            textColor = iOSRed
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 

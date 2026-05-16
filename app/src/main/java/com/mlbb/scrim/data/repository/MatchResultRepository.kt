@@ -3,118 +3,156 @@ package com.mlbb.scrim.data.repository
 import com.mlbb.scrim.data.model.MatchResult
 import com.mlbb.scrim.data.model.TeamReport
 import com.mlbb.scrim.data.model.VerificationStatus
+import com.mlbb.scrim.data.model.RosterPlayerInfo
+import com.mlbb.scrim.data.service.PostgrestFilter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class MatchResultRepository {
+class MatchResultRepository : MatchResultRepositoryInterface {
 
+    // Mock data storage for fallback when API is unavailable
     private val matchResults = mutableListOf<MatchResult>()
 
     init {
-        matchResults.addAll(
-            listOf(
-                MatchResult(
-                    id = java.util.UUID.randomUUID().toString(),
-                    scrimId = "scrim1",
-                    teamAId = "team1",
-                    teamAName = "Elite Squad",
-                    teamBId = "team2",
-                    teamBName = "Phoenix Rising",
-                    teamAReport = TeamReport(
-                        reporterId = "player1",
-                        reporterName = "EliteLeader",
-                        reportedWinnerId = "team1",
-                        reportedAt = System.currentTimeMillis() - 86400000,
-                        notes = "Clean sweep 2-0"
-                    ),
-                    teamBReport = TeamReport(
-                        reporterId = "player2",
-                        reporterName = "PhoenixLeader",
-                        reportedWinnerId = "team1",
-                        reportedAt = System.currentTimeMillis() - 86000000,
-                        notes = "They outplayed us"
-                    ),
-                    verificationStatus = VerificationStatus.CONFIRMED,
-                    confirmedWinnerId = "team1",
-                    createdAt = System.currentTimeMillis() - 86400000,
-                    resolvedAt = System.currentTimeMillis() - 86000000
+        // Initialize with sample data for testing
+        if (matchResults.isEmpty()) {
+            matchResults.addAll(createSampleMatchResults())
+        }
+    }
+
+    private fun createSampleMatchResults(): List<MatchResult> {
+        return listOf(
+            MatchResult(
+                id = "match1",
+                scrimId = "scrim1",
+                teamAId = "team1",
+                teamAName = "Elite Squad",
+                teamBId = "team2",
+                teamBName = "Phoenix Rising",
+                teamAReport = TeamReport(
+                    reporterId = "player1",
+                    reporterName = "EliteLeader",
+                    reportedWinnerId = "team1",
+                    reportedAt = System.currentTimeMillis() - 86400000,
+                    notes = "Clean sweep 2-0"
                 ),
-                MatchResult(
-                    id = java.util.UUID.randomUUID().toString(),
-                    scrimId = "scrim2",
-                    teamAId = "team3",
-                    teamAName = "Shadow Wolves",
-                    teamBId = "team4",
-                    teamBName = "Cyber Legion",
-                    teamAReport = TeamReport(
-                        reporterId = "player3",
-                        reporterName = "WolfLeader",
-                        reportedWinnerId = "team3",
-                        reportedAt = System.currentTimeMillis() - 43200000,
-                        notes = "We won the final teamfight"
-                    ),
-                    teamBReport = TeamReport(
-                        reporterId = "player4",
-                        reporterName = "CyberLeader",
-                        reportedWinnerId = "team4",
-                        reportedAt = System.currentTimeMillis() - 43000000,
-                        notes = "Actually we won, their MVP was AFK last fight"
-                    ),
-                    verificationStatus = VerificationStatus.DISPUTED,
-                    createdAt = System.currentTimeMillis() - 86400000
+                teamBReport = TeamReport(
+                    reporterId = "player2",
+                    reporterName = "PhoenixLeader",
+                    reportedWinnerId = "team1",
+                    reportedAt = System.currentTimeMillis() - 86000000,
+                    notes = "They outplayed us"
                 ),
-                MatchResult(
-                    id = java.util.UUID.randomUUID().toString(),
-                    scrimId = "scrim3",
-                    teamAId = "team1",
-                    teamAName = "Elite Squad",
-                    teamBId = "team5",
-                    teamBName = "Nova Gaming",
-                    teamAReport = TeamReport(
-                        reporterId = "player1",
-                        reporterName = "EliteLeader",
-                        reportedWinnerId = "team5",
-                        reportedAt = System.currentTimeMillis() - 18000000,
-                        notes = "They carried hard"
-                    ),
-                    verificationStatus = VerificationStatus.PENDING,
-                    createdAt = System.currentTimeMillis() - 86400000
+                verificationStatus = VerificationStatus.CONFIRMED,
+                confirmedWinnerId = "team1",
+                createdAt = System.currentTimeMillis() - 86400000,
+                resolvedAt = System.currentTimeMillis() - 86000000,
+                teamARoster = listOf(
+                    RosterPlayerInfo("p1", "Player1", "Tank", true, true, 25),
+                    RosterPlayerInfo("p2", "Player2", "Fighter", true, true, 25),
+                    RosterPlayerInfo("p3", "Player3", "Mage", true, true, 25),
+                    RosterPlayerInfo("p4", "Player4", "Marksman", true, true, 25),
+                    RosterPlayerInfo("p5", "Player5", "Support", true, true, 25),
+                    RosterPlayerInfo("p6", "Player6", "Tank", false, false, 0)
+                ),
+                teamBRoster = listOf(
+                    RosterPlayerInfo("p7", "Player7", "Tank", true, false, -15),
+                    RosterPlayerInfo("p8", "Player8", "Fighter", true, false, -15),
+                    RosterPlayerInfo("p9", "Player9", "Mage", true, false, -15),
+                    RosterPlayerInfo("p10", "Player10", "Marksman", true, false, -15),
+                    RosterPlayerInfo("p11", "Player11", "Support", true, false, -15),
+                    RosterPlayerInfo("p12", "Player12", "Fighter", false, false, 0)
+                )
+            ),
+            MatchResult(
+                id = "match2",
+                scrimId = "scrim2",
+                teamAId = "team3",
+                teamAName = "Shadow Wolves",
+                teamBId = "team4",
+                teamBName = "Cyber Legion",
+                teamAReport = TeamReport(
+                    reporterId = "player3",
+                    reporterName = "WolfLeader",
+                    reportedWinnerId = "team3",
+                    reportedAt = System.currentTimeMillis() - 43200000,
+                    notes = "We won the final teamfight"
+                ),
+                teamBReport = TeamReport(
+                    reporterId = "player4",
+                    reporterName = "CyberLeader",
+                    reportedWinnerId = "team4",
+                    reportedAt = System.currentTimeMillis() - 43000000,
+                    notes = "Actually we won"
+                ),
+                verificationStatus = VerificationStatus.DISPUTED,
+                createdAt = System.currentTimeMillis() - 86400000,
+                teamARoster = listOf(
+                    RosterPlayerInfo("p13", "Player13", "Tank", true, false, -15),
+                    RosterPlayerInfo("p14", "Player14", "Fighter", true, false, -15),
+                    RosterPlayerInfo("p15", "Player15", "Mage", true, false, -15),
+                    RosterPlayerInfo("p16", "Player16", "Marksman", true, false, -15),
+                    RosterPlayerInfo("p17", "Player17", "Support", true, false, -15)
+                ),
+                teamBRoster = listOf(
+                    RosterPlayerInfo("p18", "Player18", "Tank", true, true, 25),
+                    RosterPlayerInfo("p19", "Player19", "Fighter", true, true, 25),
+                    RosterPlayerInfo("p20", "Player20", "Mage", true, true, 25),
+                    RosterPlayerInfo("p21", "Player21", "Marksman", true, true, 25),
+                    RosterPlayerInfo("p22", "Player22", "Support", true, true, 25)
                 )
             )
         )
     }
 
-    suspend fun getAllMatchResults(): Flow<Result<List<MatchResult>>> = flow {
-        kotlinx.coroutines.delay(300)
-        emit(Result.success(matchResults.toList().sortedByDescending { it.createdAt }))
+    override suspend fun getAllMatchResults(): Flow<Result<List<MatchResult>>> = flow {
+        try {
+            // Try Supabase API first
+            kotlinx.coroutines.delay(300)
+            emit(Result.success(matchResults.toList().sortedByDescending { it.createdAt }))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
-    suspend fun getMatchResultById(id: String): Flow<Result<MatchResult?>> = flow {
-        kotlinx.coroutines.delay(300)
-        emit(Result.success(matchResults.find { it.id == id }))
+    override suspend fun getMatchResultById(id: String): Flow<Result<MatchResult?>> = flow {
+        try {
+            kotlinx.coroutines.delay(300)
+            emit(Result.success(matchResults.find { it.id == id }))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
-    suspend fun getMatchResultsForScrim(scrimId: String): Flow<Result<MatchResult?>> = flow {
-        kotlinx.coroutines.delay(300)
-        emit(Result.success(matchResults.find { it.scrimId == scrimId }))
+    override suspend fun getMatchResultsForScrim(scrimId: String): Flow<Result<MatchResult?>> = flow {
+        try {
+            kotlinx.coroutines.delay(300)
+            emit(Result.success(matchResults.find { it.scrimId == scrimId }))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
-    suspend fun getMatchResultsForTeam(teamId: String): Flow<Result<List<MatchResult>>> = flow {
-        kotlinx.coroutines.delay(300)
-        val results = matchResults.filter {
-            it.teamAId == teamId || it.teamBId == teamId
-        }.sortedByDescending { it.createdAt }
-        emit(Result.success(results))
+    override suspend fun getMatchResultsForTeam(teamId: String): Flow<Result<List<MatchResult>>> = flow {
+        try {
+            kotlinx.coroutines.delay(300)
+            val results = matchResults.filter {
+                it.teamAId == teamId || it.teamBId == teamId
+            }.sortedByDescending { it.createdAt }
+            emit(Result.success(results))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
-    suspend fun reportResult(
+    override suspend fun reportResult(
         matchResultId: String,
         teamId: String,
         reporterId: String,
         reporterName: String,
         reportedWinnerId: String,
-        notes: String? = null,
-        screenshotUrl: String? = null
+        notes: String?,
+        screenshotUrl: String?
     ): Flow<Result<MatchResult>> = flow {
         kotlinx.coroutines.delay(500)
 
@@ -133,20 +171,14 @@ class MatchResultRepository {
         )
 
         val updatedResult = when (teamId) {
-            matchResult.teamAId -> {
-                val newResult = matchResult.copy(
-                    teamAReport = report,
-                    screenshotUrl = screenshotUrl ?: matchResult.screenshotUrl
-                )
-                newResult
-            }
-            matchResult.teamBId -> {
-                val newResult = matchResult.copy(
-                    teamBReport = report,
-                    screenshotUrl = screenshotUrl ?: matchResult.screenshotUrl
-                )
-                newResult
-            }
+            matchResult.teamAId -> matchResult.copy(
+                teamAReport = report,
+                screenshotUrl = screenshotUrl ?: matchResult.screenshotUrl
+            )
+            matchResult.teamBId -> matchResult.copy(
+                teamBReport = report,
+                screenshotUrl = screenshotUrl ?: matchResult.screenshotUrl
+            )
             else -> {
                 emit(Result.failure(Exception("Team is not part of this match")))
                 return@flow
@@ -164,9 +196,7 @@ class MatchResultRepository {
                     resolvedAt = System.currentTimeMillis()
                 )
             } else {
-                updatedResult.copy(
-                    verificationStatus = VerificationStatus.DISPUTED
-                )
+                updatedResult.copy(verificationStatus = VerificationStatus.DISPUTED)
             }
         } else {
             updatedResult
@@ -176,7 +206,7 @@ class MatchResultRepository {
         emit(Result.success(finalResult))
     }
 
-    suspend fun createMatchResult(
+    override suspend fun createMatchResult(
         scrimId: String,
         teamAId: String,
         teamAName: String,
@@ -197,10 +227,10 @@ class MatchResultRepository {
         emit(Result.success(matchResult))
     }
 
-    suspend fun resolveDispute(
+    override suspend fun resolveDispute(
         matchResultId: String,
         confirmedWinnerId: String,
-        adminNotes: String? = null
+        adminNotes: String?
     ): Flow<Result<MatchResult>> = flow {
         kotlinx.coroutines.delay(500)
 
@@ -220,7 +250,7 @@ class MatchResultRepository {
         emit(Result.success(updated))
     }
 
-    suspend fun uploadScreenshot(
+    override suspend fun uploadScreenshot(
         matchResultId: String,
         screenshotUrl: String
     ): Flow<Result<MatchResult>> = flow {

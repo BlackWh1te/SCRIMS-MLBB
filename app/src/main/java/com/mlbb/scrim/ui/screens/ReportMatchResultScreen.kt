@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.MatchResult
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.GradientButton
@@ -88,7 +90,7 @@ fun ReportMatchResultScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Report Result",
+                        text = stringResource(R.string.report_result),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -126,7 +128,7 @@ fun ReportMatchResultScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Match",
+                                text = stringResource(R.string.match_label),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = 14.sp,
                                     color = MidGray
@@ -143,7 +145,7 @@ fun ReportMatchResultScreen(
                                 TeamBadge(name = matchResult.teamAName, isWinner = matchResult.confirmedWinnerId == matchResult.teamAId)
 
                                 Text(
-                                    text = "VS",
+                                    text = stringResource(R.string.vs_label),
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
@@ -199,7 +201,7 @@ fun ReportMatchResultScreen(
                                         .padding(24.dp)
                                 ) {
                                     Text(
-                                        text = "Who won?",
+                                        text = stringResource(R.string.who_won),
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.SemiBold,
@@ -253,7 +255,7 @@ fun ReportMatchResultScreen(
 
                                     // Screenshot Upload Section
                                     Text(
-                                        text = "Screenshot Evidence",
+                                        text = stringResource(R.string.screenshot_evidence),
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.SemiBold,
@@ -292,7 +294,7 @@ fun ReportMatchResultScreen(
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 Text(
-                                                    text = "Tap to upload match screenshot",
+                                                    text = stringResource(R.string.tap_upload_screenshot),
                                                     fontSize = 14.sp,
                                                     color = LightGray
                                                 )
@@ -340,13 +342,13 @@ fun ReportMatchResultScreen(
                                                     Spacer(modifier = Modifier.width(12.dp))
                                                     Column {
                                                         Text(
-                                                            text = "Screenshot uploaded",
+                                                            text = stringResource(R.string.screenshot_uploaded),
                                                             fontSize = 15.sp,
                                                             fontWeight = FontWeight.SemiBold,
                                                             color = SuccessGreen
                                                         )
                                                         Text(
-                                                            text = "Match result screenshot attached",
+                                                            text = stringResource(R.string.match_screenshot_attached),
                                                             fontSize = 13.sp,
                                                             color = LightGray
                                                         )
@@ -390,14 +392,16 @@ fun ReportMatchResultScreen(
                                                 }
                                                 else -> {
                                                     errorMessage = ""
-                                                    onReportResult(
-                                                        matchResult.id,
-                                                        currentTeamId,
-                                                        currentUserId,
-                                                        currentUserName,
-                                                        selectedWinnerId!!,
-                                                        notes.takeIf { it.isNotBlank() }
-                                                    )
+                                                    selectedWinnerId?.let { winnerId ->
+                                                        onReportResult(
+                                                            matchResult.id,
+                                                            currentTeamId,
+                                                            currentUserId,
+                                                            currentUserName,
+                                                            winnerId,
+                                                            notes.takeIf { it.isNotBlank() }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         },
@@ -452,7 +456,7 @@ fun ReportMatchResultScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "How it works",
+                                    text = stringResource(R.string.how_it_works),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -461,7 +465,7 @@ fun ReportMatchResultScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Both team leaders must report the same winner. If reports differ, the match is flagged for admin review.",
+                                    text = stringResource(R.string.both_leaders_report),
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 13.sp,
                                         color = LightGray
@@ -517,6 +521,8 @@ private fun VerificationStatusBadge(status: VerificationStatus) {
         VerificationStatus.CONFIRMED -> Triple(Icons.Default.CheckCircle, SuccessGreen, "Confirmed")
         VerificationStatus.DISPUTED -> Triple(Icons.Default.Warning, ErrorRed, "Disputed")
         VerificationStatus.ADMIN_REVIEW -> Triple(Icons.Default.Gavel, Purple, "Admin Review")
+        VerificationStatus.AUTO_CANCELLED -> Triple(Icons.Default.Cancel, ErrorRed, "Cancelled")
+        VerificationStatus.ADMIN_RESOLVED -> Triple(Icons.Default.CheckCircle, LightGray, "Resolved")
     }
 
     Row(
@@ -586,7 +592,7 @@ private fun WinnerSelectionButton(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
-                    text = "$teamName won",
+                    text = stringResource(R.string.wins_exclamation, teamName),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.SemiBold,
                         color = if (isSelected) DarkBlue else White
@@ -624,7 +630,7 @@ private fun ConfirmedResultCard(matchResult: MatchResult) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Result Confirmed",
+                text = stringResource(R.string.result_confirmed),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -638,7 +644,7 @@ private fun ConfirmedResultCard(matchResult: MatchResult) {
                 else -> "Unknown"
             }
             Text(
-                text = "Winner: $winnerName",
+                text = stringResource(R.string.winner_label, winnerName),
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = 16.sp,
                     color = White
@@ -675,7 +681,7 @@ private fun AlreadyReportedCard() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Report Submitted",
+                text = stringResource(R.string.report_submitted),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -684,7 +690,7 @@ private fun AlreadyReportedCard() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Waiting for the other team to report their result.",
+                text = stringResource(R.string.waiting_other_team),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 14.sp,
                     color = LightGray,
@@ -722,7 +728,7 @@ private fun DisputeCard(matchResult: MatchResult) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Result Disputed",
+                text = stringResource(R.string.result_disputed),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -731,7 +737,7 @@ private fun DisputeCard(matchResult: MatchResult) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "The other team reported a different winner. This match has been flagged for admin review.",
+                text = stringResource(R.string.different_winner_flagged),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 14.sp,
                     color = LightGray,
@@ -742,7 +748,7 @@ private fun DisputeCard(matchResult: MatchResult) {
             if (matchResult.adminNotes != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Admin notes: ${matchResult.adminNotes}",
+                    text = stringResource(R.string.admin_notes, matchResult.adminNotes),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
                         color = MidGray,

@@ -21,6 +21,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
@@ -59,7 +61,7 @@ fun JoinTeamScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Join Team",
+                        text = stringResource(R.string.join_team),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -109,7 +111,7 @@ fun JoinTeamScreen(
 
                 AnimatedEntrance(delayMillis = 150) {
                     Text(
-                        text = "Join a Team",
+                        text = stringResource(R.string.join_a_team),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = White,
@@ -121,7 +123,7 @@ fun JoinTeamScreen(
 
                 AnimatedEntrance(delayMillis = 200) {
                     Text(
-                        text = "Enter the invite code shared by your team leader to join their squad.",
+                        text = stringResource(R.string.invite_code_hint),
                         fontSize = 14.sp,
                         color = LightGray,
                         textAlign = TextAlign.Center
@@ -234,21 +236,21 @@ fun JoinTeamScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Welcome to the team!",
+                                    text = stringResource(R.string.welcome_to_team),
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = SuccessGreen
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "You've successfully joined the team.",
+                                    text = stringResource(R.string.joined_team_success),
                                     fontSize = 14.sp,
                                     color = LightGray,
                                     textAlign = TextAlign.Center
                                 )
                                 Spacer(modifier = Modifier.height(20.dp))
                                 GradientButton(
-                                    text = "Go to Teams",
+                                    text = stringResource(R.string.go_to_teams),
                                     onClick = onNavigateBack,
                                     gradient = BlueGradient,
                                     height = 48.dp

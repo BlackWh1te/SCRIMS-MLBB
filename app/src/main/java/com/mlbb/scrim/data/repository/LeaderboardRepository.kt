@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.flow
 class LeaderboardRepository {
 
     private val entries = mutableListOf(
+        // MYTHIC tier (17000+)
         LeaderboardEntry(
             rank = 1,
             playerId = "p1",
@@ -17,8 +18,9 @@ class LeaderboardRepository {
             wins = 45,
             losses = 12,
             totalMatches = 57,
-            currentTier = RankTier.GRANDMASTER
+            currentTier = RankTier.MYTHIC
         ),
+        // LEGEND tier (12000-16999)
         LeaderboardEntry(
             rank = 2,
             playerId = "p2",
@@ -28,7 +30,7 @@ class LeaderboardRepository {
             wins = 38,
             losses = 15,
             totalMatches = 53,
-            currentTier = RankTier.MASTER
+            currentTier = RankTier.LEGEND
         ),
         LeaderboardEntry(
             rank = 3,
@@ -39,18 +41,19 @@ class LeaderboardRepository {
             wins = 32,
             losses = 18,
             totalMatches = 50,
-            currentTier = RankTier.MASTER
+            currentTier = RankTier.LEGEND
         ),
+        // EPIC tier (8000-11999)
         LeaderboardEntry(
             rank = 4,
             playerId = "p4",
-            username = "PlatinumEdge",
+            username = "EpicEdge",
             teamName = "Cyber Legion",
             xp = 11500,
             wins = 28,
             losses = 20,
             totalMatches = 48,
-            currentTier = RankTier.DIAMOND
+            currentTier = RankTier.EPIC
         ),
         LeaderboardEntry(
             rank = 5,
@@ -61,19 +64,21 @@ class LeaderboardRepository {
             wins = 22,
             losses = 25,
             totalMatches = 47,
-            currentTier = RankTier.DIAMOND
+            currentTier = RankTier.EPIC
         ),
+        // GRANDMASTER tier (5000-7999)
         LeaderboardEntry(
             rank = 6,
             playerId = "p6",
-            username = "SilverWing",
+            username = "GrandAce",
             teamName = "Sky Blazers",
             xp = 6200,
             wins = 18,
             losses = 22,
             totalMatches = 40,
-            currentTier = RankTier.PLATINUM
+            currentTier = RankTier.GRANDMASTER
         ),
+        // GOLD tier (2500-4999)
         LeaderboardEntry(
             rank = 7,
             playerId = "p7",
@@ -88,7 +93,7 @@ class LeaderboardRepository {
         LeaderboardEntry(
             rank = 8,
             playerId = "p8",
-            username = "BronzeBeast",
+            username = "GoldNova",
             teamName = "Underdogs",
             xp = 3100,
             wins = 12,
@@ -96,17 +101,19 @@ class LeaderboardRepository {
             totalMatches = 30,
             currentTier = RankTier.GOLD
         ),
+        // SOLVER tier (1000-2499)
         LeaderboardEntry(
             rank = 9,
             playerId = "p9",
-            username = "RookieAce",
+            username = "SolverAce",
             teamName = "New Bloods",
             xp = 1500,
             wins = 8,
             losses = 12,
             totalMatches = 20,
-            currentTier = RankTier.SILVER
+            currentTier = RankTier.SOLVER
         ),
+        // BRONZE tier (0-999)
         LeaderboardEntry(
             rank = 10,
             playerId = "p10",

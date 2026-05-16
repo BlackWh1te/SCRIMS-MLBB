@@ -23,8 +23,11 @@ import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.MatchResult
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -57,7 +60,7 @@ fun MatchHistoryScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Match History",
+                        text = stringResource(R.string.match_history_title),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -84,56 +87,66 @@ fun MatchHistoryScreen(
                 }
             }
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
-            } else if (matchResults.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            tint = LightGray.copy(alpha = 0.5f),
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No matches yet",
-                            color = LightGray,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Complete a scrim to see your match history here.",
-                            color = MidGray,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    itemsIndexed(matchResults) { index, match ->
-                        AnimatedEntrance(delayMillis = 100 + index * 80) {
-                            MatchHistoryCard(
-                                match = match,
-                                currentUserTeamId = currentUserTeamId,
-                                onClick = { onNavigateToDetail(match) }
-                            )
+            PullToRefreshContainer(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    isLoading && matchResults.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = GoldPrimary)
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    matchResults.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = LightGray.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(R.string.no_matches_yet),
+                                    color = LightGray,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(R.string.complete_scrim_history),
+                                    color = MidGray,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            itemsIndexed(matchResults) { index, match ->
+                                AnimatedEntrance(delayMillis = 100 + index * 60) {
+                                    MatchHistoryCard(
+                                        match = match,
+                                        currentUserTeamId = currentUserTeamId,
+                                        onClick = { onNavigateToDetail(match) }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -154,6 +167,8 @@ private fun MatchHistoryCard(
         VerificationStatus.PENDING -> WarningOrange
         VerificationStatus.DISPUTED -> Purple
         VerificationStatus.ADMIN_REVIEW -> BluePrimary
+        VerificationStatus.AUTO_CANCELLED -> ErrorRed
+        VerificationStatus.ADMIN_RESOLVED -> LightGray
     }
 
     val statusText = when (match.verificationStatus) {
@@ -161,6 +176,8 @@ private fun MatchHistoryCard(
         VerificationStatus.PENDING -> "Pending"
         VerificationStatus.DISPUTED -> "Disputed"
         VerificationStatus.ADMIN_REVIEW -> "Under Review"
+        VerificationStatus.AUTO_CANCELLED -> "Auto-Cancelled"
+        VerificationStatus.ADMIN_RESOLVED -> "Resolved"
     }
 
     Card(
@@ -219,7 +236,7 @@ private fun MatchHistoryCard(
                 TeamNameBox(match.teamAName, match.teamAId == match.confirmedWinnerId)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "VS",
+                    text = stringResource(R.string.vs_label),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MidGray
@@ -231,7 +248,7 @@ private fun MatchHistoryCard(
             if (match.verificationStatus == VerificationStatus.CONFIRMED) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Winner: ${if (match.confirmedWinnerId == match.teamAId) match.teamAName else match.teamBName}",
+                    text = stringResource(R.string.winner_result, if (match.confirmedWinnerId == match.teamAId) match.teamAName else match.teamBName),
                     fontSize = 12.sp,
                     color = SuccessGreen,
                     fontWeight = FontWeight.Medium
@@ -241,7 +258,7 @@ private fun MatchHistoryCard(
             if (match.isDisputed) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Result disputed - waiting for resolution",
+                    text = stringResource(R.string.result_disputed_waiting),
                     fontSize = 12.sp,
                     color = WarningOrange
                 )

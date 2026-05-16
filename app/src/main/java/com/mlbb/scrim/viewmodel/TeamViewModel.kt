@@ -5,16 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.PlayerRole
 import com.mlbb.scrim.data.model.Team
 import com.mlbb.scrim.data.model.TeamInvite
-import com.mlbb.scrim.data.repository.TeamRepository
+import com.mlbb.scrim.data.repository.TeamRepositoryInterface
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class TeamViewModel : ViewModel() {
-
-    private val teamRepository = TeamRepository()
+@HiltViewModel
+class TeamViewModel @Inject constructor(
+    private val teamRepository: TeamRepositoryInterface
+) : ViewModel() {
 
     private var loadTeamsJob: Job? = null
     private var createTeamJob: Job? = null
@@ -40,6 +43,9 @@ class TeamViewModel : ViewModel() {
     
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _createSuccess = MutableStateFlow<Team?>(null)
+    val createSuccess: StateFlow<Team?> = _createSuccess.asStateFlow()
 
     // ── Invite state ──
     private val _pendingInvites = MutableStateFlow<List<TeamInvite>>(emptyList())
@@ -67,15 +73,16 @@ class TeamViewModel : ViewModel() {
         }
     }
     
-    fun createTeam(name: String, leaderEmail: String) {
+    fun createTeam(name: String, leaderId: String) {
         createTeamJob?.cancel()
         createTeamJob = viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            teamRepository.createTeam(name, leaderEmail).collect { result ->
+            teamRepository.createTeam(name, leaderId).collect { result ->
                 _isLoading.value = false
                 result.onSuccess { team ->
                     _currentTeam.value = team
+                    _createSuccess.value = team
                     loadTeams() // Refresh the list
                 }.onFailure { error ->
                     _errorMessage.value = error.message
@@ -284,7 +291,11 @@ class TeamViewModel : ViewModel() {
     fun clearErrorMessage() {
         _errorMessage.value = null
     }
-    
+
+    fun clearCreateSuccess() {
+        _createSuccess.value = null
+    }
+
     fun clearCurrentTeam() {
         _currentTeam.value = null
     }

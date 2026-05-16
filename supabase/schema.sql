@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS teams (
     total_xp INTEGER DEFAULT 0,
     current_tier TEXT DEFAULT 'Bronze',
     current_division INTEGER DEFAULT 1,
+    -- P1-5: Team stats (phantom fields now materialized)
+    reputation REAL DEFAULT 5.0,
+    can_post_scrims_until TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    total_scrims INTEGER DEFAULT 0,
+    completed_scrims INTEGER DEFAULT 0,
+    no_shows INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -66,6 +72,18 @@ CREATE TABLE IF NOT EXISTS player_stats (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- Notifications table (real-time notifications for users)
+CREATE TABLE IF NOT EXISTS app_notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,                   -- SCRIM_INVITE, MATCH_RESULT, XP_GAIN, TEAM_INVITE, MESSAGE, SYSTEM
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_id TEXT,                        -- Reference to related entity (scrim_id, match_id, team_id, etc.)
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
 -- Scrims table (available scrims posted by teams)
 CREATE TABLE IF NOT EXISTS scrims (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -94,7 +112,13 @@ CREATE TABLE IF NOT EXISTS scrims (
     winner_team_id UUID REFERENCES teams(id),
     result_submitted_at TIMESTAMP WITH TIME ZONE,
     cancellation_reason TEXT,
-    cancelled_by UUID REFERENCES profiles(id)
+    cancelled_by UUID REFERENCES profiles(id),
+    -- P1-7: Scrim search/filter fields (phantom fields now materialized)
+    game_mode TEXT DEFAULT 'RANKED',
+    region TEXT DEFAULT 'EU',
+    skill_level TEXT DEFAULT 'ALL',
+    max_players INTEGER DEFAULT 10,
+    current_players INTEGER DEFAULT 0
 );
 
 -- Scrim applications table
@@ -140,6 +164,10 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     sender_team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
+    -- P1-6: Message metadata (phantom fields now materialized)
+    sender_name TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    type TEXT DEFAULT 'TEXT',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -155,6 +183,14 @@ CREATE TABLE IF NOT EXISTS match_results (
     verification_notes TEXT,
     xp_awarded BOOLEAN DEFAULT FALSE,
     pts_awarded BOOLEAN DEFAULT FALSE,
+    -- P1-4: Admin review fields (phantom fields now materialized)
+    admin_verdict TEXT,
+    punished_team_id UUID REFERENCES teams(id),
+    punishment_duration_hours INTEGER DEFAULT 0,
+    reviewed_by_admin_id UUID REFERENCES profiles(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    no_show_team_id UUID REFERENCES teams(id),
+    match_actually_played BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -179,6 +215,8 @@ CREATE INDEX IF NOT EXISTS idx_match_results_match ON match_results(match_id);
 CREATE INDEX IF NOT EXISTS idx_team_invitations_team ON team_invitations(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_invitations_user ON team_invitations(invited_user_id);
 CREATE INDEX IF NOT EXISTS idx_player_stats_user ON player_stats(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON app_notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON app_notifications(created_at);
 
 -- ═══════════════════════════════════════════════════════════════
 -- FUNCTIONS
@@ -227,5 +265,92 @@ BEGIN
     WHERE match_id IN (
         SELECT m.id FROM matches m WHERE m.scrim_id = p_scrim_id
     );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ═══════════════════════════════════════════════════════════════
+-- RPC FUNCTIONS (P2 fixes)
+-- ═══════════════════════════════════════════════════════════════
+
+-- P2-1: Get team stats (wins, losses, total scrims, etc.)
+CREATE OR REPLACE FUNCTION get_team_stats(p_team_id UUID)
+RETURNS TABLE (
+    total_scrims BIGINT,
+    completed_scrims BIGINT,
+    wins BIGINT,
+    losses BIGINT,
+    total_points BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COUNT(*)::BIGINT AS total_scrims,
+        COUNT(*) FILTER (WHERE s.status = 'COMPLETED')::BIGINT AS completed_scrims,
+        COUNT(*) FILTER (WHERE s.winner_team_id = p_team_id AND s.status = 'COMPLETED')::BIGINT AS wins,
+        COUNT(*) FILTER (WHERE s.winner_team_id IS NOT NULL AND s.winner_team_id != p_team_id AND s.status = 'COMPLETED')::BIGINT AS losses,
+        COALESCE(SUM(ps.pts) FILTER (WHERE tm.team_id = p_team_id), 0)::BIGINT AS total_points
+    FROM scrims s
+    LEFT JOIN team_members tm ON tm.team_id = p_team_id
+    LEFT JOIN player_stats ps ON ps.user_id = tm.user_id
+    WHERE s.team_id = p_team_id OR s.opponent_team_id = p_team_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- P2-2: Get available scrims (open scrims that a team can apply to)
+CREATE OR REPLACE FUNCTION get_available_scrims(
+    p_team_id UUID,
+    p_game_mode TEXT DEFAULT NULL,
+    p_region TEXT DEFAULT NULL,
+    p_skill_level TEXT DEFAULT NULL
+)
+RETURNS SETOF scrims AS $$
+BEGIN
+    RETURN QUERY
+    SELECT *
+    FROM scrims
+    WHERE status = 'Open'
+      AND team_id != p_team_id
+      AND (p_game_mode IS NULL OR game_mode = p_game_mode)
+      AND (p_region IS NULL OR region = p_region)
+      AND (p_skill_level IS NULL OR skill_level = p_skill_level)
+    ORDER BY created_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- P2-3: Mark conversation as read for a user
+CREATE OR REPLACE FUNCTION mark_conversation_as_read(
+    p_match_id UUID,
+    p_user_id UUID
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE messages
+    SET is_read = TRUE
+    WHERE match_id = p_match_id
+      AND sender_id != p_user_id
+      AND is_read = FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- P2-4: Delete user and cascade cleanup
+CREATE OR REPLACE FUNCTION delete_user(p_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    -- team_members cleanup
+    DELETE FROM team_members WHERE user_id = p_user_id;
+    -- team_invitations cleanup
+    DELETE FROM team_invitations WHERE invited_user_id = p_user_id OR invited_by = p_user_id;
+    -- scrim_rosters cleanup
+    DELETE FROM scrim_rosters WHERE user_id = p_user_id;
+    -- scrim_applications cleanup (as applicant)
+    DELETE FROM scrim_applications WHERE applicant_team_id IN (
+        SELECT team_id FROM team_members WHERE user_id = p_user_id
+    );
+    -- player_stats cleanup
+    DELETE FROM player_stats WHERE user_id = p_user_id;
+    -- profiles cleanup
+    DELETE FROM profiles WHERE id = p_user_id;
+    -- Finally delete the auth user (requires admin privileges)
+    -- This is handled by Supabase Auth API, not here.
 END;
 $$ LANGUAGE plpgsql;

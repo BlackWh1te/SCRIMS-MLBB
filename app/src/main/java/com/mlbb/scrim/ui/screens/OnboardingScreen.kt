@@ -2,8 +2,9 @@ package com.mlbb.scrim.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,8 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
-import com.mlbb.scrim.ui.components.GradientButton
+import com.mlbb.scrim.ui.components.PremiumFadeIn
 
 private data class OnboardingPage(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -31,7 +34,6 @@ private data class OnboardingPage(
     val gradient: List<Color>
 )
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun OnboardingScreen(
     onFinish: () -> Unit
@@ -39,93 +41,98 @@ fun OnboardingScreen(
     val pages = listOf(
         OnboardingPage(
             icon = Icons.Default.SportsEsports,
-            title = "Find Scrims",
-            description = "Discover and join ranked scrims from teams around the world. Filter by region, skill level, and game mode.",
+            title = stringResource(R.string.find_scrims),
+            description = stringResource(R.string.find_scrims_desc),
             gradient = BlueGradient
         ),
         OnboardingPage(
             icon = Icons.Default.Group,
-            title = "Build Your Team",
-            description = "Create your squad, invite teammates, and manage roles. Teams of 3-7 players can compete together.",
+            title = stringResource(R.string.build_team),
+            description = stringResource(R.string.build_team_desc),
             gradient = GoldGradient
         ),
         OnboardingPage(
             icon = Icons.Default.EmojiEvents,
-            title = "Climb the Ranks",
-            description = "Earn XP, win matches, and rise through 7 tiers from Bronze to Grandmaster. Track your progress on the leaderboard.",
+            title = stringResource(R.string.climb_ranks),
+            description = stringResource(R.string.climb_ranks_desc),
             gradient = PurpleGradient
         ),
         OnboardingPage(
-            icon = Icons.Default.Chat,
-            title = "Connect & Compete",
-            description = "Chat with team leaders, apply to scrims, and verify match results with screenshots.",
+            icon = Icons.Filled.Chat,
+            title = stringResource(R.string.connect_compete),
+            description = stringResource(R.string.connect_compete_desc),
             gradient = SuccessGradient
         )
     )
 
-    var currentPage by remember { mutableStateOf(0) }
+    var currentPage by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = heroGradientBrush())
+            .background(DarkNavy)
     ) {
+        // ── Background Glow Orbs ──────────────────────────────────
+        Box(
+            modifier = Modifier
+                .size(350.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-50).dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(BluePrimary.copy(alpha = 0.12f), Color.Transparent)
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(280.dp)
+                .align(Alignment.BottomCenter)
+                .offset(y = 100.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(GoldPrimary.copy(alpha = 0.10f), Color.Transparent)
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(Modifier.height(80.dp))
 
-            // Page Content
+            // ── Page Content ────────────────────────────────────
             AnimatedContent(
                 targetState = currentPage,
                 transitionSpec = {
-                    (fadeIn(animationSpec = tween(400)) +
-                            slideInHorizontally { it / 4 } with
-                            fadeOut(animationSpec = tween(300)) +
-                            slideOutHorizontally { -it / 4 })
+                    fadeIn(animationSpec = tween(500)) togetherWith
+                    fadeOut(animationSpec = tween(400))
                 },
-                label = "pageTransition"
+                label = "pageTransition",
+                modifier = Modifier.weight(1f)
             ) { page ->
                 val pageData = pages[page]
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 32.dp),
+                        .padding(horizontal = 40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Icon with gradient background
+                    // Premium Glass Icon Container
                     Box(
                         modifier = Modifier
-                            .size(140.dp)
-                            .shadow(
-                                elevation = 20.dp,
-                                spotColor = pageData.gradient[0].copy(alpha = 0.4f),
-                                shape = CircleShape
-                            )
+                            .size(160.dp)
                             .clip(CircleShape)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        pageData.gradient[0].copy(alpha = 0.3f),
-                                        pageData.gradient[1].copy(alpha = 0.1f)
-                                    )
-                                )
-                            ),
+                            .background(SurfaceOverlay)
+                            .border(1.dp, GlassBorder, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
-                                .shadow(
-                                    elevation = 12.dp,
-                                    spotColor = pageData.gradient[0].copy(alpha = 0.3f),
-                                    shape = CircleShape
-                                )
                                 .clip(CircleShape)
-                                .background(
-                                    brush = Brush.verticalGradient(colors = pageData.gradient)
-                                ),
+                                .background(Brush.verticalGradient(pageData.gradient)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -137,40 +144,34 @@ fun OnboardingScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(Modifier.height(48.dp))
 
                     Text(
                         text = pageData.title,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = White,
+                        style = iOSTitle1.copy(color = TextPrimary),
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     Text(
                         text = pageData.description,
-                        fontSize = 16.sp,
-                        color = LightGray,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 24.sp
+                        style = iOSBody.copy(color = TextSecondary),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Page Indicators
+            // ── Page Indicators ─────────────────────────────────
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 32.dp)
+                modifier = Modifier.padding(vertical = 32.dp)
             ) {
                 pages.forEachIndexed { index, _ ->
                     val isSelected = index == currentPage
                     val width by animateDpAsState(
                         targetValue = if (isSelected) 32.dp else 8.dp,
-                        animationSpec = tween(300),
+                        animationSpec = spring(stiffness = Spring.StiffnessLow),
                         label = "indicatorWidth"
                     )
                     Box(
@@ -178,51 +179,56 @@ fun OnboardingScreen(
                             .width(width)
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (isSelected) GoldPrimary else White.copy(alpha = 0.2f)
-                            )
+                            .background(if (isSelected) GoldPrimary else GlassBorder)
                     )
                 }
             }
 
-            // Buttons
+            // ── Navigation Buttons ──────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(bottom = 60.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (currentPage > 0) {
-                    OutlinedButton(
-                        onClick = { currentPage-- },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = LightGray
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(White.copy(alpha = 0.3f))
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceOverlay)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                            .clickable { currentPage-- },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Back", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.back),
+                            style = iOSHeadline.copy(color = TextPrimary)
+                        )
                     }
+                } else {
+                    Spacer(Modifier.weight(1f))
                 }
 
                 val isLast = currentPage == pages.size - 1
-                GradientButton(
-                    text = if (isLast) "Get Started" else "Next",
-                    onClick = {
-                        if (isLast) {
-                            onFinish()
-                        } else {
-                            currentPage++
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    gradient = GoldGradient,
-                    height = 52.dp
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.verticalGradient(if (isLast) BlueGradient else GoldGradient))
+                        .clickable {
+                            if (isLast) onFinish() else currentPage++
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (isLast) stringResource(R.string.get_started) else stringResource(R.string.next),
+                        style = iOSHeadline.copy(color = if (isLast) White else DarkNavy)
+                    )
+                }
             }
         }
     }

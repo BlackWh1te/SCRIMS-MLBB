@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
@@ -40,12 +42,14 @@ fun TeamDetailScreen(
     onRemovePlayer: ((playerId: String) -> Unit)? = null,
     onLeaveTeam: (() -> Unit)? = null,
     onDisbandTeam: (() -> Unit)? = null,
-    onInvitePlayer: (() -> Unit)? = null
+    onInvitePlayer: (() -> Unit)? = null,
+    onAddPlayer: ((name: String, email: String, role: com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null
 ) {
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDisbandDialog by remember { mutableStateOf(false) }
     var showRemoveDialog by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
+    var showAddPlayerDialog by remember { mutableStateOf(false) }
     var playerToRemove by remember { mutableStateOf<com.mlbb.scrim.data.model.Player?>(null) }
 
     val inviteCode = remember(team.id) {
@@ -67,15 +71,14 @@ fun TeamDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
-                        .padding(top = 20.dp),
+                        .padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = "Team Details",
+                        text = stringResource(R.string.team_details),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -166,7 +169,7 @@ fun TeamDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "${team.players.size} / 7 players",
+                                        text = stringResource(R.string.players_count, team.players.size, 7),
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = 15.sp,
                                             color = LightGray
@@ -184,7 +187,7 @@ fun TeamDetailScreen(
                 item {
                     AnimatedEntrance(delayMillis = 175) {
                         Text(
-                            text = "Team Stats",
+                            text = stringResource(R.string.team_stats),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -238,7 +241,7 @@ fun TeamDetailScreen(
                 item {
                     AnimatedEntrance(delayMillis = 200) {
                         Text(
-                            text = "Players",
+                            text = stringResource(R.string.players),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -270,6 +273,7 @@ fun TeamDetailScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Add Player directly
                         AnimatedEntrance(delayMillis = 250 + team.players.size * 60) {
                             Card(
                                 modifier = Modifier
@@ -283,7 +287,7 @@ fun TeamDetailScreen(
                                     containerColor = DarkNavy
                                 ),
                                 shape = RoundedCornerShape(16.dp),
-                                onClick = { showInviteDialog = true }
+                                onClick = { showAddPlayerDialog = true }
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -300,11 +304,55 @@ fun TeamDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = "Add Player",
+                                        text = stringResource(R.string.add_player),
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = BluePrimary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Invite by Code
+                        AnimatedEntrance(delayMillis = 260 + team.players.size * 60) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .shadow(
+                                        elevation = 4.dp,
+                                        spotColor = GoldPrimary.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = DarkNavy
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                                onClick = { showInviteDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = "Invite by Code",
+                                        tint = GoldPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = stringResource(R.string.invite_by_code),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = GoldPrimary
                                         )
                                     )
                                 }
@@ -350,7 +398,7 @@ fun TeamDetailScreen(
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Text(
-                                            text = "Disband Team",
+                                            text = stringResource(R.string.disband_team),
                                             style = MaterialTheme.typography.bodyLarge.copy(
                                                 fontSize = 16.sp,
                                                 fontWeight = FontWeight.Medium,
@@ -390,7 +438,7 @@ fun TeamDetailScreen(
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Text(
-                                            text = "Leave Team",
+                                            text = stringResource(R.string.leave_team),
                                             style = MaterialTheme.typography.bodyLarge.copy(
                                                 fontSize = 16.sp,
                                                 fontWeight = FontWeight.Medium,
@@ -414,14 +462,14 @@ fun TeamDetailScreen(
             containerColor = DarkNavy,
             title = {
                 Text(
-                    text = "Leave Team?",
+                    text = stringResource(R.string.leave_team_confirm),
                     color = White,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to leave ${team.name}? You will need an invite to rejoin.",
+                    text = stringResource(R.string.leave_team_message, team.name),
                     color = LightGray,
                     fontSize = 14.sp
                 )
@@ -451,14 +499,14 @@ fun TeamDetailScreen(
             containerColor = DarkNavy,
             title = {
                 Text(
-                    text = "Disband Team?",
+                    text = stringResource(R.string.disband_team_confirm),
                     color = White,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "This will permanently delete ${team.name} and remove all players. This action cannot be undone.",
+                    text = stringResource(R.string.disband_team_message, team.name),
                     color = LightGray,
                     fontSize = 14.sp
                 )
@@ -482,41 +530,43 @@ fun TeamDetailScreen(
     }
 
     // Remove Player Dialog
-    if (showRemoveDialog && playerToRemove != null) {
-        AlertDialog(
-            onDismissRequest = { showRemoveDialog = false },
-            containerColor = DarkNavy,
-            title = {
-                Text(
-                    text = "Remove Player?",
-                    color = White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Remove ${playerToRemove!!.name} from the team?",
-                    color = LightGray,
-                    fontSize = 14.sp
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRemovePlayer?.invoke(playerToRemove!!.id)
-                        showRemoveDialog = false
-                        playerToRemove = null
+    playerToRemove?.let { player ->
+        if (showRemoveDialog) {
+            AlertDialog(
+                onDismissRequest = { showRemoveDialog = false },
+                containerColor = DarkNavy,
+                title = {
+                    Text(
+                        text = stringResource(R.string.remove_player_confirm),
+                        color = White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.remove_player_message, player.name),
+                        color = LightGray,
+                        fontSize = 14.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onRemovePlayer?.invoke(player.id)
+                            showRemoveDialog = false
+                            playerToRemove = null
+                        }
+                    ) {
+                        Text("Remove", color = ErrorRed)
                     }
-                ) {
-                    Text("Remove", color = ErrorRed)
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRemoveDialog = false }) {
+                        Text("Cancel", color = MidGray)
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemoveDialog = false }) {
-                    Text("Cancel", color = MidGray)
-                }
-            }
-        )
+            )
+        }
     }
 
     // Invite Player Dialog
@@ -525,6 +575,17 @@ fun TeamDetailScreen(
             teamName = team.name,
             inviteCode = inviteCode,
             onDismiss = { showInviteDialog = false }
+        )
+    }
+
+    // Add Player Dialog
+    if (showAddPlayerDialog) {
+        AddPlayerDialog(
+            teamName = team.name,
+            onDismiss = { showAddPlayerDialog = false },
+            onAddPlayer = { name, email, role ->
+                onAddPlayer?.invoke(name, email, role)
+            }
         )
     }
 }
@@ -602,7 +663,7 @@ fun PlayerCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Email: ${player.email}",
+                    text = stringResource(R.string.email_label, player.email),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
                         color = LightGray
@@ -653,7 +714,7 @@ fun PlayerCard(
             containerColor = DarkNavy,
             title = {
                 Text(
-                    text = "Change Role",
+                    text = stringResource(R.string.change_role),
                     color = White,
                     fontWeight = FontWeight.Bold
                 )
@@ -661,7 +722,7 @@ fun PlayerCard(
             text = {
                 Column {
                     Text(
-                        text = "Select a new role for ${player.name}:",
+                        text = stringResource(R.string.select_new_role, player.name),
                         color = LightGray,
                         fontSize = 14.sp
                     )

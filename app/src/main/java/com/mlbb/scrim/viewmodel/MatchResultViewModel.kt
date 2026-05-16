@@ -3,15 +3,26 @@ package com.mlbb.scrim.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.MatchResult
-import com.mlbb.scrim.data.repository.MatchResultRepository
+import com.mlbb.scrim.data.repository.MatchResultRepositoryInterface
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class MatchResultViewModel : ViewModel() {
+@HiltViewModel
+class MatchResultViewModel @Inject constructor(
+    private val matchResultRepository: MatchResultRepositoryInterface
+) : ViewModel() {
 
-    private val matchResultRepository = MatchResultRepository()
+    private var loadMatchResultsJob: Job? = null
+    private var loadMatchResultByIdJob: Job? = null
+    private var loadMatchResultsForTeamJob: Job? = null
+    private var reportResultJob: Job? = null
+    private var createMatchResultJob: Job? = null
+    private var resolveDisputeJob: Job? = null
 
     private val _matchResults = MutableStateFlow<List<MatchResult>>(emptyList())
     val matchResults: StateFlow<List<MatchResult>> = _matchResults.asStateFlow()
@@ -33,7 +44,8 @@ class MatchResultViewModel : ViewModel() {
     }
 
     fun loadMatchResults() {
-        viewModelScope.launch {
+        loadMatchResultsJob?.cancel()
+        loadMatchResultsJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
@@ -50,7 +62,8 @@ class MatchResultViewModel : ViewModel() {
     }
 
     fun loadMatchResultById(id: String) {
-        viewModelScope.launch {
+        loadMatchResultByIdJob?.cancel()
+        loadMatchResultByIdJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
@@ -67,7 +80,8 @@ class MatchResultViewModel : ViewModel() {
     }
 
     fun loadMatchResultsForTeam(teamId: String) {
-        viewModelScope.launch {
+        loadMatchResultsForTeamJob?.cancel()
+        loadMatchResultsForTeamJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
@@ -92,7 +106,8 @@ class MatchResultViewModel : ViewModel() {
         notes: String? = null,
         screenshotUrl: String? = null
     ) {
-        viewModelScope.launch {
+        reportResultJob?.cancel()
+        reportResultJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             _reportSuccess.value = false
@@ -126,7 +141,8 @@ class MatchResultViewModel : ViewModel() {
         teamBId: String,
         teamBName: String
     ) {
-        viewModelScope.launch {
+        createMatchResultJob?.cancel()
+        createMatchResultJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
@@ -154,7 +170,8 @@ class MatchResultViewModel : ViewModel() {
         confirmedWinnerId: String,
         adminNotes: String? = null
     ) {
-        viewModelScope.launch {
+        resolveDisputeJob?.cancel()
+        resolveDisputeJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
