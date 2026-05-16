@@ -52,6 +52,7 @@ fun ProfileScreen(
     onResetAuthState: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToAchievements: () -> Unit = {},
+    onLogout: () -> Unit = {},
     unlockedAchievements: List<com.mlbb.scrim.data.model.Achievement> = emptyList()
 ) {
     var isEditing by remember { mutableStateOf(false) }
@@ -64,6 +65,7 @@ fun ProfileScreen(
     // Account security dialog states
     var showEmailDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
     // Success snackbar
     val snackbarHostState = remember { SnackbarHostState() }
@@ -555,7 +557,20 @@ fun ProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Sign Out Section
+                AnimatedEntrance(delayMillis = 550) {
+                    AccountActionCard(
+                        icon = Icons.Default.Logout,
+                        title = "Sign Out",
+                        subtitle = "Log out of your account",
+                        color = WarningOrange,
+                        onClick = { showLogoutConfirm = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
 
@@ -586,6 +601,43 @@ fun ProfileScreen(
                 onUpdatePassword(currentPassword, newPassword, confirmPassword)
                 showPasswordDialog = false
             }
+        )
+    }
+
+    // Logout Confirmation Dialog
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            containerColor = DarkNavy,
+            title = {
+                Text(
+                    text = "Sign Out",
+                    style = iOSTitle3.copy(color = White, fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to sign out? You will need to enter your credentials to log back in.",
+                    style = iOSBody.copy(color = LightGray)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutConfirm = false
+                        onLogout()
+                    }
+                ) {
+                    Text("Sign Out", color = WarningOrange, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text("Cancel", color = LightGray)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
         )
     }
 }

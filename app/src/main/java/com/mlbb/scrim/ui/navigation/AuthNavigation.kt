@@ -478,6 +478,7 @@ fun AuthNavigation(
                         onNavigateToAchievements = {
                             navController.navigate(Screen.Achievements.route)
                         },
+                        onLogout = { viewModel.signOut() },
                         unlockedAchievements = derivedAchievements
                     )
                 }
