@@ -1,215 +1,118 @@
 # MLBB Scrim Host
 
+<p align="center">
+  <img src="teirs.png" width="800" alt="MLBB Scrim Rank Tiers">
+</p>
+
 An Android app for hosting and managing scrims (practice matches) for Mobile Legends: Bang Bang (MLBB). Built with Kotlin, Jetpack Compose, and Supabase.
 
-## Features
+## 🏆 Premium Achievement System
 
-- **User Authentication**: Email/password registration and login
-- **Team Management**: Create teams, invite players (3-7 members), manage team settings
-- **Scrim Scheduling**: Post available scrim slots with date/time
-- **Scrim Search**: Find and apply to scrims from other teams
-- **Real-time Chat**: Communicate with opposing team leaders
-- **Match Verification**: Upload game screenshots for admin verification
-- **XP & Ranking System**: 7-tier ranking system (Bronze to Grandmaster)
-- **Admin Dashboard**: Web interface for verifying match results
+The app features a professional, gamified "Trophy Room" with live progress tracking and custom-designed badges.
 
-## Tech Stack
+<p align="center">
+  <img src="achivments.png" width="800" alt="MLBB Scrim Achievements">
+</p>
+
+- **Live Progress Tracking**: Real-time progress bars for all milestones.
+- **Categorized Challenges**: Combat, Social, Elite, and General categories.
+- **Up Next Hero Card**: Automatically displays your closest upcoming milestone.
+- **Role Mastery**: Specific tracking for Jungler, Roamer, and other roles.
+- **Elite Milestones**: Track win streaks (up to 20!) and high-rating consistency.
+
+## 🚀 Features
+
+- **User Authentication**: Email/password registration and login with a premium UI.
+- **Team Management**: Create teams, invite players (3-7 members), manage team settings.
+- **Scrim Scheduling**: Post available scrim slots with date/time.
+- **Scrim Search**: Find and apply to scrims from other teams.
+- **Real-time Chat**: Communicate with opposing team leaders in a high-performance chat interface.
+- **Match Verification**: Upload game screenshots for admin verification.
+- **Advanced Ranking System**: 7-tier ranking system (Bronze → Mythic) with custom high-end icons.
+- **Admin Dashboard**: Full control over news, health monitoring, and match verification.
+
+## 🛠️ Tech Stack
 
 - **Frontend**: Kotlin + Jetpack Compose
 - **Backend**: Supabase (PostgreSQL, Auth, Storage, Realtime)
-- **Admin Dashboard**: React/Next.js (planned)
+- **News Service**: Production-grade service deployed on Render.
+- **Admin Dashboard**: React/Next.js with "Luxury Dark" design system.
 
-## Design System
+## 🎨 Design System
 
 The app features an MLBB-themed design with:
-- Epic gaming fantasy aesthetic
-- Official MLBB colors (Gold, Blue, Dark Blue)
-- Gaming fonts (Rajdhani, Roboto, Teko)
-- Dark mode with gold accents
-- Card-based layouts with tier badges
+- **Epic Gaming Fantasy Aesthetic**: Premium dark mode with gold and cyan accents.
+- **Glassmorphism**: Modern UI components with blur and transparency effects.
+- **Custom Typography**: Rajdhani, Roboto, and Teko for a true gaming feel.
+- **Custom Assets**: High-resolution icons for all achievements and rank tiers.
 
-See [DESIGN.md](DESIGN.md) for complete design system documentation.
-
-## Project Structure
+## 📂 Project Structure
 
 ```
 Android/
 ├── app/
 │   ├── src/main/java/com/mlbb/scrim/
 │   │   ├── data/
-│   │   │   ├── model/          # Data models (Profile, Team, Scrim, Match, etc.)
+│   │   │   ├── model/          # Data models (Achievement, Profile, Team, etc.)
 │   │   │   ├── repository/     # Repository classes for data access
 │   │   │   └── service/        # Supabase client and services
 │   │   ├── ui/
-│   │   │   ├── auth/           # Login, registration screens
-│   │   │   ├── team/           # Team management screens
-│   │   │   ├── scrim/          # Scrim search and posting
-│   │   │   ├── match/          # Match details and chat
-│   │   │   ├── profile/        # User profile
-│   │   │   └── leaderboard/    # Rankings and tiers
+│   │   │   ├── screens/        # Trophy Room, Scrim Search, Chat, etc.
+│   │   │   ├── components/     # Achievement badges, Rank icons, Shimmer skeletons
+│   │   │   └── theme/          # Custom color palette and typography
 │   │   └── viewmodel/          # ViewModels for UI state
 │   └── build.gradle.kts
 ├── supabase/
 │   ├── schema.sql              # Database table definitions
-│   ├── triggers.sql            # Database triggers (profile sync, XP calculation)
-│   ├── rls_policies.sql        # Row Level Security policies
-│   ├── functions.sql           # Custom SQL functions
-│   └── seed_data.sql           # Initial data setup
-├── DESIGN.md                   # Design system documentation
-└── CLAUDE.md                   # Project notes and configuration
+│   └── triggers.sql            # Database triggers (profile sync, XP calculation)
+└── README.md                   # Project documentation
 ```
 
-## Setup Instructions
+## 📋 Setup Instructions
 
 ### Prerequisites
 
 - Android Studio Hedgehog (2023.1.1) or later
 - JDK 17
 - Android SDK 34
-- Supabase account (free tier works)
+- Supabase account
 
 ### 1. Supabase Setup
 
 1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to the SQL Editor in your Supabase dashboard
-3. Run the SQL files in order:
-   - `supabase/schema.sql` (creates all tables)
-   - `supabase/triggers.sql` (creates triggers for profile sync and XP calculation)
-   - `supabase/rls_policies.sql` (sets up security policies)
-   - `supabase/functions.sql` (creates custom functions)
-
-4. Create an admin user:
-   - Go to Authentication → Users
-   - Create a new user with email/password
-   - Go to the SQL Editor and run:
-     ```sql
-     UPDATE profiles SET is_admin = true WHERE email = 'your-admin@email.com';
-     ```
-
-5. Create a Storage bucket for screenshots:
-   - Go to Storage → Create a new bucket
-   - Name it `screenshots`
-   - Make it public (or configure RLS policies)
-
-6. Get your Supabase credentials:
-   - Go to Project Settings → API
-   - Copy the Project URL and Anon Key
+2. Run `supabase/schema.sql` in the SQL Editor.
+3. Update `is_admin = true` for your admin account.
+4. Configure a `screenshots` storage bucket.
 
 ### 2. Android Project Setup
 
-1. Open the project in Android Studio
-2. Update Supabase credentials in `app/src/main/java/com/mlbb/scrim/data/service/SupabaseClient.kt`:
-   ```kotlin
-   private const val SUPABASE_URL = "YOUR_SUPABASE_URL"
-   private const val SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
-   ```
+1. Open in Android Studio.
+2. Update Supabase credentials in `SupabaseClient.kt`.
+3. Sync Gradle and build the project.
 
-3. Sync Gradle dependencies
-4. Build and run the app
-
-## Database Schema
-
-### Tables
-
-- **profiles**: User profiles (extends Supabase Auth)
-- **teams**: Team information and stats
-- **team_members**: Team membership with roles
-- **scrims**: Available scrim slots posted by teams
-- **scrim_applications**: Applications to join scrims
-- **matches**: Confirmed matches between teams
-- **messages**: Chat messages between team leaders
-- **match_results**: Match results with screenshots
-- **team_invitations**: Team invitations
-
-See `supabase/schema.sql` for complete schema.
-
-## Current Implementation Status
+## 📊 Current Implementation Status
 
 ### Completed ✅
-- Project structure and Gradle configuration
-- Design system documentation
-- Database schema and SQL files
-- Data models (Kotlin data classes)
-- Supabase client setup
-- AuthRepository (login, register, logout)
-- TeamRepository (create team, get team, invite players)
+- **Auth System**: Login/Register with premium UI and session management.
+- **Achievement System**: Full "Trophy Room" with live progress tracking.
+- **Custom Assets**: Sliced and integrated achievement and tier icons.
+- **Production Deployment**: News Service live on Render.
+- **Chat System**: Real-time messaging with opposing teams.
+- **Match Verification**: Screenshot upload and point calculation.
 
 ### In Progress 🚧
-- README documentation
-- Authentication UI screens
+- Push notifications for achievement unlocks.
+- Haptic feedback integration.
 
-### Pending ⏳
-- Team management UI
-- Scrim system (post, search, apply)
-- Real-time chat implementation
-- Screenshot upload functionality
-- XP and ranking system
-- Admin web dashboard
-
-## Next Steps
-
-1. **Complete Authentication UI**
-   - Login screen with MLBB-themed design
-   - Registration screen
-   - Session management
-
-2. **Implement Team Management**
-   - Team creation screen
-   - Team profile screen
-   - Member management
-   - Team settings
-
-3. **Build Scrim System**
-   - Post scrim screen
-   - Search scrims screen
-   - Scrim details and application flow
-
-4. **Add Real-time Chat**
-   - Chat UI
-   - Supabase Realtime integration
-   - System messages
-
-5. **Implement Screenshot Upload**
-   - Image picker
-   - Compression and upload to Supabase Storage
-   - Preview functionality
-
-6. **Create Admin Dashboard**
-   - Simple React/Next.js web app
-   - Verification queue
-   - Screenshot comparison
-   - Winner selection
-
-7. **Polish and Test**
-   - Apply design system consistently
-   - Add animations and transitions
-   - Test all user flows
-   - Performance optimization
-
-## Build Commands
+## 🏗️ Build Commands
 
 ```bash
 # Build debug APK
 ./gradlew assembleDebug
 
-# Run tests
-./gradlew test
-
-# Run lint
-./gradlew lint
-
 # Clean build
 ./gradlew clean
 ```
 
-## Contributing
-
-This is a personal project. Feel free to fork and modify for your own use.
-
-## License
-
-MIT License - feel free to use this code for your own projects.
-
-## Support
 
 For issues or questions, please refer to the project documentation or create an issue in the repository.
