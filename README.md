@@ -20,6 +20,18 @@ The app features a professional, gamified "Trophy Room" with live progress track
 - **Role Mastery**: Specific tracking for Jungler, Roamer, and other roles.
 - **Elite Milestones**: Track win streaks (up to 20!) and high-rating consistency.
 
+## 🖥️ Live Admin Panel
+
+The project includes a production-ready management interface for administrators to monitor the ecosystem.
+
+**🌐 Live URL**: [https://mlbb-admin.vercel.app/](https://mlbb-admin.vercel.app/)
+
+- **Luxury Dark UI**: Built with a high-end, modern aesthetic for professional management.
+- **Scrim Verification**: Queue-based system for validating match results and screenshots.
+- **User & Team Management**: Full control over profiles, rankings, and team rosters.
+- **Real-time Monitoring**: Live status of active scrims and system health.
+- **News Engine**: Directly push updates and announcements to the mobile application.
+
 ## 🚀 Features
 
 - **User Authentication**: Email/password registration and login with a premium UI.
@@ -29,7 +41,7 @@ The app features a professional, gamified "Trophy Room" with live progress track
 - **Real-time Chat**: Communicate with opposing team leaders in a high-performance chat interface.
 - **Match Verification**: Upload game screenshots for admin verification.
 - **Advanced Ranking System**: 7-tier ranking system (Bronze → Mythic) with custom high-end icons.
-- **Admin Dashboard**: Full control over news, health monitoring, and match verification.
+- **Admin Control**: Integrated dashboard for total ecosystem management.
 
 ## 🛠️ Tech Stack
 
