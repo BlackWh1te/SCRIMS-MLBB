@@ -49,6 +49,7 @@ fun SignupScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var isCaptchaVerified by remember { mutableStateOf(false) }
 
     val authState by viewModel.authState.collectAsState()
 
@@ -283,6 +284,13 @@ fun SignupScreen(
 
                         Spacer(Modifier.height(24.dp))
 
+                        // ── Security CAPTCHA ────────────────────────
+                        PremiumCaptcha(
+                            onVerified = { isCaptchaVerified = it }
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
                         val fillAllFields = stringResource(R.string.fill_all_fields)
                         val passwordsNotMatch = stringResource(R.string.passwords_not_match)
                         val passwordMinLength = stringResource(R.string.password_min_length)
@@ -308,6 +316,7 @@ fun SignupScreen(
                                         password != confirmPassword -> errorMessage = passwordsNotMatch
                                         password.length < 6 -> errorMessage = passwordMinLength
                                         !email.contains("@") -> errorMessage = invalidEmail
+                                        !isCaptchaVerified -> errorMessage = "Please slide to verify you are human"
                                         else -> viewModel.signUp(email, password, username, inGameId)
                                     }
                                 },
