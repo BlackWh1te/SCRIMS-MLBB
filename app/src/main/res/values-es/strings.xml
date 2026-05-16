@@ -4,7 +4,7 @@
     <string name="nav_home">Inicio</string>
     <string name="nav_teams">Equipos</string>
     <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">Noticias</string>
+    <string name="nav_news">News</string>
     <string name="nav_messages">Mensajes</string>
     <string name="nav_profile">Perfil</string>
     <string name="nav_match_history">Historial</string>
@@ -35,7 +35,7 @@
     <string name="matches">Partidas</string>
     <string name="win_rate">Victorias</string>
     <string name="xp_label">XP</string>
-    <string name="upcoming_scrims">Próximos scrims</string>
+    <string name="upcoming_scrims">Upcoming Scrims</string>
     <string name="see_all">Ver todo</string>
     <string name="quick_actions">Acciones rápidas</string>
     <string name="post_scrim">Post a Scrim</string>
@@ -122,7 +122,7 @@
 
 
     <!-- News -->
-    <string name="news">Noticias</string>
+    <string name="news">News</string>
     <string name="news_subtitle">Lo último de MLBB y Moonton</string>
     <string name="news_detail">Detalle de la noticia</string>
     <string name="no_news">No hay noticias disponibles</string>
@@ -204,7 +204,7 @@
     <string name="unlocked_date">Desbloqueado %s</string>
     <string name="my_teams">Mis Equipos</string>
     <string name="find_scrims_title">Buscar Scrims</string>
-    <string name="latest_news">Últimas Noticias</string>
+    <string name="latest_news">Latest News</string>
     <string name="rank_progress">Progreso de Rango</string>
     <string name="to_next_tier">hasta %s</string>
     <string name="view_all">Ver todos</string>

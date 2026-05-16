@@ -4,7 +4,7 @@
     <string name="nav_home">Ana Sayfa</string>
     <string name="nav_teams">Takimlar</string>
     <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">Haberler</string>
+    <string name="nav_news">News</string>
     <string name="nav_messages">Mesajlar</string>
     <string name="nav_profile">Profil</string>
     <string name="nav_match_history">Geçmiş</string>
@@ -122,7 +122,7 @@
 
 
     <!-- News -->
-    <string name="news">Haberler</string>
+    <string name="news">News</string>
     <string name="news_subtitle">MLBB ve Moonton\'dan son haberler</string>
     <string name="news_detail">Haber Detayı</string>
     <string name="no_news">Mevcut haber bulunmuyor</string>
@@ -203,13 +203,13 @@
     <string name="submit_report">Şikayet Gönder</string>
     <string name="unlocked_date">Açıldı %s</string>
     <string name="my_teams">Takımlarım</string>
-    <string name="find_scrims_title">Scrim Bul</string>
-    <string name="latest_news">Son Haberler</string>
+    <string name="find_scrims_title">Find Scrims</string>
+    <string name="latest_news">Latest News</string>
     <string name="rank_progress">Sıralama İlerlemesi</string>
     <string name="to_next_tier">%s\'e kadar</string>
     <string name="view_all">Tümünü Gör</string>
-    <string name="scrim_details">Scrim Detayları</string>
-    <string name="scrim_info">Scrim Bilgisi</string>
+    <string name="scrim_details">Scrim Details</string>
+    <string name="scrim_info">Scrim Info</string>
     <string name="description">Açıklama</string>
     <string name="apply_with_team">Takımla Başvur</string>
     <string name="applying_as">Başvuran: %s</string>

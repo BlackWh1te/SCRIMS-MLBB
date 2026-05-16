@@ -3,8 +3,8 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Главная</string>
     <string name="nav_teams">Команды</string>
-    <string name="nav_scrims">Скримы</string>
-    <string name="nav_news">Новости</string>
+    <string name="nav_scrims">Scrims</string>
+    <string name="nav_news">News</string>
     <string name="nav_messages">Сообщения</string>
     <string name="nav_profile">Профиль</string>
     <string name="nav_match_history">История</string>
@@ -35,7 +35,7 @@
     <string name="matches">Матчи</string>
     <string name="win_rate">Побед</string>
     <string name="xp_label">ОПыт</string>
-    <string name="upcoming_scrims">Ближайшие скримы</string>
+    <string name="upcoming_scrims">Upcoming Scrims</string>
     <string name="see_all">Смотреть все</string>
     <string name="quick_actions">Быстрые действия</string>
     <string name="post_scrim">Post a Scrim</string>
@@ -122,7 +122,7 @@
 
 
     <!-- News -->
-    <string name="news">Новости</string>
+    <string name="news">News</string>
     <string name="news_subtitle">Последние новости MLBB и Moonton</string>
     <string name="news_detail">Детали новости</string>
     <string name="no_news">Нет доступных новостей</string>
@@ -202,13 +202,13 @@
     <string name="submit_report">Отправить жалобу</string>
     <string name="unlocked_date">Открыто %s</string>
     <string name="my_teams">Мои Команды</string>
-    <string name="find_scrims_title">Найти Скримы</string>
-    <string name="latest_news">Последние Новости</string>
+    <string name="find_scrims_title">Find Scrims</string>
+    <string name="latest_news">Latest News</string>
     <string name="rank_progress">Прогресс Ранга</string>
     <string name="to_next_tier">до %s</string>
     <string name="view_all">Смотреть все</string>
-    <string name="scrim_details">Детали Скрама</string>
-    <string name="scrim_info">Информация о Скраме</string>
+    <string name="scrim_details">Scrim Details</string>
+    <string name="scrim_info">Scrim Info</string>
     <string name="description">Описание</string>
     <string name="apply_with_team">Подать заявку с Командой</string>
     <string name="applying_as">Заявка от: %s</string>

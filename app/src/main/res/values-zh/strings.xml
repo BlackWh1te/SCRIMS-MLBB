@@ -3,8 +3,8 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">首页</string>
     <string name="nav_teams">战队</string>
-    <string name="nav_scrims">对抗赛</string>
-    <string name="nav_news">新闻</string>
+    <string name="nav_scrims">Scrims</string>
+    <string name="nav_news">News</string>
     <string name="nav_messages">消息</string>
     <string name="nav_profile">我的</string>
     <string name="nav_match_history">历史</string>
@@ -35,7 +35,7 @@
     <string name="matches">比赛</string>
     <string name="win_rate">胜率</string>
     <string name="xp_label">经验</string>
-    <string name="upcoming_scrims">即将到来的训练赛</string>
+    <string name="upcoming_scrims">Upcoming Scrims</string>
     <string name="see_all">查看全部</string>
     <string name="quick_actions">快捷操作</string>
     <string name="post_scrim">Post a Scrim</string>
@@ -122,7 +122,7 @@
 
 
     <!-- News -->
-    <string name="news">新闻</string>
+    <string name="news">News</string>
     <string name="news_subtitle">MLBB 和 Moonton 的最新资讯</string>
     <string name="news_detail">新闻详情</string>
     <string name="no_news">暂无可用新闻</string>
@@ -203,13 +203,13 @@
     <string name="submit_report">提交举报</string>
     <string name="unlocked_date">已解锁 %s</string>
     <string name="my_teams">我的战队</string>
-    <string name="find_scrims_title">查找对抗赛</string>
-    <string name="latest_news">最新资讯</string>
+    <string name="find_scrims_title">Find Scrims</string>
+    <string name="latest_news">Latest News</string>
     <string name="rank_progress">段位进度</string>
     <string name="to_next_tier">距 %s</string>
     <string name="view_all">查看全部</string>
-    <string name="scrim_details">训练赛详情</string>
-    <string name="scrim_info">训练赛信息</string>
+    <string name="scrim_details">Scrim Details</string>
+    <string name="scrim_info">Scrim Info</string>
     <string name="description">描述</string>
     <string name="apply_with_team">以团队申请</string>
     <string name="applying_as">申请团队: %s</string>

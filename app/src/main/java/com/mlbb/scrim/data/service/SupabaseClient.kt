@@ -52,6 +52,8 @@ object SupabaseConfig {
  */
 object SupabaseSession {
     private const val KEY_ACCESS_TOKEN = "supabase_access_token"
+    private const val KEY_REFRESH_TOKEN = "supabase_refresh_token"
+    private const val KEY_USER_ID = "supabase_user_id"
 
     @Volatile
     private var secureStorage: SecureStorage? = null
@@ -63,6 +65,59 @@ object SupabaseSession {
     fun getAccessTokenOrNull(): String? {
         return secureStorage?.getEncrypted(KEY_ACCESS_TOKEN, "")?.takeIf { it.isNotBlank() }
     }
+
+    fun getRefreshTokenOrNull(): String? {
+        return secureStorage?.getEncrypted(KEY_REFRESH_TOKEN, "")?.takeIf { it.isNotBlank() }
+    }
+
+    fun saveTokens(accessToken: String, refreshToken: String) {
+        secureStorage?.storeEncrypted(KEY_ACCESS_TOKEN, accessToken)
+        secureStorage?.storeEncrypted(KEY_REFRESH_TOKEN, refreshToken)
+    }
+}
+
+/**
+ * Authenticator that handles 401 errors by refreshing the Supabase token.
+ */
+class SupabaseAuthenticator : okhttp3.Authenticator {
+    override fun authenticate(route: okhttp3.Route?, response: okhttp3.Response): okhttp3.Request? {
+        if (response.count() > 2) return null // Prevent infinite retry loops
+
+        val refreshToken = SupabaseSession.getRefreshTokenOrNull() ?: return null
+        
+        // Use a separate client without authenticator to avoid loops
+        val authClient = SupabaseAuthRetrofitClient.retrofit.create(SupabaseAuthService::class.java)
+        val refreshResponse = kotlinx.coroutines.runBlocking {
+            try {
+                authClient.refreshToken(RefreshTokenRequest(refreshToken))
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        if (refreshResponse?.isSuccessful == true) {
+            val body = refreshResponse.body()
+            if (body?.accessToken != null && body.refreshToken != null) {
+                SupabaseSession.saveTokens(body.accessToken, body.refreshToken)
+                
+                return response.request.newBuilder()
+                    .header("Authorization", "Bearer ${body.accessToken}")
+                    .build()
+            }
+        }
+
+        return null
+    }
+
+    private fun okhttp3.Response.count(): Int {
+        var result = 1
+        var r = priorResponse
+        while (r != null) {
+            result++
+            r = r.priorResponse
+        }
+        return result
+    }
 }
 
 /**
@@ -72,6 +127,7 @@ object SupabaseRetrofitClient {
 
     private val client by lazy {
         OkHttpClient.Builder()
+            .authenticator(SupabaseAuthenticator())
             .addInterceptor { chain ->
                 val bearerToken = SupabaseSession.getAccessTokenOrNull() ?: SupabaseConfig.SUPABASE_ANON_KEY
                 val request = chain.request().newBuilder()

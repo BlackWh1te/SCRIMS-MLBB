@@ -440,6 +440,16 @@ class SupabaseAuthRepository(
         emit(AuthResult.Loading)
         try {
             getUserId()?.let { userId ->
+                // Check if MLBB ID is already taken by someone else
+                val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+                if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                    val existing = checkResponse.body()!!.first()
+                    if (existing.id != userId) {
+                        emit(AuthResult.Error("This Game ID is already linked to another account."))
+                        return@flow
+                    }
+                }
+
                 val updateMap = mutableMapOf<String, Any>(
                     "username" to username,
                     "mlbb_id" to inGameId

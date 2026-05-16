@@ -22,6 +22,10 @@ data class SignInRequest(
     val password: String
 )
 
+data class RefreshTokenRequest(
+    @SerializedName("refresh_token") val refreshToken: String
+)
+
 data class OtpRequest(
     val email: String,
     val type: String = "signup",
@@ -322,6 +326,9 @@ interface SupabaseAuthService {
 
     @POST("token?grant_type=password")
     suspend fun signIn(@Body request: SignInRequest): Response<AuthResponse>
+
+    @POST("token?grant_type=refresh_token")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthResponse>
 
     @POST("logout")
     suspend fun signOut(@Header("Authorization") authHeader: String): Response<Unit>
