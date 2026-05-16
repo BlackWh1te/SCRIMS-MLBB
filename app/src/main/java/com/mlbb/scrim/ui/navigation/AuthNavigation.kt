@@ -137,6 +137,7 @@ fun AuthNavigation(
     context: Context
 ) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val isInitializing by viewModel.isInitializing.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
     val teams by teamViewModel.teams.collectAsState()
     val scrims by scrimViewModel.scrims.collectAsState()
@@ -283,6 +284,23 @@ fun AuthNavigation(
                 composable(Screen.Splash.route) {
                     SplashScreen(
                         onFinish = {
+                            if (!isInitializing) {
+                                if (isLoggedIn) {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    
+                    // Fallback: If splash animation ends but we are still checking DB/Network
+                    if (!isInitializing) {
+                        LaunchedEffect(Unit) {
                             if (isLoggedIn) {
                                 navController.navigate(Screen.Home.route) {
                                     popUpTo(Screen.Splash.route) { inclusive = true }
@@ -293,7 +311,7 @@ fun AuthNavigation(
                                 }
                             }
                         }
-                    )
+                    }
                 }
 
                 composable(Screen.Login.route) {

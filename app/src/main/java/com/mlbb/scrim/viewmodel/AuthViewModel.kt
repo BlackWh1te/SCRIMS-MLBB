@@ -81,6 +81,9 @@ class AuthViewModel @Inject constructor(
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
+    private val _isInitializing = MutableStateFlow(true)
+    val isInitializing: StateFlow<Boolean> = _isInitializing.asStateFlow()
+
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
@@ -107,19 +110,30 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun checkAuthStatus() {
-        val (isLoggedIn, profile) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            Pair(authRepository.isLoggedIn(), authRepository.getUserProfile())
+        _isInitializing.value = true
+        val hasToken = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            authRepository.isLoggedIn()
         }
-        if (isLoggedIn) {
+        
+        if (hasToken) {
             _isLoggedIn.value = true
-            handleProfileFetch(profile)
-            // Update location in background on app launch
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                authRepository.updateLocationAndLastSeen()
+            // Load profile in background without blocking initialization
+            viewModelScope.launch {
+                val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    authRepository.getUserProfile()
+                }
+                handleProfileFetch(profile)
+                
+                // Update location in background
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    authRepository.updateLocationAndLastSeen()
+                }
+                _isInitializing.value = false
             }
         } else {
             _isLoggedIn.value = false
             _userProfile.value = null
+            _isInitializing.value = false
         }
     }
 
