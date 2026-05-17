@@ -18,6 +18,9 @@ import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.ui.navigation.AuthNavigation
 import com.mlbb.scrim.ui.theme.MLBBScrimHostTheme
 import com.mlbb.scrim.viewmodel.AuthViewModel
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.mlbb.scrim.data.service.OtpApiClient
 
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -29,6 +32,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lastAppliedLanguage = AppSettings(this).getLanguageCodeSync()
+
+        // Wake up the Render backend asynchronously
+        lifecycleScope.launch {
+            try {
+                OtpApiClient.service.wakeUp()
+            } catch (e: Exception) {
+                // Ignore exceptions, this is just a ping
+            }
+        }
 
         setContent {
             val context = LocalContext.current
@@ -52,10 +64,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val authViewModel = ViewModelProvider(
-                        this@MainActivity,
-                        androidx.lifecycle.SavedStateViewModelFactory(application, this@MainActivity)
-                    )[AuthViewModel::class.java]
+                    val authViewModel: AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
                     AuthNavigation(
                         viewModel = authViewModel,
                         context = this@MainActivity

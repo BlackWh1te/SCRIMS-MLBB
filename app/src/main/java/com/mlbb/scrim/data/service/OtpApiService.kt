@@ -8,6 +8,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.GET
 import java.util.concurrent.TimeUnit
 
 data class SendOtpBackendRequest(
@@ -36,6 +37,10 @@ interface OtpApiService {
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body request: VerifyOtpBackendRequest): Response<OtpBackendResponse>
+
+    // Endpoint to wake up the Render backend
+    @GET("/")
+    suspend fun wakeUp()
 }
 
 object OtpApiClient {
@@ -46,9 +51,9 @@ object OtpApiClient {
 
     private val client by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })

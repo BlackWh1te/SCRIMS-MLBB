@@ -42,14 +42,16 @@ app.use((req, res, next) => {
 });
 
 const mailTransport = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // use STARTTLS (port 587 is open on Render, port 465 is blocked by default)
     auth: {
         user: GMAIL_USER,
         pass: GMAIL_APP_PASSWORD
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000
 });
 
 function checkApiKey(req, res, next) {

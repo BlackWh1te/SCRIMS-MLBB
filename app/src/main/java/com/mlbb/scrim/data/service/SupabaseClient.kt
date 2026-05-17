@@ -7,6 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.mlbb.scrim.BuildConfig
+import java.util.concurrent.TimeUnit
 
 /**
  * Supabase client configuration using REST API.
@@ -127,6 +128,9 @@ object SupabaseRetrofitClient {
 
     private val client by lazy {
         OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .authenticator(SupabaseAuthenticator())
             .addInterceptor { chain ->
                 val bearerToken = SupabaseSession.getAccessTokenOrNull() ?: SupabaseConfig.SUPABASE_ANON_KEY
@@ -161,6 +165,9 @@ object SupabaseAuthRetrofitClient {
 
     private val client by lazy {
         OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("apikey", SupabaseConfig.SUPABASE_ANON_KEY)
