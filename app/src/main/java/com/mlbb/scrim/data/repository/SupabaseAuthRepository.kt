@@ -62,17 +62,13 @@ class SupabaseAuthRepository(
         secureStorage.storeEncrypted(KEY_USER_ID, userId)
     }
 
-    private fun clearTokens() {
+    private suspend fun clearTokens() {
         secureStorage.remove(KEY_ACCESS_TOKEN)
         secureStorage.remove(KEY_REFRESH_TOKEN)
         secureStorage.remove(KEY_USER_ID)
         secureStorage.remove(KEY_USER_EMAIL)
         cachedProfile = null
-        
-        // Use a coroutine to clear the cache, since invalidate is a suspend function
-        GlobalScope.launch {
-            try { cacheManager.invalidateByPrefix("current_user_profile_") } catch (_: Exception) {}
-        }
+        try { cacheManager.invalidateByPrefix("current_user_profile_") } catch (_: Exception) {}
     }
 
     private fun authHeader(): String? = getAccessToken()?.let { "Bearer $it" }
@@ -169,11 +165,13 @@ class SupabaseAuthRepository(
 
             pendingUsername = username
             pendingInGameId = inGameId
-            val response = otpApi.sendOtp(SendOtpBackendRequest(email))
+
+            // Use Supabase's built-in OTP — sends email directly from Supabase servers
+            val response = authApi.sendOtp(OtpRequest(email = email, type = "signup"))
             if (response.isSuccessful) {
                 emit(AuthResult.EmailNotVerified(email))
             } else {
-                val errorBody = response.errorBody()?.string() ?: response.body()?.message ?: "Unknown error"
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
                 val message = mapOtpError(errorBody, "Failed to send verification code")
                 emit(AuthResult.Error(message))
             }
@@ -185,36 +183,56 @@ class SupabaseAuthRepository(
     override suspend fun verifyOtp(email: String, token: String, password: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            val response = otpApi.verifyOtp(
-                VerifyOtpBackendRequest(
-                    email = email,
-                    otp = token,
-                    password = password,
-                    username = pendingUsername,
-                    inGameId = pendingInGameId
-                )
-            )
-            if (response.isSuccessful) {
-                val signInResponse = authApi.signIn(SignInRequest(email = email, password = password))
-                if (signInResponse.isSuccessful) {
-                    val authData = signInResponse.body()
-                    if (authData?.user != null && authData.accessToken != null) {
-                        authData.refreshToken?.let { refresh ->
-                            saveTokens(authData.accessToken, refresh, authData.user.id)
-                        }
-                        secureStorage.storeEncrypted(KEY_USER_EMAIL, email)
-                        pendingUsername = ""
-                        pendingInGameId = ""
-                        emit(AuthResult.Success)
-                    } else {
-                        emit(AuthResult.Error("Verification succeeded, but sign in failed. Please try logging in."))
+            // Step 1: Verify OTP with Supabase Auth
+            val verifyResponse = authApi.verifyOtp(VerifyOtpRequest(email = email, token = token, type = "signup"))
+            if (verifyResponse.isSuccessful) {
+                val authData = verifyResponse.body()
+                if (authData?.user != null && authData.accessToken != null) {
+                    // OTP verified — user exists in Supabase Auth now
+                    authData.refreshToken?.let { refresh ->
+                        saveTokens(authData.accessToken, refresh, authData.user.id)
                     }
+                    secureStorage.storeEncrypted(KEY_USER_EMAIL, email)
+
+                    // Step 2: Set password (Supabase OTP signup doesn't set password)
+                    try {
+                        authApi.updateUser(
+                            authHeader = "Bearer ${authData.accessToken}",
+                            request = mapOf("password" to password)
+                        )
+                    } catch (_: Exception) { }
+
+                    // Step 3: Update profile with username and inGameId
+                    // The DB trigger may take a moment to create the profile row after OTP verify,
+                    // so retry with a small delay if the first attempt fails.
+                    try {
+                        val profileUpdate = mapOf(
+                            "username" to (pendingUsername.ifBlank { email.substringBefore("@") }),
+                            "mlbb_id" to (pendingInGameId.ifBlank { "" })
+                        )
+                        val updateResult = api.updateProfile(PostgrestFilter.eq(authData.user.id), profileUpdate)
+                        if (!updateResult.isSuccessful) {
+                            // Profile row may not exist yet — try PATCH → POST fallback
+                            kotlinx.coroutines.delay(500)
+                            try {
+                                api.createProfile(ProfileDto(
+                                    id = authData.user.id,
+                                    username = pendingUsername.ifBlank { email.substringBefore("@") },
+                                    email = email,
+                                    mlbbId = pendingInGameId.ifBlank { "" }
+                                ))
+                            } catch (_: Exception) { }
+                        }
+                    } catch (_: Exception) { }
+
+                    pendingUsername = ""
+                    pendingInGameId = ""
+                    emit(AuthResult.Success)
                 } else {
-                    val errorBody = signInResponse.errorBody()?.string() ?: "Unknown error"
-                    emit(AuthResult.Error("Verification succeeded, but sign in failed: $errorBody"))
+                    emit(AuthResult.Error("Verification succeeded, but no session was created. Please try logging in."))
                 }
             } else {
-                val errorBody = response.errorBody()?.string() ?: response.body()?.message ?: "Unknown error"
+                val errorBody = verifyResponse.errorBody()?.string() ?: "Unknown error"
                 val message = when {
                     errorBody.contains("otp_expired", ignoreCase = true) ->
                         "Code expired. Please request a new one."
@@ -222,8 +240,6 @@ class SupabaseAuthRepository(
                         "Code expired. Please request a new one."
                     errorBody.contains("user_not_found", ignoreCase = true) ->
                         "User not found. Please sign up again."
-                    errorBody.contains("too many incorrect attempts", ignoreCase = true) ->
-                        "Too many incorrect attempts. Please request a new code."
                     else -> "Invalid code. Please try again."
                 }
                 emit(AuthResult.Error(message))
@@ -474,8 +490,45 @@ class SupabaseAuthRepository(
 
     override suspend fun updateAvatar(avatarUrl: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
-        // Avatar feature not implemented in current UserProfile model
-        emit(AuthResult.Error("Avatar update not supported"))
+        try {
+            val userId = getUserId() ?: throw Exception("Not authenticated")
+            val response = api.updateProfile(userId, mapOf("avatar_url" to avatarUrl))
+            if (response.isSuccessful) {
+                cacheManager.invalidate("profile_$userId")
+                emit(AuthResult.Success)
+            } else {
+                emit(AuthResult.Error("Failed to update avatar: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun uploadAndSetAvatar(fileBytes: ByteArray, contentType: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val userId = getUserId() ?: throw Exception("Not authenticated")
+            val path = "avatars/${userId}_${System.currentTimeMillis()}.${if (contentType.contains("jpeg")) "jpg" else "png"}"
+            val uploadResult = SupabaseStorageUpload.uploadFile(
+                bucket = SupabaseConfig.BUCKET_AVATARS,
+                path = path,
+                fileBytes = fileBytes,
+                contentType = contentType
+            )
+            uploadResult.onSuccess { publicUrl ->
+                val updateResponse = api.updateProfile(userId, mapOf("avatar_url" to publicUrl))
+                if (updateResponse.isSuccessful) {
+                    cacheManager.invalidate("profile_$userId")
+                    emit(AuthResult.Success)
+                } else {
+                    emit(AuthResult.Error("Avatar uploaded but profile update failed"))
+                }
+            }.onFailure { e ->
+                emit(AuthResult.Error("Upload failed: ${e.message}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
     }
 
     override suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
@@ -591,8 +644,8 @@ class SupabaseAuthRepository(
         return UserProfile(
             id = entity.id,
             username = entity.username,
-            email = "", // Email isn't in Entity for security, but we could add it if needed
-            inGameId = "", // Add to entity if important
+            email = entity.email ?: "",
+            inGameId = entity.inGameId ?: "",
             currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.BRONZE,
             pts = entity.points,
             isBanned = entity.isBanned
@@ -604,16 +657,20 @@ class SupabaseAuthRepository(
             id = profile.id,
             username = profile.username,
             fullName = null,
-            avatarUrl = null,
+            avatarUrl = profile.avatarUrl,
+            email = profile.email,
+            inGameId = profile.inGameId,
             rank = profile.currentTier.name,
             role = null,
+            bio = profile.bio,
+            mainHeroes = profile.mainHeroes.joinToString(","),
             points = profile.pts,
             isBanned = profile.isBanned,
             lastUpdated = System.currentTimeMillis()
         )
     }
 
-    override fun isLoggedIn(): Boolean = getAccessToken() != null
+    override suspend fun isLoggedIn(): Boolean = getAccessToken() != null
 
     // ─── Verification Window (kept for compatibility) ───
 
@@ -632,7 +689,7 @@ class SupabaseAuthRepository(
         return if (remaining > 0) remaining / 1000 else 0L
     }
 
-    override fun purgeIfExpired(): Boolean {
+    override suspend fun purgeIfExpired(): Boolean {
         return if (isVerificationExpired()) {
             clearTokens()
             true

@@ -148,6 +148,16 @@
 #     native <methods>;
 # }
 
+# --- RETROFIT DTOs (com.mlbb.scrim.data.service) ---
+# Keep all request/response data classes used by Retrofit/Gson
+-keep class com.mlbb.scrim.data.service.** {
+    <fields>;
+    <init>(...);
+}
+-keepclassmembers class com.mlbb.scrim.data.service.** {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
 # --- REFLECTION PROTECTION ---
 
 # Minimize reflection exposure

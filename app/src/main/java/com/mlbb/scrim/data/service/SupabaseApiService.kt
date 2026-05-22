@@ -101,6 +101,8 @@ data class TeamDto(
     @SerializedName("available_time_start") val availableTimeStart: String? = null,
     @SerializedName("available_time_end") val availableTimeEnd: String? = null,
     @SerializedName("timezone") val timezone: String? = null,
+    @SerializedName("logo_url") val logoUrl: String? = null,
+    @SerializedName("is_open_for_applications") val isOpenForApplications: Boolean = false,
     @SerializedName("created_at") val createdAt: String = ""
 )
 
@@ -112,7 +114,8 @@ data class CreateTeamRequest(
     @SerializedName("leader_id") val leaderId: String,
     @SerializedName("description") val description: String? = null,
     @SerializedName("min_players") val minPlayers: Int = 5,
-    @SerializedName("max_players") val maxPlayers: Int = 7
+    @SerializedName("max_players") val maxPlayers: Int = 7,
+    @SerializedName("is_open_for_applications") val isOpenForApplications: Boolean = false
 )
 
 data class TeamMemberDto(
@@ -181,6 +184,18 @@ data class ScrimApplicationDto(
     @SerializedName("applied_at") val appliedAt: String = ""
 )
 
+// ─── Team Application DTO ───
+
+data class TeamApplicationDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("team_id") val teamId: String = "",
+    @SerializedName("applicant_user_id") val applicantUserId: String = "",
+    @SerializedName("status") val status: String = "Pending",
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("created_at") val createdAt: String = "",
+    @SerializedName("responded_at") val respondedAt: String? = null
+)
+
 // ─── Scrim Roster DTO ───
 
 data class ScrimRosterDto(
@@ -223,6 +238,10 @@ data class LfgPostDto(
     @SerializedName("rank") val rank: String? = null,
     @SerializedName("total_matches") val totalMatches: Int? = null,
     @SerializedName("win_rate") val winRate: String? = null,
+    @SerializedName("ranked_win_rate") val rankedWinRate: String? = null,
+    @SerializedName("in_game_id") val inGameId: String? = null,
+    @SerializedName("city") val city: String? = null,
+    @SerializedName("screenshot_url") val screenshotUrl: String? = null,
     @SerializedName("is_available") val isAvailable: Boolean? = null,
     @SerializedName("use_mic") val useMic: Boolean? = null,
     @SerializedName("playstyle_tags") val playstyleTags: List<String>? = null,
@@ -385,13 +404,19 @@ interface SupabaseApiService {
         @Query("select") select: String = "id,is_banned"
     ): Response<List<ProfileDto>>
 
+    @GET("profiles")
+    suspend fun getProfileByEmail(
+        @Query("email") email: String,
+        @Query("select") select: String = "*"
+    ): Response<List<ProfileDto>>
+
     @POST("profiles")
     suspend fun createProfile(@Body profile: ProfileDto): Response<List<ProfileDto>>
 
     @PATCH("profiles")
     suspend fun updateProfile(
         @Query("id") id: String,
-        @Body profile: Map<String, Any>
+        @Body profile: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<ProfileDto>>
 
     // ─── Player Stats Endpoints ───
@@ -404,7 +429,7 @@ interface SupabaseApiService {
     @PATCH("player_stats")
     suspend fun updatePlayerStats(
         @Query("user_id") userId: String,
-        @Body stats: Map<String, Any>
+        @Body stats: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<PlayerStatsDto>>
 
     @GET("player_stats")
@@ -423,6 +448,11 @@ interface SupabaseApiService {
     suspend fun getTeams(): Response<List<TeamDto>>
 
     @GET("teams")
+    suspend fun getTeamsByIds(
+        @Query("id") idFilter: String
+    ): Response<List<TeamDto>>
+
+    @GET("teams")
     suspend fun getTeamById(
         @Query("id") id: String
     ): Response<List<TeamDto>>
@@ -433,7 +463,7 @@ interface SupabaseApiService {
     @PATCH("teams")
     suspend fun updateTeam(
         @Query("id") id: String,
-        @Body team: Map<String, Any>
+        @Body team: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<TeamDto>>
 
     @DELETE("teams")
@@ -480,11 +510,32 @@ interface SupabaseApiService {
     @PATCH("team_invitations")
     suspend fun updateTeamInvitation(
         @Query("id") id: String,
-        @Body body: Map<String, Any>
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<TeamInvitationDto>>
 
     @DELETE("team_invitations")
     suspend fun deleteTeamInvitation(@Query("id") id: String): Response<Unit>
+
+    // ─── Team Application Endpoints ───
+
+    @GET("team_applications")
+    suspend fun getTeamApplications(
+        @Query("team_id") teamId: String? = null,
+        @Query("applicant_user_id") applicantUserId: String? = null,
+        @Query("status") status: String? = null
+    ): Response<List<TeamApplicationDto>>
+
+    @POST("team_applications")
+    suspend fun createTeamApplication(@Body application: TeamApplicationDto): Response<List<TeamApplicationDto>>
+
+    @PATCH("team_applications")
+    suspend fun updateTeamApplication(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<TeamApplicationDto>>
+
+    @DELETE("team_applications")
+    suspend fun deleteTeamApplication(@Query("id") id: String): Response<Unit>
 
     // ─── Scrim Endpoints ───
 
@@ -509,7 +560,7 @@ interface SupabaseApiService {
     @PATCH("scrims")
     suspend fun updateScrim(
         @Query("id") id: String,
-        @Body scrim: Map<String, Any>
+        @Body scrim: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<ScrimDto>>
 
     @DELETE("scrims")
@@ -535,7 +586,7 @@ interface SupabaseApiService {
     @PATCH("matches")
     suspend fun updateMatch(
         @Query("id") id: String,
-        @Body match: Map<String, Any>
+        @Body match: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<MatchDto>>
 
     @DELETE("matches")
@@ -554,14 +605,14 @@ interface SupabaseApiService {
     @PATCH("scrim_applications")
     suspend fun updateScrimApplication(
         @Query("id") id: String,
-        @Body body: Map<String, Any>
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<ScrimApplicationDto>>
 
     @PATCH("scrim_applications")
     suspend fun updateScrimApplicationsBulk(
         @Query("scrim_id") scrimId: String? = null,
         @Query("status") status: String? = null,
-        @Body body: Map<String, Any>
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<ScrimApplicationDto>>
 
     @DELETE("scrim_applications")
@@ -613,7 +664,7 @@ interface SupabaseApiService {
     @PATCH("match_results")
     suspend fun updateMatchResult(
         @Query("id") id: String,
-        @Body body: Map<String, Any>
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<MatchResultDto>>
 
     // ─── Message Endpoints ───
@@ -640,7 +691,7 @@ interface SupabaseApiService {
     @PATCH("conversations")
     suspend fun updateConversation(
         @Query("id") id: String,
-        @Body body: Map<String, Any>
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<ConversationDto>>
 
     // ─── Notification Endpoints ───
@@ -663,7 +714,7 @@ interface SupabaseApiService {
     @PATCH("app_notifications")
     suspend fun markAllNotificationsAsRead(
         @Query("user_id") userId: String,
-        @Body body: Map<String, Any> = mapOf("is_read" to true)
+        @Body body: Map<String, @JvmSuppressWildcards Any> = mapOf("is_read" to true)
     ): Response<List<NotificationDto>>
 
     @DELETE("app_notifications")
@@ -675,7 +726,7 @@ interface SupabaseApiService {
 
     // P2-1: get_team_stats RPC — must exist in DB schema or callers must be removed
     @POST("rpc/get_team_stats")
-    suspend fun getTeamStats(@Body params: Map<String, String>): Response<Map<String, Any>>
+    suspend fun getTeamStats(@Body params: Map<String, String>): Response<Map<String, @JvmSuppressWildcards Any>>
 
     // P2-2: get_available_scrims RPC — must exist in DB schema or callers must be removed
     @POST("rpc/get_available_scrims")
@@ -683,7 +734,7 @@ interface SupabaseApiService {
 
     // P0-4 FIX: award_scrim_points — app must pass POSITIVE loss points; RPC negates internally
     @POST("rpc/award_scrim_points")
-    suspend fun awardScrimPoints(@Body params: Map<String, Any>): Response<Unit>
+    suspend fun awardScrimPoints(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
 
     // P2-3: mark_conversation_as_read — implement in DB or remove; keeping for now as no-op safe
     @POST("rpc/mark_conversation_as_read")
@@ -695,7 +746,7 @@ interface SupabaseApiService {
     @PATCH("profiles")
     suspend fun deactivateUser(
         @Query("id") userId: String,
-        @Body body: Map<String, Any> = mapOf("deleted" to true)
+        @Body body: Map<String, @JvmSuppressWildcards Any> = mapOf("deleted" to true)
     ): Response<List<ProfileDto>>
 }
 

@@ -30,6 +30,8 @@ interface AuthRepositoryInterface {
     
     suspend fun updateAvatar(avatarUrl: String): Flow<AuthResult>
 
+    suspend fun uploadAndSetAvatar(fileBytes: ByteArray, contentType: String = "image/jpeg"): Flow<AuthResult>
+
     suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult>
 
     suspend fun updatePassword(currentPassword: String, newPassword: String, confirmPassword: String): Flow<AuthResult>
@@ -38,13 +40,13 @@ interface AuthRepositoryInterface {
 
     suspend fun getUserProfile(): UserProfile?
 
-    fun isLoggedIn(): Boolean
+    suspend fun isLoggedIn(): Boolean
 
     fun isVerificationExpired(): Boolean
 
     fun secondsUntilDeletion(): Long
 
-    fun purgeIfExpired(): Boolean
+    suspend fun purgeIfExpired(): Boolean
 
     suspend fun updateLocationAndLastSeen()
 }

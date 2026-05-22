@@ -14,8 +14,14 @@ if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
 
-val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "\"https://efhbyrhxtsadbqjsfogc.supabase.co\""
-val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY") ?: "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmaGJ5cmh4dHNhZGJxanNmb2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTkzMjQsImV4cCI6MjA5NDE5NTMyNH0.6Ywj8Xxg0mkKnp6umnWG7a6jTqCdH7tJ3EacZpkGl0E\""
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
+    ?: throw GradleException("SUPABASE_URL not found. Create local.properties with SUPABASE_URL=...")
+val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY")
+    ?: throw GradleException("SUPABASE_ANON_KEY not found. Create local.properties with SUPABASE_ANON_KEY=...")
+
+val newsApiKey = localProperties.getProperty("NEWSAPI_KEY") ?: "\"\""
+val xBearerToken = localProperties.getProperty("X_BEARER_TOKEN") ?: "\"\""
+val newsServiceApiKey = localProperties.getProperty("NEWS_SERVICE_API_KEY") ?: "\"mlbb-news-secret-2024\""
 
 android {
     namespace = "com.mlbb.scrim"
@@ -35,6 +41,9 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", supabaseUrl)
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseKey)
+        buildConfigField("String", "NEWSAPI_KEY", newsApiKey)
+        buildConfigField("String", "X_BEARER_TOKEN", xBearerToken)
+        buildConfigField("String", "NEWS_SERVICE_API_KEY", newsServiceApiKey)
     }
 
     compileOptions {

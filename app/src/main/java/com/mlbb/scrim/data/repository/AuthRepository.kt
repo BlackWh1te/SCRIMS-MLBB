@@ -55,7 +55,7 @@ class AuthRepository : AuthRepositoryInterface {
      * Deletes the unverified account if the verification window has expired.
      * Returns true if the account was deleted.
      */
-    override fun purgeIfExpired(): Boolean {
+    override suspend fun purgeIfExpired(): Boolean {
         if (isVerificationExpired()) {
             currentUser = null
             userProfile = null
@@ -90,11 +90,11 @@ class AuthRepository : AuthRepositoryInterface {
     override suspend fun verifyOtp(email: String, token: String, password: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(1000)
-        if (token.length == 6 && token.all { it.isDigit() }) {
+        if (token.length == 8 && token.all { it.isDigit() }) {
             userProfile = userProfile?.copy(emailVerified = true)
             emit(AuthResult.Success)
         } else {
-            emit(AuthResult.Error("Invalid code. Please enter the 6-digit code from your email."))
+            emit(AuthResult.Error("Invalid code. Please enter the 8-digit code from your email."))
         }
     }
 
@@ -227,6 +227,12 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Error("Avatar update not supported"))
     }
 
+    override suspend fun uploadAndSetAvatar(fileBytes: ByteArray, contentType: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(500)
+        emit(AuthResult.Error("Avatar upload not supported in mock repository"))
+    }
+
     override suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
@@ -294,7 +300,7 @@ class AuthRepository : AuthRepositoryInterface {
         return userProfile
     }
     
-    override fun isLoggedIn(): Boolean {
+    override suspend fun isLoggedIn(): Boolean {
         purgeIfExpired() // silently clean up expired unverified accounts
         return currentUser != null
     }
