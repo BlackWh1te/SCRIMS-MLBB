@@ -24,16 +24,11 @@ class MLBBScrimApplication : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             SupabaseSession.initialize(this@MLBBScrimApplication)
 
-            // Initialize security checks in release builds
-            if (!isDebuggable()) {
-                try {
-                    SecurityUtils.initialize(this@MLBBScrimApplication)
-                } catch (e: SecurityException) {
-                    // Log security violations and exit app
-                    android.util.Log.e("Security", "Security violation detected: ${e.message}")
-                    // In production, you might want to exit the app or show a security warning
-                    // System.exit(0)
-                }
+            // Initialize security checks in all builds
+            val securityResult = SecurityUtils.initialize(this@MLBBScrimApplication)
+            if (securityResult.hasCriticalThreat && !isDebuggable()) {
+                android.util.Log.e("Security", "Critical security threat detected in production. Consider exiting app.")
+                // In production, you may want to exit or show a security warning dialog
             }
         }
 

@@ -5,6 +5,8 @@ import com.mlbb.scrim.data.local.ScrimDao
 import com.mlbb.scrim.data.local.ScrimEntity
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.util.DateUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.text.SimpleDateFormat
@@ -28,6 +30,25 @@ class SupabaseScrimRepository(
         private const val CACHE_KEY_TEAM_PREFIX = "scrims_team_"
         private const val MEM_TTL = 2L * 60 * 1000
         private const val ROOM_TTL = 10L * 60 * 1000
+        private const val MAX_RETRY = 3
+        private const val RETRY_DELAY_MS = 500L
+        private const val PAGE_SIZE = 50
+    }
+
+    /**
+     * Retry a suspend block with exponential backoff.
+     */
+    private suspend fun <T> withRetry(block: suspend () -> T): T {
+        var lastException: Exception? = null
+        for (attempt in 1..MAX_RETRY) {
+            try {
+                return block()
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < MAX_RETRY) delay(RETRY_DELAY_MS * attempt)
+            }
+        }
+        throw lastException ?: Exception("Retry exhausted")
     }
 
     private suspend fun invalidateScrimCaches() {
@@ -292,7 +313,21 @@ class SupabaseScrimRepository(
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
-    override suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow { emit(Result.success(Unit)) }
+    override suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
+        try {
+            // Mark scrim as auto-cancelled and notify participants
+            val r = api.updateScrim(
+                PostgrestFilter.eq(scrimId),
+                mapOf("status" to "CANCELLED", "cancelled_at" to DateUtils.formatIsoNow(), "cancellation_reason" to "Auto-cancelled: opponent no-show")
+            )
+            if (r.isSuccessful) {
+                invalidateScrimCaches()
+                emit(Result.success(Unit))
+            } else {
+                emit(Result.failure(Exception("Failed to auto-cancel scrim")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
 
     // ─── Mapping ───
 

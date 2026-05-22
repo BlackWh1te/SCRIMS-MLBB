@@ -4,6 +4,7 @@ import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
 import com.mlbb.scrim.data.service.MessageDto
+import com.mlbb.scrim.data.service.ConversationDto
 import com.mlbb.scrim.data.service.SupabaseService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -99,14 +100,34 @@ class SupabaseMessageRepository(
         participantBTeamId: String,
         participantBTeamName: String
     ): Flow<Result<Conversation>> = flow {
-        // Implementation for creating conversation if not exists
-        // (Simplified for brevity, assuming conversation already exists for demo or handled by trigger)
-        val existing = api.getConversations(orFilter = "scrim_id.eq.$scrimId")
-        if (existing.isSuccessful && !existing.body().isNullOrEmpty()) {
-            emit(Result.success(mapDtoToConversation(existing.body()!!.first())))
-        } else {
-            // Create logic...
-            emit(Result.failure(Exception("Conversation creation via REST not implemented. Use RPC or triggers.")))
+        try {
+            val existing = api.getConversations(orFilter = "scrim_id.eq.$scrimId")
+            if (existing.isSuccessful && !existing.body().isNullOrEmpty()) {
+                emit(Result.success(mapDtoToConversation(existing.body()!!.first())))
+            } else {
+                val newConv = ConversationDto(
+                    scrimId = scrimId,
+                    participantAId = participantAId,
+                    participantAName = participantAName,
+                    participantATeamName = participantATeamName,
+                    participantBId = participantBId,
+                    participantBName = participantBName,
+                    participantBTeamName = participantBTeamName,
+                    lastMessage = "",
+                    lastMessageTime = java.time.Instant.now().toString(),
+                    chatOpensAt = java.time.Instant.now().plusSeconds(300).toString()
+                )
+                val response = api.createConversation(newConv)
+                if (response.isSuccessful && !response.body().isNullOrEmpty()) {
+                    val created = mapDtoToConversation(response.body()!!.first())
+                    conversationDao.insertConversation(mapConversationToEntity(created))
+                    emit(Result.success(created))
+                } else {
+                    emit(Result.failure(Exception("Failed to create conversation: ${response.code()}")))
+                }
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
         }
     }
 
@@ -121,6 +142,21 @@ class SupabaseMessageRepository(
         voiceDuration: Int?
     ): Flow<Result<Message>> = flow {
         try {
+            // ── CHAT GATE ENFORCEMENT ──
+            // Client-side validation: do not allow messages before chatOpensAt.
+            // NOTE: This is a best-effort guard. The definitive enforcement must be
+            // implemented via Supabase Row Level Security (RLS) on the messages table.
+            val convResponse = api.getConversations(idFilter = "eq.$conversationId")
+            if (convResponse.isSuccessful) {
+                val conv = convResponse.body()?.firstOrNull()
+                val chatOpensAt = conv?.chatOpensAt?.let { parseTimestamp(it) } ?: 0L
+                if (System.currentTimeMillis() < chatOpensAt) {
+                    val secondsRemaining = (chatOpensAt - System.currentTimeMillis()) / 1000
+                    emit(Result.failure(Exception("Chat is locked. Opens in ${secondsRemaining}s")))
+                    return@flow
+                }
+            }
+
             val dto = MessageDto(
                 conversationId = conversationId,
                 senderId = senderId,
@@ -167,8 +203,45 @@ class SupabaseMessageRepository(
         teamPlayerCount: Int,
         teamMaxPlayers: Int
     ): Flow<Result<Conversation>> = flow {
-        // This usually triggers a sequence of messages
-        emit(Result.failure(Exception("Complex apply flow should be handled via ViewModel or RPC")))
+        try {
+            val convResult = getOrCreateConversation(
+                scrimId = scrimId,
+                scrimTitle = scrimTitle,
+                participantAId = applicantId,
+                participantAName = applicantName,
+                participantATeamId = applicantTeamId,
+                participantATeamName = applicantTeamName,
+                participantBId = scrimCreatorId,
+                participantBName = scrimCreatorName,
+                participantBTeamId = scrimCreatorTeamId,
+                participantBTeamName = scrimCreatorTeamName
+            )
+            var conversation: Conversation? = null
+            convResult.collect { result ->
+                result.onSuccess { conv -> conversation = conv }
+            }
+            val conv = conversation ?: run {
+                emit(Result.failure(Exception("Failed to create conversation")))
+                return@flow
+            }
+
+            val applyContent = "$applicantName ($applicantTeamName) applied to join \"$scrimTitle\" [$teamPlayerCount/$teamMaxPlayers players]"
+            val messageDto = MessageDto(
+                conversationId = conv.id,
+                senderId = applicantId,
+                senderName = applicantName,
+                content = applyContent,
+                type = "apply"
+            )
+            val msgResponse = api.sendMessage(messageDto)
+            if (msgResponse.isSuccessful) {
+                emit(Result.success(conv))
+            } else {
+                emit(Result.failure(Exception("Failed to send apply message: ${msgResponse.code()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
     override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {

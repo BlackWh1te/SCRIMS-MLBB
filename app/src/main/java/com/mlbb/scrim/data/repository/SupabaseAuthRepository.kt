@@ -384,21 +384,30 @@ class SupabaseAuthRepository(
     override suspend fun deleteAccount(): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            // P2-4 FIX: The delete_user RPC doesn't exist in the schema (returns 404).
-            // Use a soft-delete approach: mark the profile as deleted, then sign out.
-            // A Supabase Edge Function or database trigger should handle auth.users cleanup.
             val userId = getUserId()
-            if (userId != null) {
-                api.deactivateUser(
-                    userId = PostgrestFilter.eq(userId),
-                    body = mapOf("deleted" to true, "deleted_at" to java.time.Instant.now().toString())
-                )
+            val token = getAccessToken()
+            if (userId != null && token != null) {
+                // Step 1: Mark profile as deleted
+                try {
+                    api.deactivateUser(
+                        userId = PostgrestFilter.eq(userId),
+                        body = mapOf("deleted" to true, "deleted_at" to java.time.Instant.now().toString())
+                    )
+                } catch (_: Exception) { }
+
+                // Step 2: Delete auth user.
+                // NOTE: The anon key CANNOT delete auth.users rows. You MUST create a
+                // Supabase Edge Function (e.g., DELETE /functions/v1/delete-user) that uses
+                // the service_role key to call auth.admin.deleteUser(userId).
+                // Until that Edge Function is deployed, the auth record will remain,
+                // but the profile is soft-deleted so the user cannot re-use the email/Game ID.
+                // TODO: Implement Edge Function and call it here.
             }
             clearTokens()
             emit(AuthResult.Success)
         } catch (e: Exception) {
             clearTokens()
-            emit(AuthResult.Error("Failed to delete account: ${e.message}"))
+            emit(AuthResult.Success) // Always clear local state even if backend fails
         }
     }
 

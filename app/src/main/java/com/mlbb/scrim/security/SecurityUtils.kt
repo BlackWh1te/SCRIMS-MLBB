@@ -18,23 +18,55 @@ object SecurityUtils {
     /**
      * Initialize security checks
      * Should be called in Application.onCreate()
+     *
+     * NOTE: Does NOT throw exceptions. Returns a result so callers can decide
+     * whether to proceed, show a warning, or exit gracefully.
      */
-    fun initialize(context: Context) {
-        if (isSecurityInitialized) return
+    fun initialize(context: Context): SecurityCheckResult {
+        if (isSecurityInitialized) {
+            return lastCheckResult ?: SecurityCheckResult()
+        }
 
         // Store original app signature for tamper detection
         appSignature = getAppSignature(context)
         isSecurityInitialized = true
 
-        // Perform initial security checks
-        if (isDebuggable(context)) {
-            throw SecurityException("App is running in debug mode")
+        val result = SecurityCheckResult(
+            isDebuggable = isDebuggable(context),
+            isRooted = isRooted(),
+            isDebuggerAttached = isDebuggerAttached(),
+            isFridaDetected = isFridaDetected(),
+            isXposedDetected = isXposedDetected(),
+            isAppTampered = isAppTampered(context),
+            isEmulator = isEmulator()
+        )
+        lastCheckResult = result
+
+        if (result.isDebuggable) {
+            android.util.Log.w("Security", "App is running in debug mode")
+        }
+        if (result.isRooted) {
+            android.util.Log.e("Security", "Rooted device detected")
         }
 
-        if (isRooted()) {
-            throw SecurityException("Rooted device detected")
-        }
+        return result
     }
+
+    data class SecurityCheckResult(
+        val isDebuggable: Boolean = false,
+        val isRooted: Boolean = false,
+        val isDebuggerAttached: Boolean = false,
+        val isFridaDetected: Boolean = false,
+        val isXposedDetected: Boolean = false,
+        val isAppTampered: Boolean = false,
+        val isEmulator: Boolean = false
+    ) {
+        val hasCriticalThreat: Boolean
+            get() = isRooted || isDebuggerAttached || isFridaDetected || isXposedDetected || isAppTampered
+    }
+
+    @Volatile
+    private var lastCheckResult: SecurityCheckResult? = null
 
     /**
      * Check if device is rooted
