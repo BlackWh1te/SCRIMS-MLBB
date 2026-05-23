@@ -22,6 +22,7 @@ import com.mlbb.scrim.data.model.GameRole
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.GradientButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
@@ -33,7 +34,9 @@ fun LfgBoardScreen(
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
     onCreatePost: () -> Unit = {},
-    onInvitePlayer: (LfgPost) -> Unit = {}
+    onInvitePlayer: (LfgPost) -> Unit = {},
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -78,25 +81,35 @@ fun LfgBoardScreen(
             }
 
             // Posts list
-            if (isLoading && posts.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = GoldPrimary)
-                }
-            } else if (posts.isEmpty()) {
-                EmptyLfgState(onCreatePost = onCreatePost)
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(posts) { post ->
-                        LfgPostCard(post = post, onInvite = { onInvitePlayer(post) })
+            PullToRefreshContainer(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    isLoading && posts.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = GoldPrimary)
+                        }
+                    }
+                    posts.isEmpty() -> {
+                        EmptyLfgState(onCreatePost = onCreatePost)
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(posts) { post ->
+                                LfgPostCard(post = post, onInvite = { onInvitePlayer(post) })
+                            }
+                        }
                     }
                 }
             }

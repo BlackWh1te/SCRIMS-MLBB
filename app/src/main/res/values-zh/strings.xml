@@ -324,4 +324,12 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">寻找玩家</string>
+    <string name="skill_level">技能等级</string>
+    <string name="scrims">训练赛</string>
+    <string name="open">开放</string>
+    <string name="filled">已满</string>
+    <string name="in_progress">进行中</string>
+    <string name="completed">已完成</string>
+    <string name="cancelled">已取消</string>
 </resources>

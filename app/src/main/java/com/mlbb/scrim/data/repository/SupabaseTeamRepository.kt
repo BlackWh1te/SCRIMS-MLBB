@@ -6,7 +6,10 @@ import com.mlbb.scrim.data.local.TeamDao
 import com.mlbb.scrim.data.local.TeamEntity
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -17,7 +20,8 @@ import kotlinx.coroutines.flow.flow
 class SupabaseTeamRepository(
     private val cacheManager: UnifiedCacheManager,
     private val teamDao: TeamDao,
-    private val profileCache: ProfileCacheRepository
+    private val profileCache: ProfileCacheRepository,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : TeamRepositoryInterface {
 
     private val api = SupabaseService.api
@@ -322,15 +326,9 @@ class SupabaseTeamRepository(
         return Team(id = e.id, name = e.name, leaderId = e.leaderId, players = memberIds.map { Player(id = it, name = it.take(8), role = PlayerRole.MEMBER, email = "") }, maxPlayers = e.maxPlayers, minPlayers = e.minPlayers, completedScrims = e.completedScrims, reputation = e.reputation, noShows = e.noShows, isOpenForApplications = e.isOpenForApplications)
     }
 
-    private fun parseCanPostScrimsUntil(raw: String?): Long {
-        if (raw.isNullOrBlank()) return 0L
-        return try { java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US).parse(raw)?.time ?: 0L } catch (_: Exception) { try { java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).parse(raw)?.time ?: 0L } catch (_: Exception) { 0L } }
-    }
+    private fun parseCanPostScrimsUntil(raw: String?): Long = DateUtils.parseIsoToMillis(raw, fallback = 0L)
 
-    private fun parseCreatedAt(raw: String?): Long {
-        if (raw.isNullOrBlank()) return System.currentTimeMillis()
-        return try { java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US).parse(raw)?.time ?: System.currentTimeMillis() } catch (_: Exception) { try { java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).parse(raw)?.time ?: System.currentTimeMillis() } catch (_: Exception) { System.currentTimeMillis() } }
-    }
+    private fun parseCreatedAt(raw: String?): Long = DateUtils.parseIsoToMillis(raw)
 
     suspend fun uploadTeamLogo(teamId: String, fileBytes: ByteArray, contentType: String = "image/jpeg"): Result<String> = try {
         val path = "logos/${teamId}_${System.currentTimeMillis()}.${if (contentType.contains("jpeg")) "jpg" else "png"}"
@@ -398,7 +396,7 @@ class SupabaseTeamRepository(
 
     override suspend fun acceptApplication(applicationId: String): Flow<Result<Team>> = flow {
         try {
-            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Accepted", "responded_at" to java.time.Instant.now().toString()))
+            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Accepted", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) {
                 val app = r.body()?.firstOrNull()
                 if (app != null) {
@@ -413,7 +411,7 @@ class SupabaseTeamRepository(
 
     override suspend fun declineApplication(applicationId: String): Flow<Result<Unit>> = flow {
         try {
-            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Declined", "responded_at" to java.time.Instant.now().toString()))
+            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Declined", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) emit(Result.success(Unit))
             else emit(Result.failure(Exception("Failed to decline application")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -432,6 +430,211 @@ class SupabaseTeamRepository(
             message = dto.message,
             createdAt = parseCreatedAt(dto.createdAt),
             respondedAt = dto.respondedAt?.let { parseCreatedAt(it) }
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    override fun subscribeToTeam(teamId: String): Flow<Team> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:teams:team_$teamId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "UPDATE",
+                        table = SupabaseConfig.TABLE_TEAMS,
+                        filter = "id=eq.$teamId"
+                    )
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
+            }.collect { event ->
+                try {
+                    val dto = parseRealtimeRecordToTeamDto(event.record!!)
+                    if (dto.id == teamId) {
+                        invalidateTeamCaches()
+                        emit(mapTeamDtoToModel(dto))
+                    }
+                } catch (e: Exception) {
+                    Log.w("TeamRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("TeamRepo", "Realtime subscription failed for team $teamId: ${e.message}")
+        }
+    }
+
+    override fun subscribeToTeamInvites(userId: String): Flow<TeamInvite> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:team_invitations:user_$userId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "*",  // Listen for both INSERT (new invite) and UPDATE (accept/decline)
+                        table = SupabaseConfig.TABLE_TEAM_INVITATIONS,
+                        filter = "invited_user_id=eq.$userId"
+                    )
+                )
+            ).filter { event ->
+                (event.eventType == SupabaseRealtimeClient.EVENT_INSERT ||
+                        event.eventType == SupabaseRealtimeClient.EVENT_UPDATE) && event.record != null
+            }.collect { event ->
+                try {
+                    val partial = parseRealtimeRecordToTeamInvite(event.record!!)
+                    // Fetch team name and inviter profile to populate blank names
+                    val enriched = enrichTeamInvite(partial)
+                    emit(enriched)
+                } catch (e: Exception) {
+                    Log.w("TeamRepo", "Failed to parse Realtime invite event: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("TeamRepo", "Realtime subscription failed for invites user $userId: ${e.message}")
+        }
+    }
+
+    /**
+     * Fetch team name and inviter profile to fill in blank names from Realtime payload.
+     */
+    private suspend fun enrichTeamInvite(invite: TeamInvite): TeamInvite {
+        var result = invite
+        // Fetch team name if missing
+        if (invite.teamName.isBlank()) {
+            try {
+                val teamResponse = api.getTeamById(PostgrestFilter.eq(invite.teamId))
+                if (teamResponse.isSuccessful) {
+                    result = result.copy(teamName = teamResponse.body()?.firstOrNull()?.name ?: "")
+                }
+            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich team name", e) }
+        }
+        // Fetch inviter profile if name missing
+        if (invite.invitedByName.isBlank() && invite.invitedBy.isNotBlank()) {
+            try {
+                val profiles = profileCache.getProfiles(listOf(invite.invitedBy))
+                val name = profiles[invite.invitedBy]?.username ?: ""
+                if (name.isNotBlank()) {
+                    result = result.copy(invitedByName = name)
+                }
+            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich inviter name", e) }
+        }
+        // Fetch invited user profile if name missing
+        if (invite.invitedUserName.isBlank() && invite.invitedUserId.isNotBlank()) {
+            try {
+                val profiles = profileCache.getProfiles(listOf(invite.invitedUserId))
+                val name = profiles[invite.invitedUserId]?.username ?: ""
+                if (name.isNotBlank()) {
+                    result = result.copy(invitedUserName = name)
+                }
+            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich invited user name", e) }
+        }
+        return result
+    }
+
+    private fun parseRealtimeRecordToTeamDto(record: com.google.gson.JsonObject): TeamDto {
+        return TeamDto(
+            id = record.get("id")?.asString ?: "",
+            name = record.get("name")?.asString ?: "",
+            leaderId = record.get("leader_id")?.asString ?: "",
+            description = record.get("description")?.asString,
+            minPlayers = record.get("min_players")?.asInt ?: 5,
+            maxPlayers = record.get("max_players")?.asInt ?: 7,
+            totalXp = record.get("total_xp")?.asInt ?: 0,
+            currentTier = record.get("current_tier")?.asString ?: "Bronze",
+            currentDivision = record.get("current_division")?.asInt ?: 1,
+            availableDays = record.get("available_days")?.asJsonArray?.map { it.asString },
+            totalScrims = record.get("total_scrims")?.asInt ?: 0,
+            completedScrims = record.get("completed_scrims")?.asInt ?: 0,
+            reputation = record.get("reputation")?.asFloat ?: 5.0f,
+            canPostScrimsUntil = record.get("can_post_scrims_until")?.asString,
+            noShows = record.get("no_shows")?.asInt ?: 0,
+            availableTimeStart = record.get("available_time_start")?.asString,
+            availableTimeEnd = record.get("available_time_end")?.asString,
+            timezone = record.get("timezone")?.asString,
+            isOpenForApplications = record.get("is_open_for_applications")?.asBoolean ?: false,
+            createdAt = record.get("created_at")?.asString ?: ""
+        )
+    }
+
+    // ─── Team Stats & Ratings ───
+
+    override suspend fun getTeamStats(teamId: String): Flow<Result<Map<String, Any>>> = flow {
+        try {
+            val response = api.getTeamStats(mapOf("p_team_id" to teamId))
+            if (response.isSuccessful) {
+                emit(Result.success(response.body() ?: emptyMap()))
+            } else {
+                emit(Result.failure(Exception("Failed to load team stats: ${response.code()}")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
+    override suspend fun getTeamRatings(teamId: String): Flow<Result<List<TeamRating>>> = flow {
+        try {
+            val response = api.getTeamRatings(teamId)
+            if (response.isSuccessful) {
+                val ratings = response.body()?.map { dto ->
+                    TeamRating(
+                        id = dto.id,
+                        teamId = dto.teamId,
+                        raterTeamId = dto.raterTeamId,
+                        raterTeamName = dto.raterTeamName,
+                        raterUserName = dto.raterUserName,
+                        rating = dto.rating,
+                        feedback = dto.feedback ?: "",
+                        createdAt = DateUtils.parseIsoToMillis(dto.createdAt)
+                    )
+                } ?: emptyList()
+                emit(Result.success(ratings))
+            } else {
+                emit(Result.failure(Exception("Failed to load ratings: ${response.code()}")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
+    override suspend fun submitTeamRating(
+        teamId: String,
+        raterTeamId: String,
+        raterUserId: String,
+        rating: Int,
+        feedback: String
+    ): Flow<Result<Unit>> = flow {
+        try {
+            val response = api.createTeamRating(mapOf(
+                "team_id" to teamId,
+                "rater_team_id" to raterTeamId,
+                "rater_user_id" to raterUserId,
+                "rating" to rating.coerceIn(1, 5),
+                "feedback" to feedback
+            ))
+            if (response.isSuccessful) {
+                emit(Result.success(Unit))
+            } else {
+                emit(Result.failure(Exception("Failed to submit rating: ${response.code()}")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
+    private fun parseRealtimeRecordToTeamInvite(record: com.google.gson.JsonObject): TeamInvite {
+        return TeamInvite(
+            id = record.get("id")?.asString ?: "",
+            teamId = record.get("team_id")?.asString ?: "",
+            teamName = "",  // Will be populated on next fetch
+            invitedUserId = record.get("invited_user_id")?.asString ?: "",
+            invitedUserName = "",
+            invitedBy = record.get("invited_by")?.asString ?: "",
+            invitedByName = "",
+            status = when (record.get("status")?.asString) {
+                "Accepted" -> com.mlbb.scrim.data.model.InviteStatus.ACCEPTED
+                "Declined", "Rejected" -> com.mlbb.scrim.data.model.InviteStatus.DECLINED
+                else -> com.mlbb.scrim.data.model.InviteStatus.PENDING
+            },
+            createdAt = DateUtils.parseIsoToMillis(record.get("created_at")?.asString)
         )
     }
 }

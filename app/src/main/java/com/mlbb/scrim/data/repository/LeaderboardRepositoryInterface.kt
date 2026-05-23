@@ -7,4 +7,5 @@ import kotlinx.coroutines.flow.Flow
 interface LeaderboardRepositoryInterface {
     suspend fun getLeaderboard(): Flow<Result<List<LeaderboardEntry>>>
     suspend fun getLeaderboardForTier(tier: RankTier): Flow<Result<List<LeaderboardEntry>>>
+    fun subscribeToLeaderboard(): Flow<LeaderboardEntry>
 }

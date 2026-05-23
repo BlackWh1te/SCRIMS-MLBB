@@ -145,15 +145,22 @@ fun AuthNavigation(
     val teams by teamViewModel.teams.collectAsState()
     val scrims by scrimViewModel.scrims.collectAsState()
     val scrimIsLoading by scrimViewModel.isLoading.collectAsState()
+    val scrimIsRefreshing by scrimViewModel.isRefreshing.collectAsState()
+    val scrimError by scrimViewModel.error.collectAsState()
     val matchResults by matchResultViewModel.matchResults.collectAsState()
     val matchResultIsLoading by matchResultViewModel.isLoading.collectAsState()
+    val matchResultIsRefreshing by matchResultViewModel.isRefreshing.collectAsState()
+    val matchResultError by matchResultViewModel.error.collectAsState()
     val selectedMatchResult by matchResultViewModel.selectedMatchResult.collectAsState()
     val reportSuccess by matchResultViewModel.reportSuccess.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
     val selectedConversation by messageViewModel.selectedConversation.collectAsState()
     val messagesIsLoading by messageViewModel.isLoading.collectAsState()
+    val messagesIsRefreshing by messageViewModel.isRefreshing.collectAsState()
+    val messageError by messageViewModel.error.collectAsState()
     val leaderboard by leaderboardViewModel.leaderboard.collectAsState()
     val leaderboardIsLoading by leaderboardViewModel.isLoading.collectAsState()
+    val leaderboardIsRefreshing by leaderboardViewModel.isRefreshing.collectAsState()
     val leaderboardTier by leaderboardViewModel.selectedTier.collectAsState()
     val leaderboardError by leaderboardViewModel.error.collectAsState()
     val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
@@ -165,28 +172,37 @@ fun AuthNavigation(
     val darkMode by settingsViewModel.darkMode.collectAsState()
     val notifications by notificationViewModel.notifications.collectAsState()
     val notificationUnreadCount by notificationViewModel.unreadCount.collectAsState()
+    val notificationIsLoading by notificationViewModel.isLoading.collectAsState()
+    val notificationIsRefreshing by notificationViewModel.isRefreshing.collectAsState()
+    val notificationError by notificationViewModel.error.collectAsState()
     val lfgPosts by lfgViewModel.posts.collectAsState()
     val lfgIsLoading by lfgViewModel.isLoading.collectAsState()
-    val notificationIsLoading by notificationViewModel.isLoading.collectAsState()
-    val notificationError by notificationViewModel.error.collectAsState()
+    val lfgIsRefreshing by lfgViewModel.isRefreshing.collectAsState()
+    val lfgError by lfgViewModel.error.collectAsState()
     val openTeams by teamViewModel.openTeams.collectAsState()
     val teamApplicationSuccess by teamViewModel.applicationSuccess.collectAsState()
     val teamApplications by teamViewModel.teamApplications.collectAsState()
     val teamIsLoading by teamViewModel.isLoading.collectAsState()
+    val teamIsRefreshing by teamViewModel.isRefreshing.collectAsState()
+    val teamError by teamViewModel.errorMessage.collectAsState()
+    val teamStats by teamViewModel.teamStats.collectAsState()
+    val teamRatings by teamViewModel.teamRatings.collectAsState()
+    val newsIsRefreshing by newsViewModel.isRefreshing.collectAsState()
 
     val unreadCount = conversations.sumOf { it.unreadCount }
     val pendingInviteCount = notifications.count { !it.isRead && it.type == com.mlbb.scrim.data.model.NotificationType.TEAM_INVITE }
     val playerTeamIds = teams.filter { it.leaderId == userProfile?.id }.map { it.id }
     // Derive achievement stats from available user data.
-    // TODO: Add the following columns to player_stats table for full tracking:
-    //   best_win_streak, ratings_given, has_regional_top, jungler_wins,
-    //   roamer_wins, night_wins, five_star_matches, has_flawless_victory
+    // NOTE: player_stats columns (best_win_streak, ratings_given, has_regional_top,
+    // jungler_wins, roamer_wins, night_wins, five_star_matches, has_flawless_victory)
+    // have been added to the DB schema. Full integration requires fetching player_stats
+    // from the backend and wiring into a ViewModel.
     val derivedStats = com.mlbb.scrim.data.model.PlayerAchievements(
         playerId = userProfile?.id ?: "",
         matchesPlayed = userProfile?.totalMatches ?: 0,
         scrimsCreated = scrims.count { it.teamId in playerTeamIds },
         teamsCreated = playerTeamIds.size,
-        // Fields below require DB schema changes to track properly:
+        // Placeholder until player_stats backend integration is complete
         bestWinStreak = 0,
         ratingsGiven = 0,
         hasRegionalTop = false,
@@ -216,6 +232,18 @@ fun AuthNavigation(
 
     // Dialog states
     var showInviteDialog by remember { mutableStateOf(false) }
+
+    // Direct-chat navigation gate: set true when Message tapped in PlayerFinder,
+    // so the LaunchedEffect below knows to push Chat (not MessageList) once
+    // startDirectConversation() succeeds and selectedConversation is populated.
+    var pendingDirectChat by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedConversation) {
+        val conv = selectedConversation
+        if (pendingDirectChat && conv != null) {
+            pendingDirectChat = false
+            navController.navigate(Screen.Chat.createRoute(conv.id))
+        }
+    }
 
     // Navigate based on auth state changes
     // Only handle explicit logout here. Login navigation is handled
@@ -442,6 +470,11 @@ fun AuthNavigation(
                     LaunchedEffect(languageCode) {
                         newsViewModel.loadNews(languageCode, forceRefresh = false)
                     }
+                    // Realtime: subscribe to scrim updates while on home
+                    androidx.compose.runtime.DisposableEffect(Unit) {
+                        scrimViewModel.subscribeToAllScrimUpdates()
+                        onDispose { scrimViewModel.stopRealtimeSubscriptions() }
+                    }
                     HomeScreen(
                         userProfile = userProfile,
                         onLogout = { viewModel.signOut() },
@@ -472,11 +505,11 @@ fun AuthNavigation(
                         },
                         scrims = scrims,
                         notificationCount = notificationUnreadCount,
-                        isRefreshing = scrimIsLoading,
+                        isRefreshing = scrimIsRefreshing,
                         onRefresh = {
-                            scrimViewModel.loadScrims()
+                            scrimViewModel.loadScrims(isRefresh = true)
                             newsViewModel.refresh(languageCode)
-                            teamViewModel.loadTeams()
+                            teamViewModel.loadTeams(isRefresh = true)
                         }
                     )
                 }
@@ -528,14 +561,15 @@ fun AuthNavigation(
                         posts = lfgPosts,
                         isLoading = lfgIsLoading,
                         onNavigateBack = { navController.popBackStack() },
-                        isRefreshing = lfgIsLoading,
-                        onRefresh = { lfgViewModel.loadPosts() }
+                        isRefreshing = lfgIsRefreshing,
+                        onRefresh = { lfgViewModel.loadPosts(isRefresh = true) }
                     )
                 }
 
                 composable(Screen.TeamList.route) {
                     TeamListScreen(
                         teams = teams,
+                        isRefreshing = teamIsRefreshing,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -552,7 +586,7 @@ fun AuthNavigation(
                             navController.navigate(Screen.TeamDetail.createRoute(team.id))
                         },
                         onRefresh = {
-                            teamViewModel.loadTeams()
+                            teamViewModel.loadTeams(isRefresh = true)
                         }
                     )
                 }
@@ -603,11 +637,23 @@ fun AuthNavigation(
                                 teamViewModel.loadTeamApplications(teamId)
                             }
                         }
+                        // Realtime: subscribe to team updates while viewing team detail
+                        val currentUserId = userProfile?.id ?: ""
+                        androidx.compose.runtime.DisposableEffect(teamId, currentUserId) {
+                            teamViewModel.subscribeToTeamUpdates(teamId)
+                            if (currentUserId.isNotBlank()) {
+                                teamViewModel.subscribeToTeamInvites(currentUserId)
+                            }
+                            onDispose { teamViewModel.stopRealtimeSubscriptions() }
+                        }
                         TeamDetailScreen(
                             team = team,
                             isLeader = isLeader,
                             currentUserId = userProfile?.id ?: "",
+                            teamStats = teamStats,
+                            teamRatings = teamRatings,
                             onNavigateBack = {
+                                teamViewModel.clearTeamStats()
                                 navController.popBackStack()
                             },
                             onUpdatePlayerRole = { playerId, newRole ->
@@ -637,6 +683,10 @@ fun AuthNavigation(
                             },
                             onDeclineApplication = { appId ->
                                 teamViewModel.declineApplication(appId, teamId)
+                            },
+                            onLoadStats = {
+                                teamViewModel.loadTeamStats(teamId)
+                                teamViewModel.loadTeamRatings(teamId)
                             }
                         )
                     }
@@ -646,6 +696,7 @@ fun AuthNavigation(
                     ScrimListScreen(
                         scrims = scrims,
                         isLoading = scrimIsLoading,
+                        error = scrimError,
                         onNavigateToCreateScrim = {
                             navController.navigate(Screen.CreateScrim.route)
                         },
@@ -656,24 +707,22 @@ fun AuthNavigation(
                             scrimViewModel.searchScrims(query, gameMode, region, skillLevel, status)
                         },
                         onRefresh = {
-                            scrimViewModel.loadScrims()
-                        }
+                            scrimViewModel.loadScrims(isRefresh = true)
+                        },
+                        onDismissError = { scrimViewModel.clearError() }
                     )
                 }
 
                 composable(Screen.CreateScrim.route) {
                     CreateScrimScreen(
-                        teamName = teams.firstOrNull()?.name ?: "My Team",
-                        teamId = teams.firstOrNull()?.id ?: "",
-                        teamLeader = userProfile?.username ?: "",
-                        currentPlayerCount = teams.firstOrNull()?.currentPlayerCount ?: 0,
+                        teams = teams,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onCreateScrim = { gameMode, region, skillLevel, bestOf, scheduledTime, description ->
+                        onCreateScrim = { teamId, teamName, gameMode, region, skillLevel, bestOf, scheduledTime, description ->
                             scrimViewModel.createScrim(
-                                teamId = teams.firstOrNull()?.id ?: "",
-                                teamName = teams.firstOrNull()?.name ?: "My Team",
+                                teamId = teamId,
+                                teamName = teamName,
                                 teamLeader = userProfile?.username ?: "",
                                 gameMode = gameMode,
                                 region = region,
@@ -801,6 +850,7 @@ fun AuthNavigation(
                     MatchResultListScreen(
                         matchResults = matchResults,
                         isLoading = matchResultIsLoading,
+                        isRefreshing = matchResultIsRefreshing,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -812,7 +862,7 @@ fun AuthNavigation(
                         },
                         currentUserTeamId = teams.firstOrNull()?.id,
                         onRefresh = {
-                            matchResultViewModel.loadMatchResults()
+                            matchResultViewModel.loadMatchResults(isRefresh = true)
                         }
                     )
                 }
@@ -920,8 +970,11 @@ fun AuthNavigation(
                             navController.navigate(Screen.Chat.createRoute(conversation.id))
                         },
                         onRefresh = {
-                            messageViewModel.loadConversations(userId)
-                        }
+                            messageViewModel.loadConversations(userId, isRefresh = true)
+                        },
+                        isRefreshing = messagesIsRefreshing,
+                        error = messageError,
+                        onDismissError = { messageViewModel.clearError() }
                     )
                 }
 
@@ -991,7 +1044,9 @@ fun AuthNavigation(
                                 }
                             },
                             isLoading = messagesIsLoading,
-                            isRefreshing = messagesIsLoading,
+                            error = messageError,
+                            onDismissError = { messageViewModel.clearError() },
+                            isRefreshing = messagesIsRefreshing,
                             onRefresh = { messageViewModel.loadConversation(conversationId) }
                         )
                     }
@@ -1001,6 +1056,7 @@ fun AuthNavigation(
                     LeaderboardScreen(
                         entries = leaderboard,
                         isLoading = leaderboardIsLoading,
+                        isRefreshing = leaderboardIsRefreshing,
                         error = leaderboardError,
                         selectedTier = leaderboardTier,
                         onTierFilter = { tier ->
@@ -1010,7 +1066,7 @@ fun AuthNavigation(
                             navController.popBackStack()
                         },
                         onRefresh = {
-                            leaderboardViewModel.loadLeaderboard()
+                            leaderboardViewModel.loadLeaderboard(isRefresh = true)
                         },
                         onDismissError = {
                             leaderboardViewModel.clearError()
@@ -1057,6 +1113,7 @@ fun AuthNavigation(
                     MatchHistoryScreen(
                         matchResults = matchResults,
                         isLoading = matchResultIsLoading,
+                        isRefreshing = matchResultIsRefreshing,
                         currentUserTeamId = teams.firstOrNull()?.id,
                         onNavigateBack = {
                             navController.popBackStack()
@@ -1066,7 +1123,7 @@ fun AuthNavigation(
                             navController.navigate(Screen.MatchResultDetail.createRoute(match.id))
                         },
                         onRefresh = {
-                            matchResultViewModel.loadMatchResults()
+                            matchResultViewModel.loadMatchResults(isRefresh = true)
                         }
                     )
                 }
@@ -1098,8 +1155,9 @@ fun AuthNavigation(
                     FindTeamsScreen(
                         teams = openTeams,
                         isLoading = teamIsLoading,
-                        isRefreshing = teamIsLoading,
+                        isRefreshing = teamIsRefreshing,
                         applicationSuccess = teamApplicationSuccess,
+                        error = teamError,
                         onRefresh = { teamViewModel.loadOpenTeams() },
                         onNavigateBack = { navController.popBackStack() },
                         onApplyToTeam = { teamId ->
@@ -1107,14 +1165,22 @@ fun AuthNavigation(
                         },
                         onNavigateToTeamDetail = { teamId ->
                             navController.navigate(Screen.TeamDetail.createRoute(teamId))
-                        }
+                        },
+                        onDismissError = { teamViewModel.clearErrorMessage() }
                     )
                 }
 
                 composable(Screen.Notifications.route) {
+                    // Realtime: subscribe to new notifications while on this screen
+                    val notifUserId = userProfile?.id ?: ""
+                    androidx.compose.runtime.DisposableEffect(notifUserId) {
+                        notificationViewModel.startRealtimeSubscription()
+                        onDispose { notificationViewModel.stopRealtimeSubscription() }
+                    }
                     NotificationScreen(
                         notifications = notifications,
                         isLoading = notificationIsLoading,
+                        isRefreshing = notificationIsRefreshing,
                         error = notificationError,
                         onNavigateBack = {
                             navController.popBackStack()
@@ -1129,7 +1195,7 @@ fun AuthNavigation(
                             notificationViewModel.deleteNotification(id)
                         },
                         onRefresh = {
-                            notificationViewModel.loadNotifications()
+                            notificationViewModel.loadNotifications(isRefresh = true)
                         },
                         onDismissError = {
                             notificationViewModel.clearError()
@@ -1160,7 +1226,9 @@ fun AuthNavigation(
                 composable(Screen.News.route) {
                     NewsScreen(
                         viewModel = newsViewModel,
-                        languageCode = languageCode
+                        languageCode = languageCode,
+                        isRefreshing = newsIsRefreshing,
+                        onRefresh = { newsViewModel.refresh(languageCode) }
                     )
                 }
 
@@ -1198,16 +1266,18 @@ fun AuthNavigation(
                         },
                         onDeletePost = { postId -> lfgViewModel.deletePost(postId) },
                         onMessagePlayer = { post ->
+                            pendingDirectChat = true
                             messageViewModel.startDirectConversation(
                                 senderId = userProfile?.id ?: "",
                                 senderName = userProfile?.username ?: "",
                                 recipientId = post.playerId,
                                 recipientName = post.playerName
                             )
-                            navController.navigate(Screen.MessageList.route)
                         },
-                        isRefreshing = lfgIsLoading,
-                        onRefresh = { lfgViewModel.loadPosts() }
+                        isRefreshing = lfgIsRefreshing,
+                        onRefresh = { lfgViewModel.loadPosts(isRefresh = true) },
+                        error = lfgError,
+                        onDismissError = { lfgViewModel.clearError() }
                     )
                 }
             }

@@ -148,7 +148,7 @@ fun ScrimDetailScreen(
                                         .clip(CircleShape)
                                         .background(
                                             brush = Brush.verticalGradient(
-                                                colors = listOf(BluePrimary, Color(0xFF0A5A9F))
+                                                colors = BlueGradient
                                             )
                                         ),
                                     contentAlignment = Alignment.Center

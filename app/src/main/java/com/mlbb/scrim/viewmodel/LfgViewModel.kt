@@ -27,6 +27,9 @@ class LfgViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -34,8 +37,9 @@ class LfgViewModel @Inject constructor(
         loadPosts()
     }
 
-    fun loadPosts() {
+    fun loadPosts(isRefresh: Boolean = false) {
         viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
             
@@ -43,9 +47,11 @@ class LfgViewModel @Inject constructor(
                 result.onSuccess { list ->
                     _posts.value = list
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
             }
         }
@@ -60,6 +66,13 @@ class LfgViewModel @Inject constructor(
         message: String,
         mainHeroes: List<String> = emptyList(),
         bio: String = "",
+        rank: String = "",
+        totalMatches: Int = 0,
+        winRate: String = "",
+        rankedWinRate: String = "",
+        inGameId: String = "",
+        city: String = "",
+        screenshotUrl: String = "",
         useMic: Boolean = false,
         playstyleTags: List<String> = emptyList(),
         discord: String = "",
@@ -68,9 +81,8 @@ class LfgViewModel @Inject constructor(
         facebook: String = ""
     ) {
         viewModelScope.launch {
-            _isLoading.value = true
             val post = LfgPost(
-                id = "",
+                id = UUID.randomUUID().toString(),
                 playerId = playerId,
                 playerName = playerName,
                 role = role,
@@ -79,6 +91,13 @@ class LfgViewModel @Inject constructor(
                 message = message,
                 mainHeroes = mainHeroes,
                 bio = bio,
+                rank = rank,
+                totalMatches = totalMatches,
+                winRate = winRate,
+                rankedWinRate = rankedWinRate,
+                inGameId = inGameId,
+                city = city,
+                screenshotUrl = screenshotUrl,
                 useMic = useMic,
                 playstyleTags = playstyleTags,
                 discord = discord,
@@ -87,11 +106,22 @@ class LfgViewModel @Inject constructor(
                 facebook = facebook,
                 createdAt = System.currentTimeMillis()
             )
-            
+
+            // Optimistically add to local list so it appears instantly
+            _posts.value = _posts.value + post
+
+            _isLoading.value = true
             lfgRepository.createPost(post).collect { result ->
-                result.onSuccess {
+                result.onSuccess { created ->
+                    // Replace the optimistic post with the real one from server
+                    _posts.value = _posts.value.map {
+                        if (it.id == post.id) created else it
+                    }
+                    // Also do a full refresh to get the complete list
                     loadPosts()
                 }.onFailure { exception ->
+                    // Remove the optimistic post on failure
+                    _posts.value = _posts.value.filter { it.id != post.id }
                     _error.value = exception.message
                     _isLoading.value = false
                 }
@@ -108,4 +138,8 @@ class LfgViewModel @Inject constructor(
             }
         }
     }
+
+    fun clearError() { _error.value = null }
+
+    fun clearRefreshing() { _isRefreshing.value = false }
 }

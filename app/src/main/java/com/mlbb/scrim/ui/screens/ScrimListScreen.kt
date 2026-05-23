@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.*
@@ -42,11 +43,13 @@ import kotlin.math.absoluteValue
 fun ScrimListScreen(
     scrims: List<Scrim>,
     isLoading: Boolean,
+    error: String? = null,
     onNavigateBack: (() -> Unit)? = null,
     onNavigateToCreateScrim: () -> Unit,
     onNavigateToScrimDetail: (Scrim) -> Unit,
     onSearch: (String, GameMode?, Region?, SkillLevel?, ScrimStatus?) -> Unit,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onDismissError: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedGameMode by remember { mutableStateOf<GameMode?>(null) }
@@ -118,23 +121,26 @@ fun ScrimListScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             PremiumChip(
-                                text = "0 SCRIMS",
+                                text = "${scrims.size} SCRIMS",
                                 icon = Icons.Default.SportsEsports,
-                                color = BluePrimary
+                                color = BluePrimary,
+                                modifier = Modifier.weight(1f)
                             )
                             PremiumChip(
                                 text = "Open",
                                 icon = Icons.Default.CheckCircle,
-                                color = SuccessGreen
+                                color = SuccessGreen,
+                                modifier = Modifier.weight(1f)
                             )
                             PremiumChip(
                                 text = "EU/NA",
                                 icon = Icons.Default.Public,
-                                color = GoldPrimary
+                                color = GoldPrimary,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -347,6 +353,13 @@ fun ScrimListScreen(
                 )
             }
         }
+
+        // Error snackbar
+        ErrorSnackbar(
+            error = error,
+            onDismiss = onDismissError,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -354,26 +367,33 @@ fun ScrimListScreen(
 fun PremiumChip(
     text: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
     Surface(
+        modifier = modifier,
         shape = RoundedCornerShape(20.dp),
         color = color.copy(alpha = 0.12f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = text,
-                style = iOSCaption1.copy(color = color, fontWeight = FontWeight.SemiBold)
+                style = iOSCaption1.copy(color = color, fontWeight = FontWeight.SemiBold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

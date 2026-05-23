@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
 import com.mlbb.scrim.data.model.AuthResult
 import com.mlbb.scrim.data.model.UserProfile
 import com.mlbb.scrim.data.repository.AuthRepositoryInterface
+import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
-    private val authRepository: AuthRepositoryInterface
+    private val authRepository: AuthRepositoryInterface,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : AndroidViewModel(application) {
 
     /**
@@ -30,6 +32,7 @@ class AuthViewModel @Inject constructor(
     companion object {
         const val USE_SUPABASE = true
         private const val VERIFICATION_WINDOW_SECONDS = 3_600L
+        private const val MAX_AVATAR_SIZE_BYTES = 3L * 1024 * 1024 // 3MB
 
         // SavedStateHandle keys — survives process death
         private const val KEY_PENDING_EMAIL = "pending_email"
@@ -49,6 +52,7 @@ class AuthViewModel @Inject constructor(
     private var resendEmailJob: Job? = null
     private var verifyOtpJob: Job? = null
     private var deleteAccountJob: Job? = null
+    private var uploadAvatarJob: Job? = null
 
     /**
      * Pending credentials stored during OTP sign-up flow.
@@ -87,6 +91,9 @@ class AuthViewModel @Inject constructor(
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
+    private val _isProfileRefreshing = MutableStateFlow(false)
+    val isProfileRefreshing: StateFlow<Boolean> = _isProfileRefreshing.asStateFlow()
+
     /** True when the verification email was resent successfully. */
     private val _resentSuccess = MutableStateFlow(false)
     val resentSuccess: StateFlow<Boolean> = _resentSuccess.asStateFlow()
@@ -117,6 +124,8 @@ class AuthViewModel @Inject constructor(
         
         if (hasToken) {
             _isLoggedIn.value = true
+            // Eagerly connect Realtime on cold start with existing session
+            realtimeClient.connect()
             // Load profile in background without blocking initialization
             viewModelScope.launch {
                 val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -140,6 +149,8 @@ class AuthViewModel @Inject constructor(
     private suspend fun handleProfileFetch(profile: UserProfile?) {
         if (profile?.isBanned == true) {
             authRepository.signOut()
+            // Disconnect Realtime — banned user should not receive live updates
+            realtimeClient.disconnect()
             _isLoggedIn.value = false
             _userProfile.value = null
             _authState.value = AuthResult.Error("Your account has been banned.")
@@ -167,7 +178,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    /** Verify the 6-digit OTP code sent to the user's email. */
+    /** Verify the 8-digit OTP code sent to the user's email. */
     fun verifyOtp(token: String) {
         verifyOtpJob?.cancel()
         _authState.value = AuthResult.Loading
@@ -176,6 +187,8 @@ class AuthViewModel @Inject constructor(
                 _authState.value = result
                 if (result is AuthResult.Success) {
                     _isLoggedIn.value = true
+                    // Eagerly connect Realtime WebSocket on sign-in
+                    realtimeClient.connect()
                     handleProfileFetch(authRepository.getUserProfile())
                     // Update location on fresh login
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -200,6 +213,8 @@ class AuthViewModel @Inject constructor(
                 _authState.value = result
                 if (result is AuthResult.Success) {
                     _isLoggedIn.value = true
+                    // Eagerly connect Realtime WebSocket on sign-in
+                    realtimeClient.connect()
                     handleProfileFetch(authRepository.getUserProfile())
                     // Update location on fresh login
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -221,6 +236,8 @@ class AuthViewModel @Inject constructor(
                 _authState.value = result
                 if (result is AuthResult.Success) {
                     _isLoggedIn.value = true
+                    // Eagerly connect Realtime WebSocket on sign-in
+                    realtimeClient.connect()
                     handleProfileFetch(authRepository.getUserProfile())
                     // Update location on fresh login
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -252,6 +269,8 @@ class AuthViewModel @Inject constructor(
             authRepository.signOut().collect { result ->
                 _authState.value = result
                 if (result is AuthResult.Success) {
+                    // Disconnect Realtime WebSocket to prevent stale auth state
+                    realtimeClient.disconnect()
                     _isLoggedIn.value = false
                     _userProfile.value = null
                     pendingVerificationStartedAtMs = null
@@ -267,6 +286,8 @@ class AuthViewModel @Inject constructor(
             authRepository.deleteAccount().collect { result ->
                 _authState.value = result
                 if (result is AuthResult.Success) {
+                    // Disconnect Realtime WebSocket — account no longer exists
+                    realtimeClient.disconnect()
                     _isLoggedIn.value = false
                     _userProfile.value = null
                     pendingVerificationStartedAtMs = null
@@ -305,6 +326,44 @@ class AuthViewModel @Inject constructor(
             authRepository.updatePassword(currentPassword, newPassword, confirmPassword).collect { result ->
                 _authState.value = result
             }
+        }
+    }
+
+    fun uploadAvatar(uri: android.net.Uri) {
+        uploadAvatarJob?.cancel()
+        uploadAvatarJob = viewModelScope.launch {
+            _authState.value = AuthResult.Loading
+            try {
+                val context = getApplication<Application>()
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes == null) {
+                    _authState.value = AuthResult.Error("Failed to read image")
+                    return@launch
+                }
+                if (bytes.size > MAX_AVATAR_SIZE_BYTES) {
+                    _authState.value = AuthResult.Error("Image is too large. Max size is 3MB.")
+                    return@launch
+                }
+                authRepository.uploadAndSetAvatar(bytes, "image/jpeg").collect { result ->
+                    _authState.value = result
+                    if (result is AuthResult.Success) {
+                        handleProfileFetch(authRepository.getUserProfile())
+                    }
+                }
+            } catch (e: Exception) {
+                _authState.value = AuthResult.Error("Upload failed: ${e.message}")
+            }
+        }
+    }
+
+    fun refreshProfile() {
+        viewModelScope.launch {
+            _isProfileRefreshing.value = true
+            val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                authRepository.getUserProfile()
+            }
+            handleProfileFetch(profile)
+            _isProfileRefreshing.value = false
         }
     }
 

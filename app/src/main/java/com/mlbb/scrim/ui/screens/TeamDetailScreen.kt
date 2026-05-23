@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import com.mlbb.scrim.data.model.TeamRating
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.R
@@ -37,14 +40,38 @@ fun TeamDetailScreen(
     team: com.mlbb.scrim.data.model.Team,
     isLeader: Boolean = false,
     currentUserId: String = "",
+    teamStats: Map<String, Any> = emptyMap(),
+    weeklyWins: Int = 0,
+    weeklyLosses: Int = 0,
+    teamRatings: List<com.mlbb.scrim.data.model.TeamRating> = emptyList(),
     onNavigateBack: () -> Unit,
     onUpdatePlayerRole: ((playerId: String, newRole: com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null,
     onRemovePlayer: ((playerId: String) -> Unit)? = null,
     onLeaveTeam: (() -> Unit)? = null,
     onDisbandTeam: (() -> Unit)? = null,
     onInvitePlayer: (() -> Unit)? = null,
-    onAddPlayer: ((name: String, email: String, role: com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null
+    onAddPlayer: ((name: String, email: String, role: com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null,
+    applications: List<com.mlbb.scrim.data.model.TeamApplication> = emptyList(),
+    onAcceptApplication: ((applicationId: String) -> Unit)? = null,
+    onDeclineApplication: ((applicationId: String) -> Unit)? = null,
+    onLoadStats: () -> Unit = {},
+    onSubmitRating: ((rating: Int, feedback: String) -> Unit)? = null
 ) {
+    LaunchedEffect(team.id) {
+        onLoadStats()
+    }
+
+    // Pre-compute stats so they're available across all LazyColumn items
+    val totalScrims = (teamStats["total_scrims"] as? Number)?.toInt() ?: 0
+    val wins = (teamStats["wins"] as? Number)?.toInt() ?: 0
+    val losses = (teamStats["losses"] as? Number)?.toInt() ?: 0
+    val totalPoints = (teamStats["total_points"] as? Number)?.toInt() ?: 0
+    val matchesPlayed = wins + losses
+    val winRate = if (matchesPlayed > 0) "${(wins * 100 / matchesPlayed)}%" else "0%"
+    val avgRating = if (teamRatings.isNotEmpty())
+        String.format("%.1f", teamRatings.map { it.rating }.average())
+    else "—"
+
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDisbandDialog by remember { mutableStateOf(false) }
     var showRemoveDialog by remember { mutableStateOf(false) }
@@ -183,7 +210,7 @@ fun TeamDetailScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Team Stats Section
+                // Team Stats Section (real data from get_team_stats RPC)
                 item {
                     AnimatedEntrance(delayMillis = 175) {
                         Text(
@@ -207,34 +234,129 @@ fun TeamDetailScreen(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.SportsEsports,
                                 label = "Scrims",
-                                value = "24",
+                                value = totalScrims.toString(),
                                 tint = BluePrimary
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.EmojiEvents,
                                 label = "Wins",
-                                value = "16",
+                                value = wins.toString(),
                                 tint = SuccessGreen
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.TrendingUp,
                                 label = "Win Rate",
-                                value = "67%",
+                                value = winRate,
                                 tint = GoldPrimary
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.Star,
                                 label = "Avg Rating",
-                                value = "4.2",
+                                value = avgRating,
                                 tint = Purple
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // Weekly Wins / Losses mini-graph
+                item {
+                    AnimatedEntrance(delayMillis = 190) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "This Week",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = White
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    MiniBar(label = "Wins", value = weeklyWins, color = SuccessGreen)
+                                    MiniBar(label = "Losses", value = weeklyLosses, color = ErrorRed)
+                                    MiniBar(label = "Points", value = totalPoints.coerceAtMost(100), color = GoldPrimary)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // Team Ratings & Feedback
+                if (teamRatings.isNotEmpty()) {
+                    item {
+                        AnimatedEntrance(delayMillis = 200) {
+                            Text(
+                                text = "Ratings & Feedback",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = White
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    items(teamRatings.take(5)) { rating ->
+                        AnimatedEntrance(delayMillis = 220) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = rating.raterTeamName,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = White
+                                            )
+                                        )
+                                        Row {
+                                            repeat(rating.rating) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Star,
+                                                    contentDescription = null,
+                                                    tint = GoldPrimary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    if (rating.feedback.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = rating.feedback,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = LightGray
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
 
                 // Players Section
@@ -357,6 +479,134 @@ fun TeamDetailScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Pending Applications (Leader only)
+                if (isLeader && applications.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        AnimatedEntrance(delayMillis = 380) {
+                            Text(
+                                text = "Join Requests (${applications.size})",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = White
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        applications.forEachIndexed { index, app ->
+                            AnimatedEntrance(delayMillis = 390 + index * 60) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .shadow(
+                                            elevation = 4.dp,
+                                            spotColor = GoldPrimary.copy(alpha = 0.1f),
+                                            shape = RoundedCornerShape(16.dp)
+                                        ),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = DarkNavy
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(44.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        brush = Brush.verticalGradient(
+                                                            colors = listOf(
+                                                                GoldPrimary.copy(alpha = 0.3f),
+                                                                GoldPrimary.copy(alpha = 0.1f)
+                                                            )
+                                                        )
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = app.applicantName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                    fontSize = 18.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = GoldPrimary
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = app.applicantName,
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = White
+                                                    )
+                                                )
+                                                if (!app.message.isNullOrBlank()) {
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = app.message,
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            fontSize = 12.sp,
+                                                            color = LightGray
+                                                        ),
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(10.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedButton(
+                                                onClick = { onDeclineApplication?.invoke(app.id) },
+                                                modifier = Modifier.weight(1f),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    contentColor = ErrorRed
+                                                ),
+                                                border = androidx.compose.foundation.BorderStroke(
+                                                    1.dp,
+                                                    ErrorRed.copy(alpha = 0.5f)
+                                                ),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text("Decline", fontWeight = FontWeight.SemiBold)
+                                            }
+                                            Button(
+                                                onClick = { onAcceptApplication?.invoke(app.id) },
+                                                modifier = Modifier.weight(1f),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = SuccessGreen
+                                                ),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text("Accept", fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
                     }
                 }
@@ -779,6 +1029,43 @@ fun PlayerCard(
                     Text("Cancel", color = MidGray)
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun MiniBar(label: String, value: Int, color: Color, max: Int = 20) {
+    val heightFraction = (value.toFloat() / max).coerceIn(0.05f, 1f)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value.toString(),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .width(24.dp)
+                .height(80.dp)
+                .background(Color.DarkGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(heightFraction)
+                    .background(color.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 11.sp,
+                color = LightGray
+            )
         )
     }
 }

@@ -19,9 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +42,7 @@ fun PremiumCaptcha(
     onVerified: (Boolean) -> Unit
 ) {
     var isVerified by remember { mutableStateOf(false) }
-    var offsetX by remember { mutableStateOf(0f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
     val maxOffset = with(LocalDensity.current) { 240.dp.toPx() } // Approximate slider length
     
     val animatedOffsetX by animateFloatAsState(
@@ -123,9 +125,9 @@ fun PremiumCaptcha(
                     .clip(CircleShape)
                     .background(
                         brush = if (isVerified) {
-                            Brush.linearGradient(colors = listOf(GoldPrimary, Color(0xFFD4AF37)))
+                            Brush.linearGradient(colors = GoldGradient)
                         } else {
-                            Brush.linearGradient(colors = listOf(BluePrimary, Color(0xFF0D47A1)))
+                            Brush.linearGradient(colors = BlueGradient)
                         }
                     )
                     .shadow(

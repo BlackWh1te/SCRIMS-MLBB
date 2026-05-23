@@ -323,4 +323,13 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">Найти игроков</string>
+    <string name="skill_level">Уровень навыка</string>
+    <string name="scrims">Скримы</string>
+    <string name="open">Открыт</string>
+    <string name="filled">Заполнен</string>
+    <string name="in_progress">В процессе</string>
+    <string name="completed">Завершён</string>
+    <string name="cancelled">Отменён</string>
+    <string name="enter_code">Введите 8-значный код</string>
 </resources>

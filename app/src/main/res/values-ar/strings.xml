@@ -324,4 +324,12 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">البحث عن لاعبين</string>
+    <string name="skill_level">مستوى المهارة</string>
+    <string name="scrims">سكرمز</string>
+    <string name="open">مفتوح</string>
+    <string name="filled">ممتلئ</string>
+    <string name="in_progress">قيد التقدم</string>
+    <string name="completed">مكتمل</string>
+    <string name="cancelled">ملغي</string>
 </resources>

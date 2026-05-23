@@ -7,8 +7,13 @@ import com.mlbb.scrim.data.model.Notification
 import com.mlbb.scrim.data.model.NotificationType
 import com.mlbb.scrim.data.service.NotificationDto
 import com.mlbb.scrim.data.service.PostgrestFilter
+import com.mlbb.scrim.data.service.SupabaseConfig
+import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
+import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -17,7 +22,8 @@ import kotlinx.coroutines.flow.flow
  */
 class SupabaseNotificationRepository(
     private val cacheManager: UnifiedCacheManager,
-    private val notificationDao: NotificationDao
+    private val notificationDao: NotificationDao,
+    private val realtimeClient: SupabaseRealtimeClient
 ) {
     companion object {
         private const val CACHE_KEY_PREFIX = "notifications_"
@@ -139,6 +145,65 @@ class SupabaseNotificationRepository(
 
     fun getUnreadCount(notifications: List<Notification>): Int = notifications.count { !it.isRead }
 
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Subscribe to Realtime notifications for a specific user.
+     * Emits new Notification objects as they are INSERTed into the database.
+     */
+    fun subscribeToNotifications(userId: String): Flow<Notification> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:app_notifications:user_$userId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "INSERT",
+                        table = "app_notifications",
+                        filter = "user_id=eq.$userId"
+                    )
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_INSERT && event.record != null
+            }.collect { event ->
+                try {
+                    val dto = parseRealtimeRecordToNotificationDto(event.record!!)
+                    if (dto.userId == userId) {
+                        // Invalidate cache and persist to Room
+                        cacheManager.invalidateByPrefix(CACHE_KEY_PREFIX)
+                        try {
+                            notificationDao.insert(mapModelToEntity(mapDtoToModel(dto), userId))
+                        } catch (_: Exception) { }
+                        emit(mapDtoToModel(dto))
+                    }
+                } catch (e: Exception) {
+                    Log.w("NotifRepo", "Failed to parse Realtime INSERT: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("NotifRepo", "Realtime subscription failed for user $userId: ${e.message}")
+        }
+    }
+
+    /**
+     * Parse a Realtime INSERT record (JsonObject) into a NotificationDto.
+     */
+    private fun parseRealtimeRecordToNotificationDto(record: com.google.gson.JsonObject): NotificationDto {
+        return NotificationDto(
+            id = record.get("id")?.asString ?: "",
+            userId = record.get("user_id")?.asString ?: "",
+            type = record.get("type")?.asString ?: "SYSTEM",
+            title = record.get("title")?.asString ?: "",
+            message = record.get("message")?.asString ?: "",
+            actionId = record.get("action_id")?.asString,
+            isRead = record.get("is_read")?.asBoolean ?: false,
+            createdAt = record.get("created_at")?.asString ?: ""
+        )
+    }
+
     // ─── Mapping ───
 
     private fun mapDtoToModel(dto: NotificationDto): Notification {
@@ -147,7 +212,7 @@ class SupabaseNotificationRepository(
             type = try { NotificationType.valueOf(dto.type) } catch (e: Exception) { NotificationType.SYSTEM },
             title = dto.title,
             message = dto.message,
-            timestamp = parseTimestamp(dto.createdAt),
+            timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
             actionId = dto.actionId ?: ""
         )
@@ -179,15 +244,4 @@ class SupabaseNotificationRepository(
         )
     }
 
-    private fun parseTimestamp(raw: String): Long {
-        return try {
-            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US).parse(raw)?.time
-                ?: System.currentTimeMillis()
-        } catch (_: Exception) {
-            try {
-                java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).parse(raw)?.time
-                    ?: System.currentTimeMillis()
-            } catch (_: Exception) { System.currentTimeMillis() }
-        }
-    }
 }

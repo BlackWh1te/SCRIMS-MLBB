@@ -38,6 +38,7 @@ import java.util.*
 fun MatchResultListScreen(
     matchResults: List<MatchResult>,
     isLoading: Boolean,
+    isRefreshing: Boolean = false,
     onNavigateBack: () -> Unit,
     onNavigateToMatchResultDetail: (MatchResult) -> Unit,
     onNavigateToReportResult: ((MatchResult) -> Unit)? = null,
@@ -91,7 +92,7 @@ fun MatchResultListScreen(
             }
 
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)
             ) {

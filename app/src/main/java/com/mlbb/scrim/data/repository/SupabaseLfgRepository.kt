@@ -8,14 +8,16 @@ import com.mlbb.scrim.data.model.LfgPost
 import com.mlbb.scrim.data.model.Region
 import com.mlbb.scrim.data.model.SkillLevel
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
-import java.text.SimpleDateFormat
-import java.util.*
 
 class SupabaseLfgRepository(
     private val cacheManager: UnifiedCacheManager,
-    private val lfgPostDao: LfgPostDao
+    private val lfgPostDao: LfgPostDao,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : LfgRepositoryInterface {
 
     companion object {
@@ -81,6 +83,10 @@ class SupabaseLfgRepository(
                 rank = post.rank,
                 totalMatches = post.totalMatches,
                 winRate = post.winRate,
+                rankedWinRate = post.rankedWinRate,
+                inGameId = post.inGameId,
+                city = post.city,
+                screenshotUrl = post.screenshotUrl,
                 isAvailable = post.isAvailable,
                 useMic = post.useMic,
                 playstyleTags = post.playstyleTags,
@@ -168,6 +174,10 @@ class SupabaseLfgRepository(
             rank = dto.rank ?: "",
             totalMatches = dto.totalMatches ?: 0,
             winRate = dto.winRate ?: "",
+            rankedWinRate = dto.rankedWinRate ?: "",
+            inGameId = dto.inGameId ?: "",
+            city = dto.city ?: "",
+            screenshotUrl = dto.screenshotUrl ?: "",
             isAvailable = dto.isAvailable ?: true,
             useMic = dto.useMic ?: false,
             playstyleTags = dto.playstyleTags ?: emptyList(),
@@ -175,7 +185,7 @@ class SupabaseLfgRepository(
             telegram = dto.telegram ?: "",
             vk = dto.vk ?: "",
             facebook = dto.facebook ?: "",
-            createdAt = parseDateTime(dto.createdAt)
+            createdAt = DateUtils.parseIsoToMillis(dto.createdAt)
         )
     }
 
@@ -193,6 +203,10 @@ class SupabaseLfgRepository(
             rank = post.rank,
             totalMatches = post.totalMatches,
             winRate = post.winRate,
+            rankedWinRate = post.rankedWinRate,
+            inGameId = post.inGameId,
+            city = post.city,
+            screenshotUrl = post.screenshotUrl,
             isAvailable = post.isAvailable,
             useMic = post.useMic,
             playstyleTagsJson = post.playstyleTags.joinToString(","),
@@ -219,6 +233,10 @@ class SupabaseLfgRepository(
             rank = entity.rank ?: "",
             totalMatches = entity.totalMatches,
             winRate = entity.winRate ?: "",
+            rankedWinRate = entity.rankedWinRate ?: "",
+            inGameId = entity.inGameId ?: "",
+            city = entity.city ?: "",
+            screenshotUrl = entity.screenshotUrl ?: "",
             isAvailable = entity.isAvailable,
             useMic = entity.useMic,
             playstyleTags = entity.playstyleTagsJson?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
@@ -230,17 +248,66 @@ class SupabaseLfgRepository(
         )
     }
 
-    private fun parseDateTime(dateTime: String?): Long {
-        return try {
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-                .parse(dateTime ?: "")?.time ?: System.currentTimeMillis()
-        } catch (_: Exception) {
-            try {
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-                    .parse(dateTime ?: "")?.time ?: System.currentTimeMillis()
-            } catch (_: Exception) {
-                System.currentTimeMillis()
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    override fun subscribeToLfgPosts(): Flow<LfgPost> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:lfg_posts"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "*",
+                        table = SupabaseConfig.TABLE_LFG_POSTS
+                    )
+                )
+            ).filter { event ->
+                (event.eventType == SupabaseRealtimeClient.EVENT_INSERT ||
+                        event.eventType == SupabaseRealtimeClient.EVENT_UPDATE ||
+                        event.eventType == SupabaseRealtimeClient.EVENT_DELETE) && event.record != null
+            }.collect { event ->
+                try {
+                    val post = mapDtoToModel(parseRealtimeRecordToLfgPostDto(event.record!!))
+                    emit(post)
+                } catch (e: Exception) {
+                    Log.w("LfgRepo", "Failed to parse Realtime LFG event: ${e.message}")
+                }
             }
+        } catch (e: Exception) {
+            Log.w("LfgRepo", "Realtime subscription failed for LFG posts: ${e.message}")
         }
     }
+
+    private fun parseRealtimeRecordToLfgPostDto(record: com.google.gson.JsonObject): LfgPostDto {
+        return LfgPostDto(
+            id = record.get("id")?.asString,
+            playerId = record.get("player_id")?.asString ?: "",
+            playerName = record.get("player_name")?.asString ?: "",
+            role = record.get("role")?.asString ?: "FLEX",
+            region = record.get("region")?.asString ?: "UTC",
+            skillLevel = record.get("skill_level")?.asString ?: "ALL",
+            message = record.get("message")?.asString ?: "",
+            mainHeroes = record.get("main_heroes")?.asJsonArray?.map { it.asString },
+            bio = record.get("bio")?.asString,
+            rank = record.get("rank")?.asString,
+            totalMatches = record.get("total_matches")?.asInt,
+            winRate = record.get("win_rate")?.asString,
+            rankedWinRate = record.get("ranked_win_rate")?.asString,
+            inGameId = record.get("in_game_id")?.asString,
+            city = record.get("city")?.asString,
+            screenshotUrl = record.get("screenshot_url")?.asString,
+            isAvailable = record.get("is_available")?.asBoolean,
+            useMic = record.get("use_mic")?.asBoolean,
+            playstyleTags = record.get("playstyle_tags")?.asJsonArray?.map { it.asString },
+            discord = record.get("discord")?.asString,
+            telegram = record.get("telegram")?.asString,
+            vk = record.get("vk")?.asString,
+            facebook = record.get("facebook")?.asString,
+            createdAt = record.get("created_at")?.asString ?: ""
+        )
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.mlbb.scrim.data.service
 
 import com.google.gson.annotations.SerializedName
+import com.mlbb.scrim.data.model.TeamRole
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -122,7 +123,7 @@ data class TeamMemberDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("team_id") val teamId: String = "",
     @SerializedName("user_id") val userId: String = "",
-    @SerializedName("role") val role: String = "Member",
+    @SerializedName("role") val role: String = TeamRole.MEMBER,
     @SerializedName("joined_at") val joinedAt: String = ""
 )
 
@@ -132,7 +133,7 @@ data class TeamMemberDto(
 data class AddTeamMemberRequest(
     @SerializedName("team_id") val teamId: String,
     @SerializedName("user_id") val userId: String,
-    @SerializedName("role") val role: String = "Member"
+    @SerializedName("role") val role: String = TeamRole.MEMBER
 )
 
 // ─── Team Invitation DTO ───
@@ -162,6 +163,8 @@ data class ScrimDto(
     @SerializedName("winner_team_id") val winnerTeamId: String? = null,
     @SerializedName("team_a_ready") val teamAReady: Boolean = false,
     @SerializedName("team_b_ready") val teamBReady: Boolean = false,
+    @SerializedName("team_a_ready_at") val teamAReadyAt: String? = null,
+    @SerializedName("team_b_ready_at") val teamBReadyAt: String? = null,
     @SerializedName("team_a_screenshot_url") val teamAScreenshotUrl: String? = null,
     @SerializedName("team_b_screenshot_url") val teamBScreenshotUrl: String? = null,
     @SerializedName("team_a_screenshot_uploaded_at") val teamAScreenshotUploadedAt: String? = null,
@@ -171,6 +174,12 @@ data class ScrimDto(
     @SerializedName("result_submitted_at") val resultSubmittedAt: String? = null,
     @SerializedName("cancellation_reason") val cancellationReason: String? = null,
     @SerializedName("cancelled_by") val cancelledBy: String? = null,
+    // P1-7: Scrim search/filter fields
+    @SerializedName("game_mode") val gameMode: String = "RANKED",
+    @SerializedName("region") val region: String = "EU",
+    @SerializedName("skill_level") val skillLevel: String = "ALL",
+    @SerializedName("max_players") val maxPlayers: Int = 10,
+    @SerializedName("current_players") val currentPlayers: Int = 0,
     @SerializedName("created_at") val createdAt: String = ""
 )
 
@@ -268,6 +277,19 @@ data class MatchResultDto(
     @SerializedName("created_at") val createdAt: String = ""
 )
 
+// ─── Team Rating DTO ───
+
+data class TeamRatingDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("team_id") val teamId: String = "",
+    @SerializedName("rater_team_id") val raterTeamId: String = "",
+    @SerializedName("rater_team_name") val raterTeamName: String = "",
+    @SerializedName("rater_user_name") val raterUserName: String = "",
+    @SerializedName("rating") val rating: Int = 0,
+    @SerializedName("feedback") val feedback: String? = null,
+    @SerializedName("created_at") val createdAt: String = ""
+)
+
 // ─── Leaderboard DTO ───
 
 data class LeaderboardEntryDto(
@@ -303,7 +325,9 @@ data class NotificationDto(
 data class MessageDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("conversation_id") val conversationId: String = "",
+    @SerializedName("match_id") val matchId: String? = null,
     @SerializedName("sender_id") val senderId: String = "",
+    @SerializedName("sender_team_id") val senderTeamId: String? = null,
     @SerializedName("sender_name") val senderName: String? = null,
     @SerializedName("content") val content: String = "",
     @SerializedName("is_read") val isRead: Boolean = false,
@@ -317,18 +341,21 @@ data class MessageDto(
 
 data class ConversationDto(
     @SerializedName("id") val id: String = "",
-    @SerializedName("scrim_id") val scrimId: String = "",
+    @SerializedName("scrim_id") val scrimId: String? = null,
     @SerializedName("participant_a_id") val participantAId: String = "",
     @SerializedName("participant_a_name") val participantAName: String = "",
+    @SerializedName("participant_a_team_id") val participantATeamId: String = "",
     @SerializedName("participant_a_team_name") val participantATeamName: String = "",
     @SerializedName("participant_b_id") val participantBId: String = "",
     @SerializedName("participant_b_name") val participantBName: String = "",
+    @SerializedName("participant_b_team_id") val participantBTeamId: String = "",
     @SerializedName("participant_b_team_name") val participantBTeamName: String = "",
     @SerializedName("last_message") val lastMessage: String = "",
     @SerializedName("last_message_time") val lastMessageTime: String = "",
     @SerializedName("chat_opens_at") val chatOpensAt: String = "",
     @SerializedName("participant_a_typing") val participantATyping: Boolean = false,
-    @SerializedName("participant_b_typing") val participantBTyping: Boolean = false
+    @SerializedName("participant_b_typing") val participantBTyping: Boolean = false,
+    @SerializedName("unread_count") val unreadCount: Int = 0
 )
 
 /**
@@ -739,6 +766,23 @@ interface SupabaseApiService {
     // P2-3: mark_conversation_as_read — implement in DB or remove; keeping for now as no-op safe
     @POST("rpc/mark_conversation_as_read")
     suspend fun markConversationAsRead(@Body params: Map<String, String>): Response<Unit>
+
+    // ─── Conversations RPC ───
+    @POST("rpc/get_conversations_for_user")
+    suspend fun getConversationsForUserRpc(@Body params: Map<String, String>): Response<List<ConversationDto>>
+
+    @POST("rpc/get_conversation_unread_count")
+    suspend fun getConversationUnreadCountRpc(@Body params: Map<String, String>): Response<Int>
+
+    // ─── Team Ratings ───
+    @GET("rpc/get_team_ratings")
+    suspend fun getTeamRatings(@Query("p_team_id") teamId: String): Response<List<TeamRatingDto>>
+
+    @POST("rpc/get_team_average_rating")
+    suspend fun getTeamAverageRating(@Body params: Map<String, String>): Response<Double>
+
+    @POST("team_ratings")
+    suspend fun createTeamRating(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<List<TeamRatingDto>>
 
     // ─── Utility Endpoints ───
 

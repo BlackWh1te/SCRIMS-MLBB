@@ -14,11 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,13 +41,16 @@ import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
 import com.mlbb.scrim.data.model.Team
+import com.mlbb.scrim.ui.components.ErrorSnackbar
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun ChatScreen(
     conversation    : Conversation,
     currentUserId   : String,
@@ -56,7 +62,11 @@ fun ChatScreen(
     onUpdateTyping  : (Boolean) -> Unit,
     onViewTeamInfo  : (teamId: String, teamName: String) -> Unit,
     isLoading       : Boolean = false,
-    teamInfo        : Team? = null
+    error           : String? = null,
+    onDismissError  : () -> Unit = {},
+    teamInfo        : Team? = null,
+    isRefreshing    : Boolean = false,
+    onRefresh       : () -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
     val listState   = rememberLazyListState()
@@ -68,14 +78,17 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(messageText) {
-        if (messageText.isNotEmpty()) {
-            onUpdateTyping(true)
-            kotlinx.coroutines.delay(3000)
-            onUpdateTyping(false)
-        } else {
-            onUpdateTyping(false)
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { messageText }
+            .collect { text ->
+                if (text.isNotEmpty()) {
+                    onUpdateTyping(true)
+                    kotlinx.coroutines.delay(3000)
+                    onUpdateTyping(false)
+                } else {
+                    onUpdateTyping(false)
+                }
+            }
     }
 
     val isCurrentUserParticipantA = conversation.participantAId == currentUserId
@@ -206,31 +219,41 @@ fun ChatScreen(
 
             // ── Messages List ───────────────────────────────────
             Box(modifier = Modifier.weight(1f)) {
-                LazyColumn(
-                    modifier       = Modifier.fillMaxSize(),
-                    state          = listState,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                PullToRefreshContainer(
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    itemsIndexed(conversation.messages, key = { _, msg -> msg.id }) { index, message ->
-                        val isFromMe = message.senderId == currentUserId
+                    if (conversation.messages.isEmpty()) {
+                        EmptyChatState(otherTeamName = otherTeam)
+                    } else {
+                        LazyColumn(
+                            modifier       = Modifier.fillMaxSize(),
+                            state          = listState,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            itemsIndexed(conversation.messages, key = { _, msg -> msg.id }) { index, message ->
+                                val isFromMe = message.senderId == currentUserId
 
-                        val prevMessage = if (index > 0) conversation.messages[index - 1] else null
-                        val nextMessage = if (index < conversation.messages.size - 1) conversation.messages[index + 1] else null
+                                val prevMessage = if (index > 0) conversation.messages[index - 1] else null
+                                val nextMessage = if (index < conversation.messages.size - 1) conversation.messages[index + 1] else null
 
-                        val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
-                        val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
-                        val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
+                                val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
+                                val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
+                                val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
 
-                        if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
+                                if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
 
-                        MessageBubble(
-                            message        = message,
-                            isFromMe       = isFromMe,
-                            isFirstInGroup = isFirstInGroup,
-                            isLastInGroup  = isLastInGroup,
-                            onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
-                        )
+                                MessageBubble(
+                                    message        = message,
+                                    isFromMe       = isFromMe,
+                                    isFirstInGroup = isFirstInGroup,
+                                    isLastInGroup  = isLastInGroup,
+                                    onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -269,7 +292,7 @@ fun ChatScreen(
                                 strokeWidth = 1f
                             )
                         }
-                        .background(Color(0xFF0A1525).copy(alpha = 0.97f))
+                        .background(DarkNavy.copy(alpha = 0.97f))
                         .navigationBarsPadding()
                         .imePadding()
                         .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -361,7 +384,7 @@ fun ChatScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Send, null,
+                                Icons.AutoMirrored.Filled.Send, null,
                                 tint     = if (sendEnabled) DarkBlue else TextTertiary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -372,6 +395,13 @@ fun ChatScreen(
                 ChatLockedOverlay(timeUntilOpens = conversation.timeUntilChatOpens)
             }
         }
+
+        // Error snackbar
+        ErrorSnackbar(
+            error = error,
+            onDismiss = onDismissError,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -420,7 +450,7 @@ private fun MessageBubble(
     )
 
     val myBubbleBrush = Brush.linearGradient(
-        colors = listOf(BluePrimary, Color(0xFF1565C0)),
+        colors = BlueGradient,
         start  = Offset(0f, 0f),
         end    = Offset(0f, Float.POSITIVE_INFINITY)
     )
@@ -629,7 +659,7 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
     Box(
         Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0A1525).copy(alpha = 0.98f))
+            .background(DarkNavy.copy(alpha = 0.98f))
             .navigationBarsPadding()
             .padding(24.dp),
         contentAlignment = Alignment.Center
@@ -654,6 +684,46 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
                 letterSpacing = (-0.5).sp
             )
         }
+    }
+}
+
+// ── Empty Chat State ──────────────────────────────────────
+
+@Composable
+private fun EmptyChatState(otherTeamName: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.ChatBubble,
+            contentDescription = null,
+            tint = LightGray.copy(alpha = 0.4f),
+            modifier = Modifier.size(72.dp)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "No messages yet",
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = White,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (otherTeamName.isNotBlank()) {
+                "Start the conversation with $otherTeamName"
+            } else {
+                "Start the conversation with the other team"
+            },
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MidGray
+            ),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

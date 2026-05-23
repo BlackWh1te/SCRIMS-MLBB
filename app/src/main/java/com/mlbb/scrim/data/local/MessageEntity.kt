@@ -9,7 +9,9 @@ import com.mlbb.scrim.data.model.MessageType
 data class MessageEntity(
     @PrimaryKey val id: String,
     val conversationId: String,
+    val matchId: String? = null,
     val senderId: String,
+    val senderTeamId: String? = null,
     val senderName: String,
     val content: String,
     val timestamp: Long,
@@ -23,7 +25,9 @@ data class MessageEntity(
     fun toDomainModel() = Message(
         id = id,
         conversationId = conversationId,
+        matchId = matchId,
         senderId = senderId,
+        senderTeamId = senderTeamId,
         senderName = senderName,
         content = content,
         timestamp = timestamp,

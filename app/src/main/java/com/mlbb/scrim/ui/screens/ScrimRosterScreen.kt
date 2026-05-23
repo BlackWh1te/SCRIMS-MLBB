@@ -49,7 +49,7 @@ fun ScrimRosterScreen(
     var rosterEntries by remember(existingRoster, players) {
         mutableStateOf(
             if (existingRoster.isNotEmpty()) {
-                existingRoster.toMutableList()
+                existingRoster.toList()
             } else {
                 players.map { player ->
                     ScrimRosterEntry(
@@ -58,7 +58,7 @@ fun ScrimRosterScreen(
                         teamId = teamId,
                         isActive = false  // Default: substitute, captain must activate
                     )
-                }.toMutableList()
+                }
             }
         )
     }

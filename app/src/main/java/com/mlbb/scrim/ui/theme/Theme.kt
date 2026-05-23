@@ -159,7 +159,8 @@ val PurpleGlowGradient = listOf(Purple.copy(alpha = 0.30f), Purple.copy(alpha = 
 fun goldGradientBrush()    : Brush = Brush.horizontalGradient(colors = GoldGradient)
 fun blueGradientBrush()    : Brush = Brush.horizontalGradient(colors = BlueGradient)
 fun purpleGradientBrush()  : Brush = Brush.horizontalGradient(colors = PurpleGradient)
-fun heroGradientBrush()    : Brush = Brush.verticalGradient(colors = HeroGradient)
+val HeroGradientBrush: Brush = Brush.verticalGradient(colors = HeroGradient)
+fun heroGradientBrush()    : Brush = HeroGradientBrush
 fun cardGradientBrush()    : Brush = Brush.verticalGradient(colors = CardGradient)
 fun successGradientBrush() : Brush = Brush.horizontalGradient(colors = SuccessGradient)
 fun warningGradientBrush() : Brush = Brush.horizontalGradient(colors = WarningGradient)

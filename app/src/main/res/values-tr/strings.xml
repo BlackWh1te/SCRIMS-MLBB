@@ -324,4 +324,12 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">Oyuncu Bul</string>
+    <string name="skill_level">Beceri Seviyesi</string>
+    <string name="scrims">Scrimler</string>
+    <string name="open">Açık</string>
+    <string name="filled">Dolu</string>
+    <string name="in_progress">Devam Ediyor</string>
+    <string name="completed">Tamamlandı</string>
+    <string name="cancelled">İptal Edildi</string>
 </resources>

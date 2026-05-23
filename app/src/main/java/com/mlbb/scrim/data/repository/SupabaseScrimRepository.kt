@@ -6,11 +6,11 @@ import com.mlbb.scrim.data.local.ScrimEntity
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
 import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Supabase-backed scrim repository with caching.
@@ -18,7 +18,8 @@ import java.util.*
  */
 class SupabaseScrimRepository(
     private val cacheManager: UnifiedCacheManager,
-    private val scrimDao: ScrimDao
+    private val scrimDao: ScrimDao,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : ScrimRepositoryInterface {
 
     private val api = SupabaseService.api
@@ -251,7 +252,7 @@ class SupabaseScrimRepository(
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             val isTeamA = existing.teamId == teamId
-            val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
+            val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
             if (isTeamA) { updates["team_a_ready"] = true; updates["team_a_ready_at"] = nowIso } else { updates["team_b_ready"] = true; updates["team_b_ready_at"] = nowIso }
             if (if (isTeamA) true && existing.teamBReady else existing.teamAReady && true) updates["status"] = "IN_PROGRESS"
@@ -267,7 +268,7 @@ class SupabaseScrimRepository(
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim for upload"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             val isTeamA = existing.teamId == teamId
-            val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
+            val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
             if (isTeamA) { updates["team_a_screenshot_url"] = screenshotUrl; updates["team_a_screenshot_uploaded_at"] = nowIso } else { updates["team_b_screenshot_url"] = screenshotUrl; updates["team_b_screenshot_uploaded_at"] = nowIso }
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
@@ -288,9 +289,9 @@ class SupabaseScrimRepository(
                     val teamBId = updated.opponentTeamId
                     if (teamBId != null) { val mr = api.createMatch(MatchDto(scrimId = scrimId, teamAId = updated.teamId, teamBId = teamBId, scheduledDate = updated.scheduledDate, scheduledTime = updated.scheduledTime, status = "Completed")); if (mr.isSuccessful) matchId = mr.body()?.firstOrNull()?.id }
                 }
-            } catch (_: Exception) { }
-            try { if (matchId != null) { val emr = api.getMatchResults(PostgrestFilter.eq(matchId)); if (emr.body().isNullOrEmpty()) api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId)) else api.updateMatchResult(PostgrestFilter.eq(emr.body()!!.first().id), mapOf("winner_team_id" to winnerTeamId)) } } catch (_: Exception) { }
-            try { api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS)) } catch (_: Exception) { }
+            } catch (e: Exception) { Log.w("ScrimRepo", "Failed to find/create match", e) }
+            try { if (matchId != null) { val emr = api.getMatchResults(PostgrestFilter.eq(matchId)); val existing = emr.body()?.firstOrNull(); if (existing == null) api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId)) else api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId)) } } catch (e: Exception) { Log.w("ScrimRepo", "Failed to create/update match result", e) }
+            try { api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS)) } catch (e: Exception) { Log.w("ScrimRepo", "Failed to award scrim points", e) }
             invalidateScrimCaches()
             emit(Result.success(mapDtoToScrim(updated)))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -329,26 +330,205 @@ class SupabaseScrimRepository(
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    override fun subscribeToScrim(scrimId: String): Flow<Scrim> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:scrims:scrim_$scrimId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "UPDATE",
+                        table = SupabaseConfig.TABLE_SCRIMS,
+                        filter = "id=eq.$scrimId"
+                    )
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
+            }.collect { event ->
+                try {
+                    val dto = parseRealtimeRecordToScrimDto(event.record!!)
+                    if (dto.id == scrimId) {
+                        invalidateScrimCaches()
+                        emit(mapDtoToScrim(dto))
+                    }
+                } catch (e: Exception) {
+                    Log.w("ScrimRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("ScrimRepo", "Realtime subscription failed for scrim $scrimId: ${e.message}")
+        }
+    }
+
+    override fun subscribeToAllScrims(): Flow<Scrim> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:scrims:all"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "*",
+                        table = SupabaseConfig.TABLE_SCRIMS
+                    )
+                )
+            ).collect { event ->
+                try {
+                    val record = event.record
+                    if (record != null) {
+                        val dto = parseRealtimeRecordToScrimDto(record)
+                        invalidateScrimCaches()
+                        emit(mapDtoToScrim(dto))
+                    }
+                } catch (e: Exception) {
+                    Log.w("ScrimRepo", "Failed to parse Realtime event: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("ScrimRepo", "Realtime subscription failed for all scrims: ${e.message}")
+        }
+    }
+
+    /**
+     * Parse a Realtime record (JsonObject) into a ScrimDto.
+     */
+    private fun parseRealtimeRecordToScrimDto(record: com.google.gson.JsonObject): ScrimDto {
+        return ScrimDto(
+            id = record.get("id")?.asString ?: "",
+            teamId = record.get("team_id")?.asString ?: "",
+            scheduledDate = record.get("scheduled_date")?.asString ?: "",
+            scheduledTime = record.get("scheduled_time")?.asString ?: "",
+            bestOf = record.get("best_of")?.asInt ?: 1,
+            status = record.get("status")?.asString ?: "Open",
+            description = record.get("description")?.asString,
+            opponentTeamId = record.get("opponent_team_id")?.asString,
+            opponentTeamName = record.get("opponent_team_name")?.asString,
+            winnerTeamId = record.get("winner_team_id")?.asString,
+            teamAReady = record.get("team_a_ready")?.asBoolean ?: false,
+            teamBReady = record.get("team_b_ready")?.asBoolean ?: false,
+            teamAReadyAt = record.get("team_a_ready_at")?.asString,
+            teamBReadyAt = record.get("team_b_ready_at")?.asString,
+            teamAScreenshotUrl = record.get("team_a_screenshot_url")?.asString,
+            teamBScreenshotUrl = record.get("team_b_screenshot_url")?.asString,
+            teamAScreenshotUploadedAt = record.get("team_a_screenshot_uploaded_at")?.asString,
+            teamBScreenshotUploadedAt = record.get("team_b_screenshot_uploaded_at")?.asString,
+            conversationId = record.get("conversation_id")?.asString,
+            resultSubmittedAt = record.get("result_submitted_at")?.asString,
+            cancellationReason = record.get("cancellation_reason")?.asString,
+            cancelledBy = record.get("cancelled_by")?.asString,
+            gameMode = record.get("game_mode")?.asString ?: "RANKED",
+            region = record.get("region")?.asString ?: "EU",
+            skillLevel = record.get("skill_level")?.asString ?: "ALL",
+            maxPlayers = record.get("max_players")?.asInt ?: 10,
+            currentPlayers = record.get("current_players")?.asInt ?: 0,
+            createdAt = record.get("created_at")?.asString ?: ""
+        )
+    }
+
     // ─── Mapping ───
 
     private fun mapScrimToDto(scrim: Scrim): ScrimDto {
-        val df = SimpleDateFormat("yyyy-MM-dd", Locale.US); val tf = SimpleDateFormat("HH:mm:ss", Locale.US); val d = Date(scrim.scheduledTime)
-        return ScrimDto(id = scrim.id.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(), teamId = scrim.teamId, scheduledDate = df.format(d), scheduledTime = tf.format(d), bestOf = scrim.bestOf.games, status = scrim.status.name, description = scrim.description.takeIf { it.isNotBlank() }, opponentTeamId = scrim.opponentTeamId, opponentTeamName = scrim.opponentTeamName, winnerTeamId = scrim.winnerTeamId, teamAReady = scrim.teamAReady, teamBReady = scrim.teamBReady, teamAScreenshotUrl = scrim.teamAScreenshotUrl, teamBScreenshotUrl = scrim.teamBScreenshotUrl, teamAScreenshotUploadedAt = scrim.teamAScreenshotUploadedAt?.let { df.format(Date(it)) + " " + tf.format(Date(it)) }, teamBScreenshotUploadedAt = scrim.teamBScreenshotUploadedAt?.let { df.format(Date(it)) + " " + tf.format(Date(it)) })
+        return ScrimDto(
+            id = scrim.id.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString(),
+            teamId = scrim.teamId,
+            scheduledDate = DateUtils.formatDate(scrim.scheduledTime),
+            scheduledTime = DateUtils.formatTime(scrim.scheduledTime),
+            bestOf = scrim.bestOf.games,
+            status = scrim.status.name,
+            description = scrim.description.takeIf { it.isNotBlank() },
+            opponentTeamId = scrim.opponentTeamId,
+            opponentTeamName = scrim.opponentTeamName,
+            winnerTeamId = scrim.winnerTeamId,
+            teamAReady = scrim.teamAReady,
+            teamBReady = scrim.teamBReady,
+            teamAReadyAt = scrim.teamAReadyAt?.let { DateUtils.formatIsoUtc(it) },
+            teamBReadyAt = scrim.teamBReadyAt?.let { DateUtils.formatIsoUtc(it) },
+            teamAScreenshotUrl = scrim.teamAScreenshotUrl,
+            teamBScreenshotUrl = scrim.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = scrim.teamAScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
+            teamBScreenshotUploadedAt = scrim.teamBScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
+            gameMode = scrim.gameMode.name,
+            region = scrim.region.displayName,
+            skillLevel = scrim.skillLevel.name,
+            maxPlayers = scrim.maxPlayers,
+            currentPlayers = scrim.currentPlayers
+        )
     }
 
     private fun mapDtoToScrim(dto: ScrimDto): Scrim {
-        val scheduledTime = try { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse("${dto.scheduledDate} ${dto.scheduledTime}")?.time ?: System.currentTimeMillis() } catch (_: Exception) { System.currentTimeMillis() }
-        val parseTs = { raw: String? -> raw?.let { try { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse(it)?.time ?: SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(it)?.time } catch (_: Exception) { null } } }
-        return Scrim(id = dto.id, teamId = dto.teamId, teamName = dto.opponentTeamName ?: "", teamLeader = "", bestOf = BestOf.fromGames(dto.bestOf), scheduledTime = scheduledTime, status = ScrimStatus.valueOf(dto.status), description = dto.description ?: "", opponentTeamId = dto.opponentTeamId, opponentTeamName = dto.opponentTeamName, winnerTeamId = dto.winnerTeamId, teamAReady = dto.teamAReady, teamBReady = dto.teamBReady, teamAScreenshotUrl = dto.teamAScreenshotUrl, teamBScreenshotUrl = dto.teamBScreenshotUrl, teamAScreenshotUploadedAt = parseTs(dto.teamAScreenshotUploadedAt), teamBScreenshotUploadedAt = parseTs(dto.teamBScreenshotUploadedAt))
+        val scheduledTime = DateUtils.parseIsoToMillis("${dto.scheduledDate}T${dto.scheduledTime}")
+        val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
+        return Scrim(
+            id = dto.id,
+            teamId = dto.teamId,
+            teamName = dto.opponentTeamName ?: "",
+            teamLeader = "",
+            gameMode = try { GameMode.valueOf(dto.gameMode) } catch (_: Exception) { GameMode.RANKED },
+            region = try { Region.fromDisplayName(dto.region) } catch (_: Exception) { Region.EU },
+            skillLevel = try { SkillLevel.valueOf(dto.skillLevel) } catch (_: Exception) { SkillLevel.ALL },
+            bestOf = BestOf.fromGames(dto.bestOf),
+            scheduledTime = scheduledTime,
+            maxPlayers = dto.maxPlayers,
+            currentPlayers = dto.currentPlayers,
+            status = ScrimStatus.valueOf(dto.status),
+            description = dto.description ?: "",
+            opponentTeamId = dto.opponentTeamId,
+            opponentTeamName = dto.opponentTeamName,
+            winnerTeamId = dto.winnerTeamId,
+            teamAReady = dto.teamAReady,
+            teamBReady = dto.teamBReady,
+            teamAReadyAt = parseTs(dto.teamAReadyAt),
+            teamBReadyAt = parseTs(dto.teamBReadyAt),
+            teamAScreenshotUrl = dto.teamAScreenshotUrl,
+            teamBScreenshotUrl = dto.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = parseTs(dto.teamAScreenshotUploadedAt),
+            teamBScreenshotUploadedAt = parseTs(dto.teamBScreenshotUploadedAt)
+        )
     }
 
     private fun mapScrimToEntity(scrim: Scrim): ScrimEntity {
-        val df = SimpleDateFormat("yyyy-MM-dd", Locale.US); val tf = SimpleDateFormat("HH:mm:ss", Locale.US); val d = Date(scrim.scheduledTime)
-        return ScrimEntity(id = scrim.id, teamId = scrim.teamId, scheduledDate = df.format(d), scheduledTime = tf.format(d), bestOf = scrim.bestOf.games, status = scrim.status.name, description = scrim.description, opponentTeamId = scrim.opponentTeamId, opponentTeamName = scrim.opponentTeamName, winnerTeamId = scrim.winnerTeamId, teamAReady = scrim.teamAReady, teamBReady = scrim.teamBReady, teamAScreenshotUrl = scrim.teamAScreenshotUrl, teamBScreenshotUrl = scrim.teamBScreenshotUrl)
+        return ScrimEntity(
+            id = scrim.id, teamId = scrim.teamId,
+            scheduledDate = DateUtils.formatDate(scrim.scheduledTime),
+            scheduledTime = DateUtils.formatTime(scrim.scheduledTime),
+            bestOf = scrim.bestOf.games, status = scrim.status.name,
+            description = scrim.description,
+            opponentTeamId = scrim.opponentTeamId, opponentTeamName = scrim.opponentTeamName,
+            winnerTeamId = scrim.winnerTeamId,
+            teamAReady = scrim.teamAReady, teamBReady = scrim.teamBReady,
+            teamAReadyAt = scrim.teamAReadyAt?.let { DateUtils.formatIsoUtc(it) },
+            teamBReadyAt = scrim.teamBReadyAt?.let { DateUtils.formatIsoUtc(it) },
+            teamAScreenshotUrl = scrim.teamAScreenshotUrl, teamBScreenshotUrl = scrim.teamBScreenshotUrl,
+            gameMode = scrim.gameMode.name, region = scrim.region.displayName,
+            skillLevel = scrim.skillLevel.name,
+            maxPlayers = scrim.maxPlayers, currentPlayers = scrim.currentPlayers
+        )
     }
 
     private fun mapEntityToScrim(e: ScrimEntity): Scrim {
-        val scheduledTime = try { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse("${e.scheduledDate} ${e.scheduledTime}")?.time ?: System.currentTimeMillis() } catch (_: Exception) { System.currentTimeMillis() }
-        return Scrim(id = e.id, teamId = e.teamId, teamName = e.opponentTeamName ?: "", teamLeader = "", bestOf = BestOf.fromGames(e.bestOf), scheduledTime = scheduledTime, status = try { ScrimStatus.valueOf(e.status) } catch (_: Exception) { ScrimStatus.OPEN }, description = e.description ?: "", opponentTeamId = e.opponentTeamId, opponentTeamName = e.opponentTeamName, winnerTeamId = e.winnerTeamId, teamAReady = e.teamAReady, teamBReady = e.teamBReady, teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl)
+        val scheduledTime = DateUtils.parseIsoToMillis("${e.scheduledDate}T${e.scheduledTime}")
+        val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
+        return Scrim(
+            id = e.id, teamId = e.teamId,
+            teamName = e.opponentTeamName ?: "", teamLeader = "",
+            gameMode = try { GameMode.valueOf(e.gameMode) } catch (_: Exception) { GameMode.RANKED },
+            region = try { Region.fromDisplayName(e.region) } catch (_: Exception) { Region.EU },
+            skillLevel = try { SkillLevel.valueOf(e.skillLevel) } catch (_: Exception) { SkillLevel.ALL },
+            bestOf = BestOf.fromGames(e.bestOf),
+            scheduledTime = scheduledTime,
+            maxPlayers = e.maxPlayers, currentPlayers = e.currentPlayers,
+            status = try { ScrimStatus.valueOf(e.status) } catch (_: Exception) { ScrimStatus.OPEN },
+            description = e.description ?: "",
+            opponentTeamId = e.opponentTeamId, opponentTeamName = e.opponentTeamName,
+            winnerTeamId = e.winnerTeamId,
+            teamAReady = e.teamAReady, teamBReady = e.teamBReady,
+            teamAReadyAt = parseTs(e.teamAReadyAt), teamBReadyAt = parseTs(e.teamBReadyAt),
+            teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl
+        )
     }
 }

@@ -74,14 +74,7 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF060D18),
-                        Color(0xFF0A1525),
-                        Color(0xFF0E1F38),
-                        Color(0xFF061018)
-                    )
-                )
+                brush = heroGradientBrush()
             )
     ) {
         // Decorative glow orbs
@@ -121,32 +114,11 @@ fun LoginScreen(
 
             // ── Logo ────────────────────────────────────────────
             PremiumFadeIn(delayMillis = 0) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(BluePrimary, Color(0xFF0D47A1)),
-                                start  = Offset(0f, 0f),
-                                end    = Offset(80f, 80f)
-                            )
-                        )
-                        .border(
-                            width  = 1.dp,
-                            brush  = Brush.linearGradient(
-                                colors = listOf(White.copy(alpha = 0.25f), White.copy(alpha = 0.05f))
-                            ),
-                            shape  = RoundedCornerShape(22.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
-                        contentDescription = "App Logo",
-                        modifier = Modifier.size(64.dp)
-                    )
-                }
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
+                    contentDescription = "App Logo",
+                    modifier = Modifier.size(90.dp)
+                )
             }
 
             Spacer(Modifier.height(22.dp))

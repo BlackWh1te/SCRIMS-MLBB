@@ -26,10 +26,8 @@ class NewsRepository(
 
     companion object {
         private const val TAG = "NewsRepository"
-        private const val NEWSAPI_KEY = "0ef43d1109b04f99b04e5b1292dbc7d6"
-
-        // X (Twitter) API v2 Bearer Token
-        private const val X_BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAFE99gEAAAAA8Nmx2aEY1BaHnOMpsCWftfC7kMA%3Da92UZ0B8jQ0XhhHfINCfHiolLfGhC6uEAQKqWWgMPfpn12Kmkd"
+        private const val NEWSAPI_KEY = com.mlbb.scrim.BuildConfig.NEWSAPI_KEY
+        private const val X_BEARER_TOKEN = com.mlbb.scrim.BuildConfig.X_BEARER_TOKEN
 
         // Quota limits
         private const val X_API_MONTHLY_LIMIT = 100

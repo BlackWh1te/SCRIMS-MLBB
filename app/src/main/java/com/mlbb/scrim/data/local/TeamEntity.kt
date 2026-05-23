@@ -20,5 +20,7 @@ data class TeamEntity(
     val noShows: Int = 0,
     /** JSON-serialized list of player IDs for quick member lookup */
     val memberIdsJson: String? = null,
+    val logoUrl: String? = null,
+    val isOpenForApplications: Boolean = false,
     val lastUpdated: Long = System.currentTimeMillis()
 )

@@ -13,6 +13,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -37,15 +40,20 @@ class MessageViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun loadConversations(userId: String) {
+    fun loadConversations(userId: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             messageRepository.getConversationsForUser(userId).collect { result ->
                 result.onSuccess { _conversations.value = it }
                 _isLoading.value = false
+                _isRefreshing.value = false
             }
         }
     }
@@ -88,9 +96,24 @@ class MessageViewModel @Inject constructor(
         chatPollingJob = viewModelScope.launch {
             // Mark as read when entering
             messageRepository.markConversationAsRead(conversationId, userId).collect {}
-            
-            launch {
-                messageRepository.subscribeToMessages(conversationId).collect { newMessage ->
+
+            // Merge Realtime + polling fallback, deduplicate by message ID
+            val realtimeFlow = messageRepository.subscribeToMessages(conversationId)
+            val pollingFlow = flow {
+                while (isActive) {
+                    delay(15_000) // Poll every 15s as fallback
+                    try {
+                        messageRepository.getConversationById(conversationId).collect { result ->
+                            result.onSuccess { conv ->
+                                conv?.messages?.forEach { msg -> emit(msg) }
+                            }
+                        }
+                    } catch (_: Exception) { }
+                }
+            }
+            merge(realtimeFlow, pollingFlow)
+                .distinctUntilChangedBy { it.id }
+                .collect { newMessage ->
                     val current = _selectedConversation.value
                     if (current != null && current.id == conversationId) {
                         if (current.messages.none { it.id == newMessage.id }) {
@@ -100,17 +123,17 @@ class MessageViewModel @Inject constructor(
                         }
                     }
                 }
-            }
-            
-            launch {
-                messageRepository.subscribeToConversation(conversationId).collect { updated ->
-                    val current = _selectedConversation.value
-                    if (current != null && current.id == conversationId) {
-                        _selectedConversation.value = current.copy(
-                            isParticipantATyping = updated.isParticipantATyping,
-                            isParticipantBTyping = updated.isParticipantBTyping
-                        )
-                    }
+        }
+
+        // Subscribe to conversation updates (typing status, etc.)
+        viewModelScope.launch {
+            messageRepository.subscribeToConversation(conversationId).collect { updated ->
+                val current = _selectedConversation.value
+                if (current != null && current.id == conversationId) {
+                    _selectedConversation.value = current.copy(
+                        isParticipantATyping = updated.isParticipantATyping,
+                        isParticipantBTyping = updated.isParticipantBTyping
+                    )
                 }
             }
         }
@@ -235,4 +258,6 @@ class MessageViewModel @Inject constructor(
     }
 
     fun clearError() { _error.value = null }
+
+    fun clearRefreshing() { _isRefreshing.value = false }
 }

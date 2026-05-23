@@ -1,5 +1,7 @@
 package com.mlbb.scrim.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,10 +34,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.net.Uri
+import coil.compose.AsyncImage
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.GradientButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.components.RankBadge
 import com.mlbb.scrim.ui.components.RankBadgeSize
 import com.mlbb.scrim.R
@@ -53,7 +58,10 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToAchievements: () -> Unit = {},
     onLogout: () -> Unit = {},
-    unlockedAchievements: List<com.mlbb.scrim.data.model.Achievement> = emptyList()
+    onUploadAvatar: (android.net.Uri) -> Unit = {},
+    unlockedAchievements: List<com.mlbb.scrim.data.model.Achievement> = emptyList(),
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {}
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf(userProfile?.username ?: "") }
@@ -61,6 +69,13 @@ fun ProfileScreen(
     var role by remember { mutableStateOf(userProfile?.role ?: "") }
     var bio by remember { mutableStateOf(userProfile?.bio ?: "") }
     var mainHeroesInput by remember { mutableStateOf(userProfile?.mainHeroes?.joinToString(", ") ?: "") }
+
+    // Avatar picker
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { onUploadAvatar(it) }
+    }
 
     // Account security dialog states
     var showEmailDialog by remember { mutableStateOf(false) }
@@ -84,6 +99,11 @@ fun ProfileScreen(
         }
     }
 
+    PullToRefreshContainer(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -162,18 +182,42 @@ fun ProfileScreen(
                             )
                             .clip(CircleShape)
                             .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(BluePrimary, Color(0xFF0A5A9F))
-                                )
-                            ),
+                                brush = Brush.verticalGradient(colors = BlueGradient)
+                            )
+                            .clickable(enabled = !isEditing) { imagePicker.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        if (userProfile?.avatarUrl != null) {
+                            AsyncImage(
+                                model = userProfile.avatarUrl,
+                                contentDescription = "Profile Avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
+                                fontSize = 48.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
+                        }
+                        // Camera overlay hint
+                        if (!isEditing) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Change avatar",
+                                    tint = White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -641,6 +685,7 @@ fun ProfileScreen(
         )
     }
 }
+}
 
 @Composable
 fun ProfileInfoCard(
@@ -1030,4 +1075,4 @@ fun ProfileStatBox(
             )
         }
     }
-}
+    }

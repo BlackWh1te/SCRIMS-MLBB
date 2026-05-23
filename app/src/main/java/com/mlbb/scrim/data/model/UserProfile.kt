@@ -5,9 +5,10 @@ data class UserProfile(
     val username: String = "",
     val email: String = "",
     val inGameId: String = "",
+    val avatarUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val xp: Int = 0,
-    val pts: Int = 0,          // Points earned/lost from scrims
+    val pts: Int = 0,
     val totalMatches: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,

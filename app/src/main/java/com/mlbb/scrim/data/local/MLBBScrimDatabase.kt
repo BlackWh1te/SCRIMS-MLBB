@@ -18,7 +18,7 @@ import androidx.room.RoomDatabase
         LfgPostEntity::class,
         NotificationEntity::class
     ],
-    version = 3,
+    version = 6,
     exportSchema = false
 )
 abstract class MLBBScrimDatabase : RoomDatabase() {
@@ -46,6 +46,7 @@ abstract class MLBBScrimDatabase : RoomDatabase() {
                     MLBBScrimDatabase::class.java,
                     "mlbb_scrim_database"
                 )
+                .addMigrations(MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

@@ -27,6 +27,7 @@ import com.mlbb.scrim.data.model.BestOf
 import com.mlbb.scrim.data.model.GameMode
 import com.mlbb.scrim.data.model.Region
 import com.mlbb.scrim.data.model.SkillLevel
+import com.mlbb.scrim.data.model.Team
 import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
@@ -39,12 +40,11 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateScrimScreen(
-    teamName: String,
-    teamId: String,
-    teamLeader: String,
-    currentPlayerCount: Int = 0,
+    teams: List<Team>,
     onNavigateBack: () -> Unit,
     onCreateScrim: (
+        teamId: String,
+        teamName: String,
         gameMode: GameMode,
         region: Region,
         skillLevel: SkillLevel,
@@ -53,6 +53,17 @@ fun CreateScrimScreen(
         description: String
     ) -> Unit
 ) {
+    // Team selection state
+    var selectedTeamIndex by remember { mutableIntStateOf(0) }
+    val selectedTeam = teams.getOrElse(selectedTeamIndex) { teams.firstOrNull() }
+    val teamName = selectedTeam?.name ?: "My Team"
+    val teamId = selectedTeam?.id ?: ""
+    val currentPlayerCount = selectedTeam?.currentPlayerCount ?: 0
+    val meetsMinPlayers = selectedTeam?.meetsMinPlayers ?: false
+
+    var showTeamPicker by remember { mutableStateOf(false) }
+    var showMinPlayerDialog by remember { mutableStateOf(false) }
+
     var selectedGameMode by remember { mutableStateOf(GameMode.RANKED) }
     var selectedRegion by remember { mutableStateOf(Region.EU) }
     var selectedSkillLevel by remember { mutableStateOf(SkillLevel.ALL) }
@@ -60,16 +71,21 @@ fun CreateScrimScreen(
     var description by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    // Hardcoded 2026 date/time picker state
-    var selectedMonth by remember { mutableStateOf(0) } // 0 = January
-    var selectedDay by remember { mutableStateOf(1) }
-    var selectedHour by remember { mutableStateOf(18) } // 6 PM default
-    var selectedMinute by remember { mutableStateOf(0) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
+    // Date/time picker state — defaults to today's date, current year
+    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+    val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) // 0-based
+    val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)
+    val availableYears = listOf(currentYear, currentYear + 1)
+    var selectedYearIndex by remember { mutableIntStateOf(0) } // 0 = current year
+    val selectedYear = availableYears.getOrElse(selectedYearIndex) { currentYear }
+    var selectedMonth by remember { mutableIntStateOf(currentMonth) }
+    var selectedDay by remember { mutableIntStateOf(currentDay) }
+    var selectedHour by remember { mutableIntStateOf(18) } // 6 PM default
+    var selectedMinute by remember { mutableIntStateOf(0) }
 
     val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-    val daysInMonth = listOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    val isLeapYear = (selectedYear % 4 == 0 && selectedYear % 100 != 0) || (selectedYear % 400 == 0)
+    val daysInMonth = listOf(31, if (isLeapYear) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
     val maxDay = daysInMonth.getOrElse(selectedMonth) { 31 }
     if (selectedDay > maxDay) selectedDay = maxDay
 
@@ -123,7 +139,7 @@ fun CreateScrimScreen(
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Team Info Card
+                // Team Info Card — Clickable to switch team if multiple
                 AnimatedEntrance(delayMillis = 100) {
                     Card(
                         modifier = Modifier
@@ -136,7 +152,8 @@ fun CreateScrimScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = DarkNavy
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        onClick = { if (teams.size > 1) showTeamPicker = true }
                     ) {
                         Row(
                             modifier = Modifier
@@ -165,7 +182,7 @@ fun CreateScrimScreen(
 
                             Spacer(modifier = Modifier.width(16.dp))
 
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.posting_as),
                                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -173,14 +190,44 @@ fun CreateScrimScreen(
                                         color = LightGray
                                     )
                                 )
-                                Text(
-                                    text = teamName,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = teamName,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = White
+                                        ),
+                                        modifier = Modifier.weight(1f, fill = false),
+                                        maxLines = 1
                                     )
-                                )
+                                    if (teams.size > 1) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = "Switch team",
+                                            tint = BluePrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                // Player count indicator
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.People,
+                                        contentDescription = null,
+                                        tint = if (meetsMinPlayers) SuccessGreen else WarningOrange,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "$currentPlayerCount/5 players",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (meetsMinPlayers) SuccessGreen else WarningOrange
+                                    )
+                                }
                             }
                         }
                     }
@@ -300,9 +347,9 @@ fun CreateScrimScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Scheduled Date & Time (2026 hardcoded)
+                // Scheduled Date & Time
                 AnimatedEntrance(delayMillis = 300) {
-                    SelectionCard(title = "Date & Time (2026)") {
+                    SelectionCard(title = "Date & Time") {
                         Column {
                             // Date Row
                             Row(
@@ -310,29 +357,49 @@ fun CreateScrimScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Year (fixed 2026 display)
+                                // Year selector
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = stringResource(R.string.year),
                                         fontSize = 12.sp,
                                         color = MidGray
                                     )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 4.dp)
-                                            .background(
-                                                color = White.copy(alpha = 0.1f),
-                                                shape = RoundedCornerShape(8.dp)
+                                    var yearExpanded by remember { mutableStateOf(false) }
+                                    Box {
+                                        OutlinedButton(
+                                            onClick = { yearExpanded = true },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp)
+                                                .height(40.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                containerColor = White.copy(alpha = 0.1f)
+                                            ),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, White.copy(alpha = 0.3f)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(
+                                                selectedYear.toString(),
+                                                color = GoldPrimary,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            text = "2026",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = GoldPrimary
-                                        )
+                                        }
+                                        DropdownMenu(
+                                            expanded = yearExpanded,
+                                            onDismissRequest = { yearExpanded = false },
+                                            modifier = Modifier.background(DarkNavy)
+                                        ) {
+                                            availableYears.forEachIndexed { index, year ->
+                                                DropdownMenuItem(
+                                                    text = { Text(year.toString(), color = White) },
+                                                    onClick = {
+                                                        selectedYearIndex = index
+                                                        yearExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
 
@@ -563,7 +630,7 @@ fun CreateScrimScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "Scrim will start: ${months[selectedMonth]} $selectedDay, 2026 at ${String.format("%02d", selectedHour)}:${String.format("%02d", selectedMinute)} ${selectedRegion.utcOffset}",
+                                text = "Scrim will start: ${months[selectedMonth]} $selectedDay, $selectedYear at ${String.format("%02d", selectedHour)}:${String.format("%02d", selectedMinute)} ${selectedRegion.utcOffset}",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontSize = 13.sp,
                                     color = MidGray
@@ -649,32 +716,203 @@ fun CreateScrimScreen(
                     }
                 }
 
-                // Post Button
+                // Post Button — gated on minimum 5 players
                 AnimatedEntrance(delayMillis = 400) {
                     GradientButton(
                         text = stringResource(R.string.post_scrim),
                         onClick = {
-                            val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-                            calendar.set(2026, selectedMonth, selectedDay, selectedHour, selectedMinute, 0)
-                            calendar.set(java.util.Calendar.MILLISECOND, 0)
-                            val scheduledTime = calendar.timeInMillis
-                            onCreateScrim(
-                                selectedGameMode,
-                                selectedRegion,
-                                selectedSkillLevel,
-                                selectedBestOf,
-                                scheduledTime,
-                                description
-                            )
+                            if (!meetsMinPlayers) {
+                                showMinPlayerDialog = true
+                            } else {
+                                val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                                calendar.set(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute, 0)
+                                calendar.set(java.util.Calendar.MILLISECOND, 0)
+                                val scheduledTime = calendar.timeInMillis
+                                onCreateScrim(
+                                    teamId,
+                                    teamName,
+                                    selectedGameMode,
+                                    selectedRegion,
+                                    selectedSkillLevel,
+                                    selectedBestOf,
+                                    scheduledTime,
+                                    description
+                                )
+                            }
                         },
                         gradient = GoldGradient,
-                        height = 56.dp
+                        height = 56.dp,
+                        enabled = meetsMinPlayers
                     )
+                    if (!meetsMinPlayers) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Your team needs at least 5 players to post scrims",
+                            color = WarningOrange,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp)
+                )
             }
         }
+    }
+
+    // ── Team Picker Dialog ──────────────────────────────────────
+    if (showTeamPicker) {
+        AlertDialog(
+            onDismissRequest = { showTeamPicker = false },
+            containerColor = DarkNavy,
+            title = {
+                Text("Select Team", color = White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    teams.forEachIndexed { index, team ->
+                        val isSelected = index == selectedTeamIndex
+                        val hasMinPlayers = team.meetsMinPlayers
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) BluePrimary.copy(alpha = 0.15f) else White.copy(alpha = 0.05f)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            onClick = {
+                                selectedTeamIndex = index
+                                showTeamPicker = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(BluePrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                                        color = BluePrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        team.name,
+                                        color = White,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.People, null,
+                                            tint = if (hasMinPlayers) SuccessGreen else WarningOrange,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            "${team.currentPlayerCount}/5 players",
+                                            color = if (hasMinPlayers) SuccessGreen else WarningOrange,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTeamPicker = false }) {
+                    Text("Cancel", color = LightGray)
+                }
+            }
+        )
+    }
+
+    // ── Min Player Warning Dialog ─────────────────────────────────
+    if (showMinPlayerDialog) {
+        AlertDialog(
+            onDismissRequest = { showMinPlayerDialog = false },
+            containerColor = DarkNavy,
+            icon = {
+                Icon(Icons.Default.Warning, null, tint = WarningOrange, modifier = Modifier.size(32.dp))
+            },
+            title = {
+                Text("Not Enough Players", color = White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(
+                        "Your team \"$teamName\" has only $currentPlayerCount out of 5 required players.",
+                        color = LightGray,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "You need at least 5 players in your team before you can post scrims. Add more players to your team first.",
+                        color = MidGray,
+                        fontSize = 13.sp
+                    )
+                    // Show other teams that DO have 5 players
+                    val eligibleTeams = teams.filter { it.meetsMinPlayers && it.id != teamId }
+                    if (eligibleTeams.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Switch to a team with 5+ players:",
+                            color = BluePrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        eligibleTeams.forEach { team ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.1f)),
+                                shape = RoundedCornerShape(8.dp),
+                                onClick = {
+                                    selectedTeamIndex = teams.indexOf(team)
+                                    showMinPlayerDialog = false
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(team.name, color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text("${team.currentPlayerCount} players", color = SuccessGreen, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMinPlayerDialog = false }) {
+                    Text("OK", color = GoldPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
 

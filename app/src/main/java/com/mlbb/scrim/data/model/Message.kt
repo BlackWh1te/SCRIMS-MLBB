@@ -3,7 +3,9 @@ package com.mlbb.scrim.data.model
 data class Message(
     val id: String = "",
     val conversationId: String = "",
+    val matchId: String? = null,
     val senderId: String = "",
+    val senderTeamId: String? = null,
     val senderName: String = "",
     val content: String = "",
     val timestamp: Long = System.currentTimeMillis(),

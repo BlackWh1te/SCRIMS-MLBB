@@ -40,9 +40,11 @@ import androidx.compose.ui.platform.LocalContext
 fun TeamListScreen(
     teams: List<com.mlbb.scrim.data.model.Team>,
     isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
     onNavigateBack: () -> Unit,
     onNavigateToCreateTeam: () -> Unit,
     onNavigateToJoinTeam: () -> Unit = {},
+    onNavigateToFindTeams: () -> Unit = {},
     onNavigateToTeamDetail: (com.mlbb.scrim.data.model.Team) -> Unit,
     onRefresh: () -> Unit = {}
 ) {
@@ -92,6 +94,24 @@ fun TeamListScreen(
                             )
                         }
 
+                        // Find teams button
+                        IconButton(
+                            onClick = onNavigateToFindTeams,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    color = BluePrimary.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Find Teams",
+                                tint = BluePrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
                         // Join button
                         IconButton(
                             onClick = onNavigateToJoinTeam,
@@ -132,7 +152,7 @@ fun TeamListScreen(
             }
 
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)
             ) {

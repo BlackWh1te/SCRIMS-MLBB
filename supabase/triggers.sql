@@ -47,6 +47,7 @@ CREATE OR REPLACE FUNCTION public.calculate_division(xp INTEGER, tier TEXT)
 RETURNS INTEGER AS $$
 DECLARE
   tier_min INTEGER;
+  raw_div INTEGER;
 BEGIN
   CASE tier
     WHEN 'Bronze' THEN tier_min := 0;
@@ -58,7 +59,9 @@ BEGIN
     ELSE tier_min := 2000;
   END CASE;
 
-  RETURN FLOOR((xp - tier_min) / 50) + 1;
+  raw_div := FLOOR((xp - tier_min) / 50) + 1;
+  -- Clamp division to valid range [1, 4]
+  RETURN GREATEST(1, LEAST(4, raw_div));
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

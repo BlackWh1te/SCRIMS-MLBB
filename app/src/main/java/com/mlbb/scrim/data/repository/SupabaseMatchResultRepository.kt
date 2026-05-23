@@ -3,6 +3,8 @@ package com.mlbb.scrim.data.repository
 import com.mlbb.scrim.data.cache.ProfileCacheRepository
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -244,7 +246,7 @@ class SupabaseMatchResultRepository(
                 ).body()?.firstOrNull()
                 created?.id
             }
-        } catch (_: Exception) { null }
+        } catch (e: Exception) { Log.w("MatchResultRepo", "Failed to create match record", e); null }
     }
 
     override suspend fun resolveDispute(
@@ -286,9 +288,15 @@ class SupabaseMatchResultRepository(
             val mrResponse = api.getMatchResults(PostgrestFilter.eq(matchResultId))
             val mr = mrResponse.body()?.firstOrNull()
             if (mr != null) {
+                val currentUserId = com.mlbb.scrim.data.service.SupabaseSession.getUserIdOrNull()
+                // Fetch match to determine which team the user is on
+                val matchResponse = api.getMatches(PostgrestFilter.eq(mr.matchId))
+                val match = matchResponse.body()?.firstOrNull()
+                val isTeamA = match != null && currentUserId != null && isUserInTeam(match.teamAId, currentUserId)
+                val column = if (isTeamA) "team_a_screenshot_url" else "team_b_screenshot_url"
                 api.updateMatchResult(
                     PostgrestFilter.eq(mr.id),
-                    mapOf("team_a_screenshot_url" to screenshotUrl)
+                    mapOf(column to screenshotUrl)
                 )
             }
             val scrimResp = api.getScrimById(PostgrestFilter.eq(matchResultId))
@@ -303,6 +311,13 @@ class SupabaseMatchResultRepository(
         }
     }
 
+    private suspend fun isUserInTeam(teamId: String, userId: String): Boolean {
+        return try {
+            val members = api.getTeamMembers(PostgrestFilter.eq(teamId))
+            members.body()?.any { it.userId == userId } == true
+        } catch (e: Exception) { Log.w("MatchResultRepo", "Failed to check team membership", e); false }
+    }
+
     // ─── Mapping (N+1 FIXED: uses batch profile cache) ───
 
     private suspend fun mapScrimToMatchResult(scrimDto: ScrimDto, mrDto: MatchResultDto? = null): MatchResult {
@@ -315,7 +330,7 @@ class SupabaseMatchResultRepository(
         // Fetch rosters for this scrim (single API call)
         val rosterEntries = try {
             api.getScrimRosters(PostgrestFilter.eq(scrimDto.id)).body() ?: emptyList()
-        } catch (_: Exception) { emptyList() }
+        } catch (e: Exception) { Log.w("MatchResultRepo", "Failed to load scrim rosters", e); emptyList() }
 
         val winnerTeamId = scrimDto.winnerTeamId ?: mrDto?.winnerTeamId
 
@@ -387,7 +402,7 @@ class SupabaseMatchResultRepository(
             },
             confirmedWinnerId = winnerTeamId,
             adminNotes = mrDto?.verificationNotes,
-            createdAt = parseTimestamp(scrimDto.createdAt),
+            createdAt = DateUtils.parseIsoToMillis(scrimDto.createdAt),
             resolvedAt = if (scrimDto.winnerTeamId != null) System.currentTimeMillis() else null,
             teamARoster = teamARoster,
             teamBRoster = teamBRoster
@@ -401,17 +416,9 @@ class SupabaseMatchResultRepository(
         teamNameCache[teamId]?.let { return it }
         val name = try {
             api.getTeamById(PostgrestFilter.eq(teamId)).body()?.firstOrNull()?.name ?: ""
-        } catch (_: Exception) { "" }
+        } catch (e: Exception) { Log.w("MatchResultRepo", "Failed to fetch team name", e); "" }
         if (name.isNotEmpty()) teamNameCache[teamId] = name
         return name
     }
 
-    private fun parseTimestamp(raw: String?): Long {
-        return try {
-            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
-                .parse(raw ?: "")?.time ?: System.currentTimeMillis()
-        } catch (_: Exception) {
-            System.currentTimeMillis()
-        }
-    }
 }

@@ -324,4 +324,12 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">플레이어 찾기</string>
+    <string name="skill_level">스킬 레벨</string>
+    <string name="scrims">스크림</string>
+    <string name="open">열림</string>
+    <string name="filled">가득 참</string>
+    <string name="in_progress">진행 중</string>
+    <string name="completed">완료됨</string>
+    <string name="cancelled">취소됨</string>
 </resources>

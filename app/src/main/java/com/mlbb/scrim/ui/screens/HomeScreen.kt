@@ -32,6 +32,7 @@ import java.util.Calendar
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.PremiumGlassCard
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,8 +47,15 @@ fun HomeScreen(
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToScrimDetail: (String) -> Unit = {},
     scrims: List<com.mlbb.scrim.data.model.Scrim> = emptyList(),
-    notificationCount: Int = 0
+    notificationCount: Int = 0,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {}
 ) {
+    PullToRefreshContainer(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -377,6 +385,7 @@ fun HomeScreen(
         }
     }
 }
+}
 
 // ── Stat Card ───────────────────────────────────────────────
 
@@ -393,10 +402,13 @@ private fun HomeStatCard(
             .clip(RoundedCornerShape(16.dp))
             .background(SurfaceCard)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(vertical = 14.dp, horizontal = 10.dp),
+            .padding(vertical = 16.dp, horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Box(
                 modifier = Modifier
                     .size(38.dp)
@@ -408,12 +420,14 @@ private fun HomeStatCard(
             Spacer(Modifier.height(8.dp))
             Text(
                 value,
-                style = PremiumStatsM.copy(fontSize = 18.sp, color = TextPrimary)
+                style = PremiumStatsM.copy(fontSize = 18.sp, color = TextPrimary),
+                maxLines = 1
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 label,
-                style = iOSCaption2.copy(color = TextSecondary)
+                style = iOSCaption2.copy(color = TextSecondary),
+                maxLines = 1
             )
         }
     }
@@ -436,9 +450,13 @@ private fun HomeActionCard(
             .background(SurfaceCard)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 14.dp)
+            .padding(horizontal = 14.dp, vertical = 16.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -448,9 +466,9 @@ private fun HomeActionCard(
                 Icon(icon, null, tint = White, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(10.dp))
-            Column {
-                Text(title,    style = iOSHeadline.copy(color = TextPrimary))
-                Text(subtitle, style = iOSCaption1.copy(color = TextSecondary))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title,    style = iOSHeadline.copy(color = TextPrimary), maxLines = 1)
+                Text(subtitle, style = iOSCaption1.copy(color = TextSecondary), maxLines = 1)
             }
         }
     }
@@ -493,21 +511,11 @@ private fun XpProgressCard(
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(
-                                Brush.linearGradient(tierGrad),
-                                RoundedCornerShape(10.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.EmojiEvents, null,
-                            tint     = White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    com.mlbb.scrim.ui.components.RankBadge(
+                        tier = tier,
+                        size = com.mlbb.scrim.ui.components.RankBadgeSize.MEDIUM,
+                        modifier = Modifier.size(36.dp)
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(
@@ -633,4 +641,4 @@ private fun ScrimCarouselCard(
             }
         }
     }
-}
+    }

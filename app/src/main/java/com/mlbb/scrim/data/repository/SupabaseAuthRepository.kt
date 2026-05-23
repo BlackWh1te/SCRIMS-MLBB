@@ -1,6 +1,7 @@
 package com.mlbb.scrim.data.repository
 
 import android.content.Context
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import com.mlbb.scrim.data.model.AuthResult
 import com.mlbb.scrim.data.model.RankTier
 import com.mlbb.scrim.data.model.UserProfile
@@ -9,9 +10,8 @@ import com.mlbb.scrim.security.SecureStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.firstOrNull
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
+import com.mlbb.scrim.util.DateUtils
+import android.util.Log
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -73,31 +73,6 @@ class SupabaseAuthRepository(
 
     private fun authHeader(): String? = getAccessToken()?.let { "Bearer $it" }
 
-    private fun parseTimestamp(raw: String?): Long {
-        if (raw.isNullOrBlank()) return System.currentTimeMillis()
-
-        val patterns = listOf(
-            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-            "yyyy-MM-dd'T'HH:mm:ssXXX",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss"
-        )
-
-        for (pattern in patterns) {
-            try {
-                val formatter = SimpleDateFormat(pattern, Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }
-                val parsed = formatter.parse(raw)
-                if (parsed != null) {
-                    return parsed.time
-                }
-            } catch (_: Exception) {
-            }
-        }
-
-        return System.currentTimeMillis()
-    }
 
     private fun mapUserProfile(
         userId: String,
@@ -117,7 +92,7 @@ class SupabaseAuthRepository(
             username = profileDto?.username?.takeIf { it.isNotBlank() } ?: fallbackUsername,
             email = profileDto?.email?.takeIf { it.isNotBlank() } ?: fallbackEmail,
             inGameId = profileDto?.mlbbId?.takeIf { it.isNotBlank() } ?: fallbackInGameId,
-            createdAt = profileDto?.createdAt?.let(::parseTimestamp) ?: System.currentTimeMillis(),
+            createdAt = DateUtils.parseIsoToMillis(profileDto?.createdAt),
             xp = rankXp,
             pts = pts,
             totalMatches = statsDto?.matchesPlay ?: 0,
@@ -391,17 +366,29 @@ class SupabaseAuthRepository(
                 try {
                     api.deactivateUser(
                         userId = PostgrestFilter.eq(userId),
-                        body = mapOf("deleted" to true, "deleted_at" to java.time.Instant.now().toString())
+                        body = mapOf("deleted" to true, "deleted_at" to DateUtils.formatIsoUtc(System.currentTimeMillis()))
                     )
-                } catch (_: Exception) { }
+                } catch (e: Exception) { Log.w("AuthRepo", "Failed to mark profile as deleted", e) }
 
-                // Step 2: Delete auth user.
-                // NOTE: The anon key CANNOT delete auth.users rows. You MUST create a
-                // Supabase Edge Function (e.g., DELETE /functions/v1/delete-user) that uses
-                // the service_role key to call auth.admin.deleteUser(userId).
-                // Until that Edge Function is deployed, the auth record will remain,
-                // but the profile is soft-deleted so the user cannot re-use the email/Game ID.
-                // TODO: Implement Edge Function and call it here.
+                // Step 2: Delete auth user via Edge Function (requires service_role key)
+                try {
+                    val edgeFunctionUrl = "${SupabaseConfig.SUPABASE_URL}/functions/v1/delete-user"
+                    val request = okhttp3.Request.Builder()
+                        .url(edgeFunctionUrl)
+                        .addHeader("Authorization", "Bearer $token")
+                        .addHeader("Content-Type", "application/json")
+                        .post(okhttp3.RequestBody.create(
+                            "application/json".toMediaTypeOrNull(),
+                            com.google.gson.Gson().toJson(mapOf("user_id" to userId))
+                        ))
+                        .build()
+                    val response = okhttp3.OkHttpClient().newCall(request).execute()
+                    if (!response.isSuccessful) {
+                        Log.w("AuthRepo", "Edge Function delete-user returned ${response.code}: ${response.body?.string()}")
+                    }
+                } catch (e: Exception) {
+                    Log.w("AuthRepo", "Failed to call delete-user Edge Function: ${e.message}")
+                }
             }
             clearTokens()
             emit(AuthResult.Success)
@@ -723,9 +710,7 @@ class SupabaseAuthRepository(
                     val city = jsonObject.optString("city", "")
                     
                     if (country.isNotEmpty() || city.isNotEmpty()) {
-                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
-                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-                        val nowIso = sdf.format(java.util.Date())
+                        val nowIso = DateUtils.formatIsoUtcWithMs(System.currentTimeMillis())
                         
                         val updateMap = mapOf(
                             "country" to country,

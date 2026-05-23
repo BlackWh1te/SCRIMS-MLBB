@@ -4,6 +4,8 @@ import com.mlbb.scrim.data.model.InviteStatus
 import com.mlbb.scrim.data.model.Player
 import com.mlbb.scrim.data.model.PlayerRole
 import com.mlbb.scrim.data.model.Team
+import com.mlbb.scrim.data.model.TeamApplication
+import com.mlbb.scrim.data.model.TeamApplicationStatus
 import com.mlbb.scrim.data.model.TeamInvite
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -20,7 +22,7 @@ class TeamRepository : TeamRepositoryInterface {
     private val invites = mutableListOf<TeamInvite>()
     private var currentTeamId: String? = null
     
-    override suspend fun createTeam(name: String, leaderId: String, description: String): Flow<Result<Team>> = flow {
+    override suspend fun createTeam(name: String, leaderId: String, description: String, isOpenForApplications: Boolean): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
@@ -31,11 +33,12 @@ class TeamRepository : TeamRepositoryInterface {
                 players = listOf(
                     Player(
                         id = java.util.UUID.randomUUID().toString(),
-                        name = "Leader",
+                        name = "Team Leader",
                         role = PlayerRole.LEADER,
                         email = leaderId
                     )
-                )
+                ),
+                isOpenForApplications = isOpenForApplications
             )
             teams.add(team)
             currentTeamId = team.id
@@ -47,6 +50,11 @@ class TeamRepository : TeamRepositoryInterface {
     
     override suspend fun getTeams(): Flow<Result<List<Team>>> = flow {
         kotlinx.coroutines.delay(300) // Simulate network delay
+        emit(Result.success(teams.toList()))
+    }
+    
+    override suspend fun getTeamsForUser(userId: String): Flow<Result<List<Team>>> = flow {
+        kotlinx.coroutines.delay(300)
         emit(Result.success(teams.toList()))
     }
     
@@ -333,5 +341,135 @@ class TeamRepository : TeamRepositoryInterface {
         kotlinx.coroutines.delay(300)
         val teamInvites = invites.filter { it.teamId == teamId }
         emit(Result.success(teamInvites))
+    }
+
+    // ─── Team Application Methods (Mock) ───
+
+    private val applications = mutableListOf<TeamApplication>()
+
+    override suspend fun getOpenTeams(): Flow<Result<List<Team>>> = flow {
+        kotlinx.coroutines.delay(300)
+        emit(Result.success(teams.filter { it.isOpenForApplications }))
+    }
+
+    override suspend fun applyToTeam(teamId: String, applicantUserId: String, message: String?): Flow<Result<TeamApplication>> = flow {
+        kotlinx.coroutines.delay(500)
+        val team = teams.find { it.id == teamId }
+        if (team == null) {
+            emit(Result.failure(Exception("Team not found")))
+            return@flow
+        }
+        if (!team.isOpenForApplications) {
+            emit(Result.failure(Exception("Team is not accepting applications")))
+            return@flow
+        }
+        if (team.players.any { it.id == applicantUserId }) {
+            emit(Result.failure(Exception("You are already a member of this team")))
+            return@flow
+        }
+        val existing = applications.find { it.teamId == teamId && it.applicantUserId == applicantUserId && it.status == TeamApplicationStatus.PENDING }
+        if (existing != null) {
+            emit(Result.failure(Exception("You already have a pending application to this team")))
+            return@flow
+        }
+        val application = TeamApplication(
+            id = java.util.UUID.randomUUID().toString(),
+            teamId = teamId,
+            teamName = team.name,
+            applicantUserId = applicantUserId,
+            applicantName = "Applicant",
+            status = TeamApplicationStatus.PENDING,
+            message = message
+        )
+        applications.add(application)
+        emit(Result.success(application))
+    }
+
+    override suspend fun getTeamApplications(teamId: String): Flow<Result<List<TeamApplication>>> = flow {
+        kotlinx.coroutines.delay(300)
+        emit(Result.success(applications.filter { it.teamId == teamId && it.status == TeamApplicationStatus.PENDING }))
+    }
+
+    override suspend fun getMyApplications(userId: String): Flow<Result<List<TeamApplication>>> = flow {
+        kotlinx.coroutines.delay(300)
+        emit(Result.success(applications.filter { it.applicantUserId == userId }))
+    }
+
+    override suspend fun acceptApplication(applicationId: String): Flow<Result<Team>> = flow {
+        kotlinx.coroutines.delay(500)
+        val appIndex = applications.indexOfFirst { it.id == applicationId }
+        if (appIndex == -1) {
+            emit(Result.failure(Exception("Application not found")))
+            return@flow
+        }
+        val app = applications[appIndex]
+        if (app.status != TeamApplicationStatus.PENDING) {
+            emit(Result.failure(Exception("Application is no longer pending")))
+            return@flow
+        }
+        val teamIndex = teams.indexOfFirst { it.id == app.teamId }
+        if (teamIndex == -1) {
+            emit(Result.failure(Exception("Team not found")))
+            return@flow
+        }
+        val team = teams[teamIndex]
+        if (team.isFull) {
+            applications[appIndex] = app.copy(status = TeamApplicationStatus.DECLINED)
+            emit(Result.failure(Exception("Team is now full")))
+            return@flow
+        }
+        applications[appIndex] = app.copy(status = TeamApplicationStatus.ACCEPTED, respondedAt = System.currentTimeMillis())
+        val updatedTeam = team.copy(
+            players = team.players + Player(
+                id = app.applicantUserId,
+                name = app.applicantName,
+                role = PlayerRole.MEMBER,
+                email = ""
+            )
+        )
+        teams[teamIndex] = updatedTeam
+        emit(Result.success(updatedTeam))
+    }
+
+    override suspend fun declineApplication(applicationId: String): Flow<Result<Unit>> = flow {
+        kotlinx.coroutines.delay(300)
+        val appIndex = applications.indexOfFirst { it.id == applicationId }
+        if (appIndex == -1) {
+            emit(Result.success(Unit))
+            return@flow
+        }
+        val app = applications[appIndex]
+        if (app.status != TeamApplicationStatus.PENDING) {
+            emit(Result.success(Unit))
+            return@flow
+        }
+        applications[appIndex] = app.copy(status = TeamApplicationStatus.DECLINED, respondedAt = System.currentTimeMillis())
+        emit(Result.success(Unit))
+    }
+
+    override fun subscribeToTeam(teamId: String): Flow<Team> = flow {
+        // Mock repository does not support Realtime subscriptions
+    }
+
+    override fun subscribeToTeamInvites(userId: String): Flow<TeamInvite> = flow {
+        // Mock repository does not support Realtime subscriptions
+    }
+
+    override suspend fun getTeamStats(teamId: String): Flow<Result<Map<String, Any>>> = flow {
+        emit(Result.success(emptyMap()))
+    }
+
+    override suspend fun getTeamRatings(teamId: String): Flow<Result<List<com.mlbb.scrim.data.model.TeamRating>>> = flow {
+        emit(Result.success(emptyList()))
+    }
+
+    override suspend fun submitTeamRating(
+        teamId: String,
+        raterTeamId: String,
+        raterUserId: String,
+        rating: Int,
+        feedback: String
+    ): Flow<Result<Unit>> = flow {
+        emit(Result.success(Unit))
     }
 }

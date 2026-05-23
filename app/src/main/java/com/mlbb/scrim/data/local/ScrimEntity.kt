@@ -20,8 +20,15 @@ data class ScrimEntity(
     val winnerTeamId: String?,
     val teamAReady: Boolean = false,
     val teamBReady: Boolean = false,
+    val teamAReadyAt: String? = null,
+    val teamBReadyAt: String? = null,
     val teamAScreenshotUrl: String?,
     val teamBScreenshotUrl: String?,
+    val gameMode: String = "RANKED",
+    val region: String = "EU",
+    val skillLevel: String = "ALL",
+    val maxPlayers: Int = 10,
+    val currentPlayers: Int = 0,
     val createdAt: String = "",
     val lastUpdated: Long = System.currentTimeMillis()
 )

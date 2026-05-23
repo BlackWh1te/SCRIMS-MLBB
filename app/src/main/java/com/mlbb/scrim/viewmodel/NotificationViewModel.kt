@@ -24,6 +24,7 @@ class NotificationViewModel @Inject constructor(
     private var markAsReadJob: Job? = null
     private var markAllAsReadJob: Job? = null
     private var deleteNotificationJob: Job? = null
+    private var realtimeJob: Job? = null
 
     private val _notifications = MutableStateFlow<List<Notification>>(emptyList())
     val notifications: StateFlow<List<Notification>> = _notifications.asStateFlow()
@@ -34,18 +35,50 @@ class NotificationViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
     fun setUserId(userId: String) {
         currentUserId = userId
-        loadNotifications()
+        // Load notifications first, then start Realtime to avoid race where
+        // Realtime events are overwritten by the REST response arriving later.
+        loadNotifications(onComplete = {
+            startRealtimeSubscription()
+        })
     }
 
-    fun loadNotifications() {
+    /**
+     * Subscribe to Realtime notifications for the current user.
+     * New notifications appear instantly without polling.
+     */
+    fun startRealtimeSubscription() {
+        val userId = currentUserId ?: return
+        realtimeJob?.cancel()
+        realtimeJob = viewModelScope.launch {
+            repository.subscribeToNotifications(userId).collect { newNotification ->
+                val current = _notifications.value.toMutableList()
+                // Avoid duplicates
+                if (current.none { it.id == newNotification.id }) {
+                    current.add(0, newNotification)
+                    _notifications.value = current
+                    _unreadCount.value = current.count { !it.isRead }
+                }
+            }
+        }
+    }
+
+    fun stopRealtimeSubscription() {
+        realtimeJob?.cancel()
+    }
+
+    fun loadNotifications(onComplete: (() -> Unit)? = null, isRefresh: Boolean = false) {
         val userId = currentUserId ?: return
         loadNotificationsJob?.cancel()
         loadNotificationsJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
             repository.getNotificationsForUser(userId).collect { result ->
@@ -53,9 +86,12 @@ class NotificationViewModel @Inject constructor(
                     _notifications.value = list
                     _unreadCount.value = list.count { !it.isRead }
                     _isLoading.value = false
+                    _isRefreshing.value = false
+                    onComplete?.invoke()
                 }.onFailure { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
             }
         }
@@ -103,5 +139,14 @@ class NotificationViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun clearRefreshing() {
+        _isRefreshing.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopRealtimeSubscription()
     }
 }

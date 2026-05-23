@@ -39,6 +39,9 @@ class ScrimViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -54,9 +57,10 @@ class ScrimViewModel @Inject constructor(
         loadScrims()
     }
 
-    fun loadScrims() {
+    fun loadScrims(isRefresh: Boolean = false) {
         loadScrimsJob?.cancel()
         loadScrimsJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
 
@@ -65,14 +69,17 @@ class ScrimViewModel @Inject constructor(
                 .catch { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
                 .collect { result ->
                     result.onSuccess { scrimList ->
                         _scrims.value = scrimList
                         _isLoading.value = false
+                        _isRefreshing.value = false
                     }.onFailure { exception ->
                         _error.value = exception.message
                         _isLoading.value = false
+                        _isRefreshing.value = false
                     }
                 }
         }
@@ -525,7 +532,64 @@ class ScrimViewModel @Inject constructor(
         _error.value = null
     }
 
+    fun clearRefreshing() {
+        _isRefreshing.value = false
+    }
+
     fun clearPointsResult() {
         _pointsResult.value = PointsResult.empty()
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    private var scrimRealtimeJob: Job? = null
+    private var allScrimsRealtimeJob: Job? = null
+
+    /**
+     * Subscribe to Realtime updates for a specific scrim.
+     * Automatically updates _selectedScrim when the scrim changes.
+     */
+    fun subscribeToScrimUpdates(scrimId: String) {
+        scrimRealtimeJob?.cancel()
+        scrimRealtimeJob = viewModelScope.launch {
+            scrimRepository.subscribeToScrim(scrimId).collect { updatedScrim ->
+                _selectedScrim.value = updatedScrim
+            }
+        }
+    }
+
+    /**
+     * Subscribe to Realtime updates for all scrims.
+     * Automatically updates _scrims list when any scrim changes.
+     */
+    fun subscribeToAllScrimUpdates() {
+        allScrimsRealtimeJob?.cancel()
+        allScrimsRealtimeJob = viewModelScope.launch {
+            scrimRepository.subscribeToAllScrims().collect { updatedScrim ->
+                val current = _scrims.value.toMutableList()
+                val index = current.indexOfFirst { it.id == updatedScrim.id }
+                if (index >= 0) {
+                    current[index] = updatedScrim
+                } else {
+                    current.add(0, updatedScrim) // New scrim
+                }
+                _scrims.value = current
+            }
+        }
+    }
+
+    /**
+     * Stop all Realtime subscriptions.
+     */
+    fun stopRealtimeSubscriptions() {
+        scrimRealtimeJob?.cancel()
+        allScrimsRealtimeJob?.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopRealtimeSubscriptions()
     }
 }

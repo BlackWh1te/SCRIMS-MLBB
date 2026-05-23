@@ -11,17 +11,17 @@
     <string name="nav_profile">Profile</string>
     <string name="nav_match_history">History</string>
     <string name="nav_player_finder">Find Players</string>
-    <string name="player_finder_title">Player Finder</string>
-    <string name="post_as_solo">Post as Solo Player</string>
-    <string name="looking_for_team">Looking for Team</string>
-    <string name="message_player">Message</string>
-    <string name="action_invite">Invite</string>
-    <string name="filter_role">Filter by Role</string>
-    <string name="filter_region">Filter by Region</string>
-    <string name="all_roles">All Roles</string>
-    <string name="post_is_live">Your post is live!</string>
-    <string name="remove_my_post">Remove My Post</string>
-    <string name="your_post_active">Your post is active</string>
+    <string name="player_finder_title" translatable="false">Player Finder</string>
+    <string name="post_as_solo" translatable="false">Post as Solo Player</string>
+    <string name="looking_for_team" translatable="false">Looking for Team</string>
+    <string name="message_player" translatable="false">Message</string>
+    <string name="action_invite" translatable="false">Invite</string>
+    <string name="filter_role" translatable="false">Filter by Role</string>
+    <string name="filter_region" translatable="false">Filter by Region</string>
+    <string name="all_roles" translatable="false">All Roles</string>
+    <string name="post_is_live" translatable="false">Your post is live!</string>
+    <string name="remove_my_post" translatable="false">Remove My Post</string>
+    <string name="your_post_active" translatable="false">Your post is active</string>
     <string name="nav_create_team">New Team</string>
     <string name="login">Login</string>
     <string name="signup">Sign Up</string>
@@ -193,11 +193,11 @@
 
     <!-- Email Verification -->
     <string name="verify_email_title">Verify Your Email</string>
-    <string name="verify_email_subtitle">We sent a 6-digit code to your email. Enter it below to activate your account.</string>
+    <string name="verify_email_subtitle">We sent an 8-digit code to your email. Enter it below to activate your account.</string>
     <string name="i_have_verified">Verify Code</string>
     <string name="resend_email">Resend Code</string>
     <string name="resend_in_seconds">Resend in %ds</string>
-    <string name="enter_code">Enter 6-digit code</string>
+    <string name="enter_code">Enter 8-digit code</string>
     <string name="check_spam_folder">Check your spam/junk folder if you don\'t see the email.</string>
     <string name="back_to_login">Back to Login</string>
     <string name="email_not_verified">Email not verified</string>

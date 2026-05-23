@@ -484,6 +484,14 @@ class ScrimRepository : ScrimRepositoryInterface {
         delay(300)
         emit(Result.success(Unit))
     }
+
+    override fun subscribeToScrim(scrimId: String): Flow<Scrim> = flow {
+        // Mock repository does not support Realtime subscriptions
+    }
+
+    override fun subscribeToAllScrims(): Flow<Scrim> = flow {
+        // Mock repository does not support Realtime subscriptions
+    }
 }
 
 /** Result of points calculation for a completed scrim */

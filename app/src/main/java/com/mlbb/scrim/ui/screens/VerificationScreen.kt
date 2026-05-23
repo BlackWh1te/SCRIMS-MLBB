@@ -218,7 +218,7 @@ fun VerificationScreen(
                     OutlinedTextField(
                         value = otpCode,
                         onValueChange = {
-                            if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                            if (it.length <= 8 && it.all { c -> c.isDigit() }) {
                                 otpCode = it
                                 localError = null
                             }
@@ -268,8 +268,8 @@ fun VerificationScreen(
                             .clip(RoundedCornerShape(14.dp))
                             .background(Brush.verticalGradient(BlueGradient))
                             .clickable(enabled = !isLoading) {
-                                if (otpCode.length == 6) onVerifyOtp(otpCode)
-                                else localError = "Enter the 6-digit code"
+                                if (otpCode.length == 8) onVerifyOtp(otpCode)
+                                else localError = "Enter the 8-digit code"
                             },
                         contentAlignment = Alignment.Center
                     ) {

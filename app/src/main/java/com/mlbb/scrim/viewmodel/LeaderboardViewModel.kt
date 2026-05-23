@@ -27,6 +27,9 @@ class LeaderboardViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -37,18 +40,21 @@ class LeaderboardViewModel @Inject constructor(
         loadLeaderboard()
     }
 
-    fun loadLeaderboard() {
+    fun loadLeaderboard(isRefresh: Boolean = false) {
         loadLeaderboardJob?.cancel()
         loadLeaderboardJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
             repository.getLeaderboard().collect { result ->
                 result.onSuccess { entries ->
                     _leaderboard.value = entries
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
             }
         }
@@ -83,5 +89,9 @@ class LeaderboardViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun clearRefreshing() {
+        _isRefreshing.value = false
     }
 }

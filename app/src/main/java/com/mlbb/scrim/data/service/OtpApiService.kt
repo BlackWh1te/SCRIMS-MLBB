@@ -1,6 +1,7 @@
 package com.mlbb.scrim.data.service
 
 import com.google.gson.annotations.SerializedName
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
@@ -49,13 +50,23 @@ object OtpApiClient {
      */
     private const val OTP_BASE_URL = "https://news-service-yq17.onrender.com/"
 
+    private val apiKeyInterceptor by lazy {
+        Interceptor { chain ->
+            val request = chain.request().newBuilder()
+                .addHeader("X-API-Key", com.mlbb.scrim.BuildConfig.NEWS_SERVICE_API_KEY)
+                .build()
+            chain.proceed(request)
+        }
+    }
+
     private val client by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(120, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
+            .addInterceptor(apiKeyInterceptor)
             .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = if (com.mlbb.scrim.BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
             })
             .build()
     }

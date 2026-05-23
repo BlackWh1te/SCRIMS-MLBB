@@ -161,7 +161,7 @@ private fun Top1Badge(modifier: Modifier) {
             .shadow(6.dp, RoundedCornerShape(9999.dp), spotColor = Top1Gold.copy(alpha = 0.5f))
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFFFFD700), Color(0xFFFF8C00))
+                    colors = GoldRankGradient
                 ),
                 shape = RoundedCornerShape(9999.dp)
             )
@@ -194,7 +194,7 @@ private fun Top2Badge(modifier: Modifier) {
             .shadow(4.dp, RoundedCornerShape(9999.dp), spotColor = Top2Silver.copy(alpha = 0.5f))
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFFE8E8E8), Color(0xFFA0A0A0))
+                    colors = SilverGradient
                 ),
                 shape = RoundedCornerShape(9999.dp)
             )
@@ -227,7 +227,7 @@ private fun Top3Badge(modifier: Modifier) {
             .shadow(4.dp, RoundedCornerShape(9999.dp), spotColor = Top3Bronze.copy(alpha = 0.5f))
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFFD4A574), Color(0xFF8B6914))
+                    colors = BronzeGradient
                 ),
                 shape = RoundedCornerShape(9999.dp)
             )
@@ -272,14 +272,14 @@ fun TierBadge(
     } else {
         // Fallback for unknown tiers
         val (gradient, textColor) = when (tierName.lowercase()) {
-            "bronze" -> listOf(Color(0xFFCD7F32), Color(0xFF8B4513)) to Color.White
-            "silver" -> listOf(Color(0xFFC0C0C0), Color(0xFF808080)) to Color.White
-            "gold" -> listOf(Color(0xFFFFD700), Color(0xFFFFA500)) to DarkBlue
-            "platinum" -> listOf(Color(0xFFE5E4E2), Color(0xFFB0B0B0)) to DarkBlue
-            "diamond" -> listOf(Color(0xFFB9F2FF), Color(0xFF00BFFF)) to DarkBlue
-            "master" -> listOf(Color(0xFFFF00FF), Color(0xFF8B008B)) to Color.White
-            "grandmaster" -> listOf(Color(0xFFFFD700), Color(0xFFFF0000)) to Color.White
-            else -> listOf(Color(0xFF7C4DFF), Color(0xFF4A148C)) to Color.White
+            "bronze" -> BronzeGradient to Color.White
+            "silver" -> SilverGradient to Color.White
+            "gold" -> GoldRankGradient to DarkBlue
+            "platinum" -> PlatinumGradient to DarkBlue
+            "diamond" -> DiamondGradient to DarkBlue
+            "master" -> MasterGradient to Color.White
+            "grandmaster" -> GrandmasterGradient to Color.White
+            else -> PurpleGradient to Color.White
         }
         val brush = Brush.horizontalGradient(colors = gradient)
         Box(
@@ -304,7 +304,7 @@ fun TierBadge(
 // ═══════════════════════════════════════════════════════════════════
 
 private fun DrawScope.drawCrownTop(w: Float, h: Float) {
-    val crownColor = Color(0xFFFFD700)
+    val crownColor = Gold
     val stroke = Stroke(width = 1.5f)
     drawArc(
         color = crownColor,
@@ -318,7 +318,7 @@ private fun DrawScope.drawCrownTop(w: Float, h: Float) {
 }
 
 private fun DrawScope.drawFlameBorder(w: Float, h: Float) {
-    val flameColor = Color(0xFFFFA500).copy(alpha = 0.4f)
+    val flameColor = WarningOrange.copy(alpha = 0.4f)
     drawRect(
         color = flameColor,
         topLeft = Offset(-1f, -1f),
@@ -328,7 +328,7 @@ private fun DrawScope.drawFlameBorder(w: Float, h: Float) {
 }
 
 private fun DrawScope.drawWingAccents(w: Float, h: Float) {
-    val wingColor = Color(0xFFFFD700).copy(alpha = 0.3f)
+    val wingColor = Gold.copy(alpha = 0.3f)
     // Left wing hint
     drawRect(
         color = wingColor,
@@ -347,7 +347,7 @@ private fun DrawScope.drawWingAccents(w: Float, h: Float) {
 private fun Modifier.bronzeHexBackground() = this.then(
     Modifier.background(
         brush = Brush.linearGradient(
-            colors = listOf(Color(0xFFCD7F32), Color(0xFF8B4513))
+            colors = BronzeGradient
         ),
         shape = RoundedCornerShape(8.dp)
     )

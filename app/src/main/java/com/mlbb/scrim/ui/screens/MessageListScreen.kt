@@ -32,6 +32,7 @@ import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.EmptyState
+import com.mlbb.scrim.ui.components.ErrorSnackbar
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import java.text.SimpleDateFormat
 import java.util.*
@@ -45,7 +46,10 @@ fun MessageListScreen(
     onNavigateBack : () -> Unit = {},
     isTab          : Boolean = false,
     onNavigateToChat: (Conversation) -> Unit,
-    onRefresh      : () -> Unit = {}
+    onRefresh      : () -> Unit = {},
+    isRefreshing   : Boolean = false,
+    error          : String? = null,
+    onDismissError : () -> Unit = {}
 ) {
     val totalUnread = conversations.sumOf { it.unreadCount }
 
@@ -132,7 +136,7 @@ fun MessageListScreen(
 
             // ── Content ─────────────────────────────────────────
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh    = onRefresh,
                 modifier     = Modifier.weight(1f)
             ) {
@@ -180,6 +184,13 @@ fun MessageListScreen(
                 }
             }
         }
+
+        // Error snackbar
+        ErrorSnackbar(
+            error = error,
+            onDismiss = onDismissError,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -200,11 +211,11 @@ private fun ConversationCard(
     val avatarColors = remember(otherName) {
         val hash = otherName.hashCode()
         val palettes = listOf(
-            listOf(Color(0xFF2196F3), Color(0xFF1565C0)),
-            listOf(Color(0xFF7C4DFF), Color(0xFF4527A0)),
-            listOf(Color(0xFF00BCD4), Color(0xFF006064)),
-            listOf(Color(0xFFFF9800), Color(0xFFE65100)),
-            listOf(Color(0xFF4CAF50), Color(0xFF1B5E20))
+            BlueGradient,
+            PurpleGradient,
+            listOf(AndroidTeal, Color(0xFF006064)),
+            PremiumOrangeGradient,
+            PremiumGreenGradient
         )
         palettes[Math.abs(hash) % palettes.size]
     }

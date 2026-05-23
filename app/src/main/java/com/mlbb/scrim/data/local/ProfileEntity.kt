@@ -12,6 +12,8 @@ data class ProfileEntity(
     val username: String,
     val fullName: String?,
     val avatarUrl: String?,
+    val email: String? = null,
+    val inGameId: String? = null,
     val rank: String?,
     val role: String?,
     val bio: String? = null,

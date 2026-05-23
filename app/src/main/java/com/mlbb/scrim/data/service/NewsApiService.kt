@@ -2,6 +2,8 @@ package com.mlbb.scrim.data.service
 
 import com.google.gson.annotations.SerializedName
 import com.mlbb.scrim.data.model.NewsArticle
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -190,9 +192,25 @@ object ProxyApiClient {
      */
     private const val PROXY_BASE_URL = "https://news-service-yq17.onrender.com/"
 
+    private val apiKeyInterceptor by lazy {
+        Interceptor { chain ->
+            val request = chain.request().newBuilder()
+                .addHeader("X-API-Key", com.mlbb.scrim.BuildConfig.NEWS_SERVICE_API_KEY)
+                .build()
+            chain.proceed(request)
+        }
+    }
+
+    private val client by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor(apiKeyInterceptor)
+            .build()
+    }
+
     val service: ProxyApiService by lazy {
         Retrofit.Builder()
             .baseUrl(PROXY_BASE_URL)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ProxyApiService::class.java)

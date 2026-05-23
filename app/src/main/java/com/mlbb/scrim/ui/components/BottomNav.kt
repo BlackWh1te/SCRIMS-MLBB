@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,7 +57,9 @@ val bottomNavItems = listOf(
 @Composable
 fun AppBottomNav(
     navController: NavHostController,
-    unreadMessageCount: Int = 0
+    unreadMessageCount: Int = 0,
+    notificationCount: Int = 0,
+    pendingInviteCount: Int = 0
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -79,8 +83,8 @@ fun AppBottomNav(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF1A2A40).copy(alpha = 0.96f),
-                            Color(0xFF0E1A2D).copy(alpha = 0.98f)
+                            SurfaceElevated.copy(alpha = 0.96f),
+                            DarkNavy.copy(alpha = 0.98f)
                         )
                     )
                 )
@@ -111,10 +115,16 @@ fun AppBottomNav(
             ) {
                 bottomNavItems.forEach { item ->
                     val isSelected = currentRoute == item.route
+                    val badgeCount = when (item) {
+                        is BottomNavItem.Home     -> notificationCount
+                        is BottomNavItem.Messages -> unreadMessageCount
+                        is BottomNavItem.Profile  -> pendingInviteCount
+                        else -> 0
+                    }
                     BottomNavItemButton(
                         item          = item,
                         isSelected    = isSelected,
-                        badgeCount    = if (item is BottomNavItem.Messages) unreadMessageCount else 0,
+                        badgeCount    = badgeCount,
                         onClick       = {
                             if (!isSelected) {
                                 navController.navigate(item.route) {
@@ -159,9 +169,9 @@ private fun RowScope.BottomNavItemButton(
             .weight(1f)
             .fillMaxHeight()
             .clickable(
-                indication           = null,
-                interactionSource    = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                onClick              = onClick
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {

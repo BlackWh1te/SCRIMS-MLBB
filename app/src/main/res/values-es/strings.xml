@@ -324,4 +324,12 @@
     <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
+    <string name="nav_player_finder">Buscar jugadores</string>
+    <string name="skill_level">Nivel de habilidad</string>
+    <string name="scrims">Scrims</string>
+    <string name="open">Abierto</string>
+    <string name="filled">Lleno</string>
+    <string name="in_progress">En progreso</string>
+    <string name="completed">Completado</string>
+    <string name="cancelled">Cancelado</string>
 </resources>

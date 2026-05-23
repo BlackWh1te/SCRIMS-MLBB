@@ -43,7 +43,7 @@ fun SplashScreen(
                     colors = listOf(
                         DarkBlue,
                         DarkNavy,
-                        Color(0xFF0D1B2A).copy(alpha = 0.95f)
+                        DarkSurface.copy(alpha = 0.95f)
                     )
                 )
             )

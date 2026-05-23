@@ -41,6 +41,7 @@ import com.mlbb.scrim.ui.components.PullToRefreshContainer
 fun LeaderboardScreen(
     entries: List<LeaderboardEntry>,
     isLoading: Boolean,
+    isRefreshing: Boolean = false,
     error: String?,
     selectedTier: RankTier? = null,
     onTierFilter: (RankTier?) -> Unit = {},
@@ -137,7 +138,7 @@ fun LeaderboardScreen(
             }
 
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)
             ) {

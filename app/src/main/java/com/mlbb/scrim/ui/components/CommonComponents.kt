@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -1277,6 +1278,68 @@ fun NotificationListSkeleton(
                             .width(40.dp)
                             .height(12.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+// ============================================
+// Error Snackbar — Shows ViewModel errors as a dismissable banner
+// ============================================
+
+/**
+ * Displays an error message as a snackbar-style banner at the bottom of the screen.
+ * Automatically hides when [error] becomes null. Shows a dismiss button.
+ *
+ * Usage: Collect ViewModel error state and pass it here.
+ * ```
+ * val error by viewModel.error.collectAsState()
+ * ErrorSnackbar(error = error, onDismiss = { viewModel.clearError() })
+ * ```
+ */
+@Composable
+fun ErrorSnackbar(
+    error: String?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val visible = error != null
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        modifier = modifier
+    ) {
+        if (error != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = ErrorRed.copy(alpha = 0.95f),
+                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = error,
+                        color = White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("OK", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
         }

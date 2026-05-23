@@ -26,6 +26,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -69,10 +72,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         val unseen: Int         // articles locked behind drip timer
     )
 
-    fun loadNews(languageCode: String = currentLanguage, forceRefresh: Boolean = false) {
+    fun loadNews(languageCode: String = currentLanguage, forceRefresh: Boolean = false, isRefresh: Boolean = false) {
         currentLanguage = languageCode
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
 
@@ -81,6 +85,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 .catch { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
                 .collect { result ->
                     result.onSuccess { refreshResult ->
@@ -89,16 +94,18 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                             ThrottleInfo(minutesUntilRefresh = refreshResult.minutesUntilRefresh)
                         } else null
                         _isLoading.value = false
+                        _isRefreshing.value = false
                     }.onFailure { exception ->
                         _error.value = exception.message
                         _isLoading.value = false
+                        _isRefreshing.value = false
                     }
                 }
         }
     }
 
     fun refresh(languageCode: String = currentLanguage) {
-        loadNews(languageCode, forceRefresh = true)
+        loadNews(languageCode, forceRefresh = true, isRefresh = true)
         loadQuotaInfo()
         loadDripInfo()
     }
@@ -134,6 +141,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun clearRefreshing() {
+        _isRefreshing.value = false
     }
 
     override fun onCleared() {

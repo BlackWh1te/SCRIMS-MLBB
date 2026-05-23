@@ -36,6 +36,7 @@ import java.util.*
 fun MatchHistoryScreen(
     matchResults: List<MatchResult>,
     isLoading: Boolean,
+    isRefreshing: Boolean = false,
     currentUserTeamId: String?,
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (MatchResult) -> Unit,
@@ -88,7 +89,7 @@ fun MatchHistoryScreen(
             }
 
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)
             ) {

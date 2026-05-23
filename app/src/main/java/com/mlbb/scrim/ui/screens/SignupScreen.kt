@@ -33,6 +33,7 @@ import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.PremiumFadeIn
+import com.mlbb.scrim.ui.components.PremiumCaptcha
 
 @Composable
 fun SignupScreen(
@@ -116,43 +117,11 @@ fun SignupScreen(
 
             // ── Logo ────────────────────────────────────────────
             PremiumFadeIn(delayMillis = 0) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(BluePrimary, Color(0xFF0D47A1)),
-                                start  = Offset(0f, 0f),
-                                end    = Offset(80f, 80f)
-                            )
-                        )
-                        .border(
-                            width  = 1.dp,
-                            brush  = Brush.linearGradient(
-                                colors = listOf(White.copy(alpha = 0.25f), White.copy(alpha = 0.05f))
-                            ),
-                            shape  = RoundedCornerShape(22.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "ML",
-                            fontSize   = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color      = White,
-                            letterSpacing = (-1).sp
-                        )
-                        Text(
-                            "BB",
-                            fontSize   = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = GoldPrimary,
-                            letterSpacing = 2.sp
-                        )
-                    }
-                }
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
+                    contentDescription = "App Logo",
+                    modifier = Modifier.size(90.dp)
+                )
             }
 
             Spacer(Modifier.height(22.dp))
@@ -304,7 +273,7 @@ fun SignupScreen(
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
                                     brush = Brush.linearGradient(
-                                        colors = listOf(BluePrimary, Color(0xFF0D47A1))
+                                        colors = BlueGradient
                                     )
                                 )
                                 .clickable(enabled = !isLoading) {

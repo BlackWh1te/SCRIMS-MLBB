@@ -227,7 +227,8 @@ fun Modifier.premiumShimmer(
     
     return this.drawWithContent {
         drawContent()
-        
+        val width = size.width
+        val startX = -width + (width * 2) * ((shimmerOffset + 1f) / 2f)
         // Simplified shimmer effect
         drawRect(
             brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
@@ -235,7 +236,9 @@ fun Modifier.premiumShimmer(
                     baseColor,
                     highlightColor,
                     baseColor
-                )
+                ),
+                startX = startX,
+                endX = startX + width * 2
             ),
             blendMode = BlendMode.SrcOver
         )
@@ -302,8 +305,8 @@ fun Modifier.premiumGlow(
 
 @Composable
 fun rememberPremiumParallaxState(): ParallaxState {
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
     
     return remember {
         ParallaxState(

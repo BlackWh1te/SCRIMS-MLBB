@@ -1,15 +1,20 @@
 package com.mlbb.scrim.data.repository
 
+import android.util.Log
 import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
 import com.mlbb.scrim.data.service.MessageDto
 import com.mlbb.scrim.data.service.ConversationDto
+import com.mlbb.scrim.data.service.SupabaseConfig
+import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
-import kotlinx.coroutines.delay
+import com.mlbb.scrim.util.DateUtils
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import java.text.SimpleDateFormat
+
 import java.util.*
 
 import com.mlbb.scrim.data.local.ConversationDao
@@ -17,47 +22,46 @@ import com.mlbb.scrim.data.local.MessageDao
 
 class SupabaseMessageRepository(
     private val conversationDao: ConversationDao,
-    private val messageDao: MessageDao
+    private val messageDao: MessageDao,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : MessageRepositoryInterface {
 
     private val api = SupabaseService.api
+
+    companion object {
+        private const val TAG = "MessageRepo"
+    }
 
     override suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
         try {
             // Phase 4: Emit cached Room data first for instant UI
             try {
-                val cached = conversationDao.getConversationsForUser(userId)
-                cached.collect { entities ->
-                    if (entities.isNotEmpty()) {
-                        emit(Result.success(entities.map { it.toDomainModel() }))
-                    }
-                    return@collect // Only take the first emission
+                val cached = conversationDao.getConversationsForUser(userId).first()
+                if (cached.isNotEmpty()) {
+                    emit(Result.success(cached.map { it.toDomainModel() }))
                 }
-            } catch (_: Exception) { /* Room empty, proceed to network */ }
+            } catch (e: Exception) { Log.w(TAG, "Failed to load cached conversations", e) }
 
             // Then fetch fresh from network
-            val response = api.getConversations(orFilter = "participant_a_id.eq.$userId,participant_b_id.eq.$userId")
+            val response = api.getConversationsForUserRpc(mapOf("p_user_id" to userId))
             if (response.isSuccessful) {
                 val list = response.body()?.map { mapDtoToConversation(it) } ?: emptyList()
-                val sorted = list.sortedByDescending { it.lastMessageTime }
                 // Save to Room for offline access
                 try {
-                    conversationDao.insertConversations(sorted.map { mapConversationToEntity(it) })
-                } catch (_: Exception) { }
-                emit(Result.success(sorted))
+                    conversationDao.insertConversations(list.map { mapConversationToEntity(it) })
+                } catch (e: Exception) { Log.w(TAG, "Failed to persist conversations to Room", e) }
+                emit(Result.success(list))
             } else {
                 emit(Result.failure(Exception("Failed to load conversations: ${response.code()}")))
             }
         } catch (e: Exception) {
             // Offline fallback: try Room
             try {
-                conversationDao.getConversationsForUser(userId).collect { entities ->
-                    if (entities.isNotEmpty()) {
-                        emit(Result.success(entities.map { it.toDomainModel() }))
-                    } else {
-                        emit(Result.failure(e))
-                    }
-                    return@collect
+                val cached = conversationDao.getConversationsForUser(userId).first()
+                if (cached.isNotEmpty()) {
+                    emit(Result.success(cached.map { it.toDomainModel() }))
+                } else {
+                    emit(Result.failure(e))
                 }
             } catch (_: Exception) {
                 emit(Result.failure(e))
@@ -101,7 +105,10 @@ class SupabaseMessageRepository(
         participantBTeamName: String
     ): Flow<Result<Conversation>> = flow {
         try {
-            val existing = api.getConversations(orFilter = "scrim_id.eq.$scrimId")
+            // Search for existing conversation with SAME scrim_id AND SAME participants
+            // (either direction: A=sender+B=recipient OR A=recipient+B=sender)
+            val filter = "and(scrim_id.eq.$scrimId,participant_a_id.eq.$participantAId,participant_b_id.eq.$participantBId),and(scrim_id.eq.$scrimId,participant_a_id.eq.$participantBId,participant_b_id.eq.$participantAId)"
+            val existing = api.getConversations(orFilter = filter)
             if (existing.isSuccessful && !existing.body().isNullOrEmpty()) {
                 emit(Result.success(mapDtoToConversation(existing.body()!!.first())))
             } else {
@@ -109,13 +116,15 @@ class SupabaseMessageRepository(
                     scrimId = scrimId,
                     participantAId = participantAId,
                     participantAName = participantAName,
+                    participantATeamId = participantATeamId,
                     participantATeamName = participantATeamName,
                     participantBId = participantBId,
                     participantBName = participantBName,
+                    participantBTeamId = participantBTeamId,
                     participantBTeamName = participantBTeamName,
                     lastMessage = "",
-                    lastMessageTime = java.time.Instant.now().toString(),
-                    chatOpensAt = java.time.Instant.now().plusSeconds(300).toString()
+                    lastMessageTime = DateUtils.formatIsoUtc(System.currentTimeMillis()),
+                    chatOpensAt = DateUtils.formatIsoUtc(System.currentTimeMillis() + 300_000)
                 )
                 val response = api.createConversation(newConv)
                 if (response.isSuccessful && !response.body().isNullOrEmpty()) {
@@ -149,7 +158,7 @@ class SupabaseMessageRepository(
             val convResponse = api.getConversations(idFilter = "eq.$conversationId")
             if (convResponse.isSuccessful) {
                 val conv = convResponse.body()?.firstOrNull()
-                val chatOpensAt = conv?.chatOpensAt?.let { parseTimestamp(it) } ?: 0L
+                val chatOpensAt = DateUtils.parseIsoToMillis(conv?.chatOpensAt, fallback = 0L)
                 if (System.currentTimeMillis() < chatOpensAt) {
                     val secondsRemaining = (chatOpensAt - System.currentTimeMillis()) / 1000
                     emit(Result.failure(Exception("Chat is locked. Opens in ${secondsRemaining}s")))
@@ -176,7 +185,17 @@ class SupabaseMessageRepository(
                     try {
                         messageDao.insertMessage(mapMessageToEntity(message))
                         conversationDao.updateLastMessage(conversationId, content, message.timestamp)
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) { Log.w(TAG, "Failed to persist sent message to Room", e) }
+                    // Also PATCH server-side conversation metadata (best-effort; DB trigger is primary)
+                    try {
+                        api.updateConversation(
+                            conversationId,
+                            mapOf(
+                                "last_message" to content,
+                                "last_message_time" to DateUtils.formatIsoUtc(message.timestamp)
+                            )
+                        )
+                    } catch (e: Exception) { Log.w(TAG, "Failed to update conversation last_message on server", e) }
                     emit(Result.success(message))
                 } else {
                     emit(Result.failure(Exception("Message sent but not returned")))
@@ -246,7 +265,7 @@ class SupabaseMessageRepository(
 
     override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
         try {
-            api.markConversationAsRead(mapOf("conversation_id" to conversationId, "user_id" to userId))
+            api.markConversationAsRead(mapOf("p_conversation_id" to conversationId, "p_user_id" to userId))
             emit(Result.success(Unit))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -298,7 +317,7 @@ class SupabaseMessageRepository(
                     participantBId = recipientId,
                     participantBName = recipientName,
                     lastMessage = "Conversation started",
-                    lastMessageTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                    lastMessageTime = DateUtils.formatIsoUtc(System.currentTimeMillis())
                 )
                 val createResponse = api.createConversation(newConvDto)
                 if (createResponse.isSuccessful) {
@@ -313,86 +332,91 @@ class SupabaseMessageRepository(
     }
 
     override fun subscribeToMessages(conversationId: String): Flow<Message> = flow {
-        // Phase 4: Cursor-based polling — only fetch NEW messages since last known
-        var lastTimestamp = ""
-
-        // Load existing messages from Room first for instant display
+        // ── Phase 1: Emit cached Room messages for instant display ──
         try {
-            messageDao.getMessagesForConversation(conversationId).collect { entities ->
-                entities.forEach { entity ->
-                    emit(entity.toDomainModel())
-                }
-                if (entities.isNotEmpty()) {
-                    lastTimestamp = entities.last().let {
-                        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
-                            .format(java.util.Date(it.timestamp))
-                    }
-                }
-                return@collect // Only take first emission
-            }
-        } catch (_: Exception) { }
+            val cached = messageDao.getMessagesForConversation(conversationId).first()
+            cached.forEach { entity -> emit(entity.toDomainModel()) }
+        } catch (e: Exception) { Log.w(TAG, "Failed to load cached messages", e) }
 
-        // Then poll for new messages only
-        var lastId = ""
-        while (true) {
-            delay(3000) // Poll every 3s
-            try {
-                // If we have a last timestamp, only fetch newer messages
-                val response = if (lastTimestamp.isNotEmpty()) {
-                    api.getMessages(
-                        conversationId = conversationId,
-                        createdAfter = "gt.$lastTimestamp"
+        // ── Phase 2: Supabase Realtime (WebSocket) for live updates ──
+        try {
+            realtimeClient.connect()
+            val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "INSERT",
+                        table = SupabaseConfig.TABLE_MESSAGES,
+                        filter = "conversation_id=eq.$conversationId"
                     )
-                } else {
-                    api.getMessages(conversationId = conversationId)
-                }
-
-                if (response.isSuccessful) {
-                    val messages = response.body() ?: emptyList()
-                    val newMessages = messages.filter { it.id > lastId }
-                    if (newMessages.isNotEmpty()) {
-                        // Save new messages to Room
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_INSERT && event.record != null
+            }.collect { event ->
+                try {
+                    val dto = parseRealtimeRecordToMessageDto(event.record!!)
+                    if (dto.conversationId == conversationId) {
+                        val message = mapDtoToMessage(dto)
                         try {
-                            messageDao.insertMessages(newMessages.map { dto ->
-                                mapMessageToEntity(mapDtoToMessage(dto))
-                            })
-                        } catch (_: Exception) { }
-
-                        newMessages.forEach { msg ->
-                            emit(mapDtoToMessage(msg))
-                            lastId = msg.id
-                        }
-                        // Update cursor
-                        lastTimestamp = newMessages.last().createdAt
+                            messageDao.insertMessage(mapMessageToEntity(message))
+                        } catch (e: Exception) { Log.w(TAG, "Failed to persist realtime message to Room", e) }
+                        emit(message)
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse Realtime INSERT: ${e.message}")
                 }
-            } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Realtime subscription ended for messages: ${e.message}")
         }
     }
 
     override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
-        while (true) {
-            delay(5000)
-            try {
-                val response = api.getConversations(idFilter = "eq.$conversationId")
-                if (response.isSuccessful) {
-                    val dto = response.body()?.firstOrNull()
-                    if (dto != null) emit(mapDtoToConversation(dto))
+        // Supabase Realtime for conversation UPDATE events
+        try {
+            realtimeClient.connect()
+            val channelName = "public:conversations:conv_$conversationId"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "UPDATE",
+                        table = "conversations",
+                        filter = "id=eq.$conversationId"
+                    )
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
+            }.collect { event ->
+                try {
+                    val dto = parseRealtimeRecordToConversationDto(event.record!!)
+                    if (dto.id == conversationId) {
+                        emit(mapDtoToConversation(dto))
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse Realtime UPDATE for conversation: ${e.message}")
                 }
-            } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Realtime subscription ended for conversation: ${e.message}")
         }
     }
+
+    // ─── Mapping ───
 
     private fun mapDtoToMessage(dto: MessageDto): Message {
         return Message(
             id = dto.id,
             conversationId = dto.conversationId,
+            matchId = dto.matchId,
             senderId = dto.senderId,
+            senderTeamId = dto.senderTeamId,
             senderName = dto.senderName ?: "Unknown",
             content = dto.content,
-            timestamp = parseTimestamp(dto.createdAt),
+            timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
-            readAt = dto.readAt?.let { parseTimestamp(it) },
+            readAt = dto.readAt?.let { DateUtils.parseIsoToMillis(it) },
             type = MessageType.valueOf(dto.type),
             imageUrl = dto.imageUrl,
             voiceUrl = dto.voice_url,
@@ -403,29 +427,70 @@ class SupabaseMessageRepository(
     private fun mapDtoToConversation(dto: com.mlbb.scrim.data.service.ConversationDto): Conversation {
         return Conversation(
             id = dto.id,
-            scrimId = dto.scrimId,
+            scrimId = dto.scrimId ?: "",
             scrimTitle = "", // Not always needed for list
             participantAId = dto.participantAId,
             participantAName = dto.participantAName,
+            participantATeamId = dto.participantATeamId,
             participantATeamName = dto.participantATeamName,
             participantBId = dto.participantBId,
             participantBName = dto.participantBName,
+            participantBTeamId = dto.participantBTeamId,
             participantBTeamName = dto.participantBTeamName,
             lastMessage = dto.lastMessage,
-            lastMessageTime = parseTimestamp(dto.lastMessageTime),
-            chatOpensAt = parseTimestamp(dto.chatOpensAt),
+            lastMessageTime = DateUtils.parseIsoToMillis(dto.lastMessageTime),
+            unreadCount = dto.unreadCount,
+            chatOpensAt = DateUtils.parseIsoToMillis(dto.chatOpensAt),
             isParticipantATyping = dto.participantATyping,
             isParticipantBTyping = dto.participantBTyping
         )
     }
 
-    private fun parseTimestamp(iso: String): Long {
-        return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-            sdf.parse(iso)?.time ?: System.currentTimeMillis()
-        } catch (_: Exception) {
-            System.currentTimeMillis()
-        }
+    /**
+     * Parse a Realtime INSERT record (JsonObject) into a MessageDto.
+     * Realtime payloads use snake_case column names matching the DB schema.
+     */
+    private fun parseRealtimeRecordToMessageDto(record: com.google.gson.JsonObject): MessageDto {
+        return MessageDto(
+            id = record.get("id")?.asString ?: "",
+            conversationId = record.get("conversation_id")?.asString ?: "",
+            matchId = record.get("match_id")?.asString,
+            senderId = record.get("sender_id")?.asString ?: "",
+            senderTeamId = record.get("sender_team_id")?.asString,
+            senderName = record.get("sender_name")?.asString,
+            content = record.get("content")?.asString ?: "",
+            type = record.get("type")?.asString ?: "TEXT",
+            createdAt = record.get("created_at")?.asString ?: "",
+            isRead = record.get("is_read")?.asBoolean ?: false,
+            readAt = record.get("read_at")?.asString,
+            imageUrl = record.get("image_url")?.asString,
+            voice_url = record.get("voice_url")?.asString,
+            voiceDuration = record.get("voice_duration")?.asInt
+        )
+    }
+
+    /**
+     * Parse a Realtime UPDATE record (JsonObject) into a ConversationDto.
+     * Realtime payloads use snake_case column names matching the DB schema.
+     */
+    private fun parseRealtimeRecordToConversationDto(record: com.google.gson.JsonObject): ConversationDto {
+        return ConversationDto(
+            id = record.get("id")?.asString ?: "",
+            scrimId = record.get("scrim_id")?.asString,
+            participantAId = record.get("participant_a_id")?.asString ?: "",
+            participantAName = record.get("participant_a_name")?.asString ?: "",
+            participantATeamId = record.get("participant_a_team_id")?.asString ?: "",
+            participantATeamName = record.get("participant_a_team_name")?.asString ?: "",
+            participantBId = record.get("participant_b_id")?.asString ?: "",
+            participantBName = record.get("participant_b_name")?.asString ?: "",
+            participantBTeamId = record.get("participant_b_team_id")?.asString ?: "",
+            participantBTeamName = record.get("participant_b_team_name")?.asString ?: "",
+            lastMessage = record.get("last_message")?.asString ?: "",
+            lastMessageTime = record.get("last_message_time")?.asString ?: "",
+            chatOpensAt = record.get("chat_opens_at")?.asString ?: "",
+            participantATyping = record.get("participant_a_typing")?.asBoolean ?: false,
+            participantBTyping = record.get("participant_b_typing")?.asBoolean ?: false
+        )
     }
 
     // ─── Room Entity Mappers ───
@@ -455,7 +520,9 @@ class SupabaseMessageRepository(
         return com.mlbb.scrim.data.local.MessageEntity(
             id = msg.id,
             conversationId = msg.conversationId,
+            matchId = msg.matchId,
             senderId = msg.senderId,
+            senderTeamId = msg.senderTeamId,
             senderName = msg.senderName,
             content = msg.content,
             timestamp = msg.timestamp,

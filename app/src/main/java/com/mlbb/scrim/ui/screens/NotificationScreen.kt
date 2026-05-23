@@ -37,6 +37,7 @@ import com.mlbb.scrim.ui.components.SwipeToAction
 fun NotificationScreen(
     notifications: List<Notification>,
     isLoading: Boolean,
+    isRefreshing: Boolean = false,
     error: String?,
     onNavigateBack: () -> Unit,
     onMarkAsRead: (String) -> Unit,
@@ -134,7 +135,7 @@ fun NotificationScreen(
             }
 
             PullToRefreshContainer(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)
             ) {

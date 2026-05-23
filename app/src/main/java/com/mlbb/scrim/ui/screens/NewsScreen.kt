@@ -33,6 +33,7 @@ import com.mlbb.scrim.R
 import com.mlbb.scrim.data.model.NewsArticle
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GradientButton
+import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.components.timeAgo
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.viewmodel.NewsViewModel
@@ -43,7 +44,9 @@ import java.util.Locale
 @Composable
 fun NewsScreen(
     viewModel: NewsViewModel,
-    languageCode: String = "en"
+    languageCode: String = "en",
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {}
 ) {
     val articles by viewModel.articles.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -71,9 +74,10 @@ fun NewsScreen(
             NewsListContent(
                 articles = articles,
                 isLoading = isLoading,
+                isRefreshing = isRefreshing,
                 error = error,
                 dripInfo = dripInfo,
-                onRefresh = { viewModel.refresh(languageCode) },
+                onRefresh = onRefresh,
                 onArticleClick = { viewModel.selectArticle(it) },
                 onClearError = { viewModel.clearError() }
             )
@@ -85,6 +89,7 @@ fun NewsScreen(
 private fun NewsListContent(
     articles: List<NewsArticle>,
     isLoading: Boolean,
+    isRefreshing: Boolean,
     error: String?,
     dripInfo: com.mlbb.scrim.viewmodel.NewsViewModel.DripInfo,
     onRefresh: () -> Unit,
@@ -205,65 +210,56 @@ private fun NewsListContent(
         }
 
         // Content
-        if (isLoading && articles.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    color = GoldPrimary,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
-        } else if (articles.isEmpty()) {
-            EmptyNewsState(onRefresh = onRefresh)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    items = articles,
-                    key = { it.id }
-                ) { article ->
-                    NewsCard(
-                        article = article,
-                        onClick = { onArticleClick(article) }
-                    )
+        PullToRefreshContainer(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            when {
+                isLoading && articles.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = GoldPrimary,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
-
-                item {
-                    if (isLoading) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = GoldPrimary,
-                                modifier = Modifier.size(32.dp)
+                articles.isEmpty() -> {
+                    EmptyNewsState(onRefresh = onRefresh)
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = articles,
+                            key = { it.id }
+                        ) { article ->
+                            NewsCard(
+                                article = article,
+                                onClick = { onArticleClick(article) }
                             )
                         }
-                    } else {
-                        // Pull to refresh hint
-                        TextButton(
-                            onClick = onRefresh,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MidGray,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = stringResource(R.string.refresh),
-                                color = MidGray,
-                                style = iOSFootnote
-                            )
+
+                        item {
+                            if (isLoading) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = GoldPrimary,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

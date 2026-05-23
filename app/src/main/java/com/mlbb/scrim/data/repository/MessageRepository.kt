@@ -211,12 +211,13 @@ class MessageRepository : MessageRepositoryInterface {
             }
         }
 
-        if (conversation == null) {
+        val conv = conversation
+        if (conv == null) {
             emit(Result.failure(Exception("Failed to create conversation")))
             return@flow
         }
 
-        val convId = conversation!!.id
+        val convId = conv.id
 
         // Send system message
         sendMessage(

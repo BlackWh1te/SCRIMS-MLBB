@@ -7,13 +7,18 @@ import com.mlbb.scrim.data.local.LeaderboardEntity
 import com.mlbb.scrim.data.model.LeaderboardEntry
 import com.mlbb.scrim.data.model.RankTier
 import com.mlbb.scrim.data.service.LeaderboardEntryDto
+import com.mlbb.scrim.data.service.SupabaseConfig
+import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 
 class SupabaseLeaderboardRepository(
     private val cacheManager: UnifiedCacheManager,
-    private val leaderboardDao: LeaderboardDao
+    private val leaderboardDao: LeaderboardDao,
+    private val realtimeClient: SupabaseRealtimeClient
 ) : LeaderboardRepositoryInterface {
 
     companion object {
@@ -146,6 +151,61 @@ class SupabaseLeaderboardRepository(
             losses = entity.losses,
             totalMatches = entity.matchesPlayed,
             currentTier = try { RankTier.valueOf(entity.tier) } catch (_: Exception) { RankTier.BRONZE }
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    override fun subscribeToLeaderboard(): Flow<LeaderboardEntry> = flow {
+        try {
+            realtimeClient.connect()
+            val channelName = "public:player_stats"
+            realtimeClient.subscribe(
+                channelName = channelName,
+                configs = listOf(
+                    SupabaseRealtimeClient.PostgresChangeConfig(
+                        event = "UPDATE",
+                        table = SupabaseConfig.TABLE_PLAYER_STATS
+                    )
+                )
+            ).filter { event ->
+                event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
+            }.collect { event ->
+                try {
+                    val entry = parseRealtimeRecordToLeaderboardEntry(event.record!!)
+                    emit(entry)
+                } catch (e: Exception) {
+                    Log.w("LeaderboardRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("LeaderboardRepo", "Realtime subscription failed for leaderboard: ${e.message}")
+        }
+    }
+
+    private fun parseRealtimeRecordToLeaderboardEntry(record: com.google.gson.JsonObject): LeaderboardEntry {
+        val pts = record.get("pts")?.asInt ?: 0
+        val tier = when {
+            pts >= 17000 -> RankTier.MYTHIC
+            pts >= 12000 -> RankTier.LEGEND
+            pts >= 8000 -> RankTier.EPIC
+            pts >= 5000 -> RankTier.GRANDMASTER
+            pts >= 2500 -> RankTier.GOLD
+            pts >= 1000 -> RankTier.SOLVER
+            else -> RankTier.BRONZE
+        }
+        return LeaderboardEntry(
+            rank = 0, // Rank is positional, will be recalculated on full refresh
+            playerId = record.get("user_id")?.asString ?: "",
+            username = "", // Profile name fetched separately
+            teamName = "",
+            xp = pts,
+            wins = record.get("wins")?.asInt ?: 0,
+            losses = record.get("losses")?.asInt ?: 0,
+            totalMatches = record.get("matches_play")?.asInt ?: 0,
+            currentTier = tier
         )
     }
 }
