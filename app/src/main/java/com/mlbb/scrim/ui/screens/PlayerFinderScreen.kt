@@ -43,6 +43,8 @@ import com.mlbb.scrim.ui.components.ErrorSnackbar
 import com.mlbb.scrim.ui.components.iOSChip
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.theme.*
+import androidx.compose.ui.res.stringResource
+import com.mlbb.scrim.R
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,14 +103,14 @@ fun PlayerFinderScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Player Finder",
+                                text = stringResource(R.string.player_finder_title),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = White
                             )
                             Text(
-                                text = if (isTeamLeader) "Recruit pro players for your squad"
-                                    else "Post your stats & get discovered",
+                                text = if (isTeamLeader) stringResource(R.string.recruit_players)
+                                    else stringResource(R.string.post_stats_discovered),
                                 fontSize = 13.sp,
                                 color = LightGray.copy(alpha = 0.7f)
                             )
@@ -124,7 +126,7 @@ fun PlayerFinderScreen(
                                         shape = RoundedCornerShape(14.dp)
                                     )
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = "Post", tint = White, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.content_desc_post), tint = White, modifier = Modifier.size(24.dp))
                             }
                         } else {
                             IconButton(
@@ -133,7 +135,7 @@ fun PlayerFinderScreen(
                                     .size(48.dp)
                                     .background(ErrorRed.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Remove post", tint = ErrorRed, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_remove_post), tint = ErrorRed, modifier = Modifier.size(22.dp))
                             }
                         }
                     }
@@ -155,7 +157,7 @@ fun PlayerFinderScreen(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "Your post is live — players can see you!",
+                                    text = stringResource(R.string.your_post_is_live),
                                     color = SuccessGreen,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -177,7 +179,7 @@ fun PlayerFinderScreen(
                     ) {
                         item {
                             iOSChip(
-                                text = "All Roles",
+                                text = stringResource(R.string.all_roles),
                                 selected = selectedRoleFilter == null,
                                 onClick = { selectedRoleFilter = null }
                             )
@@ -201,7 +203,7 @@ fun PlayerFinderScreen(
                         ) {
                             item {
                                 iOSChip(
-                                    text = "All Cities",
+                                    text = stringResource(R.string.all_cities),
                                     selected = selectedCityFilter == null,
                                     onClick = { selectedCityFilter = null }
                                 )
@@ -280,7 +282,7 @@ fun PlayerFinderScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showScreenshotDialog = null }) {
-                        Text("Close", color = White)
+                        Text(stringResource(R.string.close), color = White)
                     }
                 }
             )
@@ -384,7 +386,7 @@ private fun PlayerCard(
                         if (post.useMic) {
                             Spacer(Modifier.width(6.dp))
                             Icon(
-                                Icons.Default.Mic, "Mic On",
+                                Icons.Default.Mic, stringResource(R.string.content_desc_post),
                                 tint = BluePrimary, modifier = Modifier.size(16.dp)
                             )
                         }
@@ -432,7 +434,7 @@ private fun PlayerCard(
                     if (post.totalMatches > 0) {
                         StatBadge(
                             icon = Icons.Default.SportsEsports,
-                            label = "Games",
+                            label = stringResource(R.string.games),
                             value = post.totalMatches.toString(),
                             color = BluePrimary,
                             modifier = Modifier.weight(1f)
@@ -441,7 +443,7 @@ private fun PlayerCard(
                     if (post.winRate.isNotBlank()) {
                         StatBadge(
                             icon = Icons.AutoMirrored.Filled.TrendingUp,
-                            label = "WR",
+                            label = stringResource(R.string.win_rate_abbrev),
                             value = post.winRate,
                             color = SuccessGreen,
                             modifier = Modifier.weight(1f)
@@ -450,7 +452,7 @@ private fun PlayerCard(
                     if (post.rankedWinRate.isNotBlank()) {
                         StatBadge(
                             icon = Icons.Default.EmojiEvents,
-                            label = "Ranked WR",
+                            label = stringResource(R.string.ranked_wr),
                             value = post.rankedWinRate,
                             color = GoldPrimary,
                             modifier = Modifier.weight(1f)
@@ -475,7 +477,7 @@ private fun PlayerCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "ID: ${post.inGameId}",
+                        text = stringResource(R.string.in_game_id_label, post.inGameId),
                         color = TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
@@ -511,7 +513,7 @@ private fun PlayerCard(
                             .data(post.screenshotUrl)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Profile Screenshot",
+                        contentDescription = stringResource(R.string.content_desc_profile_screenshot),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -529,7 +531,7 @@ private fun PlayerCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Visibility, null, tint = White, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Tap to view", color = White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.tap_to_view), color = White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -593,7 +595,7 @@ private fun PlayerCard(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Message", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.message_action), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 if (isTeamLeader) {
@@ -613,7 +615,7 @@ private fun PlayerCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Invite", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -765,12 +767,12 @@ private fun CreatePostSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
-            Text("Create Player Post", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = White)
-            Text("Show off your stats and get recruited", fontSize = 13.sp, color = LightGray.copy(alpha = 0.6f))
+            Text(stringResource(R.string.create_player_post), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = White)
+            Text(stringResource(R.string.show_off_stats), fontSize = 13.sp, color = LightGray.copy(alpha = 0.6f))
             Spacer(Modifier.height(24.dp))
 
             // ── Role ──
-            SectionLabel("Main Role")
+            SectionLabel(stringResource(R.string.main_role))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(GameRole.values()) { role ->
                     val rc = roleColor(role)
@@ -790,7 +792,7 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── City ──
-            SectionLabel("Your City")
+            SectionLabel(stringResource(R.string.your_city))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(cities) { c ->
                     val selected = city == c
@@ -809,11 +811,11 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── In-Game ID ──
-            SectionLabel("In-Game ID")
+            SectionLabel(stringResource(R.string.in_game_id))
             OutlinedTextField(
                 value = inGameId,
                 onValueChange = { inGameId = it },
-                placeholder = { Text("Your MLBB Game ID", color = DimGray) },
+                placeholder = { Text(stringResource(R.string.your_mlbb_game_id), color = DimGray) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -830,7 +832,7 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── Stats: Total Games + Win Rate + Ranked WR (stacked for readability) ──
-            SectionLabel("Game Stats")
+            SectionLabel(stringResource(R.string.player_stats))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -838,7 +840,7 @@ private fun CreatePostSheet(
                 OutlinedTextField(
                     value = totalMatches,
                     onValueChange = { totalMatches = it.filter { c -> c.isDigit() } },
-                    label = { Text("Total Games", color = TextSecondary) },
+                    label = { Text(stringResource(R.string.total_games), color = TextSecondary) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -855,10 +857,10 @@ private fun CreatePostSheet(
                 OutlinedTextField(
                     value = winRate,
                     onValueChange = { winRate = it },
-                    label = { Text("Win Rate %", color = TextSecondary) },
+                    label = { Text(stringResource(R.string.win_rate_percent), color = TextSecondary) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    placeholder = { Text("e.g. 62%", color = DimGray) },
+                    placeholder = { Text(stringResource(R.string.win_rate_example), color = DimGray) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SuccessGreen,
@@ -874,8 +876,8 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = rankedWinRate,
                 onValueChange = { rankedWinRate = it },
-                label = { Text("Ranked Win Rate %", color = TextSecondary) },
-                placeholder = { Text("e.g. 58%", color = DimGray) },
+                label = { Text(stringResource(R.string.ranked_win_rate_percent), color = TextSecondary) },
+                placeholder = { Text(stringResource(R.string.ranked_win_rate_example), color = DimGray) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -892,11 +894,11 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── Rank ──
-            SectionLabel("Current Rank")
+            SectionLabel(stringResource(R.string.current_rank))
             OutlinedTextField(
                 value = rank,
                 onValueChange = { rank = it },
-                placeholder = { Text("e.g. Mythic 52 stars", color = DimGray) },
+                placeholder = { Text(stringResource(R.string.rank_example), color = DimGray) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -913,11 +915,11 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── Hero Picker ──
-            SectionLabel("Top 3 Heroes")
+            SectionLabel(stringResource(R.string.top_3_main_heroes_hint))
             OutlinedTextField(
                 value = heroesInput,
                 onValueChange = { heroesInput = it },
-                placeholder = { Text("Fanny, Gusion, Lancelot", color = DimGray) },
+                placeholder = { Text(stringResource(R.string.hero_examples), color = DimGray) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -934,7 +936,7 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── Screenshot Upload ──
-            SectionLabel("Profile Screenshot (Optional)")
+            SectionLabel(stringResource(R.string.profile_screenshot_optional))
             if (screenshotUri != null) {
                 Box(
                     modifier = Modifier
@@ -944,7 +946,7 @@ private fun CreatePostSheet(
                 ) {
                     AsyncImage(
                         model = screenshotUri,
-                        contentDescription = "Selected Screenshot",
+                        contentDescription = stringResource(R.string.content_desc_selected_screenshot),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -974,7 +976,7 @@ private fun CreatePostSheet(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Image, null, tint = BluePrimary, modifier = Modifier.size(32.dp))
                         Spacer(Modifier.height(6.dp))
-                        Text("Tap to upload screenshot", color = TextSecondary, fontSize = 13.sp)
+                        Text(stringResource(R.string.tap_upload_screenshot), color = TextSecondary, fontSize = 13.sp)
                     }
                 }
             }
@@ -990,7 +992,7 @@ private fun CreatePostSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Mic, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Use Microphone?", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = White)
+                    Text(stringResource(R.string.use_microphone), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = White)
                 }
                 Switch(
                     checked = useMic,
@@ -1007,7 +1009,7 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(20.dp))
 
             // ── Playstyle Tags ──
-            SectionLabel("Playstyle Tags")
+            SectionLabel(stringResource(R.string.playstyle_tags))
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1030,24 +1032,24 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(24.dp))
 
             // ── Social Links ──
-            SectionLabel("Social Links (Optional)")
+            SectionLabel(stringResource(R.string.social_links_optional))
             Spacer(Modifier.height(8.dp))
-            SocialInputField(value = discord, onValueChange = { discord = it }, label = "Discord Username", icon = Icons.Default.Language)
+            SocialInputField(value = discord, onValueChange = { discord = it }, label = stringResource(R.string.discord_username), icon = Icons.Default.Language)
             Spacer(Modifier.height(8.dp))
-            SocialInputField(value = telegram, onValueChange = { telegram = it }, label = "Telegram @username", icon = Icons.AutoMirrored.Filled.Send)
+            SocialInputField(value = telegram, onValueChange = { telegram = it }, label = stringResource(R.string.telegram_username), icon = Icons.AutoMirrored.Filled.Send)
             Spacer(Modifier.height(8.dp))
-            SocialInputField(value = vk, onValueChange = { vk = it }, label = "VK ID/Link", icon = Icons.Default.Language)
+            SocialInputField(value = vk, onValueChange = { vk = it }, label = stringResource(R.string.vk_id), icon = Icons.Default.Language)
             Spacer(Modifier.height(8.dp))
-            SocialInputField(value = facebook, onValueChange = { facebook = it }, label = "Facebook Name/Link", icon = Icons.Default.Facebook)
+            SocialInputField(value = facebook, onValueChange = { facebook = it }, label = stringResource(R.string.facebook_name), icon = Icons.Default.Facebook)
 
             Spacer(Modifier.height(20.dp))
 
             // ── Bio / Message ──
-            SectionLabel("Bio / Message")
+            SectionLabel(stringResource(R.string.bio_message))
             OutlinedTextField(
                 value = bio,
                 onValueChange = { if (it.length <= 200) bio = it },
-                placeholder = { Text("Tell team leaders about yourself...", color = DimGray) },
+                placeholder = { Text(stringResource(R.string.tell_about_yourself), color = DimGray) },
                 modifier = Modifier.fillMaxWidth().height(100.dp),
                 maxLines = 4,
                 shape = RoundedCornerShape(12.dp),
@@ -1129,7 +1131,7 @@ private fun CreatePostSheet(
                     if (isUploading) {
                         CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        Text("Post Profile", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = White)
+                        Text(stringResource(R.string.post_profile), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = White)
                     }
                 }
             }

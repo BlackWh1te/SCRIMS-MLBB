@@ -265,9 +265,9 @@
     <string name="complete_scrim_history">أكمل سكرامًا لرؤية سجل مبارياتك هنا.</string>
     <string name="winner_result">الفائز: %s</string>
     <string name="result_disputed_waiting">النتيجة متنازع عليها - في انتظار الحل</string>
-    <string name="players_count">%d/%d لاعبين</string>
+    <string name="players_count">%1/%2 لاعبين</string>
     <string name="scrim_label">سكرام %s</string>
-    <string name="players_count_label">%d/%d لاعبين</string>
+    <string name="players_count_label">%1/%2 لاعبين</string>
     <string name="vs_label">ضد</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

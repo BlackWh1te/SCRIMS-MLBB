@@ -265,9 +265,9 @@
     <string name="complete_scrim_history">스크림을 완료하면 여기에서 경기 기록을 볼 수 있습니다.</string>
     <string name="winner_result">승자: %s</string>
     <string name="result_disputed_waiting">결과 분쟁 중 - 해결 대기 중</string>
-    <string name="players_count">%d/%d 플레이어</string>
+    <string name="players_count">%1/%2 플레이어</string>
     <string name="scrim_label">스크림 %s</string>
-    <string name="players_count_label">%d/%d 플레이어</string>
+    <string name="players_count_label">%1/%2 플레이어</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

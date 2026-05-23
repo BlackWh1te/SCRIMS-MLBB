@@ -26,6 +26,8 @@ import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.theme.*
 import androidx.compose.ui.graphics.Color
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,7 +77,7 @@ fun FindTeamsScreen(
                 ) {
                     GlassBackButton(onClick = onNavigateBack)
                     Text(
-                        text = "Find Teams",
+                        text = stringResource(R.string.find_teams_title),
                         style = iOSTitle2.copy(color = TextPrimary)
                     )
                     Spacer(modifier = Modifier.width(44.dp))
@@ -87,7 +89,7 @@ fun FindTeamsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search teams...", color = TextTertiary) },
+                    placeholder = { Text(stringResource(R.string.search_teams_hint), color = TextTertiary) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
@@ -124,8 +126,8 @@ fun FindTeamsScreen(
                     filteredTeams.isEmpty() -> {
                         EmptyState(
                             icon = Icons.Default.GroupAdd,
-                            title = if (searchQuery.isEmpty()) "No open teams yet" else "No teams found",
-                            subtitle = if (searchQuery.isEmpty()) "Teams that accept applications will appear here" else "Try a different search term",
+                            title = if (searchQuery.isEmpty()) stringResource(R.string.no_open_teams_yet) else stringResource(R.string.no_teams_found),
+                            subtitle = if (searchQuery.isEmpty()) stringResource(R.string.teams_will_appear_here) else stringResource(R.string.try_different_search_term),
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -208,7 +210,7 @@ private fun OpenTeamCard(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "${team.currentPlayerCount}/${team.maxPlayers} players",
+                            stringResource(R.string.players_fraction, team.currentPlayerCount, team.maxPlayers),
                             style = iOSCaption2.copy(color = TextSecondary)
                         )
                     }
@@ -225,7 +227,7 @@ private fun OpenTeamCard(
                         onClick = onApply,
                         colors = ButtonDefaults.textButtonColors(contentColor = SuccessGreen)
                     ) {
-                        Text("Apply", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.apply), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -240,7 +242,7 @@ private fun OpenTeamCard(
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        "Reputation ${team.displayReputation}",
+                        stringResource(R.string.reputation_label, team.displayReputation),
                         style = iOSCaption2.copy(color = InfoBlue, fontWeight = FontWeight.Medium)
                     )
                 }
@@ -253,7 +255,7 @@ private fun OpenTeamCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            "Recruiting",
+                            stringResource(R.string.recruiting),
                             style = iOSCaption2.copy(color = SuccessGreen, fontWeight = FontWeight.Medium)
                         )
                     }
@@ -265,7 +267,7 @@ private fun OpenTeamCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            "Full",
+                            stringResource(R.string.full),
                             style = iOSCaption2.copy(color = ErrorRed, fontWeight = FontWeight.Medium)
                         )
                     }

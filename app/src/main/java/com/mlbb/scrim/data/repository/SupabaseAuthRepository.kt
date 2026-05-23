@@ -92,6 +92,7 @@ class SupabaseAuthRepository(
             username = profileDto?.username?.takeIf { it.isNotBlank() } ?: fallbackUsername,
             email = profileDto?.email?.takeIf { it.isNotBlank() } ?: fallbackEmail,
             inGameId = profileDto?.mlbbId?.takeIf { it.isNotBlank() } ?: fallbackInGameId,
+            avatarUrl = profileDto?.avatarUrl,
             createdAt = DateUtils.parseIsoToMillis(profileDto?.createdAt),
             xp = rankXp,
             pts = pts,
@@ -642,6 +643,7 @@ class SupabaseAuthRepository(
             username = entity.username,
             email = entity.email ?: "",
             inGameId = entity.inGameId ?: "",
+            avatarUrl = entity.avatarUrl,
             currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.BRONZE,
             pts = entity.points,
             isBanned = entity.isBanned

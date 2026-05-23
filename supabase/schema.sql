@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     ban_reason TEXT,
     banned_at TIMESTAMP WITH TIME ZONE,
     banned_by UUID REFERENCES profiles(id),
+    avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );

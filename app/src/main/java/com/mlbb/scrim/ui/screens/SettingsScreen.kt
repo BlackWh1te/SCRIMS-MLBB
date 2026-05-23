@@ -223,7 +223,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(60.dp))
                 
                 Text(
-                    text = "Version $appVersion",
+                    text = stringResource(R.string.version_label, appVersion),
                     style = iOSFootnote.copy(color = TextTertiary),
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 40.dp)
                 )

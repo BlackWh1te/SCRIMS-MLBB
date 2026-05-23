@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -109,7 +111,7 @@ fun SplashScreen(
 
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(id = com.mlbb.scrim.R.drawable.logo),
-                    contentDescription = "App Logo",
+                    contentDescription = stringResource(R.string.content_desc_app_logo),
                     modifier = Modifier.size(80.dp).scale(logoScale)
                 )
             }
@@ -124,7 +126,7 @@ fun SplashScreen(
             )
 
             Text(
-                text = "MLBB Scrim Host",
+                text = stringResource(R.string.app_title),
                 modifier = Modifier.alpha(titleAlpha),
                 color = White,
                 fontSize = 26.sp,
@@ -143,7 +145,7 @@ fun SplashScreen(
             )
 
             Text(
-                text = "Compete. Rank. Dominate.",
+                text = stringResource(R.string.tagline),
                 modifier = Modifier.alpha(taglineAlpha),
                 color = MidGray,
                 fontSize = 14.sp,
@@ -172,7 +174,7 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Loading...",
+                text = stringResource(R.string.loading),
                 color = DimGray,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium

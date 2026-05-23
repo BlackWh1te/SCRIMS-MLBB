@@ -88,7 +88,7 @@ fun TeamListScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh",
+                                contentDescription = stringResource(R.string.refresh),
                                 tint = LightGray,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -106,7 +106,7 @@ fun TeamListScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Find Teams",
+                                contentDescription = stringResource(R.string.find_teams),
                                 tint = BluePrimary,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -124,7 +124,7 @@ fun TeamListScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.GroupAdd,
-                                contentDescription = "Join Team",
+                                contentDescription = stringResource(R.string.join_team),
                                 tint = SuccessGreen,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -142,7 +142,7 @@ fun TeamListScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Create Team",
+                                contentDescription = stringResource(R.string.create_team),
                                 tint = White,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -166,8 +166,8 @@ fun TeamListScreen(
                     teams.isEmpty() -> {
                         EmptyState(
                             icon = Icons.Default.GroupAdd,
-                            title = "No teams yet",
-                            subtitle = "Create your first team or join one with an invite code",
+                            title = stringResource(R.string.no_teams_yet),
+                            subtitle = stringResource(R.string.no_teams_subtitle),
                             modifier = Modifier.fillMaxSize(),
                             action = {
                                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -290,7 +290,7 @@ fun TeamCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Players",
+                        contentDescription = stringResource(R.string.players),
                         tint = LightGray,
                         modifier = Modifier.size(16.dp)
                     )
@@ -308,7 +308,7 @@ fun TeamCard(
             // Chevron
             Icon(
                 imageVector = Icons.Default.ChevronRight,
-                contentDescription = "View team",
+                contentDescription = stringResource(R.string.view_team),
                 tint = LightGray.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )

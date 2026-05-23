@@ -116,7 +116,7 @@ fun LoginScreen(
             PremiumFadeIn(delayMillis = 0) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
-                    contentDescription = "App Logo",
+                    contentDescription = stringResource(R.string.content_desc_app_logo),
                     modifier = Modifier.size(90.dp)
                 )
             }
@@ -273,7 +273,7 @@ fun LoginScreen(
                                             modifier    = Modifier.size(18.dp),
                                             strokeWidth = 2.dp
                                         )
-                                        Text("Signing in…", color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.signing_in), color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 } else {
                                     Text(

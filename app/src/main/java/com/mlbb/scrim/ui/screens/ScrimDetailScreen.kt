@@ -178,12 +178,13 @@ fun ScrimDetailScreen(
                                 // Status Badge
                                 EnhancedStatusBadge(
                                     text = when (scrim.status) {
-                                        ScrimStatus.OPEN -> "Open"
-                                        ScrimStatus.FILLED -> "Filled"
-                                        ScrimStatus.READY_CHECK -> "Ready Check"
-                                        ScrimStatus.IN_PROGRESS -> "In Progress"
-                                        ScrimStatus.COMPLETED -> "Completed"
-                                        ScrimStatus.CANCELLED -> "Cancelled"
+                                        ScrimStatus.OPEN -> stringResource(R.string.scrim_status_open)
+                                        ScrimStatus.FILLED -> stringResource(R.string.scrim_status_filled)
+                                        ScrimStatus.READY_CHECK -> stringResource(R.string.ready_check)
+                                        ScrimStatus.IN_PROGRESS -> stringResource(R.string.scrim_status_in_progress)
+                                        ScrimStatus.COMPLETED -> stringResource(R.string.scrim_status_completed)
+                                        ScrimStatus.CANCELLED -> stringResource(R.string.scrim_status_cancelled)
+                                        else -> stringResource(R.string.scrim_status_open)
                                     },
                                     color = when (scrim.status) {
                                         ScrimStatus.OPEN -> SuccessGreen
@@ -192,6 +193,7 @@ fun ScrimDetailScreen(
                                         ScrimStatus.IN_PROGRESS -> BluePrimary
                                         ScrimStatus.COMPLETED -> LightGray
                                         ScrimStatus.CANCELLED -> ErrorRed
+                                        else -> SuccessGreen
                                     }
                                 )
                             }
@@ -221,7 +223,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 250) {
                         InfoCard(
                             icon = Icons.Default.SportsEsports,
-                            label = "Game Mode",
+                            label = stringResource(R.string.game_mode),
                             value = scrim.gameMode.name
                         )
                     }
@@ -235,7 +237,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 300) {
                         InfoCard(
                             icon = Icons.Default.Public,
-                            label = "Region",
+                            label = stringResource(R.string.region),
                             value = scrim.region.displayName
                         )
                     }
@@ -249,7 +251,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 350) {
                         InfoCard(
                             icon = Icons.Default.Star,
-                            label = "Skill Level",
+                            label = stringResource(R.string.skill_level),
                             value = scrim.skillLevel.name
                         )
                     }
@@ -263,7 +265,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 375) {
                         InfoCard(
                             icon = Icons.Default.SportsScore,
-                            label = "Format",
+                            label = stringResource(R.string.format_label),
                             value = scrim.bestOf.displayName
                         )
                     }
@@ -277,7 +279,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 400) {
                         InfoCard(
                             icon = Icons.Default.AccessTime,
-                            label = "Scheduled Time",
+                            label = stringResource(R.string.scheduled_time),
                             value = formatDetailedTime(scrim.scheduledTime)
                         )
                     }
@@ -291,7 +293,7 @@ fun ScrimDetailScreen(
                     AnimatedEntrance(delayMillis = 450) {
                         InfoCard(
                             icon = Icons.Default.Person,
-                            label = "Players",
+                            label = stringResource(R.string.players),
                             value = "${scrim.currentPlayers} / ${scrim.maxPlayers}"
                         )
                     }
@@ -342,7 +344,7 @@ fun ScrimDetailScreen(
                     item {
                         AnimatedEntrance(delayMillis = 580) {
                             Text(
-                                text = "Rosters",
+                                text = stringResource(R.string.rosters),
                                 style = iOSTitle2.copy(color = TextPrimary)
                             )
                         }
@@ -367,7 +369,7 @@ fun ScrimDetailScreen(
                         item {
                             AnimatedEntrance(delayMillis = 600) {
                                 RosterDisplayCard(
-                                    teamName = scrim.opponentTeamName ?: "Opponent",
+                                    teamName = scrim.opponentTeamName ?: stringResource(R.string.opponent_label),
                                     roster = scrim.teamBRoster
                                 )
                             }
@@ -507,12 +509,12 @@ fun ScrimDetailScreen(
                         showCancelDialog = false
                     }
                 ) {
-                    Text("Cancel Scrim", color = ErrorRed)
+                    Text(stringResource(R.string.cancel_scrim), color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCancelDialog = false }) {
-                    Text("Keep Scrim", color = MidGray)
+                    Text(stringResource(R.string.keep_scrim), color = MidGray)
                 }
             }
         )
@@ -648,7 +650,7 @@ private fun HostActions(
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text("Opponent", fontSize = 13.sp, color = LightGray)
+                                    Text(stringResource(R.string.opponent_label), fontSize = 13.sp, color = LightGray)
                                     Text(opponentName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
                                 }
                             }
@@ -658,7 +660,7 @@ private fun HostActions(
                             // Select roster button
                             if (currentTeamId != null && onNavigateToRoster != null) {
                                 GradientButton(
-                                    text = "Select Roster",
+                                    text = stringResource(R.string.select_roster),
                                     onClick = { onNavigateToRoster(scrim.id, currentTeamId) },
                                     gradient = BlueGradient,
                                     height = 48.dp
@@ -750,7 +752,7 @@ private fun ApplicationCard(
                         style = iOSHeadline.copy(color = TextPrimary)
                     )
                     Text(
-                        "Leader: ${application.applicantTeamLeaderName}",
+                        stringResource(R.string.leader_name, application.applicantTeamLeaderName),
                         style = iOSCaption1.copy(color = TextSecondary)
                     )
                 }
@@ -806,10 +808,10 @@ private fun ApplicantStatusCard(
     }
 
     val statusText = when (application.status) {
-        ApplicationStatus.PENDING -> "Application Pending"
-        ApplicationStatus.APPROVED -> "Application Approved!"
-        ApplicationStatus.REJECTED -> "Application Rejected"
-        ApplicationStatus.CANCELLED -> "Application Cancelled"
+        ApplicationStatus.PENDING -> stringResource(R.string.application_pending)
+        ApplicationStatus.APPROVED -> stringResource(R.string.application_approved)
+        ApplicationStatus.REJECTED -> stringResource(R.string.application_rejected)
+        ApplicationStatus.CANCELLED -> stringResource(R.string.application_cancelled)
     }
 
     Card(
@@ -843,7 +845,7 @@ private fun ApplicantStatusCard(
                 Column {
                     Text(statusText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = statusColor)
                     if (application.status == ApplicationStatus.APPROVED) {
-                        Text("Scrim: ${scrim.teamName}", fontSize = 13.sp, color = LightGray)
+                        Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = LightGray)
                     }
                 }
             }
@@ -865,7 +867,7 @@ private fun ApplicantStatusCard(
             if (application.status == ApplicationStatus.PENDING) {
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onCancel, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Withdraw Application", color = ErrorRed, fontSize = 14.sp)
+                    Text(stringResource(R.string.withdraw_application), color = ErrorRed, fontSize = 14.sp)
                 }
             }
         }
@@ -879,12 +881,13 @@ private fun ApplicantStatusCard(
 @Composable
 private fun ScrimStatusCard(scrim: Scrim) {
     val (label, color) = when (scrim.status) {
-        ScrimStatus.OPEN -> "Open" to SuccessGreen
-        ScrimStatus.FILLED -> "Filled" to WarningOrange
-        ScrimStatus.READY_CHECK -> "Ready Check" to WarningOrange
-        ScrimStatus.IN_PROGRESS -> "In Progress" to BluePrimary
-        ScrimStatus.COMPLETED -> "Completed" to LightGray
-        ScrimStatus.CANCELLED -> "Cancelled" to ErrorRed
+        ScrimStatus.OPEN -> stringResource(R.string.scrim_status_open) to SuccessGreen
+        ScrimStatus.FILLED -> stringResource(R.string.scrim_status_filled) to WarningOrange
+        ScrimStatus.READY_CHECK -> stringResource(R.string.ready_check) to WarningOrange
+        ScrimStatus.IN_PROGRESS -> stringResource(R.string.scrim_status_in_progress) to BluePrimary
+        ScrimStatus.COMPLETED -> stringResource(R.string.scrim_status_completed) to LightGray
+        ScrimStatus.CANCELLED -> stringResource(R.string.scrim_status_cancelled) to ErrorRed
+        else -> stringResource(R.string.scrim_status_open) to SuccessGreen
     }
     Card(
         modifier = Modifier
@@ -1042,7 +1045,7 @@ private fun ReadyCheckSection(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Match Time!",
+                    text = stringResource(R.string.match_time),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = WarningOrange
@@ -1060,7 +1063,7 @@ private fun ReadyCheckSection(
                     isReady = scrim.teamAReady
                 )
                 ReadyIndicator(
-                    teamName = scrim.opponentTeamName ?: "Opponent",
+                    teamName = scrim.opponentTeamName ?: stringResource(R.string.opponent_label),
                     isReady = scrim.teamBReady
                 )
             }
@@ -1070,7 +1073,7 @@ private fun ReadyCheckSection(
             // Ready button (only if not already ready)
             if (!myTeamReady && currentTeamId != null && onMarkReady != null) {
                 GradientButton(
-                    text = "READY",
+                    text = stringResource(R.string.ready),
                     onClick = { onMarkReady(scrim.id, currentTeamId) },
                     gradient = GoldGradient,
                     height = 56.dp
@@ -1088,7 +1091,7 @@ private fun ReadyCheckSection(
                     ) {
                         Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("You are ready!", color = SuccessGreen, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.you_are_ready), color = SuccessGreen, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1096,7 +1099,7 @@ private fun ReadyCheckSection(
             if (!opponentReady) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Waiting for opponent to ready up...",
+                    text = stringResource(R.string.waiting_opponent_ready),
                     fontSize = 13.sp,
                     color = LightGray
                 )
@@ -1198,7 +1201,7 @@ private fun InProgressSection(
                             uploadError = error.message
                         }
                     } else {
-                        uploadError = "Failed to read image"
+                        uploadError = context.getString(R.string.error_failed_read_image)
                     }
                 } catch (e: Exception) {
                     uploadError = e.message
@@ -1231,7 +1234,7 @@ private fun InProgressSection(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Match In Progress",
+                    text = stringResource(R.string.match_in_progress),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = BluePrimary
@@ -1242,7 +1245,7 @@ private fun InProgressSection(
 
             // Step 1: Attach Screenshot
             Text(
-                text = "Step 1: Attach Screenshot",
+                text = stringResource(R.string.step_1_attach_screenshot),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = White
@@ -1258,10 +1261,10 @@ private fun InProgressSection(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Uploading...", color = LightGray, fontSize = 13.sp)
+                    Text(stringResource(R.string.uploading), color = LightGray, fontSize = 13.sp)
                 } else {
                     GradientButton(
-                        text = "Attach Screenshot",
+                        text = stringResource(R.string.attach_screenshot),
                         onClick = { imagePickerLauncher.launch("image/*") },
                         gradient = BlueGradient,
                         height = 48.dp
@@ -1280,7 +1283,7 @@ private fun InProgressSection(
                     ) {
                         Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Screenshot uploaded", color = SuccessGreen, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.screenshot_uploaded_label), color = SuccessGreen, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -1299,7 +1302,7 @@ private fun InProgressSection(
 
             // Step 2: Complete Scrim (only after screenshot)
             Text(
-                text = "Step 2: Complete Scrim",
+                text = stringResource(R.string.step_2_complete_scrim),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (myScreenshotUploaded) White else MidGray
@@ -1308,7 +1311,7 @@ private fun InProgressSection(
             Spacer(modifier = Modifier.height(8.dp))
 
             GradientButton(
-                text = if (myScreenshotUploaded) "Complete Scrim" else "Upload screenshot first",
+                text = if (myScreenshotUploaded) stringResource(R.string.complete_scrim) else stringResource(R.string.upload_screenshot_first),
                 onClick = { if (myScreenshotUploaded) showWinnerDialog = true },
                 enabled = myScreenshotUploaded,
                 gradient = if (myScreenshotUploaded) GoldGradient else listOf(Color.Gray, Color.DarkGray),
@@ -1335,11 +1338,11 @@ private fun InProgressSection(
             onDismissRequest = { showWinnerDialog = false },
             containerColor = DarkNavy,
             title = {
-                Text("Select Winner", color = White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.select_winner), color = White, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
-                    Text("Who won this scrim?", color = LightGray, fontSize = 14.sp)
+                    Text(stringResource(R.string.who_won_scrim), color = LightGray, fontSize = 14.sp)
                 }
             },
             confirmButton = {
@@ -1354,13 +1357,13 @@ private fun InProgressSection(
                         onCompleteScrim?.invoke(scrim.id, scrim.opponentTeamId ?: "")
                         showWinnerDialog = false
                     }) {
-                        Text(scrim.opponentTeamName ?: "Opponent", color = ErrorRed, fontWeight = FontWeight.Bold)
+                        Text(scrim.opponentTeamName ?: stringResource(R.string.opponent_label), color = ErrorRed, fontWeight = FontWeight.Bold)
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showWinnerDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text(stringResource(R.string.cancel_btn), color = MidGray)
                 }
             }
         )

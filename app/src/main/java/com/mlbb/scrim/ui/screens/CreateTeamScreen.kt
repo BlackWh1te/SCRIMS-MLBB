@@ -139,7 +139,7 @@ fun CreateTeamScreen(
                         if (selectedLogoUri != null) {
                             AsyncImage(
                                 model = selectedLogoUri,
-                                contentDescription = "Team logo",
+                                contentDescription = stringResource(R.string.content_desc_team_logo),
                                 modifier = Modifier
                                     .size(100.dp)
                                     .clip(CircleShape),
@@ -151,7 +151,7 @@ fun CreateTeamScreen(
                             ) {
                                 Icon(
                                     Icons.Default.AddAPhoto,
-                                    contentDescription = "Upload logo",
+                                    contentDescription = stringResource(R.string.content_desc_upload_logo),
                                     tint = BluePrimary,
                                     modifier = Modifier.size(28.dp)
                                 )

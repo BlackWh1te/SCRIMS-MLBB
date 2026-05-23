@@ -80,7 +80,7 @@ fun MatchHistoryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = LightGray,
                             modifier = Modifier.size(22.dp)
                         )

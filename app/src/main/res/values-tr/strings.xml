@@ -265,9 +265,9 @@
     <string name="complete_scrim_history">Maç geçmişini burada görmek için bir scrim tamamlayın.</string>
     <string name="winner_result">Kazanan: %s</string>
     <string name="result_disputed_waiting">Sonuç tartışmalı - çözüm bekleniyor</string>
-    <string name="players_count">%d/%d oyuncu</string>
+    <string name="players_count">%1/%2 oyuncu</string>
     <string name="scrim_label">Scrim %s</string>
-    <string name="players_count_label">%d/%d oyuncu</string>
+    <string name="players_count_label">%1/%2 oyuncu</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

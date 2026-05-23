@@ -293,4 +293,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 
+-- ═══════════════════════════════════════════════════════════════
+-- 13. ADD avatar_url to profiles (if not exists)
+-- ═══════════════════════════════════════════════════════════════
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'avatar_url'
+    ) THEN
+        ALTER TABLE profiles ADD COLUMN avatar_url TEXT;
+    END IF;
+END $$;
+
 NOTIFY pgrst, 'reload schema';

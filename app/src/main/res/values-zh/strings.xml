@@ -265,9 +265,9 @@
     <string name="complete_scrim_history">完成一场训练赛以在此处查看你的比赛历史。</string>
     <string name="winner_result">获胜者: %s</string>
     <string name="result_disputed_waiting">结果有争议 - 等待解决</string>
-    <string name="players_count">%d/%d 玩家</string>
+    <string name="players_count">%1/%2 玩家</string>
     <string name="scrim_label">训练赛 %s</string>
-    <string name="players_count_label">%d/%d 玩家</string>
+    <string name="players_count_label">%1/%2 玩家</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

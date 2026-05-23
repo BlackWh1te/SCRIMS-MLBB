@@ -83,7 +83,7 @@ fun MatchResultListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = LightGray,
                             modifier = Modifier.size(22.dp)
                         )
@@ -112,8 +112,8 @@ fun MatchResultListScreen(
                         ) {
                             EmptyState(
                                 icon = Icons.Default.SportsEsports,
-                                title = "No matches yet",
-                                subtitle = "Complete a scrim to see match results here."
+                                title = stringResource(R.string.no_matches_yet),
+                                subtitle = stringResource(R.string.complete_scrim_to_see_results)
                             )
                         }
                     }

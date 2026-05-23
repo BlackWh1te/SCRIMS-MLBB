@@ -72,7 +72,7 @@ fun LfgBoardScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Create Post",
+                            contentDescription = stringResource(R.string.create_post),
                             tint = White,
                             modifier = Modifier.size(22.dp)
                         )

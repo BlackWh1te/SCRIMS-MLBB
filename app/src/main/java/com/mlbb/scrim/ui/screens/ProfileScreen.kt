@@ -153,7 +153,7 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = if (isEditing) "Save" else "Edit",
+                            contentDescription = if (isEditing) stringResource(R.string.save) else stringResource(R.string.edit),
                             tint = White,
                             modifier = Modifier.size(20.dp)
                         )
@@ -190,7 +190,7 @@ fun ProfileScreen(
                         if (userProfile?.avatarUrl != null) {
                             AsyncImage(
                                 model = userProfile.avatarUrl,
-                                contentDescription = "Profile Avatar",
+                                contentDescription = stringResource(R.string.content_desc_profile_avatar),
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -212,7 +212,7 @@ fun ProfileScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Change avatar",
+                                    contentDescription = stringResource(R.string.content_desc_change_avatar),
                                     tint = White.copy(alpha = 0.8f),
                                     modifier = Modifier.size(28.dp)
                                 )
@@ -243,7 +243,7 @@ fun ProfileScreen(
                         com.mlbb.scrim.ui.components.iOSInput(
                             value = username,
                             onValueChange = { username = it },
-                            placeholder = "Username",
+                            placeholder = stringResource(R.string.username),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp)
@@ -266,7 +266,7 @@ fun ProfileScreen(
                         com.mlbb.scrim.ui.components.iOSInput(
                             value = inGameId,
                             onValueChange = { inGameId = it },
-                            placeholder = "In-Game ID",
+                            placeholder = stringResource(R.string.in_game_id),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp)
@@ -289,7 +289,7 @@ fun ProfileScreen(
                         com.mlbb.scrim.ui.components.iOSInput(
                             value = bio,
                             onValueChange = { bio = it },
-                            placeholder = "Bio (Something about yourself)",
+                            placeholder = stringResource(R.string.bio_placeholder),
                             singleLine = false,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -317,7 +317,7 @@ fun ProfileScreen(
                         com.mlbb.scrim.ui.components.iOSInput(
                             value = role,
                             onValueChange = { role = it },
-                            placeholder = "Main Role (e.g., Jungler, Roamer)",
+                            placeholder = stringResource(R.string.role_placeholder),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp)
@@ -350,7 +350,7 @@ fun ProfileScreen(
                         OutlinedTextField(
                             value = mainHeroesInput,
                             onValueChange = { mainHeroesInput = it },
-                            label = { Text("Top 3 Main Heroes (comma separated)") },
+                            label = { Text(stringResource(R.string.top_3_main_heroes_hint)) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp),
@@ -391,8 +391,8 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 250) {
                     ProfileInfoCard(
                         icon = Icons.Default.Email,
-                        label = "Email",
-                        value = userProfile?.email ?: "Not set"
+                        label = stringResource(R.string.email),
+                        value = userProfile?.email ?: stringResource(R.string.not_set)
                     )
                 }
 
@@ -401,10 +401,10 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 300) {
                     ProfileInfoCard(
                         icon = Icons.Default.CalendarToday,
-                        label = "Member Since",
+                        label = stringResource(R.string.member_since),
                         value = userProfile?.createdAt?.let {
                             java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.US).format(it)
-                        } ?: "Not set"
+                        } ?: stringResource(R.string.not_set)
                     )
                 }
 
@@ -413,8 +413,8 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 350) {
                     ProfileInfoCard(
                         icon = Icons.Default.SportsEsports,
-                        label = "In-Game ID",
-                        value = userProfile?.inGameId ?: "Not set"
+                        label = stringResource(R.string.in_game_id),
+                        value = userProfile?.inGameId ?: stringResource(R.string.not_set)
                     )
                 }
 
@@ -436,19 +436,19 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ProfileStatBox(
-                            label = "Matches",
+                            label = stringResource(R.string.matches),
                             value = (userProfile?.totalMatches ?: 0).toString(),
                             color = GoldPrimary,
                             modifier = Modifier.weight(1f)
                         )
                         ProfileStatBox(
-                            label = "Wins",
+                            label = stringResource(R.string.wins),
                             value = (userProfile?.wins ?: 0).toString(),
                             color = SuccessGreen,
                             modifier = Modifier.weight(1f)
                         )
                         ProfileStatBox(
-                            label = "Losses",
+                            label = stringResource(R.string.losses),
                             value = (userProfile?.losses ?: 0).toString(),
                             color = ErrorRed,
                             modifier = Modifier.weight(1f)
@@ -464,19 +464,19 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ProfileStatBox(
-                            label = "Win Rate",
+                            label = stringResource(R.string.win_rate),
                             value = userProfile?.winRate ?: "0%",
                             color = BluePrimary,
                             modifier = Modifier.weight(1f)
                         )
                         ProfileStatBox(
-                            label = "XP",
+                            label = stringResource(R.string.xp_label),
                             value = (userProfile?.xp ?: 0).toString(),
                             color = Purple,
                             modifier = Modifier.weight(1f)
                         )
                         ProfileStatBox(
-                            label = "PTS",
+                            label = stringResource(R.string.pts_label),
                             value = userProfile?.ptsDisplay ?: "0",
                             color = if ((userProfile?.pts ?: 0) >= 0) SuccessGreen else ErrorRed,
                             modifier = Modifier.weight(1f)
@@ -581,8 +581,8 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 450) {
                     AccountActionCard(
                         icon = Icons.Default.Email,
-                        title = "Change Email",
-                        subtitle = userProfile?.email ?: "Not set",
+                        title = stringResource(R.string.change_email),
+                        subtitle = userProfile?.email ?: stringResource(R.string.not_set),
                         color = BluePrimary,
                         onClick = { showEmailDialog = true }
                     )
@@ -594,8 +594,8 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 500) {
                     AccountActionCard(
                         icon = Icons.Default.Lock,
-                        title = "Change Password",
-                        subtitle = "Update your account password",
+                        title = stringResource(R.string.change_password),
+                        subtitle = stringResource(R.string.update_password_sub),
                         color = GoldPrimary,
                         onClick = { showPasswordDialog = true }
                     )
@@ -607,8 +607,8 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 550) {
                     AccountActionCard(
                         icon = Icons.Default.Logout,
-                        title = "Sign Out",
-                        subtitle = "Log out of your account",
+                        title = stringResource(R.string.sign_out),
+                        subtitle = stringResource(R.string.sign_out_sub),
                         color = WarningOrange,
                         onClick = { showLogoutConfirm = true }
                     )
@@ -655,13 +655,13 @@ fun ProfileScreen(
             containerColor = DarkNavy,
             title = {
                 Text(
-                    text = "Sign Out",
+                    text = stringResource(R.string.sign_out),
                     style = iOSTitle3.copy(color = White, fontWeight = FontWeight.Bold)
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to sign out? You will need to enter your credentials to log back in.",
+                    text = stringResource(R.string.sign_out_confirm_message),
                     style = iOSBody.copy(color = LightGray)
                 )
             },
@@ -672,12 +672,12 @@ fun ProfileScreen(
                         onLogout()
                     }
                 ) {
-                    Text("Sign Out", color = WarningOrange, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sign_out), color = WarningOrange, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirm = false }) {
-                    Text("Cancel", color = LightGray)
+                    Text(stringResource(R.string.cancel_btn), color = LightGray)
                 }
             },
             shape = RoundedCornerShape(20.dp),
@@ -797,6 +797,9 @@ fun ChangeEmailDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
+    val errorEnterNewEmail = stringResource(R.string.error_enter_new_email)
+    val errorEnterValidEmail = stringResource(R.string.error_enter_valid_email)
+    val errorEnterCurrentPassword = stringResource(R.string.error_enter_current_password)
     var newEmail by remember { mutableStateOf("") }
     var currentPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
@@ -831,7 +834,7 @@ fun ChangeEmailDialog(
                         newEmail = it
                         errorMessage = ""
                     },
-                    label = { Text("New Email") },
+                    label = { Text(stringResource(R.string.new_email)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
@@ -855,7 +858,7 @@ fun ChangeEmailDialog(
                         currentPassword = it
                         errorMessage = ""
                     },
-                    label = { Text("Current Password") },
+                    label = { Text(stringResource(R.string.current_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
@@ -887,9 +890,9 @@ fun ChangeEmailDialog(
                 text = stringResource(R.string.update_email),
                 onClick = {
                     when {
-                        newEmail.isBlank() -> errorMessage = "Please enter a new email"
-                        !newEmail.contains("@") -> errorMessage = "Please enter a valid email"
-                        currentPassword.isBlank() -> errorMessage = "Please enter your current password"
+                        newEmail.isBlank() -> errorMessage = errorEnterNewEmail
+                        !newEmail.contains("@") -> errorMessage = errorEnterValidEmail
+                        currentPassword.isBlank() -> errorMessage = errorEnterCurrentPassword
                         else -> onConfirm(newEmail, currentPassword)
                     }
                 },
@@ -900,7 +903,7 @@ fun ChangeEmailDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = LightGray)
+                Text(stringResource(R.string.cancel_btn), color = LightGray)
             }
         }
     )
@@ -911,6 +914,9 @@ fun ChangePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String, String) -> Unit
 ) {
+    val errorPasswordMinLength = stringResource(R.string.error_password_min_length)
+    val errorPasswordsNotMatch = stringResource(R.string.error_passwords_not_match)
+    val errorPasswordMustDiffer = stringResource(R.string.error_password_must_differ)
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -937,7 +943,7 @@ fun ChangePasswordDialog(
                         currentPassword = it
                         errorMessage = ""
                     },
-                    label = { Text("Current Password") },
+                    label = { Text(stringResource(R.string.current_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
@@ -962,7 +968,7 @@ fun ChangePasswordDialog(
                         newPassword = it
                         errorMessage = ""
                     },
-                    label = { Text("New Password") },
+                    label = { Text(stringResource(R.string.new_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
@@ -987,7 +993,7 @@ fun ChangePasswordDialog(
                         confirmPassword = it
                         errorMessage = ""
                     },
-                    label = { Text("Confirm New Password") },
+                    label = { Text(stringResource(R.string.confirm_new_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
@@ -1020,9 +1026,9 @@ fun ChangePasswordDialog(
                 onClick = {
                     when {
                         currentPassword.isBlank() -> errorMessage = "Please enter your current password"
-                        newPassword.length < 6 -> errorMessage = "New password must be at least 6 characters"
-                        newPassword != confirmPassword -> errorMessage = "New passwords do not match"
-                        currentPassword == newPassword -> errorMessage = "New password must be different"
+                        newPassword.length < 6 -> errorMessage = errorPasswordMinLength
+                        newPassword != confirmPassword -> errorMessage = errorPasswordsNotMatch
+                        currentPassword == newPassword -> errorMessage = errorPasswordMustDiffer
                         else -> onConfirm(currentPassword, newPassword, confirmPassword)
                     }
                 },
@@ -1033,7 +1039,7 @@ fun ChangePasswordDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = LightGray)
+                Text(stringResource(R.string.cancel_btn), color = LightGray)
             }
         }
     )

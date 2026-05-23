@@ -38,6 +38,8 @@ fun JoinTeamScreen(
     var errorMessage by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
 
+    val enterValidCodeError = stringResource(R.string.enter_valid_invite_code)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -156,7 +158,7 @@ fun JoinTeamScreen(
                                         inviteCode = it.uppercase()
                                         errorMessage = ""
                                     },
-                                    label = { Text("Invite Code") },
+                                    label = { Text(stringResource(R.string.invite_code)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = GoldPrimary,
@@ -170,7 +172,7 @@ fun JoinTeamScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                                     singleLine = true,
-                                    placeholder = { Text("e.g. MLBB-ELI7A3B2", color = MidGray) }
+                                    placeholder = { Text(stringResource(R.string.invite_code_placeholder), color = MidGray) }
                                 )
 
                                 AnimatedVisibility(
@@ -189,10 +191,10 @@ fun JoinTeamScreen(
                                 Spacer(modifier = Modifier.height(20.dp))
 
                                 GradientButton(
-                                    text = if (isLoading) "Joining..." else "Join Team",
+                                    text = if (isLoading) stringResource(R.string.joining) else stringResource(R.string.join_team_btn),
                                     onClick = {
                                         if (inviteCode.isBlank() || inviteCode.length < 6) {
-                                            errorMessage = "Please enter a valid invite code"
+                                            errorMessage = enterValidCodeError
                                             return@GradientButton
                                         }
                                         isLoading = true

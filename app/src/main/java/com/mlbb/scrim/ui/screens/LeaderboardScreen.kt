@@ -82,7 +82,7 @@ fun LeaderboardScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = LightGray,
                             modifier = Modifier.size(22.dp)
                         )
@@ -110,7 +110,7 @@ fun LeaderboardScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.ErrorOutline,
-                                    contentDescription = "Error",
+                                    contentDescription = stringResource(R.string.error),
                                     tint = ErrorRed,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -127,7 +127,7 @@ fun LeaderboardScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
+                                    contentDescription = stringResource(R.string.dismiss),
                                     tint = White,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -183,7 +183,7 @@ fun LeaderboardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Complete scrims to earn points and climb the ranks",
+                                    text = stringResource(R.string.leaderboard_empty_hint),
                                     style = iOSFootnote.copy(color = MidGray),
                                     textAlign = TextAlign.Center
                                 )

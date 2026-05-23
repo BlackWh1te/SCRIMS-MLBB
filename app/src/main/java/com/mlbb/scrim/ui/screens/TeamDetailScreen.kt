@@ -163,7 +163,7 @@ fun TeamDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                                        text = team.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.team_initial_fallback),
                                         fontSize = 40.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = White
@@ -190,7 +190,7 @@ fun TeamDetailScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Person,
-                                        contentDescription = "Players",
+                                        contentDescription = stringResource(R.string.content_desc_players),
                                         tint = LightGray,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -233,28 +233,28 @@ fun TeamDetailScreen(
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.SportsEsports,
-                                label = "Scrims",
+                                label = stringResource(R.string.scrims),
                                 value = totalScrims.toString(),
                                 tint = BluePrimary
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.EmojiEvents,
-                                label = "Wins",
+                                label = stringResource(R.string.wins),
                                 value = wins.toString(),
                                 tint = SuccessGreen
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.TrendingUp,
-                                label = "Win Rate",
+                                label = stringResource(R.string.win_rate),
                                 value = winRate,
                                 tint = GoldPrimary
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.Star,
-                                label = "Avg Rating",
+                                label = stringResource(R.string.avg_rating),
                                 value = avgRating,
                                 tint = Purple
                             )
@@ -274,7 +274,7 @@ fun TeamDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "This Week",
+                                    text = stringResource(R.string.this_week),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -287,9 +287,9 @@ fun TeamDetailScreen(
                                     horizontalArrangement = Arrangement.SpaceEvenly,
                                     verticalAlignment = Alignment.Bottom
                                 ) {
-                                    MiniBar(label = "Wins", value = weeklyWins, color = SuccessGreen)
-                                    MiniBar(label = "Losses", value = weeklyLosses, color = ErrorRed)
-                                    MiniBar(label = "Points", value = totalPoints.coerceAtMost(100), color = GoldPrimary)
+                                    MiniBar(label = stringResource(R.string.wins), value = weeklyWins, color = SuccessGreen)
+                                    MiniBar(label = stringResource(R.string.losses), value = weeklyLosses, color = ErrorRed)
+                                    MiniBar(label = stringResource(R.string.points), value = totalPoints.coerceAtMost(100), color = GoldPrimary)
                                 }
                             }
                         }
@@ -302,7 +302,7 @@ fun TeamDetailScreen(
                     item {
                         AnimatedEntrance(delayMillis = 200) {
                             Text(
-                                text = "Ratings & Feedback",
+                                text = stringResource(R.string.ratings_and_feedback),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -420,7 +420,7 @@ fun TeamDetailScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
-                                        contentDescription = "Add Player",
+                                        contentDescription = stringResource(R.string.content_desc_add_player),
                                         tint = BluePrimary,
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -464,7 +464,7 @@ fun TeamDetailScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Share,
-                                        contentDescription = "Invite by Code",
+                                        contentDescription = stringResource(R.string.content_desc_invite_code),
                                         tint = GoldPrimary,
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -490,7 +490,7 @@ fun TeamDetailScreen(
 
                         AnimatedEntrance(delayMillis = 380) {
                             Text(
-                                text = "Join Requests (${applications.size})",
+                                text = stringResource(R.string.join_requests_count, applications.size),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -540,7 +540,7 @@ fun TeamDetailScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = app.applicantName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                    text = app.applicantName.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.unknown_applicant_initial),
                                                     fontSize = 18.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = GoldPrimary
@@ -589,7 +589,7 @@ fun TeamDetailScreen(
                                                 ),
                                                 shape = RoundedCornerShape(10.dp)
                                             ) {
-                                                Text("Decline", fontWeight = FontWeight.SemiBold)
+                                                Text(stringResource(R.string.decline), fontWeight = FontWeight.SemiBold)
                                             }
                                             Button(
                                                 onClick = { onAcceptApplication?.invoke(app.id) },
@@ -599,7 +599,7 @@ fun TeamDetailScreen(
                                                 ),
                                                 shape = RoundedCornerShape(10.dp)
                                             ) {
-                                                Text("Accept", fontWeight = FontWeight.SemiBold)
+                                                Text(stringResource(R.string.accept), fontWeight = FontWeight.SemiBold)
                                             }
                                         }
                                     }
@@ -642,7 +642,7 @@ fun TeamDetailScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = "Disband",
+                                            contentDescription = stringResource(R.string.content_desc_disband),
                                             tint = ErrorRed,
                                             modifier = Modifier.size(22.dp)
                                         )
@@ -682,7 +682,7 @@ fun TeamDetailScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ExitToApp,
-                                            contentDescription = "Leave",
+                                            contentDescription = stringResource(R.string.content_desc_leave),
                                             tint = WarningOrange,
                                             modifier = Modifier.size(22.dp)
                                         )
@@ -731,12 +731,12 @@ fun TeamDetailScreen(
                         showLeaveDialog = false
                     }
                 ) {
-                    Text("Leave", color = ErrorRed)
+                    Text(stringResource(R.string.leave), color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLeaveDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text(stringResource(R.string.cancel), color = MidGray)
                 }
             }
         )
@@ -768,12 +768,12 @@ fun TeamDetailScreen(
                         showDisbandDialog = false
                     }
                 ) {
-                    Text("Disband", color = ErrorRed)
+                    Text(stringResource(R.string.disband), color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDisbandDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text(stringResource(R.string.cancel), color = MidGray)
                 }
             }
         )
@@ -807,12 +807,12 @@ fun TeamDetailScreen(
                             playerToRemove = null
                         }
                     ) {
-                        Text("Remove", color = ErrorRed)
+                        Text(stringResource(R.string.remove), color = ErrorRed)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showRemoveDialog = false }) {
-                        Text("Cancel", color = MidGray)
+                        Text(stringResource(R.string.cancel), color = MidGray)
                     }
                 }
             )
@@ -890,7 +890,7 @@ fun PlayerCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
+                    text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.player_initial_fallback),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = BluePrimary
@@ -948,7 +948,7 @@ fun PlayerCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Change role",
+                        contentDescription = stringResource(R.string.content_desc_change_role),
                         tint = MidGray,
                         modifier = Modifier.size(18.dp)
                     )
@@ -1026,7 +1026,7 @@ fun PlayerCard(
             },
             confirmButton = {
                 TextButton(onClick = { showRoleDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text(stringResource(R.string.cancel), color = MidGray)
                 }
             }
         )

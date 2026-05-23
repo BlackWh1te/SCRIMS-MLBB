@@ -107,7 +107,7 @@ fun NotificationScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.ErrorOutline,
-                                    contentDescription = "Error",
+                                    contentDescription = stringResource(R.string.error),
                                     tint = ErrorRed,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -124,7 +124,7 @@ fun NotificationScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
+                                    contentDescription = stringResource(R.string.dismiss),
                                     tint = White,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -167,7 +167,7 @@ fun NotificationScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "You'll receive notifications when someone invites you to a team or scrim, or when match results are ready",
+                                text = stringResource(R.string.notifications_hint),
                                 style = iOSFootnote.copy(color = MidGray),
                                 textAlign = TextAlign.Center
                             )
@@ -190,7 +190,7 @@ fun NotificationScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete",
+                                                    contentDescription = stringResource(R.string.delete),
                                                     tint = ErrorRed,
                                                     modifier = Modifier.size(24.dp)
                                                 )

@@ -110,7 +110,7 @@ fun ScrimListScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.FilterList,
-                                    contentDescription = "Filters",
+                                    contentDescription = stringResource(R.string.filters),
                                     tint = if (showFilters) GoldPrimary else LightGray,
                                     modifier = Modifier.size(22.dp)
                                 )
@@ -131,13 +131,13 @@ fun ScrimListScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             PremiumChip(
-                                text = "Open",
+                                text = stringResource(R.string.open),
                                 icon = Icons.Default.CheckCircle,
                                 color = SuccessGreen,
                                 modifier = Modifier.weight(1f)
                             )
                             PremiumChip(
-                                text = "EU/NA",
+                                text = stringResource(R.string.region_eu_na),
                                 icon = Icons.Default.Public,
                                 color = GoldPrimary,
                                 modifier = Modifier.weight(1f)
@@ -167,7 +167,7 @@ fun ScrimListScreen(
                     ) {
                         // Search Bar
                         DebouncedSearchBar(
-                            placeholder = "Search teams...",
+                            placeholder = stringResource(R.string.search_teams),
                             onSearch = {
                                 searchQuery = it
                                 onSearch(searchQuery, selectedGameMode, selectedRegion, selectedSkillLevel, null)
@@ -286,7 +286,7 @@ fun ScrimListScreen(
                                 },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
-                                Text("Clear Filters", color = iOSRed, fontSize = 13.sp)
+                                Text(stringResource(R.string.clear_filters), color = iOSRed, fontSize = 13.sp)
                             }
                         }
                     }
@@ -306,8 +306,8 @@ fun ScrimListScreen(
                     scrims.isEmpty() -> {
                         EmptyState(
                             icon = Icons.Default.SportsEsports,
-                            title = "No scrims found",
-                            subtitle = "Be the first to post a scrim",
+                            title = stringResource(R.string.no_scrims_found),
+                            subtitle = stringResource(R.string.be_first_to_post_scrim),
                             modifier = Modifier.fillMaxSize(),
                             action = {}
                         )
@@ -348,7 +348,7 @@ fun ScrimListScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Post Scrim",
+                    contentDescription = stringResource(R.string.post_scrim),
                     modifier = Modifier.size(28.dp)
                 )
             }

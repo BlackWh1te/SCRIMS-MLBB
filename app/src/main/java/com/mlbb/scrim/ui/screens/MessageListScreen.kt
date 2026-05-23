@@ -125,7 +125,7 @@ fun MessageListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Refresh, "Refresh",
+                                Icons.Default.Refresh, stringResource(R.string.refresh),
                                 tint     = TextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -154,8 +154,8 @@ fun MessageListScreen(
                     conversations.isEmpty() -> {
                         EmptyState(
                             icon     = Icons.Default.ChatBubble,
-                            title    = "No messages yet",
-                            subtitle = "When teams apply to your scrims or you apply to theirs, conversations will appear here."
+                            title    = stringResource(R.string.no_messages_yet),
+                            subtitle = stringResource(R.string.no_messages_subtitle)
                         )
                     }
 

@@ -265,9 +265,9 @@
     <string name="complete_scrim_history">Complétez un scrim pour voir votre historique de matchs ici.</string>
     <string name="winner_result">Gagnant: %s</string>
     <string name="result_disputed_waiting">Résultat contesté - en attente de résolution</string>
-    <string name="players_count">%d/%d joueurs</string>
+    <string name="players_count">%1/%2 joueurs</string>
     <string name="scrim_label">Scrim %s</string>
-    <string name="players_count_label">%d/%d joueurs</string>
+    <string name="players_count_label">%1/%2 joueurs</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

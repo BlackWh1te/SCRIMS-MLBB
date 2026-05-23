@@ -51,6 +51,7 @@ fun SignupScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isCaptchaVerified by remember { mutableStateOf(false) }
+    val captchaError = stringResource(R.string.captcha_verify_human)
 
     val authState by viewModel.authState.collectAsState()
 
@@ -119,7 +120,7 @@ fun SignupScreen(
             PremiumFadeIn(delayMillis = 0) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo),
-                    contentDescription = "App Logo",
+                    contentDescription = stringResource(R.string.content_desc_app_logo),
                     modifier = Modifier.size(90.dp)
                 )
             }
@@ -285,7 +286,7 @@ fun SignupScreen(
                                         password != confirmPassword -> errorMessage = passwordsNotMatch
                                         password.length < 6 -> errorMessage = passwordMinLength
                                         !email.contains("@") -> errorMessage = invalidEmail
-                                        !isCaptchaVerified -> errorMessage = "Please slide to verify you are human"
+                                        !isCaptchaVerified -> errorMessage = captchaError
                                         else -> viewModel.signUp(email, password, username, inGameId)
                                     }
                                 },

@@ -64,6 +64,7 @@ data class ProfileDto(
     @SerializedName("is_admin") val isAdmin: Boolean = false,
     @SerializedName("is_banned") val isBanned: Boolean = false,
     @SerializedName("email_verified") val emailVerified: Boolean = false,
+    @SerializedName("avatar_url") val avatarUrl: String? = null,
     @SerializedName("created_at") val createdAt: String = "",
     @SerializedName("role") val role: String? = null,
     @SerializedName("bio") val bio: String? = null,

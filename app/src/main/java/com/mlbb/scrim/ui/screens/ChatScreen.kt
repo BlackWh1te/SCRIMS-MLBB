@@ -36,7 +36,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import coil.compose.SubcomposeAsyncImage
+import com.mlbb.scrim.R
 import com.mlbb.scrim.data.model.Conversation
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
@@ -184,11 +186,11 @@ fun ChatScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     TypingDots()
                                     Spacer(Modifier.width(6.dp))
-                                    Text("typing…", fontSize = 12.sp, color = GoldPrimary)
+                                    Text(stringResource(R.string.typing_status), fontSize = 12.sp, color = GoldPrimary)
                                 }
                             } else {
                                 Text(
-                                    text     = if (otherTeam.isNotBlank()) otherTeam else "Online",
+                                    text     = if (otherTeam.isNotBlank()) otherTeam else stringResource(R.string.online),
                                     fontSize = 12.sp,
                                     color    = SuccessGreen,
                                     maxLines = 1,
@@ -335,7 +337,7 @@ fun ChatScreen(
                             value         = messageText,
                             onValueChange = { messageText = it },
                             placeholder   = {
-                                Text("Message…", color = TextTertiary, fontSize = 15.sp)
+                                Text(stringResource(R.string.message_placeholder), color = TextTertiary, fontSize = 15.sp)
                             },
                             modifier      = Modifier.weight(1f),
                             colors        = OutlinedTextFieldDefaults.colors(
@@ -535,7 +537,7 @@ private fun MessageBubble(
 private fun ImageContent(url: String) {
     SubcomposeAsyncImage(
         model            = url,
-        contentDescription = "Shared image",
+        contentDescription = stringResource(R.string.shared_image),
         modifier         = Modifier
             .widthIn(max = 230.dp)
             .heightIn(max = 280.dp)
@@ -590,7 +592,7 @@ private fun ApplyContent(content: String, onView: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Scrim Application", fontWeight = FontWeight.Bold, color = GoldPrimary, fontSize = 13.sp)
+            Text(stringResource(R.string.scrim_application), fontWeight = FontWeight.Bold, color = GoldPrimary, fontSize = 13.sp)
         }
         Spacer(Modifier.height(6.dp))
         Text(content, color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
@@ -605,7 +607,7 @@ private fun ApplyContent(content: String, onView: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "Review Application",
+                stringResource(R.string.review_application),
                 color      = White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize   = 13.sp
@@ -675,7 +677,7 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
                 Icon(Icons.Default.Lock, null, tint = WarningOrange, modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Chat opens in", fontSize = 13.sp, color = TextSecondary)
+            Text(stringResource(R.string.chat_opens_in), fontSize = 13.sp, color = TextSecondary)
             Text(
                 String.format("%02d:%02d:%02d", hours, minutes, seconds),
                 fontSize   = 34.sp,
@@ -706,7 +708,7 @@ private fun EmptyChatState(otherTeamName: String) {
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "No messages yet",
+            text = stringResource(R.string.no_messages_yet),
             style = MaterialTheme.typography.titleMedium.copy(
                 color = White,
                 fontWeight = FontWeight.SemiBold
@@ -715,9 +717,9 @@ private fun EmptyChatState(otherTeamName: String) {
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = if (otherTeamName.isNotBlank()) {
-                "Start the conversation with $otherTeamName"
+                stringResource(R.string.start_conversation_with, otherTeamName)
             } else {
-                "Start the conversation with the other team"
+                stringResource(R.string.start_conversation)
             },
             style = MaterialTheme.typography.bodyMedium.copy(
                 color = MidGray

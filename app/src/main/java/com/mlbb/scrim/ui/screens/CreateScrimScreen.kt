@@ -56,7 +56,7 @@ fun CreateScrimScreen(
     // Team selection state
     var selectedTeamIndex by remember { mutableIntStateOf(0) }
     val selectedTeam = teams.getOrElse(selectedTeamIndex) { teams.firstOrNull() }
-    val teamName = selectedTeam?.name ?: "My Team"
+    val teamName = selectedTeam?.name ?: stringResource(R.string.my_team_default)
     val teamId = selectedTeam?.id ?: ""
     val currentPlayerCount = selectedTeam?.currentPlayerCount ?: 0
     val meetsMinPlayers = selectedTeam?.meetsMinPlayers ?: false
@@ -205,7 +205,7 @@ fun CreateScrimScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Icon(
                                             Icons.Default.SwapHoriz,
-                                            contentDescription = "Switch team",
+                                            contentDescription = stringResource(R.string.content_desc_switch_team),
                                             tint = BluePrimary,
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -237,7 +237,7 @@ fun CreateScrimScreen(
 
                 // Game Mode Selection
                 AnimatedEntrance(delayMillis = 150) {
-                    SelectionCard(title = "Game Mode") {
+                    SelectionCard(title = stringResource(R.string.game_mode)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -265,7 +265,7 @@ fun CreateScrimScreen(
 
                 // Region Selection
                 AnimatedEntrance(delayMillis = 200) {
-                    SelectionCard(title = "Region") {
+                    SelectionCard(title = stringResource(R.string.region)) {
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -293,7 +293,7 @@ fun CreateScrimScreen(
 
                 // Skill Level Selection
                 AnimatedEntrance(delayMillis = 250) {
-                    SelectionCard(title = "Skill Level") {
+                    SelectionCard(title = stringResource(R.string.skill_level)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -321,7 +321,7 @@ fun CreateScrimScreen(
 
                 // Best Of Selection
                 AnimatedEntrance(delayMillis = 275) {
-                    SelectionCard(title = "Number of Games") {
+                    SelectionCard(title = stringResource(R.string.number_of_games)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -330,7 +330,7 @@ fun CreateScrimScreen(
                                 FilterChip(
                                     selected = selectedBestOf == bestOf,
                                     onClick = { selectedBestOf = bestOf },
-                                    label = { Text("BO${bestOf.games}", fontSize = 13.sp) },
+                                    label = { Text(stringResource(R.string.bo_format, bestOf.games), fontSize = 13.sp) },
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
@@ -349,7 +349,7 @@ fun CreateScrimScreen(
 
                 // Scheduled Date & Time
                 AnimatedEntrance(delayMillis = 300) {
-                    SelectionCard(title = "Date & Time") {
+                    SelectionCard(title = stringResource(R.string.date_and_time)) {
                         Column {
                             // Date Row
                             Row(
@@ -644,11 +644,11 @@ fun CreateScrimScreen(
 
                 // Description
                 AnimatedEntrance(delayMillis = 350) {
-                    SelectionCard(title = "Description (Optional)") {
+                    SelectionCard(title = stringResource(R.string.description_optional)) {
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
-                            placeholder = { Text("Add details about your scrim...", color = MidGray) },
+                            placeholder = { Text(stringResource(R.string.add_scrim_details_hint), color = MidGray) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GoldPrimary,
@@ -747,7 +747,7 @@ fun CreateScrimScreen(
                     if (!meetsMinPlayers) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Your team needs at least 5 players to post scrims",
+                            text = stringResource(R.string.team_needs_5_players_to_post_scrims),
                             color = WarningOrange,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
@@ -769,7 +769,7 @@ fun CreateScrimScreen(
             onDismissRequest = { showTeamPicker = false },
             containerColor = DarkNavy,
             title = {
-                Text("Select Team", color = White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.select_team), color = White, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
@@ -840,7 +840,7 @@ fun CreateScrimScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showTeamPicker = false }) {
-                    Text("Cancel", color = LightGray)
+                    Text(stringResource(R.string.cancel), color = LightGray)
                 }
             }
         )
@@ -855,7 +855,7 @@ fun CreateScrimScreen(
                 Icon(Icons.Default.Warning, null, tint = WarningOrange, modifier = Modifier.size(32.dp))
             },
             title = {
-                Text("Not Enough Players", color = White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.not_enough_players), color = White, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
@@ -866,7 +866,7 @@ fun CreateScrimScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "You need at least 5 players in your team before you can post scrims. Add more players to your team first.",
+                        stringResource(R.string.need_5_players_to_post),
                         color = MidGray,
                         fontSize = 13.sp
                     )
@@ -875,7 +875,7 @@ fun CreateScrimScreen(
                     if (eligibleTeams.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            "Switch to a team with 5+ players:",
+                            stringResource(R.string.switch_to_team_with_5_plus),
                             color = BluePrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
@@ -900,7 +900,7 @@ fun CreateScrimScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(team.name, color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Text("${team.currentPlayerCount} players", color = SuccessGreen, fontSize = 12.sp)
+                                    Text(stringResource(R.string.players_count_short, team.currentPlayerCount), color = SuccessGreen, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -909,7 +909,7 @@ fun CreateScrimScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showMinPlayerDialog = false }) {
-                    Text("OK", color = GoldPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ok), color = GoldPrimary, fontWeight = FontWeight.Bold)
                 }
             }
         )

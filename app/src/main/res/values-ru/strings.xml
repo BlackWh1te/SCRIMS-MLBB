@@ -264,9 +264,9 @@
     <string name="complete_scrim_history">Завершите скрам, чтобы увидеть историю матчей здесь.</string>
     <string name="winner_result">Победитель: %s</string>
     <string name="result_disputed_waiting">Результат оспорен - ожидание решения</string>
-    <string name="players_count">%d/%d игроков</string>
+    <string name="players_count">%1/%2 игроков</string>
     <string name="scrim_label">Скрам %s</string>
-    <string name="players_count_label">%d/%d игроков</string>
+    <string name="players_count_label">%1/%2 игроков</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>

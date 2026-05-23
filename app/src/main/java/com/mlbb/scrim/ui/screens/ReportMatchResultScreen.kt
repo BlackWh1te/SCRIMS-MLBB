@@ -234,8 +234,8 @@ fun ReportMatchResultScreen(
                                     OutlinedTextField(
                                         value = notes,
                                         onValueChange = { notes = it },
-                                        label = { Text("Optional notes") },
-                                        placeholder = { Text("e.g., We won 2-0, clean game") },
+                                        label = { Text(stringResource(R.string.optional_notes)) },
+                                        placeholder = { Text(stringResource(R.string.notes_placeholder)) },
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = GoldPrimary,

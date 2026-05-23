@@ -35,7 +35,14 @@
       "Exec(python3)",
       "Exec(py)",
       "Exec(ls)",
-      "Exec(sed)"
+      "Exec(sed)",
+      "Exec(graphx)",
+      "Exec(git ls-files)",
+      "Exec(git diff)",
+      "Exec(dir)",
+      "Exec(rg)",
+      "Exec(cp)",
+      "Exec(read f)"
     ]
   }
 }

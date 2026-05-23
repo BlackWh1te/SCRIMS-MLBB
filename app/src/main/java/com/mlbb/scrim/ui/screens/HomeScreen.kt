@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
+import com.mlbb.scrim.R
+import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.PremiumGlassCard
@@ -80,10 +82,10 @@ fun HomeScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                         val greeting = when {
-                            hour < 6  -> "Late night,"
-                            hour < 12 -> "Good morning,"
-                            hour < 17 -> "Good afternoon,"
-                            else      -> "Good evening,"
+                            hour < 6  -> stringResource(R.string.greeting_late_night)
+                            hour < 12 -> stringResource(R.string.greeting_good_morning)
+                            hour < 17 -> stringResource(R.string.greeting_good_afternoon)
+                            else      -> stringResource(R.string.greeting_good_evening)
                         }
                         Text(
                             text  = greeting,
@@ -94,7 +96,7 @@ fun HomeScreen(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text  = userProfile?.username ?: "Player",
+                            text  = userProfile?.username ?: stringResource(R.string.player_default),
                             style = iOSTitle1.copy(color = TextPrimary)
                         )
                     }
@@ -112,7 +114,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector        = Icons.Default.Notifications,
-                                contentDescription = "Notifications",
+                                contentDescription = stringResource(R.string.notifications),
                                 tint               = if (notificationCount > 0) GoldPrimary else TextSecondary,
                                 modifier           = Modifier.size(22.dp)
                             )
@@ -146,21 +148,21 @@ fun HomeScreen(
                 ) {
                     HomeStatCard(
                         icon     = Icons.Default.SportsEsports,
-                        label    = "Matches",
+                        label    = stringResource(R.string.matches),
                         value    = (userProfile?.totalMatches ?: 0).toString(),
                         gradient = BlueGradient,
                         modifier = Modifier.weight(1f)
                     )
                     HomeStatCard(
                         icon     = Icons.Default.EmojiEvents,
-                        label    = "Wins",
+                        label    = stringResource(R.string.wins),
                         value    = (userProfile?.wins ?: 0).toString(),
                         gradient = SuccessGradient,
                         modifier = Modifier.weight(1f)
                     )
                     HomeStatCard(
                         icon     = Icons.Default.TrendingUp,
-                        label    = "Win Rate",
+                        label    = stringResource(R.string.win_rate),
                         value    = userProfile?.winRate ?: "—",
                         gradient = GoldGradient,
                         modifier = Modifier.weight(1f)
@@ -200,13 +202,13 @@ fun HomeScreen(
                             }
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "Upcoming Scrims",
+                                stringResource(R.string.upcoming_scrims),
                                 style = iOSTitle3.copy(color = TextPrimary)
                             )
                         }
                         TextButton(onClick = onNavigateToSchedule) {
                             Text(
-                                "See all",
+                                stringResource(R.string.see_all),
                                 style      = iOSCallout.copy(
                                     color      = BluePrimary,
                                     fontWeight = FontWeight.SemiBold
@@ -240,7 +242,7 @@ fun HomeScreen(
             // ── Quick Actions Label ─────────────────────────────
             AnimatedEntrance(delayMillis = 200) {
                 Text(
-                    "Quick Actions",
+                    stringResource(R.string.quick_actions),
                     style    = iOSCaption1.copy(
                         color         = TextSecondary,
                         fontWeight    = FontWeight.SemiBold,
@@ -284,15 +286,15 @@ fun HomeScreen(
                                     .background(White.copy(alpha = 0.20f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Add, "Post Scrim", tint = White, modifier = Modifier.size(26.dp))
+                                Icon(Icons.Default.Add, stringResource(R.string.post_scrim), tint = White, modifier = Modifier.size(26.dp))
                             }
                             Column {
                                 Text(
-                                    "Post a Scrim",
+                                    stringResource(R.string.post_scrim),
                                     style = iOSTitle3.copy(color = White)
                                 )
                                 Text(
-                                    "List your team for a match",
+                                    stringResource(R.string.post_scrim_sub),
                                     style = iOSCaption1.copy(color = White.copy(alpha = 0.75f))
                                 )
                             }
@@ -325,16 +327,16 @@ fun HomeScreen(
                 ) {
                     HomeActionCard(
                         icon     = Icons.Default.EmojiEvents,
-                        title    = "Leaderboard",
-                        subtitle = "Top players",
+                        title    = stringResource(R.string.leaderboard),
+                        subtitle = stringResource(R.string.leaderboard_sub),
                         gradient = GoldGradient,
                         onClick  = onNavigateToLeaderboard,
                         modifier = Modifier.weight(1f)
                     )
                     HomeActionCard(
                         icon     = Icons.Default.History,
-                        title    = "History",
-                        subtitle = "Past matches",
+                        title    = stringResource(R.string.match_history),
+                        subtitle = stringResource(R.string.match_history_sub),
                         gradient = SuccessGradient,
                         onClick  = onNavigateToMatchHistory,
                         modifier = Modifier.weight(1f)
@@ -353,16 +355,16 @@ fun HomeScreen(
                 ) {
                     HomeActionCard(
                         icon     = Icons.Default.CalendarMonth,
-                        title    = "Schedule",
-                        subtitle = "Upcoming",
+                        title    = stringResource(R.string.schedule),
+                        subtitle = stringResource(R.string.schedule_sub),
                         gradient = BlueGradient,
                         onClick  = onNavigateToSchedule,
                         modifier = Modifier.weight(1f)
                     )
                     HomeActionCard(
                         icon     = Icons.Default.GroupAdd,
-                        title    = "Create Team",
-                        subtitle = "Build squad",
+                        title    = stringResource(R.string.create_team),
+                        subtitle = stringResource(R.string.create_team_sub),
                         gradient = listOf(Color(0xFFFF9800), Color(0xFFFF6D00)),
                         onClick  = onNavigateToCreateTeam,
                         modifier = Modifier.weight(1f)
