@@ -192,15 +192,18 @@ class SupabaseNotificationRepository(
      * Parse a Realtime INSERT record (JsonObject) into a NotificationDto.
      */
     private fun parseRealtimeRecordToNotificationDto(record: com.google.gson.JsonObject): NotificationDto {
+        fun safeStr(key: String): String? =
+            record.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
         return NotificationDto(
-            id = record.get("id")?.asString ?: "",
-            userId = record.get("user_id")?.asString ?: "",
-            type = record.get("type")?.asString ?: "SYSTEM",
-            title = record.get("title")?.asString ?: "",
-            message = record.get("message")?.asString ?: "",
-            actionId = record.get("action_id")?.asString,
-            isRead = record.get("is_read")?.asBoolean ?: false,
-            createdAt = record.get("created_at")?.asString ?: ""
+            id        = safeStr("id")         ?: "",
+            userId    = safeStr("user_id")    ?: "",
+            type      = safeStr("type")       ?: "SYSTEM",
+            title     = safeStr("title")      ?: "",
+            message   = safeStr("message"),              // canonical; may be null on old rows
+            body      = safeStr("body"),                 // legacy fallback
+            actionId  = safeStr("action_id"),
+            isRead    = record.get("is_read")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
+            createdAt = safeStr("created_at") ?: ""
         )
     }
 
@@ -209,9 +212,9 @@ class SupabaseNotificationRepository(
     private fun mapDtoToModel(dto: NotificationDto): Notification {
         return Notification(
             id = dto.id,
-            type = try { NotificationType.valueOf(dto.type) } catch (e: Exception) { NotificationType.SYSTEM },
+            type = try { NotificationType.valueOf(dto.type) } catch (_: Exception) { NotificationType.SYSTEM },
             title = dto.title,
-            message = dto.message,
+            message = dto.resolvedMessage,   // coalesces message → body → ""
             timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
             actionId = dto.actionId ?: ""

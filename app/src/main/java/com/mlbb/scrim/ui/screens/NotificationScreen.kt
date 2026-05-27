@@ -225,13 +225,65 @@ private fun NotificationRow(
     onDismiss: () -> Unit
 ) {
     val (icon, iconColor, bgColor) = when (notification.type) {
-        NotificationType.SCRIM_INVITE -> Triple(Icons.Default.SportsEsports, BluePrimary, BluePrimary.copy(alpha = 0.12f))
-        NotificationType.MATCH_RESULT -> Triple(Icons.Default.EmojiEvents, GoldPrimary, GoldPrimary.copy(alpha = 0.12f))
-        NotificationType.TEAM_INVITE -> Triple(Icons.Default.Group, SuccessGreen, SuccessGreen.copy(alpha = 0.12f))
-        NotificationType.MESSAGE -> Triple(Icons.Default.ChatBubble, Purple, Purple.copy(alpha = 0.12f))
-        NotificationType.SYSTEM -> Triple(Icons.Default.Info, LightGray, White.copy(alpha = 0.08f))
-        NotificationType.XP_GAIN -> Triple(Icons.Default.TrendingUp, WarningOrange, WarningOrange.copy(alpha = 0.12f))
-        NotificationType.TIER_UP -> Triple(Icons.Default.Star, Grandmaster, Grandmaster.copy(alpha = 0.12f))
+        // ── Scrim ────────────────────────────────────────────────────────
+        NotificationType.SCRIM_INVITE ->
+            Triple(Icons.Default.SportsEsports, BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+        NotificationType.SCRIM_APPLICATION_NEW ->
+            Triple(Icons.Default.SportsEsports, BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+        NotificationType.SCRIM_APPLICATION_APPROVED ->
+            Triple(Icons.Default.CheckCircle,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
+        NotificationType.SCRIM_APPLICATION_REJECTED ->
+            Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        // ── Match ────────────────────────────────────────────────────────
+        NotificationType.MATCH_RESULT ->
+            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+        // ── Team ─────────────────────────────────────────────────────────
+        NotificationType.TEAM_INVITE ->
+            Triple(Icons.Default.Group,         SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
+        // ── Message ──────────────────────────────────────────────────────
+        NotificationType.MESSAGE ->
+            Triple(Icons.Default.ChatBubble,    Purple,        Purple.copy(alpha = 0.12f))
+        // ── System / Progress ────────────────────────────────────────────
+        NotificationType.SYSTEM ->
+            Triple(Icons.Default.Info,          LightGray,     White.copy(alpha = 0.08f))
+        NotificationType.XP_GAIN ->
+            Triple(Icons.Default.TrendingUp,    WarningOrange, WarningOrange.copy(alpha = 0.12f))
+        NotificationType.TIER_UP ->
+            Triple(Icons.Default.Star,          Grandmaster,   Grandmaster.copy(alpha = 0.12f))
+        // ── Tournament (DB-generated) ────────────────────────────────────
+        NotificationType.TOURNAMENT_APPLICATION_NEW ->
+            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_APPLICATION_ACCEPTED ->
+            Triple(Icons.Default.CheckCircle,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_APPLICATION_REJECTED ->
+            Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_APPLICATION_BLOCKED ->
+            Triple(Icons.Default.Block,         ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_CANCELLED ->
+            Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_COMPLETED ->
+            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_ROUND_ADVANCED ->
+            Triple(Icons.Default.PlayArrow,     BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_TEAM_DISQUALIFIED ->
+            Triple(Icons.Default.PersonOff,     ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_ROSTER_LOCKED ->
+            Triple(Icons.Default.Lock,          Purple,        Purple.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_MATCH_RESULT ->
+            Triple(Icons.Default.EmojiEvents,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
+        // ── Tournament (legacy app-generated names) ──────────────────────
+        NotificationType.TOURNAMENT_APPLICATION_STATUS ->
+            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_MATCH_SCHEDULED ->
+            Triple(Icons.Default.Schedule,      BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_ROUND_START ->
+            Triple(Icons.Default.PlayArrow,     ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_HOST_REQUEST_STATUS ->
+            Triple(Icons.Default.Verified,      Purple,        Purple.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_HOST_APPROVED ->
+            Triple(Icons.Default.Verified,      SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
+        NotificationType.TOURNAMENT_HOST_REJECTED ->
+            Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
     }
 
     Card(

@@ -1,23 +1,41 @@
 package com.mlbb.scrim.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.Notification
+import com.mlbb.scrim.data.model.NotificationType
+import com.mlbb.scrim.data.model.isMatchType
+import com.mlbb.scrim.data.model.isMessageType
+import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.data.repository.SupabaseNotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Manages in-app notifications with settings-aware badge count.
+ *
+ * unreadCount is filtered by:
+ *   notificationsEnabled = false → always 0 (master off)
+ *   matchNotifications   = false → exclude match/scrim/tournament types
+ *   messageNotifications = false → exclude MESSAGE type
+ *
+ * TEAM_INVITE and SYSTEM are never suppressed by category settings.
+ */
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
-    private val repository: SupabaseNotificationRepository
+    private val repository: SupabaseNotificationRepository,
+    @ApplicationContext context: Context
 ) : ViewModel() {
-    
-    // User ID will be set from AuthViewModel via setUserId
+
+    private val appSettings = AppSettings(context)
+
     private var currentUserId: String? = null
 
     private var loadNotificationsJob: Job? = null
@@ -41,30 +59,86 @@ class NotificationViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // ── Settings state (observed from DataStore) ──────────────
+    private val _notificationsEnabled = MutableStateFlow(true)
+    private val _matchNotifications   = MutableStateFlow(true)
+    private val _messageNotifications = MutableStateFlow(true)
+
+    init {
+        observeSettings()
+    }
+
+    // ── Settings observation ──────────────────────────────────
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            appSettings.notificationsEnabled.collect {
+                _notificationsEnabled.value = it
+                recomputeUnreadCount()
+            }
+        }
+        viewModelScope.launch {
+            appSettings.matchNotifications.collect {
+                _matchNotifications.value = it
+                recomputeUnreadCount()
+            }
+        }
+        viewModelScope.launch {
+            appSettings.messageNotifications.collect {
+                _messageNotifications.value = it
+                recomputeUnreadCount()
+            }
+        }
+    }
+
+    /**
+     * Recompute the badge count respecting the current notification settings.
+     * Rules:
+     *  - Master off  → 0
+     *  - Match off   → skip SCRIM_*, MATCH_*, TOURNAMENT_*, XP_GAIN, TIER_UP
+     *  - Message off → skip MESSAGE
+     *  - TEAM_INVITE and SYSTEM always counted
+     */
+    private fun recomputeUnreadCount() {
+        val list = _notifications.value
+        if (!_notificationsEnabled.value) {
+            _unreadCount.value = 0
+            return
+        }
+        _unreadCount.value = list.count { n ->
+            if (n.isRead) return@count false
+            when {
+                n.type.isMatchType()   && !_matchNotifications.value   -> false
+                n.type.isMessageType() && !_messageNotifications.value -> false
+                else -> true
+            }
+        }
+    }
+
+    // ── Public API ────────────────────────────────────────────
+
     fun setUserId(userId: String) {
         currentUserId = userId
-        // Load notifications first, then start Realtime to avoid race where
-        // Realtime events are overwritten by the REST response arriving later.
-        loadNotifications(onComplete = {
-            startRealtimeSubscription()
-        })
+        loadNotifications(onComplete = { startRealtimeSubscription() })
     }
 
     /**
      * Subscribe to Realtime notifications for the current user.
-     * New notifications appear instantly without polling.
+     * Ignores categories suppressed by settings so the badge stays consistent.
      */
     fun startRealtimeSubscription() {
         val userId = currentUserId ?: return
         realtimeJob?.cancel()
         realtimeJob = viewModelScope.launch {
             repository.subscribeToNotifications(userId).collect { newNotification ->
+                // Skip if master toggle is off, or if the category is suppressed
+                if (!shouldShowNotification(newNotification)) return@collect
+
                 val current = _notifications.value.toMutableList()
-                // Avoid duplicates
                 if (current.none { it.id == newNotification.id }) {
                     current.add(0, newNotification)
                     _notifications.value = current
-                    _unreadCount.value = current.count { !it.isRead }
+                    recomputeUnreadCount()
                 }
             }
         }
@@ -84,7 +158,7 @@ class NotificationViewModel @Inject constructor(
             repository.getNotificationsForUser(userId).collect { result ->
                 result.onSuccess { list ->
                     _notifications.value = list
-                    _unreadCount.value = list.count { !it.isRead }
+                    recomputeUnreadCount()
                     _isLoading.value = false
                     _isRefreshing.value = false
                     onComplete?.invoke()
@@ -101,11 +175,8 @@ class NotificationViewModel @Inject constructor(
         markAsReadJob?.cancel()
         markAsReadJob = viewModelScope.launch {
             repository.markAsRead(notificationId).collect { result ->
-                result.onSuccess {
-                    loadNotifications()
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                }
+                result.onSuccess { loadNotifications() }
+                    .onFailure { _error.value = it.message }
             }
         }
     }
@@ -115,11 +186,8 @@ class NotificationViewModel @Inject constructor(
         markAllAsReadJob?.cancel()
         markAllAsReadJob = viewModelScope.launch {
             repository.markAllAsRead(userId).collect { result ->
-                result.onSuccess {
-                    loadNotifications()
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                }
+                result.onSuccess { loadNotifications() }
+                    .onFailure { _error.value = it.message }
             }
         }
     }
@@ -128,11 +196,8 @@ class NotificationViewModel @Inject constructor(
         deleteNotificationJob?.cancel()
         deleteNotificationJob = viewModelScope.launch {
             repository.deleteNotification(notificationId).collect { result ->
-                result.onSuccess {
-                    loadNotifications()
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                }
+                result.onSuccess { loadNotifications() }
+                    .onFailure { _error.value = it.message }
             }
         }
     }
@@ -148,5 +213,20 @@ class NotificationViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopRealtimeSubscription()
+    }
+
+    // ── Private helpers ───────────────────────────────────────
+
+    /**
+     * Returns false if settings say this notification should be suppressed.
+     * NOTE: suppression here only affects the in-app delivery (badge + list).
+     * The row is still stored in the DB; the user can see it if they re-enable
+     * the setting.
+     */
+    private fun shouldShowNotification(n: Notification): Boolean {
+        if (!_notificationsEnabled.value) return false
+        if (n.type.isMatchType()   && !_matchNotifications.value)   return false
+        if (n.type.isMessageType() && !_messageNotifications.value) return false
+        return true
     }
 }

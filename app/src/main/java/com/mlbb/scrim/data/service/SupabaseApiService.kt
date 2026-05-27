@@ -311,23 +311,36 @@ data class LeaderboardEntryDto(
 )
 
 data class ProfileNameDto(
-    @SerializedName("username") val username: String = ""
+    @SerializedName("username") val username: String = "",
+    @SerializedName("avatar_url") val avatarUrl: String? = null
 )
 
 // ─── Message DTO ───
 
 // ─── Notification DTO ───
+//
+// The DB has two sets of text columns due to schema evolution:
+//   schema.sql       → message TEXT,  action_id TEXT
+//   older migrations → body TEXT,     data JSONB
+// Migration 20260531060004 adds all four and dual-writes new rows.
+// Rows from before that migration may have only 'body' populated.
+// resolvedMessage coalesces: message → body → ""
 
 data class NotificationDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("user_id") val userId: String = "",
     @SerializedName("type") val type: String = "",
     @SerializedName("title") val title: String = "",
-    @SerializedName("message") val message: String = "",
+    @SerializedName("message") val message: String? = null,   // canonical column
+    @SerializedName("body") val body: String? = null,         // legacy fallback
     @SerializedName("action_id") val actionId: String? = null,
     @SerializedName("is_read") val isRead: Boolean = false,
     @SerializedName("created_at") val createdAt: String = ""
-)
+) {
+    /** Resolved human-readable body: prefers 'message', falls back to 'body'. */
+    val resolvedMessage: String
+        get() = message?.takeIf { it.isNotBlank() } ?: body?.takeIf { it.isNotBlank() } ?: ""
+}
 
 // ─── Message DTO ───
 
@@ -475,7 +488,7 @@ interface SupabaseApiService {
 
     @GET("player_stats")
     suspend fun getLeaderboard(
-        @Query("select") select: String = "*,profiles(username)",
+        @Query("select") select: String = "*,profiles(username,avatar_url)",
         @Query("order") order: String = "pts.desc",
         @Header("Range") range: String = "0-49"
     ): Response<List<LeaderboardEntryDto>>
@@ -860,6 +873,11 @@ interface SupabaseApiService {
     @POST("rpc/get_user_appeal_status")
     suspend fun getUserAppealStatus(@Body params: Map<String, String>): Response<List<BanAppealDto>>
 
+    // ─── User Reports ──────────────────────────────────────────────
+
+    @POST("user_reports")
+    suspend fun createUserReport(@Body report: Map<String, @JvmSuppressWildcards Any>): Response<List<Map<String, @JvmSuppressWildcards Any>>>
+
     // ─── Tournament Endpoints ───
 
     @GET("tournaments")
@@ -918,10 +936,12 @@ interface SupabaseApiService {
 
     @GET("tournament_applications")
     suspend fun getTournamentApplications(
+        @Query("id") id: String? = null,
         @Query("tournament_id") tournamentId: String? = null,
         @Query("team_id") teamId: String? = null,
         @Query("select") select: String? = null,
-        @Query("order") order: String = "applied_at.desc"
+        @Query("order") order: String = "applied_at.desc",
+        @Query("limit") limit: String? = null
     ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
 
     // ─── Tournament Host Requests ───
@@ -1019,6 +1039,13 @@ interface SupabaseApiService {
 
     @POST("rpc/check_in_tournament_team")
     suspend fun rpcCheckInTournamentTeam(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @GET("user_reports")
+    suspend fun getUserReports(
+        @Query("select") select: String = "*",
+        @Query("order") order: String = "created_at.desc",
+        @Header("Range") range: String = "0-99"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
 }
 
 // ─── Ban Appeal DTO ───
