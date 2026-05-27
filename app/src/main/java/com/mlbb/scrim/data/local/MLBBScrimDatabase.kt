@@ -10,6 +10,7 @@ import androidx.room.RoomDatabase
         ProfileEntity::class,
         ConversationEntity::class,
         MessageEntity::class,
+        PendingMessageEntity::class,
         // Cache entities (Phase 1)
         CacheMetadataEntity::class,
         TeamEntity::class,
@@ -18,7 +19,7 @@ import androidx.room.RoomDatabase
         LfgPostEntity::class,
         NotificationEntity::class
     ],
-    version = 6,
+    version = 11,
     exportSchema = false
 )
 abstract class MLBBScrimDatabase : RoomDatabase() {
@@ -26,6 +27,7 @@ abstract class MLBBScrimDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
+    abstract fun pendingMessageDao(): PendingMessageDao
 
     // Cache DAOs (Phase 1)
     abstract fun cacheMetadataDao(): CacheMetadataDao
@@ -46,7 +48,7 @@ abstract class MLBBScrimDatabase : RoomDatabase() {
                     MLBBScrimDatabase::class.java,
                     "mlbb_scrim_database"
                 )
-                .addMigrations(MIGRATION_5_6)
+                .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

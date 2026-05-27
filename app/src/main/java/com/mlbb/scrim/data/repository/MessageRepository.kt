@@ -1,8 +1,11 @@
 package com.mlbb.scrim.data.repository
 
 import com.mlbb.scrim.data.model.Conversation
+import com.mlbb.scrim.data.model.DeliveryStatus
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
+import com.mlbb.scrim.data.model.MessageWithDelivery
+import com.mlbb.scrim.data.service.ChatConnectionState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -138,15 +141,16 @@ class MessageRepository : MessageRepositoryInterface {
         senderName: String,
         content: String,
         type: MessageType,
+        clientMessageId: String,
         imageUrl: String?,
         voiceUrl: String?,
         voiceDuration: Int?
-    ): Flow<Result<Message>> = flow {
+    ): Flow<MessageWithDelivery> = flow {
         kotlinx.coroutines.delay(300)
 
         val index = conversations.indexOfFirst { it.id == conversationId }
         if (index == -1) {
-            emit(Result.failure(Exception("Conversation not found")))
+            emit(MessageWithDelivery(Message(), DeliveryStatus.FAILED, clientMessageId, errorReason = "Conversation not found"))
             return@flow
         }
 
@@ -171,8 +175,18 @@ class MessageRepository : MessageRepositoryInterface {
         )
         conversations[index] = updatedConversation
 
-        emit(Result.success(message))
+        emit(MessageWithDelivery(message, DeliveryStatus.SENT, clientMessageId))
     }
+
+    override suspend fun retryMessage(clientMessageId: String): Flow<MessageWithDelivery> = flow {
+        emit(MessageWithDelivery(Message(), DeliveryStatus.FAILED, clientMessageId, errorReason = "Mock retry not supported"))
+    }
+
+    override suspend fun cancelMessage(clientMessageId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun syncOutbox(): Result<Int> = Result.success(0)
+    override fun unsubscribeFromMessages(conversationId: String) {}
+    override fun observeConnectionState(): Flow<ChatConnectionState> = flow { emit(ChatConnectionState.CONNECTED) }
 
     override suspend fun sendApplyMessage(
         scrimId: String,
@@ -225,7 +239,8 @@ class MessageRepository : MessageRepositoryInterface {
             senderId = "system",
             senderName = "System",
             content = "$applicantTeamName has applied to join your scrim.",
-            type = MessageType.SYSTEM
+            type = MessageType.SYSTEM,
+            clientMessageId = "mock_${java.util.UUID.randomUUID()}"
         ).collect {}
 
         // Send apply info message with team details
@@ -234,7 +249,8 @@ class MessageRepository : MessageRepositoryInterface {
             senderId = applicantId,
             senderName = applicantName,
             content = "Team ID: $applicantTeamId | Team Name: $applicantTeamName | Players: $teamPlayerCount/$teamMaxPlayers",
-            type = MessageType.APPLY
+            type = MessageType.APPLY,
+            clientMessageId = "mock_${java.util.UUID.randomUUID()}"
         ).collect {}
 
         // Update unread count for the scrim creator

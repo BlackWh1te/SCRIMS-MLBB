@@ -1285,10 +1285,10 @@ fun AuthNavigation(
                         }
                     }
 
-                    // Start/stop real-time chat polling while on this screen
+                    // Start/stop real-time chat subscription while on this screen
                     androidx.compose.runtime.DisposableEffect(conversationId) {
-                        messageViewModel.startChatPolling(conversationId, userId)
-                        onDispose { messageViewModel.stopChatPolling() }
+                        messageViewModel.startChatSubscription(conversationId, userId)
+                        onDispose { messageViewModel.stopChatSubscription(conversationId) }
                     }
 
                     if (conversation != null) {
@@ -1297,7 +1297,7 @@ fun AuthNavigation(
                             currentUserId = userId,
                             currentUserName = userProfile?.username ?: "",
                             onNavigateBack = {
-                                messageViewModel.stopChatPolling()
+                                messageViewModel.stopChatSubscription(conversationId)
                                 navController.popBackStack()
                             },
                             onSendMessage = { content ->

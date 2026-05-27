@@ -21,16 +21,33 @@ interface MessageRepositoryInterface {
         participantBTeamName: String
     ): Flow<Result<Conversation>>
 
+    /**
+     * Send a message with idempotent delivery.
+     *
+     * @param clientMessageId Local UUID for deduplication. Same value on retry = same message.
+     * @return Flow emitting PENDING → SENDING → SENT (or FAILED).
+     */
     suspend fun sendMessage(
         conversationId: String,
         senderId: String,
         senderName: String,
         content: String,
         type: MessageType,
+        clientMessageId: String,
         imageUrl: String? = null,
         voiceUrl: String? = null,
         voiceDuration: Int? = null
-    ): Flow<Result<Message>>
+    ): Flow<com.mlbb.scrim.data.model.MessageWithDelivery>
+
+    /**
+     * Retry a previously failed message by its clientMessageId.
+     */
+    suspend fun retryMessage(clientMessageId: String): Flow<com.mlbb.scrim.data.model.MessageWithDelivery>
+
+    /**
+     * Cancel a pending message (removes from outbox).
+     */
+    suspend fun cancelMessage(clientMessageId: String): Result<Unit>
 
     suspend fun sendApplyMessage(
         scrimId: String,
@@ -48,16 +65,36 @@ interface MessageRepositoryInterface {
     ): Flow<Result<Conversation>>
 
     suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>>
-    
+
     suspend fun setTypingStatus(conversationId: String, userId: String, isTyping: Boolean): Flow<Result<Unit>>
-    
+
+    /**
+     * Subscribe to messages with full lifecycle management.
+     * Automatically handles bridge fetch + Realtime + fallback polling.
+     */
     fun subscribeToMessages(conversationId: String): Flow<Message>
-    
+
     fun subscribeToConversation(conversationId: String): Flow<Conversation>
+
     suspend fun startDirectConversation(
         senderId: String,
         senderName: String,
         recipientId: String,
         recipientName: String
     ): Flow<Result<Conversation>>
+
+    /**
+     * Explicitly unsubscribe from a message stream and clean up resources.
+     */
+    fun unsubscribeFromMessages(conversationId: String)
+
+    /**
+     * Sync all pending outbox messages immediately (called by WorkManager).
+     */
+    suspend fun syncOutbox(): Result<Int>
+
+    /**
+     * Observe connection state of the messaging transport.
+     */
+    fun observeConnectionState(): Flow<com.mlbb.scrim.data.service.ChatConnectionState>
 }

@@ -26,9 +26,11 @@ object RepositoryModule {
     fun provideMessageRepository(
         conversationDao: ConversationDao,
         messageDao: MessageDao,
-        realtimeClient: SupabaseRealtimeClient
+        pendingMessageDao: PendingMessageDao,
+        realtimeClient: SupabaseRealtimeClient,
+        cacheManager: UnifiedCacheManager
     ): MessageRepositoryInterface {
-        return SupabaseMessageRepository(conversationDao, messageDao, realtimeClient)
+        return SupabaseMessageRepository(conversationDao, messageDao, pendingMessageDao, realtimeClient, cacheManager)
     }
 
     @Provides
@@ -97,5 +99,13 @@ object RepositoryModule {
         cacheManager: UnifiedCacheManager
     ): AuthRepositoryInterface {
         return SupabaseAuthRepository(context, cacheManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTournamentRepository(
+        cacheManager: UnifiedCacheManager
+    ): TournamentRepositoryInterface {
+        return SupabaseTournamentRepository(cacheManager)
     }
 }

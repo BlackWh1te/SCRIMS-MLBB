@@ -39,6 +39,11 @@ object DatabaseModule {
         return database.messageDao()
     }
 
+    @Provides
+    fun providePendingMessageDao(database: MLBBScrimDatabase): PendingMessageDao {
+        return database.pendingMessageDao()
+    }
+
     // ─── Cache DAOs ───
 
     @Provides

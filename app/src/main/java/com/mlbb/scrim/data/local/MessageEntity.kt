@@ -20,7 +20,9 @@ data class MessageEntity(
     val type: String,
     val imageUrl: String?,
     val voiceUrl: String?,
-    val voiceDuration: Int?
+    val voiceDuration: Int?,
+    val deliveryStatus: String = "SENT",
+    val clientMessageId: String? = null
 ) {
     fun toDomainModel() = Message(
         id = id,

@@ -25,3 +25,85 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("ALTER TABLE messages ADD COLUMN senderTeamId TEXT")
     }
 }
+
+/**
+ * Migration from version 6 to 7.
+ * Adds tournament match chat columns to conversations table:
+ * - tournamentMatchId, participantCount, isGroupChat
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE conversations ADD COLUMN tournamentMatchId TEXT")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN participantCount INTEGER NOT NULL DEFAULT 2")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN isGroupChat INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/**
+ * Migration from version 7 to 8.
+ * Adds wins, losses, pts columns to cached_lfg_posts table.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_lfg_posts ADD COLUMN wins INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE cached_lfg_posts ADD COLUMN losses INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE cached_lfg_posts ADD COLUMN pts INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/**
+ * Migration from version 8 to 9.
+ * Adds viewCount column to cached_lfg_posts table.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_lfg_posts ADD COLUMN viewCount INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/**
+ * Migration from version 9 to 10.
+ * Adds unreadCount column to conversations table.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE conversations ADD COLUMN unreadCount INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/**
+ * Migration from version 10 to 11.
+ * Production messaging hardening:
+ * - pending_messages outbox table
+ * - messages.deliveryStatus + messages.clientMessageId
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Outbox table
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS pending_messages (
+                clientMessageId TEXT PRIMARY KEY NOT NULL,
+                conversationId TEXT NOT NULL,
+                senderId TEXT NOT NULL,
+                senderName TEXT NOT NULL,
+                content TEXT NOT NULL,
+                type TEXT NOT NULL,
+                imageUrl TEXT,
+                voiceUrl TEXT,
+                voiceDuration INTEGER,
+                createdAt INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                retryCount INTEGER NOT NULL DEFAULT 0,
+                nextRetryAt INTEGER NOT NULL DEFAULT 0,
+                errorReason TEXT,
+                failedAt INTEGER
+            )"""
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_pending_status_retry ON pending_messages(status, nextRetryAt)")
+
+        // Message delivery tracking
+        db.execSQL("ALTER TABLE messages ADD COLUMN deliveryStatus TEXT NOT NULL DEFAULT 'SENT'")
+        db.execSQL("ALTER TABLE messages ADD COLUMN clientMessageId TEXT")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_client_id ON messages(clientMessageId)")
+    }
+}

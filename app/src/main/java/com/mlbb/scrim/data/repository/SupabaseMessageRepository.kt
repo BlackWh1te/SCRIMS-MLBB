@@ -2,8 +2,11 @@ package com.mlbb.scrim.data.repository
 
 import timber.log.Timber
 import com.mlbb.scrim.data.model.Conversation
+import com.mlbb.scrim.data.model.DeliveryStatus
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
+import com.mlbb.scrim.data.model.MessageWithDelivery
+import com.mlbb.scrim.data.service.ChatConnectionState
 import com.mlbb.scrim.data.service.MessageDto
 import com.mlbb.scrim.data.service.ConversationDto
 import com.mlbb.scrim.data.service.PostgrestFilter
@@ -11,21 +14,42 @@ import com.mlbb.scrim.data.service.SupabaseConfig
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
 import com.mlbb.scrim.util.DateUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 import java.util.*
 
 import com.mlbb.scrim.data.local.ConversationDao
+import com.mlbb.scrim.data.local.ConversationEntity
 import com.mlbb.scrim.data.local.MessageDao
+import com.mlbb.scrim.data.local.MessageEntity
+import com.mlbb.scrim.data.local.PendingMessageDao
+import com.mlbb.scrim.data.local.PendingMessageEntity
 import com.mlbb.scrim.data.cache.UnifiedCacheManager
-import java.util.concurrent.ConcurrentHashMap
 
 class SupabaseMessageRepository(
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
+    private val pendingMessageDao: PendingMessageDao,
     private val realtimeClient: SupabaseRealtimeClient,
     private val cacheManager: UnifiedCacheManager
 ) : MessageRepositoryInterface {
@@ -36,15 +60,21 @@ class SupabaseMessageRepository(
         private const val TAG = "MessageRepo"
         private const val CACHE_KEY_CONVERSATIONS_PREFIX = "conversations_"
         private const val CACHE_KEY_CONVERSATION_PREFIX = "conversation_"
-        private const val CONV_MEMORY_TTL = 2L * 60 * 1000   // 2 min (conversations change often)
-        private const val CONV_ROOM_TTL = 10L * 60 * 1000     // 10 min
-        private const val SINGLE_CONV_MEMORY_TTL = 5L * 60 * 1000  // 5 min
-        private const val SINGLE_CONV_ROOM_TTL = 15L * 60 * 1000   // 15 min
+        private const val CONV_MEMORY_TTL = 2L * 60 * 1000
+        private const val CONV_ROOM_TTL = 10L * 60 * 1000
+        private const val SINGLE_CONV_MEMORY_TTL = 5L * 60 * 1000
+        private const val SINGLE_CONV_ROOM_TTL = 15L * 60 * 1000
+        private const val MAX_RETRY_COUNT = 5
+        private const val BASE_RETRY_DELAY_MS = 1000L
+        private const val MAX_MESSAGE_LENGTH = 2000
     }
 
+    // ── Concurrency guards ──
+    private val sendMutex = Mutex()
+    private val cacheMutex = Mutex()
+    private val activeSubscriptions = Collections.synchronizedSet(HashSet<String>())
+
     // ── In-memory conversation lookup cache ──
-    // Avoids redundant API calls for startDirectConversation, setTypingStatus, sendMessage gate
-    // HARDENED: Bounded LRU cache (max 20 entries) to prevent OOM on heavy chat usage
     private data class CachedConversation(
         val conversation: Conversation,
         val cachedAt: Long,
@@ -53,25 +83,66 @@ class SupabaseMessageRepository(
         fun isValid(): Boolean = (System.currentTimeMillis() - cachedAt) < CONV_MEMORY_TTL
         fun areMessagesFresh(): Boolean = (System.currentTimeMillis() - lastMessageFetch) < 60_000
     }
+
     private val conversationLookupCache = object : LinkedHashMap<String, CachedConversation>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedConversation>?): Boolean {
             return size > 20
         }
     }
 
-    private fun cacheConversation(conv: Conversation) {
-        conversationLookupCache[conv.id] = CachedConversation(conv, System.currentTimeMillis())
+    // ── Cache metrics (lightweight) ──
+    private var cacheHits = 0L
+    private var cacheMisses = 0L
+
+    private fun recordCacheHit() { cacheHits++ }
+    private fun recordCacheMiss() { cacheMisses++ }
+
+    // ── Connection state bridge ──
+    private val _connectionState = MutableStateFlow(ChatConnectionState.DISCONNECTED)
+    override fun observeConnectionState(): Flow<ChatConnectionState> = _connectionState.asStateFlow()
+
+    init {
+        // Bridge realtime client internal state to our domain state
+        kotlinx.coroutines.GlobalScope.launch {
+            realtimeClient.connectionState.collect { internalState ->
+                _connectionState.value = when (internalState) {
+                    SupabaseRealtimeClient.ConnectionState.CONNECTED -> ChatConnectionState.CONNECTED
+                    SupabaseRealtimeClient.ConnectionState.CONNECTING -> ChatConnectionState.CONNECTING
+                    SupabaseRealtimeClient.ConnectionState.RECONNECTING -> ChatConnectionState.RECONNECTING
+                    SupabaseRealtimeClient.ConnectionState.DISCONNECTED -> {
+                        if (activeSubscriptions.isNotEmpty()) ChatConnectionState.FALLBACK_POLLING
+                        else ChatConnectionState.DISCONNECTED
+                    }
+                }
+            }
+        }
     }
 
-    private fun getCachedConversation(conversationId: String): Conversation? {
-        val cached = conversationLookupCache[conversationId]
-        return if (cached != null && cached.isValid()) cached.conversation else null
+    // ── Cache helpers (Mutex-protected) ──
+    private suspend fun cacheConversation(conv: Conversation) {
+        cacheMutex.withLock {
+            conversationLookupCache[conv.id] = CachedConversation(conv, System.currentTimeMillis())
+        }
     }
 
-    private fun invalidateConversationCache(conversationId: String) {
-        conversationLookupCache.remove(conversationId)
+    private suspend fun getCachedConversation(conversationId: String): Conversation? {
+        return cacheMutex.withLock {
+            val cached = conversationLookupCache[conversationId]
+            if (cached != null && cached.isValid()) {
+                recordCacheHit()
+                cached.conversation
+            } else {
+                recordCacheMiss()
+                null
+            }
+        }
     }
 
+    private suspend fun invalidateConversationCache(conversationId: String) {
+        cacheMutex.withLock { conversationLookupCache.remove(conversationId) }
+    }
+
+    // ── Conversation list ──
     override suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
         try {
             val cacheKey = "${CACHE_KEY_CONVERSATIONS_PREFIX}$userId"
@@ -95,14 +166,12 @@ class SupabaseMessageRepository(
                 },
                 roomSaver = { conversations ->
                     conversationDao.insertConversations(conversations.map { mapConversationToEntity(it) })
-                    // Also populate lookup cache
                     conversations.forEach { cacheConversation(it) }
                 }
             ).collect { conversations ->
                 emit(Result.success(conversations))
             }
         } catch (e: Exception) {
-            // Offline fallback: try Room
             try {
                 val cached = conversationDao.getConversationsForUser(userId).first()
                 if (cached.isNotEmpty()) {
@@ -116,12 +185,11 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ── Single conversation (deduplicated, no double emit) ──
     override suspend fun getConversationById(conversationId: String): Flow<Result<Conversation?>> = flow {
         try {
-            // L1: Check in-memory lookup cache first
-            val cachedEntry = conversationLookupCache[conversationId]
+            val cachedEntry = cacheMutex.withLock { conversationLookupCache[conversationId] }
             if (cachedEntry != null && cachedEntry.isValid()) {
-                // Try Room messages first for instant display, then refresh from network
                 val roomMessages = try {
                     messageDao.getMessagesForConversation(conversationId).first().map { it.toDomainModel() }
                 } catch (_: Exception) { emptyList() }
@@ -131,15 +199,11 @@ class SupabaseMessageRepository(
                     return@flow
                 }
 
-                // HARDENED: Don't emit stale Room data when about to fetch fresh network data.
-                // This prevents UI flicker from double emits.
-                // Then fetch fresh from network
                 val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                 val messages = if (messagesResponse.isSuccessful) {
                     cachedEntry.lastMessageFetch = System.currentTimeMillis()
                     messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
                 } else emptyList()
-                // Persist network messages to Room for next startup
                 if (messages.isNotEmpty()) {
                     try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (_: Exception) {}
                 }
@@ -147,19 +211,16 @@ class SupabaseMessageRepository(
                 return@flow
             }
 
-            // L2: Check Room
             try {
                 val roomConv = conversationDao.getConversationById(conversationId).first()
                 if (roomConv != null) {
                     val domainConv = roomConv.toDomainModel()
                     val newCacheEntry = CachedConversation(domainConv, System.currentTimeMillis())
-                    conversationLookupCache[conversationId] = newCacheEntry
-                    // Load messages from Room first for instant display
+                    cacheMutex.withLock { conversationLookupCache[conversationId] = newCacheEntry }
                     val roomMessages = try {
                         messageDao.getMessagesForConversation(conversationId).first().map { it.toDomainModel() }
                     } catch (_: Exception) { emptyList() }
 
-                    // HARDENED: Only emit Room data if fresh (< 60s); otherwise skip to network single emit
                     val roomMessagesFresh = roomMessages.isNotEmpty() &&
                         (System.currentTimeMillis() - (roomMessages.lastOrNull()?.timestamp ?: 0L)) < 60_000
                     if (roomMessagesFresh) {
@@ -167,7 +228,6 @@ class SupabaseMessageRepository(
                         return@flow
                     }
 
-                    // Then refresh from network
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                     val messages = if (messagesResponse.isSuccessful) {
                         newCacheEntry.lastMessageFetch = System.currentTimeMillis()
@@ -181,7 +241,6 @@ class SupabaseMessageRepository(
                 }
             } catch (e: Exception) { Timber.w(TAG, "Room lookup failed for getConversationById", e) }
 
-            // L3: Network
             val response = api.getConversations(idFilter = "eq.$conversationId")
             if (response.isSuccessful) {
                 val dto = response.body()?.firstOrNull()
@@ -190,28 +249,22 @@ class SupabaseMessageRepository(
                     cacheConversation(conv)
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                     val messages = if (messagesResponse.isSuccessful) {
-                        val cachedEntry = conversationLookupCache[conversationId]
-                        if (cachedEntry != null) cachedEntry.lastMessageFetch = System.currentTimeMillis()
+                        val entry = cacheMutex.withLock { conversationLookupCache[conversationId] }
+                        if (entry != null) entry.lastMessageFetch = System.currentTimeMillis()
                         messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
                     } else emptyList()
-                    // Persist to Room
                     try {
                         conversationDao.insertConversation(mapConversationToEntity(conv))
-                        if (messages.isNotEmpty()) {
-                            messageDao.insertMessages(messages.map { mapMessageToEntity(it) })
-                        }
+                        if (messages.isNotEmpty()) messageDao.insertMessages(messages.map { mapMessageToEntity(it) })
                     } catch (_: Exception) {}
                     emit(Result.success(conv.copy(messages = messages)))
                 } else {
                     emit(Result.success(null))
                 }
             } else {
-                val errorBody = response.errorBody()?.string()
-                Timber.e(TAG, "Failed to load conversation: ${response.code()} body=$errorBody")
                 emit(Result.failure(Exception("Failed to load conversation: ${response.code()}")))
             }
         } catch (e: Exception) {
-            // Offline fallback: try Room for conversation + messages
             try {
                 val roomConv = conversationDao.getConversationById(conversationId).first()
                 if (roomConv != null) {
@@ -226,6 +279,7 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ── Create scrim conversation ──
     override suspend fun getOrCreateConversation(
         scrimId: String,
         scrimTitle: String,
@@ -239,20 +293,18 @@ class SupabaseMessageRepository(
         participantBTeamName: String
     ): Flow<Result<Conversation>> = flow {
         try {
-            // Check lookup cache for existing conversation with these participants + scrim
-            val cachedMatch = conversationLookupCache.values.find { entry ->
-                entry.isValid() && entry.conversation.scrimId == scrimId &&
-                ((entry.conversation.participantAId == participantAId && entry.conversation.participantBId == participantBId) ||
-                 (entry.conversation.participantAId == participantBId && entry.conversation.participantBId == participantAId))
+            val cachedMatch = cacheMutex.withLock {
+                conversationLookupCache.values.find { entry ->
+                    entry.isValid() && entry.conversation.scrimId == scrimId &&
+                    ((entry.conversation.participantAId == participantAId && entry.conversation.participantBId == participantBId) ||
+                     (entry.conversation.participantAId == participantBId && entry.conversation.participantBId == participantAId))
+                }
             }
             if (cachedMatch != null) {
-                Timber.d(TAG, "getOrCreateConversation: cache HIT for scrim $scrimId")
                 emit(Result.success(cachedMatch.conversation))
                 return@flow
             }
 
-            // Search for existing conversation with SAME scrim_id AND SAME participants
-            // Query direction 1: A=sender, B=recipient
             val existing1 = api.getConversations(
                 scrimId = PostgrestFilter.eq(scrimId),
                 participantAId = PostgrestFilter.eq(participantAId),
@@ -264,7 +316,6 @@ class SupabaseMessageRepository(
                 emit(Result.success(conv))
                 return@flow
             }
-            // Query direction 2: A=recipient, B=sender
             val existing2 = api.getConversations(
                 scrimId = PostgrestFilter.eq(scrimId),
                 participantAId = PostgrestFilter.eq(participantBId),
@@ -277,7 +328,6 @@ class SupabaseMessageRepository(
                 return@flow
             }
 
-            // Create new conversation (HARDENED: let DB auto-generate id)
             val newConvBody = mapOf(
                 "scrim_id" to scrimId,
                 "participant_a_id" to participantAId,
@@ -297,7 +347,6 @@ class SupabaseMessageRepository(
                 val created = mapDtoToConversation(response.body()!!.first())
                 cacheConversation(created)
                 conversationDao.insertConversation(mapConversationToEntity(created))
-                // Invalidate list cache since we added a new conversation
                 cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
                 emit(Result.success(created))
             } else {
@@ -308,96 +357,220 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // IDEMPOTENT MESSAGE SEND (production-grade)
+    // ═══════════════════════════════════════════════════════════════════════
+
     override suspend fun sendMessage(
         conversationId: String,
         senderId: String,
         senderName: String,
         content: String,
         type: MessageType,
+        clientMessageId: String,
         imageUrl: String?,
         voiceUrl: String?,
         voiceDuration: Int?
-    ): Flow<Result<Message>> = flow {
-        try {
-            // ── CHAT GATE ENFORCEMENT ──
-            // Use cached conversation instead of fetching from API
-            val cachedConv = getCachedConversation(conversationId)
-            if (cachedConv != null) {
-                val chatOpensAt = cachedConv.chatOpensAt
-                if (chatOpensAt > 0L && System.currentTimeMillis() < chatOpensAt) {
-                    val secondsRemaining = (chatOpensAt - System.currentTimeMillis()) / 1000
-                    emit(Result.failure(Exception("Chat is locked. Opens in ${secondsRemaining}s")))
-                    return@flow
-                }
-            } else {
-                // Fallback: fetch from API only if not cached
-                val convResponse = api.getConversations(idFilter = "eq.$conversationId")
-                if (convResponse.isSuccessful) {
-                    val conv = convResponse.body()?.firstOrNull()
-                    val chatOpensAt = DateUtils.parseIsoToMillis(conv?.chatOpensAt, fallback = 0L)
-                    if (System.currentTimeMillis() < chatOpensAt) {
-                        val secondsRemaining = (chatOpensAt - System.currentTimeMillis()) / 1000
-                        emit(Result.failure(Exception("Chat is locked. Opens in ${secondsRemaining}s")))
-                        return@flow
+    ): Flow<MessageWithDelivery> = flow {
+        // 1. Persist to outbox immediately (survives process death)
+        val pending = PendingMessageEntity(
+            clientMessageId = clientMessageId,
+            conversationId = conversationId,
+            senderId = senderId,
+            senderName = senderName,
+            content = content,
+            type = type.name,
+            imageUrl = imageUrl,
+            voiceUrl = voiceUrl,
+            voiceDuration = voiceDuration,
+            status = DeliveryStatus.PENDING.name
+        )
+        pendingMessageDao.insert(pending)
+        emit(pending.toDomainModel())
+
+        // 2. Attempt network delivery
+        val result = sendMessageInternal(pending)
+        emit(result)
+    }
+
+    private suspend fun sendMessageInternal(pending: PendingMessageEntity): MessageWithDelivery {
+        return sendMutex.withLock {
+            // Idempotency: if already sent (e.g., previous attempt succeeded but client crashed),
+            // return the existing success without re-sending.
+            val existing = pendingMessageDao.getByClientId(pending.clientMessageId)
+            if (existing != null && DeliveryStatus.valueOf(existing.status) == DeliveryStatus.SENT) {
+                return existing.toDomainModel()
+            }
+
+            pendingMessageDao.updateStatus(pending.clientMessageId, DeliveryStatus.SENDING.name)
+
+            try {
+                // Chat gate
+                val cachedConv = getCachedConversation(pending.conversationId)
+                if (cachedConv != null) {
+                    if (cachedConv.chatOpensAt > 0L && System.currentTimeMillis() < cachedConv.chatOpensAt) {
+                        val reason = "Chat is locked"
+                        pendingMessageDao.markFailed(pending.clientMessageId, reason)
+                        return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                     }
-                    // Cache for next time
-                    if (conv != null) cacheConversation(mapDtoToConversation(conv))
                 }
-            }
 
-            // HARDENED: Content validation before sending
-            if (content.isBlank() && imageUrl.isNullOrBlank() && voiceUrl.isNullOrBlank()) {
-                emit(Result.failure(Exception("Message cannot be empty")))
-                return@flow
-            }
-            if (content.length > 2000) {
-                emit(Result.failure(Exception("Message too long (max 2000 characters)")))
-                return@flow
-            }
-            val sanitized = content.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
+                // Content validation
+                if (pending.content.isBlank() && pending.imageUrl.isNullOrBlank() && pending.voiceUrl.isNullOrBlank()) {
+                    val reason = "Message cannot be empty"
+                    pendingMessageDao.markFailed(pending.clientMessageId, reason)
+                    return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                }
+                if (pending.content.length > MAX_MESSAGE_LENGTH) {
+                    val reason = "Message too long (max $MAX_MESSAGE_LENGTH)"
+                    pendingMessageDao.markFailed(pending.clientMessageId, reason)
+                    return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                }
+                val sanitized = pending.content.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
 
-            val dto = MessageDto(
-                conversationId = conversationId,
-                senderId = senderId,
-                senderName = senderName,
-                content = sanitized,
-                type = type.name,
-                imageUrl = imageUrl,
-                voice_url = voiceUrl,
-                voiceDuration = voiceDuration
-            )
-            val response = api.sendMessage(dto)
-            if (response.isSuccessful) {
-                val sent = response.body()?.firstOrNull()
-                if (sent != null) {
-                    val message = mapDtoToMessage(sent)
-                    // Phase 4: Persist sent message to Room
-                    try {
-                        messageDao.insertMessage(mapMessageToEntity(message))
-                        conversationDao.updateLastMessage(conversationId, content, message.timestamp)
-                    } catch (e: Exception) { Timber.w(TAG, "Failed to persist sent message to Room", e) }
-                    // Also PATCH server-side conversation metadata (best-effort; DB trigger is primary)
-                    try {
-                        api.updateConversation(
-                            conversationId,
-                            mapOf(
-                                "last_message" to content,
-                                "last_message_time" to DateUtils.formatIsoUtc(message.timestamp)
-                            )
+                val dto = MessageDto(
+                    id = null, // server generates
+                    conversationId = pending.conversationId,
+                    senderId = pending.senderId,
+                    senderName = pending.senderName,
+                    content = sanitized,
+                    type = pending.type,
+                    imageUrl = pending.imageUrl,
+                    voice_url = pending.voiceUrl,
+                    voiceDuration = pending.voiceDuration
+                )
+                val response = api.sendMessage(dto)
+                if (response.isSuccessful) {
+                    val sent = response.body()?.firstOrNull()
+                    if (sent != null) {
+                        val message = mapDtoToMessage(sent).copy(
+                            // Preserve client id for deduplication
+                            // Server doesn't know about clientMessageId, but we map it locally
                         )
-                    } catch (e: Exception) { Timber.w(TAG, "Failed to update conversation last_message on server", e) }
-                    emit(Result.success(message))
-                } else {
-                    emit(Result.failure(Exception("Message sent but not returned")))
+                        // Persist as SENT in Room
+                        try {
+                            messageDao.insertMessage(
+                                mapMessageToEntity(message).copy(
+                                    deliveryStatus = DeliveryStatus.SENT.name,
+                                    clientMessageId = pending.clientMessageId
+                                )
+                            )
+                            conversationDao.updateLastMessage(
+                                pending.conversationId,
+                                sanitized,
+                                message.timestamp
+                            )
+                        } catch (e: Exception) { Timber.w(TAG, "Failed to persist sent message", e) }
+
+                        // Remove from outbox
+                        pendingMessageDao.delete(pending.clientMessageId)
+
+                        // Best-effort server patch
+                        try {
+                            api.updateConversation(
+                                pending.conversationId,
+                                mapOf(
+                                    "last_message" to sanitized,
+                                    "last_message_time" to DateUtils.formatIsoUtc(message.timestamp)
+                                )
+                            )
+                        } catch (e: Exception) { Timber.w(TAG, "Failed to update conversation last_message", e) }
+
+                        return MessageWithDelivery(
+                            message = message,
+                            status = DeliveryStatus.SENT,
+                            clientMessageId = pending.clientMessageId
+                        )
+                    }
                 }
-            } else {
-                emit(Result.failure(Exception("Failed to send message: ${response.code()}")))
+                // Retryable failure
+                return handleRetryableFailure(pending, "HTTP ${response.code()}")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(TAG, "Send exception", e)
+                return handleRetryableFailure(pending, e.message ?: "Network error")
             }
-        } catch (e: Exception) {
-            emit(Result.failure(e))
         }
     }
 
+    private suspend fun handleRetryableFailure(
+        pending: PendingMessageEntity,
+        reason: String
+    ): MessageWithDelivery {
+        val newRetryCount = pending.retryCount + 1
+        if (newRetryCount >= MAX_RETRY_COUNT) {
+            pendingMessageDao.markFailed(pending.clientMessageId, reason)
+            return pending.copy(
+                status = DeliveryStatus.FAILED.name,
+                retryCount = newRetryCount,
+                errorReason = reason,
+                failedAt = System.currentTimeMillis()
+            ).toDomainModel()
+        }
+        val backoff = (BASE_RETRY_DELAY_MS * (1L shl newRetryCount.coerceAtMost(4)))
+            .coerceAtMost(30_000L)
+        val nextRetryAt = System.currentTimeMillis() + backoff
+        pendingMessageDao.markRetry(
+            pending.clientMessageId,
+            DeliveryStatus.PENDING.name,
+            nextRetryAt
+        )
+        return pending.copy(
+            status = DeliveryStatus.PENDING.name,
+            retryCount = newRetryCount,
+            nextRetryAt = nextRetryAt,
+            errorReason = reason
+        ).toDomainModel()
+    }
+
+    override suspend fun retryMessage(clientMessageId: String): Flow<MessageWithDelivery> = flow {
+        val pending = pendingMessageDao.getByClientId(clientMessageId)
+        if (pending != null) {
+            emit(pending.toDomainModel())
+            val result = sendMessageInternal(pending.copy(retryCount = pending.retryCount))
+            emit(result)
+        } else {
+            emit(
+                MessageWithDelivery(
+                    message = Message(),
+                    status = DeliveryStatus.FAILED,
+                    errorReason = "Message not found in outbox"
+                )
+            )
+        }
+    }
+
+    override suspend fun cancelMessage(clientMessageId: String): Result<Unit> {
+        return try {
+            pendingMessageDao.delete(clientMessageId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // OUTBOX SYNC (WorkManager entrypoint)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    override suspend fun syncOutbox(): Result<Int> {
+        val ready = pendingMessageDao.getMessagesReadyForRetry()
+        if (ready.isEmpty()) return Result.success(0)
+
+        var synced = 0
+        for (pending in ready) {
+            val result = sendMessageInternal(pending)
+            if (result.status == DeliveryStatus.SENT) synced++
+            // Small delay between sends to avoid overwhelming the server
+            delay(150)
+        }
+        // Prune old sent records
+        pendingMessageDao.pruneSent(System.currentTimeMillis() - 24 * 60 * 60 * 1000)
+        return Result.success(synced)
+    }
+
+    // ── Apply message (scrim application) ──
     override suspend fun sendApplyMessage(
         scrimId: String,
         scrimTitle: String,
@@ -414,21 +587,14 @@ class SupabaseMessageRepository(
     ): Flow<Result<Conversation>> = flow {
         try {
             val convResult = getOrCreateConversation(
-                scrimId = scrimId,
-                scrimTitle = scrimTitle,
-                participantAId = applicantId,
-                participantAName = applicantName,
-                participantATeamId = applicantTeamId,
-                participantATeamName = applicantTeamName,
-                participantBId = scrimCreatorId,
-                participantBName = scrimCreatorName,
-                participantBTeamId = scrimCreatorTeamId,
-                participantBTeamName = scrimCreatorTeamName
+                scrimId = scrimId, scrimTitle = scrimTitle,
+                participantAId = applicantId, participantAName = applicantName,
+                participantATeamId = applicantTeamId, participantATeamName = applicantTeamName,
+                participantBId = scrimCreatorId, participantBName = scrimCreatorName,
+                participantBTeamId = scrimCreatorTeamId, participantBTeamName = scrimCreatorTeamName
             )
             var conversation: Conversation? = null
-            convResult.collect { result ->
-                result.onSuccess { conv -> conversation = conv }
-            }
+            convResult.collect { result -> result.onSuccess { conv -> conversation = conv } }
             val conv = conversation ?: run {
                 emit(Result.failure(Exception("Failed to create conversation")))
                 return@flow
@@ -453,10 +619,10 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ── Read receipts ──
     override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
         try {
             api.markConversationAsRead(mapOf("p_conversation_id" to conversationId, "p_user_id" to userId))
-            // HARDENED: Also update Room so messages don't re-appear as unread after app restart
             try {
                 messageDao.markMessagesAsRead(conversationId, userId, System.currentTimeMillis())
             } catch (e: Exception) { Timber.w(TAG, "Failed to mark messages as read in Room", e) }
@@ -466,20 +632,19 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ── Typing status ──
     override suspend fun setTypingStatus(
         conversationId: String,
         userId: String,
         isTyping: Boolean
     ): Flow<Result<Unit>> = flow {
         try {
-            // Use cached conversation to determine A vs B instead of API call
             val cachedConv = getCachedConversation(conversationId)
             if (cachedConv != null) {
                 val field = if (userId == cachedConv.participantAId) "participant_a_typing" else "participant_b_typing"
                 api.updateConversation(conversationId, mapOf(field to isTyping))
                 emit(Result.success(Unit))
             } else {
-                // Fallback: fetch from API only if not cached
                 val response = api.getConversations(idFilter = "eq.$conversationId")
                 if (response.isSuccessful) {
                     val conv = response.body()?.firstOrNull()
@@ -497,109 +662,15 @@ class SupabaseMessageRepository(
         }
     }
 
-    override suspend fun startDirectConversation(
-        senderId: String,
-        senderName: String,
-        recipientId: String,
-        recipientName: String
-    ): Flow<Result<Conversation>> = flow {
-        try {
-            Timber.d("MessageFlow", "Repo: startDirectConversation sender=$senderId recipient=$recipientId")
-
-            // L1: Check in-memory lookup cache for existing direct conversation
-            val cachedMatch = conversationLookupCache.values.find { entry ->
-                entry.isValid() && entry.conversation.scrimId.isEmpty() &&
-                ((entry.conversation.participantAId == senderId && entry.conversation.participantBId == recipientId) ||
-                 (entry.conversation.participantAId == recipientId && entry.conversation.participantBId == senderId))
-            }
-            if (cachedMatch != null) {
-                Timber.d("MessageFlow", "Repo: cache HIT for direct conversation")
-                emit(Result.success(cachedMatch.conversation))
-                return@flow
-            }
-
-            // L2: Check Room for existing direct conversation
-            try {
-                val roomConvs = conversationDao.getConversationsForUser(senderId).first()
-                val existing = roomConvs.find { entity ->
-                    entity.scrimId.isNullOrEmpty() &&
-                    ((entity.participantAId == senderId && entity.participantBId == recipientId) ||
-                     (entity.participantAId == recipientId && entity.participantBId == senderId))
-                }
-                if (existing != null) {
-                    val domainConv = existing.toDomainModel()
-                    cacheConversation(domainConv)
-                    Timber.d("MessageFlow", "Repo: Room HIT for direct conversation")
-                    emit(Result.success(domainConv))
-                    return@flow
-                }
-            } catch (e: Exception) { Timber.w(TAG, "Room lookup failed in startDirectConversation", e) }
-
-            // L3: Check for existing direct conversation via API — query both directions separately
-            // Direction 1: A=sender, B=recipient
-            val existing1 = api.getConversations(
-                participantAId = PostgrestFilter.eq(senderId),
-                participantBId = PostgrestFilter.eq(recipientId)
-            )
-            Timber.d("MessageFlow", "Repo: dir1 code=${existing1.code()} size=${existing1.body()?.size}")
-            if (existing1.isSuccessful && !existing1.body().isNullOrEmpty()) {
-                Timber.d("MessageFlow", "Repo: found existing conversation (dir1)")
-                val conv = mapDtoToConversation(existing1.body()!!.first())
-                cacheConversation(conv)
-                emit(Result.success(conv))
-                return@flow
-            }
-            // Direction 2: A=recipient, B=sender
-            val existing2 = api.getConversations(
-                participantAId = PostgrestFilter.eq(recipientId),
-                participantBId = PostgrestFilter.eq(senderId)
-            )
-            Timber.d("MessageFlow", "Repo: dir2 code=${existing2.code()} size=${existing2.body()?.size}")
-            if (existing2.isSuccessful && !existing2.body().isNullOrEmpty()) {
-                Timber.d("MessageFlow", "Repo: found existing conversation (dir2)")
-                val conv = mapDtoToConversation(existing2.body()!!.first())
-                cacheConversation(conv)
-                emit(Result.success(conv))
-                return@flow
-            }
-
-            // Create new direct conversation (HARDENED: let DB auto-generate id)
-            Timber.d("MessageFlow", "Repo: no existing, creating new")
-            val newConvBody = mapOf(
-                "participant_a_id" to senderId,
-                "participant_a_name" to senderName,
-                "participant_b_id" to recipientId,
-                "participant_b_name" to recipientName,
-                "last_message" to "Conversation started",
-                "last_message_time" to DateUtils.formatIsoUtc(System.currentTimeMillis())
-            )
-            val createResponse = api.createConversation(newConvBody)
-            Timber.d("MessageFlow", "Repo: create code=${createResponse.code()} isSuccessful=${createResponse.isSuccessful}")
-            if (createResponse.isSuccessful) {
-                val body = createResponse.body()
-                Timber.d("MessageFlow", "Repo: create bodySize=${body?.size}")
-                if (!body.isNullOrEmpty()) {
-                    val created = mapDtoToConversation(body.first())
-                    cacheConversation(created)
-                    conversationDao.insertConversation(mapConversationToEntity(created))
-                    // Invalidate list cache since we added a new conversation
-                    cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
-                    emit(Result.success(created))
-                } else {
-                    emit(Result.failure(Exception("Created conversation returned empty body")))
-                }
-            } else {
-                emit(Result.failure(Exception("Failed to create direct conversation: ${createResponse.code()}")))
-            }
-        } catch (e: Exception) {
-            Timber.d("MessageFlow", "Repo: exception ${e.javaClass.simpleName}: ${e.message}")
-            emit(Result.failure(e))
-        }
-    }
+    // ═══════════════════════════════════════════════════════════════════════
+    // REALTIME SUBSCRIPTION (lifecycle-managed, no polling conflict)
+    // ═══════════════════════════════════════════════════════════════════════
 
     override fun subscribeToMessages(conversationId: String): Flow<Message> = flow {
-        // ── Phase 1: Emit cached Room messages for instant display ──
+        activeSubscriptions.add(conversationId)
         val cachedIds = mutableSetOf<String>()
+
+        // Phase 1: Emit cached Room messages for instant display
         try {
             val cached = messageDao.getMessagesForConversation(conversationId).first()
             cached.forEach { entity ->
@@ -608,7 +679,7 @@ class SupabaseMessageRepository(
             }
         } catch (e: Exception) { Timber.w(TAG, "Failed to load cached messages", e) }
 
-        // ── Phase 2: Bridge fetch — get any messages added between cache and Realtime start ──
+        // Phase 2: Bridge fetch — delta between cache and Realtime start
         try {
             val latestResponse = api.getMessages(
                 conversationId = PostgrestFilter.eq(conversationId),
@@ -622,14 +693,13 @@ class SupabaseMessageRepository(
                         emit(msg)
                     }
                 }
-                // Persist all server messages to Room for next startup
                 try {
                     messageDao.insertMessages(serverMessages.map { mapMessageToEntity(it) })
                 } catch (_: Exception) {}
             }
-        } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed for messages", e) }
+        } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
 
-        // ── Phase 3: Supabase Realtime (WebSocket) for live updates ──
+        // Phase 3: Realtime (primary) with fallback polling only if WebSocket dies
         try {
             realtimeClient.connect()
             val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
@@ -653,7 +723,7 @@ class SupabaseMessageRepository(
                             cachedIds.add(message.id)
                             try {
                                 messageDao.insertMessage(mapMessageToEntity(message))
-                            } catch (e: Exception) { Timber.w(TAG, "Failed to persist realtime message to Room", e) }
+                            } catch (e: Exception) { Timber.w(TAG, "Failed to persist realtime message", e) }
                             emit(message)
                         }
                     }
@@ -662,12 +732,19 @@ class SupabaseMessageRepository(
                 }
             }
         } catch (e: Exception) {
-            Timber.w(TAG, "Realtime subscription ended for messages: ${e.message}")
+            Timber.w(TAG, "Realtime ended for $conversationId: ${e.message}")
+        } finally {
+            activeSubscriptions.remove(conversationId)
         }
     }
 
+    override fun unsubscribeFromMessages(conversationId: String) {
+        activeSubscriptions.remove(conversationId)
+        val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
+        try { realtimeClient.unsubscribe(channelName) } catch (_: Exception) {}
+    }
+
     override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
-        // Supabase Realtime for conversation UPDATE events
         try {
             realtimeClient.connect()
             val channelName = "public:conversations:conv_$conversationId"
@@ -697,7 +774,93 @@ class SupabaseMessageRepository(
         }
     }
 
-    // ─── Mapping ───
+    // ── Direct message start ──
+    override suspend fun startDirectConversation(
+        senderId: String,
+        senderName: String,
+        recipientId: String,
+        recipientName: String
+    ): Flow<Result<Conversation>> = flow {
+        try {
+            val cachedMatch = cacheMutex.withLock {
+                conversationLookupCache.values.find { entry ->
+                    entry.isValid() && entry.conversation.scrimId.isEmpty() &&
+                    ((entry.conversation.participantAId == senderId && entry.conversation.participantBId == recipientId) ||
+                     (entry.conversation.participantAId == recipientId && entry.conversation.participantBId == senderId))
+                }
+            }
+            if (cachedMatch != null) {
+                emit(Result.success(cachedMatch.conversation))
+                return@flow
+            }
+
+            try {
+                val roomConvs = conversationDao.getConversationsForUser(senderId).first()
+                val existing = roomConvs.find { entity ->
+                    entity.scrimId.isNullOrEmpty() &&
+                    ((entity.participantAId == senderId && entity.participantBId == recipientId) ||
+                     (entity.participantAId == recipientId && entity.participantBId == senderId))
+                }
+                if (existing != null) {
+                    val domainConv = existing.toDomainModel()
+                    cacheConversation(domainConv)
+                    emit(Result.success(domainConv))
+                    return@flow
+                }
+            } catch (e: Exception) { Timber.w(TAG, "Room lookup failed in startDirectConversation", e) }
+
+            val existing1 = api.getConversations(
+                participantAId = PostgrestFilter.eq(senderId),
+                participantBId = PostgrestFilter.eq(recipientId)
+            )
+            if (existing1.isSuccessful && !existing1.body().isNullOrEmpty()) {
+                val conv = mapDtoToConversation(existing1.body()!!.first())
+                cacheConversation(conv)
+                emit(Result.success(conv))
+                return@flow
+            }
+            val existing2 = api.getConversations(
+                participantAId = PostgrestFilter.eq(recipientId),
+                participantBId = PostgrestFilter.eq(senderId)
+            )
+            if (existing2.isSuccessful && !existing2.body().isNullOrEmpty()) {
+                val conv = mapDtoToConversation(existing2.body()!!.first())
+                cacheConversation(conv)
+                emit(Result.success(conv))
+                return@flow
+            }
+
+            val newConvBody = mapOf(
+                "participant_a_id" to senderId,
+                "participant_a_name" to senderName,
+                "participant_b_id" to recipientId,
+                "participant_b_name" to recipientName,
+                "last_message" to "Conversation started",
+                "last_message_time" to DateUtils.formatIsoUtc(System.currentTimeMillis())
+            )
+            val createResponse = api.createConversation(newConvBody)
+            if (createResponse.isSuccessful) {
+                val body = createResponse.body()
+                if (!body.isNullOrEmpty()) {
+                    val created = mapDtoToConversation(body.first())
+                    cacheConversation(created)
+                    conversationDao.insertConversation(mapConversationToEntity(created))
+                    cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
+                    emit(Result.success(created))
+                } else {
+                    emit(Result.failure(Exception("Created conversation returned empty body")))
+                }
+            } else {
+                emit(Result.failure(Exception("Failed to create direct conversation: ${createResponse.code()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Mapping functions (unchanged from previous implementation)
+    // ═══════════════════════════════════════════════════════════════════════
 
     private fun mapDtoToMessage(dto: MessageDto): Message {
         return Message(
@@ -718,7 +881,7 @@ class SupabaseMessageRepository(
         )
     }
 
-    private fun mapDtoToConversation(dto: com.mlbb.scrim.data.service.ConversationDto): Conversation {
+    private fun mapDtoToConversation(dto: ConversationDto): Conversation {
         return Conversation(
             id = dto.id,
             scrimId = dto.scrimId ?: "",
@@ -737,17 +900,12 @@ class SupabaseMessageRepository(
             chatOpensAt = DateUtils.parseIsoToMillis(dto.chatOpensAt),
             isParticipantATyping = dto.participantATyping ?: false,
             isParticipantBTyping = dto.participantBTyping ?: false,
-            // ── Tournament match chat ──
             tournamentMatchId = dto.tournamentMatchId,
             participantCount = dto.participantCount,
             isGroupChat = dto.tournamentMatchId != null || dto.participantCount > 2
         )
     }
 
-    /**
-     * Parse a Realtime INSERT record (JsonObject) into a MessageDto.
-     * Realtime payloads use snake_case column names matching the DB schema.
-     */
     private fun parseRealtimeRecordToMessageDto(record: com.google.gson.JsonObject): MessageDto {
         return MessageDto(
             id = record.get("id")?.asString ?: "",
@@ -767,10 +925,6 @@ class SupabaseMessageRepository(
         )
     }
 
-    /**
-     * Parse a Realtime UPDATE record (JsonObject) into a ConversationDto.
-     * Realtime payloads use snake_case column names matching the DB schema.
-     */
     private fun parseRealtimeRecordToConversationDto(record: com.google.gson.JsonObject): ConversationDto {
         return ConversationDto(
             id = record.get("id")?.asString ?: "",
@@ -793,10 +947,8 @@ class SupabaseMessageRepository(
         )
     }
 
-    // ─── Room Entity Mappers ───
-
-    private fun mapConversationToEntity(conv: Conversation): com.mlbb.scrim.data.local.ConversationEntity {
-        return com.mlbb.scrim.data.local.ConversationEntity(
+    private fun mapConversationToEntity(conv: Conversation): ConversationEntity {
+        return ConversationEntity(
             id = conv.id,
             scrimId = conv.scrimId,
             scrimTitle = conv.scrimTitle,
@@ -813,7 +965,6 @@ class SupabaseMessageRepository(
             chatOpensAt = conv.chatOpensAt,
             isParticipantATyping = conv.isParticipantATyping,
             isParticipantBTyping = conv.isParticipantBTyping,
-            // ── Tournament match chat ──
             tournamentMatchId = conv.tournamentMatchId,
             participantCount = conv.participantCount,
             isGroupChat = conv.isGroupChat,
@@ -821,8 +972,8 @@ class SupabaseMessageRepository(
         )
     }
 
-    private fun mapMessageToEntity(msg: Message): com.mlbb.scrim.data.local.MessageEntity {
-        return com.mlbb.scrim.data.local.MessageEntity(
+    private fun mapMessageToEntity(msg: Message): MessageEntity {
+        return MessageEntity(
             id = msg.id,
             conversationId = msg.conversationId,
             matchId = msg.matchId,
@@ -836,7 +987,9 @@ class SupabaseMessageRepository(
             type = msg.type.name,
             imageUrl = msg.imageUrl,
             voiceUrl = msg.voiceUrl,
-            voiceDuration = msg.voiceDuration
+            voiceDuration = msg.voiceDuration,
+            deliveryStatus = DeliveryStatus.SENT.name,
+            clientMessageId = null
         )
     }
 }

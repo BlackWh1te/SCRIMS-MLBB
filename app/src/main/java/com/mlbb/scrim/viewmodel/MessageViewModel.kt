@@ -4,22 +4,22 @@ import timber.log.Timber
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.Conversation
+import com.mlbb.scrim.data.model.DeliveryStatus
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
+import com.mlbb.scrim.data.model.MessageWithDelivery
 import com.mlbb.scrim.data.repository.MessageRepositoryInterface
-import com.mlbb.scrim.data.repository.SupabaseMessageRepository
+import com.mlbb.scrim.data.service.ChatConnectionState
 import com.mlbb.scrim.data.service.SupabaseStorageUpload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 import java.util.UUID
 
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,17 +30,20 @@ class MessageViewModel @Inject constructor(
     private val messageRepository: MessageRepositoryInterface
 ) : ViewModel() {
 
-
-    private var chatPollingJob: Job? = null
+    private var chatSubscriptionJob: Job? = null
     private var convPollingJob: Job? = null
-    private var typingStatusJob: Job? = null
+    private var typingDebounceJob: Job? = null
     private var conversationUpdatesJob: Job? = null
 
+    // ── UI State ──
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
 
     private val _selectedConversation = MutableStateFlow<Conversation?>(null)
     val selectedConversation: StateFlow<Conversation?> = _selectedConversation.asStateFlow()
+
+    private val _messagesWithDelivery = MutableStateFlow<List<MessageWithDelivery>>(emptyList())
+    val messagesWithDelivery: StateFlow<List<MessageWithDelivery>> = _messagesWithDelivery.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -51,6 +54,21 @@ class MessageViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _connectionState = MutableStateFlow(ChatConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<ChatConnectionState> = _connectionState.asStateFlow()
+
+    private val _typingIndicator = MutableStateFlow(false)
+    val typingIndicator: StateFlow<Boolean> = _typingIndicator.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            messageRepository.observeConnectionState()
+                .distinctUntilChanged()
+                .collect { _connectionState.value = it }
+        }
+    }
+
+    // ── Conversation list ──
     fun loadConversations(userId: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
@@ -79,6 +97,7 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Conversation list polling (REST fallback only) ──
     fun startConversationsPolling(userId: String) {
         convPollingJob?.cancel()
         convPollingJob = viewModelScope.launch {
@@ -86,7 +105,7 @@ class MessageViewModel @Inject constructor(
                 messageRepository.getConversationsForUser(userId).collect { result ->
                     result.onSuccess { _conversations.value = it }
                 }
-                delay(30_000) // Poll every 30s (reduced from 10s — cache handles freshness)
+                delay(30_000)
             }
         }
     }
@@ -95,54 +114,32 @@ class MessageViewModel @Inject constructor(
         convPollingJob?.cancel()
     }
 
-    fun startChatPolling(conversationId: String, userId: String) {
-        chatPollingJob?.cancel()
-        chatPollingJob = viewModelScope.launch {
-            // Mark as read when entering
+    // ── Chat screen subscription (Realtime primary, no conflicting polling) ──
+    fun startChatSubscription(conversationId: String, userId: String) {
+        chatSubscriptionJob?.cancel()
+        messageRepository.unsubscribeFromMessages(conversationId)
+
+        chatSubscriptionJob = viewModelScope.launch {
+            // Mark as read on enter
             messageRepository.markConversationAsRead(conversationId, userId).collect {}
 
-            // Load conversation first to ensure _selectedConversation is populated
+            // Load initial conversation
             messageRepository.getConversationById(conversationId).collect { result ->
-                result.onSuccess { _selectedConversation.value = it }
-            }
-
-            // Merge Realtime + polling fallback, deduplicate by message ID
-            val realtimeFlow = messageRepository.subscribeToMessages(conversationId)
-            val pollingFlow = flow {
-                while (isActive) {
-                    delay(30_000) // Poll every 30s as fallback (reduced from 15s — cache handles freshness)
-                    try {
-                        messageRepository.getConversationById(conversationId).collect { result ->
-                            result.onSuccess { conv ->
-                                conv?.messages?.forEach { msg -> emit(msg) }
-                            }
-                        }
-                    } catch (_: Exception) { }
-                }
-            }
-            merge(realtimeFlow, pollingFlow)
-                .collect { newMessage ->
-                    val current = _selectedConversation.value
-                    if (current != null && current.id == conversationId) {
-                        val existingIndex = current.messages.indexOfFirst { it.id == newMessage.id }
-                        val localIndex = current.messages.indexOfFirst { it.id.startsWith("local_") && it.content == newMessage.content }
-                        
-                        if (existingIndex == -1) {
-                            if (localIndex != -1) {
-                                val updatedMessages = current.messages.toMutableList()
-                                updatedMessages[localIndex] = newMessage
-                                _selectedConversation.value = current.copy(messages = updatedMessages)
-                            } else {
-                                _selectedConversation.value = current.copy(
-                                    messages = (current.messages + newMessage).sortedBy { it.timestamp }
-                                )
-                            }
-                        }
+                result.onSuccess { conv ->
+                    _selectedConversation.value = conv
+                    conv?.messages?.let { msgs ->
+                        _messagesWithDelivery.value = msgs.map { MessageWithDelivery(message = it) }
                     }
                 }
+            }
+
+            // Subscribe to new messages via Realtime
+            messageRepository.subscribeToMessages(conversationId).collect { newMessage ->
+                integrateMessage(newMessage)
+            }
         }
 
-        // Subscribe to conversation updates (typing status, etc.)
+        // Typing status updates
         conversationUpdatesJob?.cancel()
         conversationUpdatesJob = viewModelScope.launch {
             messageRepository.subscribeToConversation(conversationId).collect { updated ->
@@ -152,28 +149,24 @@ class MessageViewModel @Inject constructor(
                         isParticipantATyping = updated.isParticipantATyping,
                         isParticipantBTyping = updated.isParticipantBTyping
                     )
+                    _typingIndicator.value = updated.isOtherTyping(userId)
                 }
             }
         }
     }
 
-    fun stopChatPolling() {
-        chatPollingJob?.cancel()
+    fun stopChatSubscription(conversationId: String) {
+        chatSubscriptionJob?.cancel()
         conversationUpdatesJob?.cancel()
+        typingDebounceJob?.cancel()
+        messageRepository.unsubscribeFromMessages(conversationId)
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        chatPollingJob?.cancel()
-        convPollingJob?.cancel()
-        typingStatusJob?.cancel()
-        conversationUpdatesJob?.cancel()
-    }
-
+    // ── Send message (idempotent with clientMessageId) ──
     fun sendMessage(conversationId: String, senderId: String, senderName: String, content: String) {
-        val tempId = "local_${UUID.randomUUID()}"
+        val clientMessageId = "cm_${UUID.randomUUID()}"
         val tempMessage = Message(
-            id = tempId,
+            id = clientMessageId,
             conversationId = conversationId,
             senderId = senderId,
             senderName = senderName,
@@ -182,15 +175,17 @@ class MessageViewModel @Inject constructor(
             isRead = true,
             type = MessageType.TEXT
         )
-        
-        val current = _selectedConversation.value
-        if (current != null && current.id == conversationId) {
-            _selectedConversation.value = current.copy(
-                messages = current.messages + tempMessage,
-                lastMessage = content,
-                lastMessageTime = tempMessage.timestamp
+
+        // Optimistic UI: show as SENDING
+        val current = _messagesWithDelivery.value.toMutableList()
+        current.add(
+            MessageWithDelivery(
+                message = tempMessage,
+                status = DeliveryStatus.SENDING,
+                clientMessageId = clientMessageId
             )
-        }
+        )
+        _messagesWithDelivery.value = current
 
         viewModelScope.launch {
             messageRepository.sendMessage(
@@ -198,29 +193,44 @@ class MessageViewModel @Inject constructor(
                 senderId = senderId,
                 senderName = senderName,
                 content = content,
-                type = MessageType.TEXT
-            ).collect { result ->
-                result.onSuccess { sentMessage ->
-                    val currentConv = _selectedConversation.value
-                    if (currentConv != null && currentConv.id == conversationId) {
-                        val localIndex = currentConv.messages.indexOfFirst { it.id == tempId }
-                        if (localIndex != -1) {
-                            val updatedMessages = currentConv.messages.toMutableList()
-                            updatedMessages[localIndex] = sentMessage
-                            _selectedConversation.value = currentConv.copy(messages = updatedMessages)
-                        }
-                    }
-                }.onFailure { _error.value = it.message }
+                type = MessageType.TEXT,
+                clientMessageId = clientMessageId
+            ).collect { delivery ->
+                updateDeliveryState(clientMessageId, delivery)
+                if (delivery.status == DeliveryStatus.FAILED) {
+                    _error.value = delivery.errorReason ?: "Failed to send"
+                }
             }
+        }
+    }
+
+    fun retryMessage(clientMessageId: String) {
+        viewModelScope.launch {
+            updateDeliveryState(clientMessageId, MessageWithDelivery(
+                message = Message(id = clientMessageId),
+                status = DeliveryStatus.SENDING,
+                clientMessageId = clientMessageId
+            ))
+            messageRepository.retryMessage(clientMessageId).collect { delivery ->
+                updateDeliveryState(clientMessageId, delivery)
+            }
+        }
+    }
+
+    fun cancelMessage(clientMessageId: String) {
+        viewModelScope.launch {
+            messageRepository.cancelMessage(clientMessageId)
+            removeMessage(clientMessageId)
         }
     }
 
     fun sendImageMessage(conversationId: String, senderId: String, senderName: String, imageBytes: ByteArray) {
         viewModelScope.launch {
             _isLoading.value = true
+            val clientMessageId = "cm_${UUID.randomUUID()}"
             val path = "chat/$conversationId/${System.currentTimeMillis()}.png"
             val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, imageBytes, "image/png")
-            
+
             uploadResult.onSuccess { url ->
                 messageRepository.sendMessage(
                     conversationId = conversationId,
@@ -228,6 +238,7 @@ class MessageViewModel @Inject constructor(
                     senderName = senderName,
                     content = "[Image]",
                     type = MessageType.IMAGE,
+                    clientMessageId = clientMessageId,
                     imageUrl = url
                 ).collect { _isLoading.value = false }
             }.onFailure {
@@ -240,9 +251,10 @@ class MessageViewModel @Inject constructor(
     fun sendVoiceMessage(conversationId: String, senderId: String, senderName: String, voiceBytes: ByteArray, duration: Int) {
         viewModelScope.launch {
             _isLoading.value = true
+            val clientMessageId = "cm_${UUID.randomUUID()}"
             val path = "chat/$conversationId/${System.currentTimeMillis()}.m4a"
             val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, voiceBytes, "audio/m4a")
-            
+
             uploadResult.onSuccess { url ->
                 messageRepository.sendMessage(
                     conversationId = conversationId,
@@ -250,6 +262,7 @@ class MessageViewModel @Inject constructor(
                     senderName = senderName,
                     content = "[Voice Note]",
                     type = MessageType.VOICE,
+                    clientMessageId = clientMessageId,
                     voiceUrl = url,
                     voiceDuration = duration
                 ).collect { _isLoading.value = false }
@@ -260,10 +273,10 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Typing status (debounced + distinctUntilChanged + auto-timeout) ──
     fun updateTypingStatus(conversationId: String, userId: String, isTyping: Boolean) {
-        typingStatusJob?.cancel()
-        typingStatusJob = viewModelScope.launch {
-            // HARDENED: Debounce typing status: send true immediately, auto-false after 3s inactivity
+        typingDebounceJob?.cancel()
+        typingDebounceJob = viewModelScope.launch {
             if (isTyping) {
                 messageRepository.setTypingStatus(conversationId, userId, true).collect {}
                 delay(3000)
@@ -274,6 +287,7 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Apply message (scrim application) ──
     fun sendApplyMessage(
         scrimId: String,
         scrimTitle: String,
@@ -301,6 +315,7 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Direct message start ──
     fun startDirectConversation(
         senderId: String,
         senderName: String,
@@ -308,19 +323,17 @@ class MessageViewModel @Inject constructor(
         recipientName: String
     ) {
         viewModelScope.launch {
-            Timber.d("MessageFlow", "VM: startDirectConversation called sender=$senderId recipient=$recipientId")
+            Timber.d("MessageFlow", "VM: startDirectConversation sender=$senderId recipient=$recipientId")
             _isLoading.value = true
             try {
-                withTimeout(10000) {
+                kotlinx.coroutines.withTimeout(10000) {
                     messageRepository.startDirectConversation(
                         senderId, senderName, recipientId, recipientName
                     ).collect { result ->
                         result.onSuccess {
                             Timber.d("MessageFlow", "VM: success convId=${it.id}")
-                            // Clear first to guarantee StateFlow emits even if value is equal
                             _selectedConversation.value = null
                             _selectedConversation.value = it
-                            // Optionally refresh list
                             loadConversations(senderId)
                         }.onFailure {
                             Timber.d("MessageFlow", "VM: failure error=${it.message}")
@@ -336,13 +349,62 @@ class MessageViewModel @Inject constructor(
                 _error.value = e.message ?: "Unknown error"
             }
             _isLoading.value = false
-            Timber.d("MessageFlow", "VM: isLoading set to false")
+        }
+    }
+
+    // ── State helpers ──
+    private fun integrateMessage(newMessage: Message) {
+        val current = _messagesWithDelivery.value.toMutableList()
+        val existingIndex = current.indexOfFirst { it.message.id == newMessage.id }
+        val pendingIndex = current.indexOfFirst {
+            it.clientMessageId != null && it.message.content == newMessage.content && it.message.senderId == newMessage.senderId
+        }
+        when {
+            existingIndex != -1 -> {
+                // Update existing (e.g., read receipt)
+                current[existingIndex] = current[existingIndex].copy(message = newMessage)
+            }
+            pendingIndex != -1 -> {
+                // Replace pending local message with server-confirmed message
+                current[pendingIndex] = MessageWithDelivery(
+                    message = newMessage,
+                    status = DeliveryStatus.SENT,
+                    clientMessageId = current[pendingIndex].clientMessageId
+                )
+            }
+            else -> {
+                current.add(MessageWithDelivery(message = newMessage))
+            }
+        }
+        _messagesWithDelivery.value = current.sortedBy { it.message.timestamp }
+    }
+
+    private fun updateDeliveryState(clientMessageId: String, delivery: MessageWithDelivery) {
+        val current = _messagesWithDelivery.value.toMutableList()
+        val index = current.indexOfFirst { it.clientMessageId == clientMessageId }
+        if (index != -1) {
+            current[index] = delivery
+            _messagesWithDelivery.value = current.sortedBy { it.message.timestamp }
+        }
+    }
+
+    private fun removeMessage(clientMessageId: String) {
+        _messagesWithDelivery.value = _messagesWithDelivery.value.filter {
+            it.clientMessageId != clientMessageId
         }
     }
 
     fun setError(message: String) { _error.value = message }
-
     fun clearError() { _error.value = null }
-
     fun clearRefreshing() { _isRefreshing.value = false }
+
+    override fun onCleared() {
+        super.onCleared()
+        chatSubscriptionJob?.cancel()
+        convPollingJob?.cancel()
+        typingDebounceJob?.cancel()
+        conversationUpdatesJob?.cancel()
+        // Unsubscribe all active channels
+        _selectedConversation.value?.id?.let { messageRepository.unsubscribeFromMessages(it) }
+    }
 }
