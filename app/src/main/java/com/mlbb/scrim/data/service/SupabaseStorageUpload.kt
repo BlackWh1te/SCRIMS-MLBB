@@ -20,8 +20,19 @@ object SupabaseStorageUpload {
 
     private val client = OkHttpClient()
 
+    companion object {
+        private const val MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024 // 10 MB
+        private val ALLOWED_CONTENT_TYPES = setOf(
+            "image/jpeg",
+            "image/jpg",
+            "image/png"
+        )
+    }
+
     /**
      * Upload a file to a Supabase Storage bucket.
+     *
+     * Validates size (max 10MB) and MIME type (jpg, jpeg, png) before upload.
      *
      * @param bucket Storage bucket name (e.g. "match-screenshots")
      * @param path Object path inside the bucket (e.g. "screenshots/scrim1_team1_123.png")
@@ -36,6 +47,20 @@ object SupabaseStorageUpload {
         contentType: String = "image/png"
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
+            // Validate file size
+            if (fileBytes.size > MAX_FILE_SIZE_BYTES) {
+                return@withContext Result.failure(
+                    Exception("File too large (${fileBytes.size / 1024 / 1024}MB). Maximum allowed is 10MB.")
+                )
+            }
+            // Validate MIME type
+            val normalizedType = contentType.lowercase().trim()
+            if (normalizedType !in ALLOWED_CONTENT_TYPES) {
+                return@withContext Result.failure(
+                    Exception("Unsupported file type: $contentType. Allowed: jpg, jpeg, png")
+                )
+            }
+
             val requestBody = fileBytes.toRequestBody(contentType.toMediaTypeOrNull())
             // Get the user's access token for authenticated upload
             val bearerToken = SupabaseSession.getAccessTokenOrNull() ?: SupabaseConfig.SUPABASE_ANON_KEY

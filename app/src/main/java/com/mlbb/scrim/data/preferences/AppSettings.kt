@@ -1,7 +1,6 @@
 package com.mlbb.scrim.data.preferences
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -10,12 +9,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.mlbb.scrim.security.SecurePreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
-private const val SHARED_PREFS_NAME = "app_settings_shared"
 
 class AppSettings(private val context: Context) {
 
@@ -38,6 +37,9 @@ class AppSettings(private val context: Context) {
         val NEWS_DRIP_INDEX = intPreferencesKey("news_drip_index")
         val NEWS_DRIP_LAST_UPDATE = longPreferencesKey("news_drip_last_update")
         val NEWS_DRIP_COUNT_TOTAL = intPreferencesKey("news_drip_count_total")
+
+        // LFG post views tracking (one view per user per post)
+        val VIEWED_POSTS = stringPreferencesKey("viewed_posts")
     }
 
     val notificationsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.NOTIFICATIONS_ENABLED] ?: true }
@@ -79,17 +81,17 @@ class AppSettings(private val context: Context) {
     }
 
     // Synchronous methods for critical initialization paths (e.g., attachBaseContext)
-    // These use SharedPreferences as a fallback to avoid blocking the main thread
-    private val sharedPrefs: SharedPreferences by lazy {
-        context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+    // Uses EncryptedSharedPreferences for defense-in-depth
+    private val securePrefs: SecurePreferences by lazy {
+        SecurePreferences.getInstance(context)
     }
 
     fun getLanguageCodeSync(default: String = "en"): String {
-        return sharedPrefs.getString(Keys.LANGUAGE_CODE.name, default) ?: default
+        return securePrefs.getString(Keys.LANGUAGE_CODE.name, default) ?: default
     }
 
     fun setLanguageCodeSync(code: String) {
-        sharedPrefs.edit().putString(Keys.LANGUAGE_CODE.name, code).apply()
+        securePrefs.putString(Keys.LANGUAGE_CODE.name, code)
     }
 
     // X API v2 Quota Tracking
@@ -169,5 +171,25 @@ class AppSettings(private val context: Context) {
             }
         }
         return newlyUnlocked
+    }
+
+    // ── LFG Post View Tracking (one view per user per post) ─────────────────
+
+    suspend fun markPostViewed(userId: String, postId: String) {
+        val key = "$userId:$postId"
+        context.settingsDataStore.edit { prefs ->
+            val current = prefs[Keys.VIEWED_POSTS] ?: ""
+            if (!current.contains(key)) {
+                prefs[Keys.VIEWED_POSTS] = if (current.isBlank()) key else "$current,$key"
+            }
+        }
+    }
+
+    suspend fun hasViewedPost(userId: String, postId: String): Boolean {
+        val key = "$userId:$postId"
+        return context.settingsDataStore.data.map { prefs ->
+            val current = prefs[Keys.VIEWED_POSTS] ?: ""
+            current.contains(key)
+        }.first()
     }
 }
