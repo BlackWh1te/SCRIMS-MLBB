@@ -2,7 +2,6 @@ package com.mlbb.scrim
 
 import android.app.Application
 import android.os.StrictMode
-import android.util.Log
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseSession
 import com.mlbb.scrim.security.SecurityUtils
@@ -11,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -30,6 +30,13 @@ class MLBBScrimApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize logging: full logs in debug, WARN+ only in release
+        if (isDebuggable()) {
+            Timber.plant(Timber.DebugTree())
+        } else {
+            Timber.plant(ReleaseTree())
+        }
+
         // Run potentially slow initializations (like DB and security checks) in the background
         appScope.launch {
             SupabaseSession.initialize(this@MLBBScrimApplication)
@@ -37,7 +44,7 @@ class MLBBScrimApplication : Application() {
             // Initialize security checks in all builds
             val securityResult = SecurityUtils.initialize(this@MLBBScrimApplication)
             if (securityResult.hasCriticalThreat && !isDebuggable()) {
-                Log.e("Security", "Critical security threat detected in production. Consider exiting app.")
+                Timber.e("Critical security threat detected in production. Consider exiting app.")
                 // In production, you may want to exit or show a security warning dialog
             }
         }
@@ -60,7 +67,7 @@ class MLBBScrimApplication : Application() {
      * This avoids the delay of lazy connection on first subscription.
      */
     fun onUserSignedIn() {
-        Log.d("MLBBScrimApp", "User signed in — connecting Realtime eagerly")
+        Timber.d("User signed in — connecting Realtime eagerly")
         realtimeClient.connect()
     }
 
@@ -68,8 +75,32 @@ class MLBBScrimApplication : Application() {
      * Call when user signs out to disconnect Realtime and clear subscriptions.
      */
     fun onUserSignedOut() {
-        Log.d("MLBBScrimApp", "User signed out — disconnecting Realtime")
+        Timber.d("User signed out — disconnecting Realtime")
         realtimeClient.disconnect()
+    }
+
+    /**
+     * Release-safe Timber tree: only WARN and ERROR are logged in production.
+     * No DEBUG/INFO logs reach crash reporting or logcat in release builds.
+     */
+    private class ReleaseTree : Timber.Tree() {
+        override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+            if (priority < android.util.Log.WARN) return
+            // Strip any potential PII before sending to crash reporter
+            val sanitized = sanitizeLogMessage(message)
+            if (t != null) {
+                android.util.Log.println(priority, tag, sanitized)
+                // Future: send to Firebase Crashlytics here
+            } else {
+                android.util.Log.println(priority, tag, sanitized)
+            }
+        }
+
+        private fun sanitizeLogMessage(message: String): String {
+            return message
+                .replace(Regex("(?i)(token|bearer|password|secret|key)=\\S+"), "$1=***REDACTED***")
+                .replace(Regex("(?i)(Authorization: )Bearer \\S+"), "$1***REDACTED***")
+        }
     }
 
     private fun isDebuggable(): Boolean {

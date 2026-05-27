@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import timber.log.Timber
 import java.io.File
 
 /**
@@ -11,6 +12,17 @@ import java.io.File
  * Protects against Frida, ADB debugging, and reverse engineering
  */
 object SecurityUtils {
+
+    /**
+     * HARDENED: Expected SHA-256 hash of the release signing certificate.
+     * Generate with: keytool -list -v -keystore release-keystore.jks | grep "SHA256"
+     * Then convert to colon-separated hex, or paste the raw base64 of the cert.
+     *
+     * IMPORTANT: Replace this placeholder with your actual release certificate hash
+     * before shipping to production. If left as empty string, tamper detection
+     * is effectively disabled (returns false) to avoid false positives in debug builds.
+     */
+    private const val EXPECTED_SIGNATURE_SHA256 = ""
 
     private var isSecurityInitialized = false
     private var appSignature: String? = null
@@ -27,7 +39,7 @@ object SecurityUtils {
             return lastCheckResult ?: SecurityCheckResult()
         }
 
-        // Store original app signature for tamper detection
+        // Store original app signature for tamper detection (legacy, kept for compatibility)
         appSignature = getAppSignature(context)
         isSecurityInitialized = true
 
@@ -43,10 +55,10 @@ object SecurityUtils {
         lastCheckResult = result
 
         if (result.isDebuggable) {
-            android.util.Log.w("Security", "App is running in debug mode")
+            Timber.w("App is running in debug mode")
         }
         if (result.isRooted) {
-            android.util.Log.e("Security", "Rooted device detected")
+            Timber.e("Rooted device detected")
         }
 
         return result
@@ -163,9 +175,12 @@ object SecurityUtils {
 
     /**
      * Check for Frida or other hooking frameworks
+     *
+     * HARDENED: Now checks files, ports, /proc/net/tcp, /proc/self/maps, and thread names.
+     * Previously only checked 3 default ports (easily bypassed) and files.
      */
     fun isFridaDetected(): Boolean {
-        return checkFridaFiles() || checkFridaPorts() || checkFridaThreads()
+        return checkFridaFiles() || checkFridaPorts() || checkFridaByProcNet() || checkFridaInMaps() || checkFridaThreads()
     }
 
     private fun checkFridaFiles(): Boolean {
@@ -186,16 +201,43 @@ object SecurityUtils {
     private fun checkFridaPorts(): Boolean {
         val fridaPorts = listOf(27042, 27043, 27047) // Common Frida ports
 
-        return try {
-            for (port in fridaPorts) {
+        // BUGFIX: iterate all ports before returning; previously returned on first loop iteration
+        for (port in fridaPorts) {
+            try {
                 val socket = java.net.Socket("127.0.0.1", port)
                 socket.close()
                 return true
-            }
-            false
-        } catch (e: Exception) {
-            false
+            } catch (_: Exception) { /* port closed */ }
         }
+        return false
+    }
+
+    /**
+     * HARDENED: Check /proc/net/tcp for suspicious localhost established connections.
+     * Frida can run on any custom port; this catches the network footprint.
+     */
+    private fun checkFridaByProcNet(): Boolean {
+        return try {
+            val tcpFile = File("/proc/net/tcp").readText()
+            tcpFile.lines().any { line ->
+                val parts = line.trim().split(Regex("\\s+"))
+                // Column 3 (index 3) is the state: 01 = ESTABLISHED
+                // Column 2 (index 1) is the local address: 0100007F = 127.0.0.1
+                parts.size > 3 && parts[1].startsWith("0100007F") && parts[3] == "01"
+            }
+        } catch (_: Exception) { false }
+    }
+
+    /**
+     * HARDENED: Check /proc/self/maps for Frida libraries loaded in process memory.
+     * Catches frida-agent.so, frida-gadget, libfrida-gum even when no server files exist.
+     */
+    private fun checkFridaInMaps(): Boolean {
+        return try {
+            val mapsFile = File("/proc/self/maps").readText()
+            val fridaPatterns = listOf("frida-agent", "frida-gadget", "libfrida-gum", "frida-server")
+            fridaPatterns.any { pattern -> mapsFile.contains(pattern, ignoreCase = true) }
+        } catch (_: Exception) { false }
     }
 
     private fun checkFridaThreads(): Boolean {
@@ -237,13 +279,22 @@ object SecurityUtils {
     }
 
     /**
-     * Check if app signature has been tampered with
+     * Check if app signature has been tampered with.
+     *
+     * HARDENED: Compares against a hardcoded EXPECTED_SIGNATURE_SHA256 instead of
+     * comparing the app against itself (which always passes for repackaged APKs).
+     *
+     * If EXPECTED_SIGNATURE_SHA256 is empty, tamper detection is disabled to avoid
+     * false positives during development. Set it to your release cert hash before shipping.
      */
     fun isAppTampered(context: Context): Boolean {
-        if (!isSecurityInitialized || appSignature == null) return false
+        if (EXPECTED_SIGNATURE_SHA256.isBlank()) return false
 
         val currentSignature = getAppSignature(context)
-        return currentSignature != appSignature
+        // Normalize: remove spaces and compare case-insensitively
+        val normalizedCurrent = currentSignature?.replace(":", "")?.lowercase()
+        val normalizedExpected = EXPECTED_SIGNATURE_SHA256.replace(":", "").lowercase()
+        return normalizedCurrent != normalizedExpected
     }
 
     /**
@@ -257,23 +308,23 @@ object SecurityUtils {
 
         return when {
             isRooted() -> {
-                android.util.Log.e("Security", "Rooted device detected")
+                Timber.e("Rooted device detected")
                 false
             }
             isDebuggerAttached() -> {
-                android.util.Log.e("Security", "Debugger attached")
+                Timber.e("Debugger attached")
                 false
             }
             isFridaDetected() -> {
-                android.util.Log.e("Security", "Frida detected")
+                Timber.e("Frida detected")
                 false
             }
             isXposedDetected() -> {
-                android.util.Log.e("Security", "Xposed framework detected")
+                Timber.e("Xposed framework detected")
                 false
             }
             isAppTampered(context) -> {
-                android.util.Log.e("Security", "App tampering detected")
+                Timber.e("App tampering detected")
                 false
             }
             else -> true

@@ -299,7 +299,11 @@ class AuthRepository : AuthRepositoryInterface {
     override suspend fun getUserProfile(): UserProfile? {
         return userProfile
     }
-    
+
+    override suspend fun invalidateProfileCache() {
+        // No-op for mock repository
+    }
+
     override suspend fun isLoggedIn(): Boolean {
         purgeIfExpired() // silently clean up expired unverified accounts
         return currentUser != null

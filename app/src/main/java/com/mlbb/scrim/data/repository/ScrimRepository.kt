@@ -61,7 +61,7 @@ class ScrimRepository : ScrimRepositoryInterface {
                     teamName = "Moscow Wolves",
                     teamLeader = "player3",
                     bestOf = BestOf.BO5,
-                    region = com.mlbb.scrim.data.model.Region.MCK,
+                    region = com.mlbb.scrim.data.model.Region.MSK,
                     skillLevel = com.mlbb.scrim.data.model.SkillLevel.PRO,
                     scheduledTime = System.currentTimeMillis() + 86400000,
                     status = com.mlbb.scrim.data.model.ScrimStatus.OPEN,
@@ -521,10 +521,10 @@ data class PointsResult(
 
 /** Points change for a single player */
 data class PlayerPointsChange(
-    val playerId: String,
-    val playerName: String,
-    val teamId: String,
-    val pointsChange: Int,      // positive = gain, negative = loss, 0 = substitute
-    val isWinner: Boolean,
+    val playerId: String = "",
+    val playerName: String = "",
+    val teamId: String = "",
+    val pointsChange: Int = 0,      // positive = gain, negative = loss, 0 = substitute
+    val isWinner: Boolean = false,
     val isSubstitute: Boolean = false
 )

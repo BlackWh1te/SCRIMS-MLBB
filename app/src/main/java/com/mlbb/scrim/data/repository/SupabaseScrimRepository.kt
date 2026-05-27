@@ -7,7 +7,7 @@ import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
 import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -359,9 +359,9 @@ class SupabaseScrimRepository(
                     val teamBId = updated.opponentTeamId
                     if (teamBId != null) { val mr = api.createMatch(MatchDto(scrimId = scrimId, teamAId = updated.teamId, teamBId = teamBId, scheduledDate = updated.scheduledDate, scheduledTime = updated.scheduledTime, status = "Completed")); if (mr.isSuccessful) matchId = mr.body()?.firstOrNull()?.id }
                 }
-            } catch (e: Exception) { Log.w("ScrimRepo", "Failed to find/create match", e) }
-            try { if (matchId != null) { val emr = api.getMatchResults(PostgrestFilter.eq(matchId)); val existing = emr.body()?.firstOrNull(); if (existing == null) api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId)) else api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId)) } } catch (e: Exception) { Log.w("ScrimRepo", "Failed to create/update match result", e) }
-            try { api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS)) } catch (e: Exception) { Log.w("ScrimRepo", "Failed to award scrim points", e) }
+            } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to find/create match", e) }
+            try { if (matchId != null) { val emr = api.getMatchResults(PostgrestFilter.eq(matchId)); val existing = emr.body()?.firstOrNull(); if (existing == null) api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId)) else api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId)) } } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to create/update match result", e) }
+            try { api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS)) } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to award scrim points", e) }
             invalidateScrimCaches()
             emit(Result.success(mapDtoToScrim(updated)))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -435,11 +435,11 @@ class SupabaseScrimRepository(
                         emit(mapDtoToScrim(dto))
                     }
                 } catch (e: Exception) {
-                    Log.w("ScrimRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                    Timber.w("ScrimRepo", "Failed to parse Realtime UPDATE: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("ScrimRepo", "Realtime subscription failed for scrim $scrimId: ${e.message}")
+            Timber.w("ScrimRepo", "Realtime subscription failed for scrim $scrimId: ${e.message}")
         }
     }
 
@@ -464,11 +464,11 @@ class SupabaseScrimRepository(
                         emit(mapDtoToScrim(dto))
                     }
                 } catch (e: Exception) {
-                    Log.w("ScrimRepo", "Failed to parse Realtime event: ${e.message}")
+                    Timber.w("ScrimRepo", "Failed to parse Realtime event: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("ScrimRepo", "Realtime subscription failed for all scrims: ${e.message}")
+            Timber.w("ScrimRepo", "Realtime subscription failed for all scrims: ${e.message}")
         }
     }
 

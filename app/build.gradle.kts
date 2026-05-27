@@ -121,6 +121,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     // ML Kit Translation (on-device)
     implementation("com.google.mlkit:translate:17.0.2")
 

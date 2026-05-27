@@ -1,7 +1,7 @@
 package com.mlbb.scrim.data.repository
 
 import android.content.Context
-import android.util.Log
+import timber.log.Timber
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
@@ -54,7 +54,7 @@ class NewsCacheManager(private val context: Context) {
         return withContext(Dispatchers.IO) {
             try {
                 if (!cacheFile.exists()) {
-                    Log.d(TAG, "No local cache file yet")
+                    Timber.d(TAG, "No local cache file yet")
                     return@withContext emptyList<NewsArticle>()
                 }
 
@@ -63,20 +63,20 @@ class NewsCacheManager(private val context: Context) {
                 val cached = gson.fromJson<CachedNews>(json, type)
 
                 if (cached == null || cached.articles.isEmpty()) {
-                    Log.d(TAG, "Local cache empty or corrupt")
+                    Timber.d(TAG, "Local cache empty or corrupt")
                     return@withContext emptyList<NewsArticle>()
                 }
 
                 val age = System.currentTimeMillis() - cached.cachedAt
                 if (age > maxAgeMs) {
-                    Log.d(TAG, "Local cache expired (${age / 1000 / 60} min old > ${maxAgeMs / 1000 / 60} min TTL)")
+                    Timber.d(TAG, "Local cache expired (${age / 1000 / 60} min old > ${maxAgeMs / 1000 / 60} min TTL)")
                     return@withContext emptyList<NewsArticle>()
                 }
 
-                Log.d(TAG, "Local cache hit: ${cached.articles.size} articles, ${age / 1000 / 60} min old")
+                Timber.d(TAG, "Local cache hit: ${cached.articles.size} articles, ${age / 1000 / 60} min old")
                 cached.articles
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to load local cache", e)
+                Timber.w(TAG, "Failed to load local cache", e)
                 emptyList()
             }
         }
@@ -96,9 +96,9 @@ class NewsCacheManager(private val context: Context) {
                 )
                 val json = gson.toJson(cached)
                 cacheFile.writeText(json)
-                Log.d(TAG, "Saved ${trimmed.size} articles to local cache")
+                Timber.d(TAG, "Saved ${trimmed.size} articles to local cache")
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to save local cache", e)
+                Timber.w(TAG, "Failed to save local cache", e)
             }
         }
     }
@@ -111,12 +111,12 @@ class NewsCacheManager(private val context: Context) {
             try {
                 if (cacheFile.exists()) {
                     cacheFile.delete()
-                    Log.d(TAG, "Local cache cleared")
+                    Timber.d(TAG, "Local cache cleared")
                 } else {
-                    Log.d(TAG, "No local cache to clear")
+                    Timber.d(TAG, "No local cache to clear")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to clear local cache", e)
+                Timber.w(TAG, "Failed to clear local cache", e)
             }
         }
     }

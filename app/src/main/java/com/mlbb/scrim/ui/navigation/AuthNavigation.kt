@@ -2,6 +2,8 @@ package com.mlbb.scrim.ui.navigation
 
 import android.content.Context
 import android.net.Uri
+import timber.log.Timber
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,10 +33,13 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.mlbb.scrim.ui.screens.BannedScreen
 import com.mlbb.scrim.ui.screens.ChatScreen
 import com.mlbb.scrim.ui.screens.CreateScrimScreen
 import com.mlbb.scrim.ui.screens.CreateTeamScreen
@@ -64,6 +69,13 @@ import com.mlbb.scrim.ui.screens.TeamListScreen
 import com.mlbb.scrim.ui.screens.FindTeamsScreen
 import com.mlbb.scrim.ui.screens.LfgBoardScreen
 import com.mlbb.scrim.ui.screens.PlayerFinderScreen
+import com.mlbb.scrim.ui.screens.TournamentListScreen
+import com.mlbb.scrim.ui.screens.TournamentDetailScreen
+import com.mlbb.scrim.ui.screens.TournamentCreateScreen
+import com.mlbb.scrim.ui.screens.TournamentEditScreen
+import com.mlbb.scrim.ui.screens.TournamentHostRequestScreen
+import com.mlbb.scrim.ui.screens.TournamentHostManagementScreen
+import com.mlbb.scrim.data.model.Tournament
 import com.mlbb.scrim.ui.components.AppBottomNav
 import com.mlbb.scrim.viewmodel.AuthViewModel
 import com.mlbb.scrim.viewmodel.LeaderboardViewModel
@@ -121,6 +133,18 @@ sealed class Screen(val route: String) {
     object ScrimRoster : Screen("scrim_roster/{scrimId}/{teamId}") {
         fun createRoute(scrimId: String, teamId: String) = "scrim_roster/$scrimId/$teamId"
     }
+    object Banned : Screen("banned")
+    // ── Tournament Routes ──
+    object TournamentList : Screen("tournament_list")
+    object TournamentDetail : Screen("tournament_detail/{tournamentId}") {
+        fun createRoute(tournamentId: String) = "tournament_detail/$tournamentId"
+    }
+    object TournamentCreate : Screen("tournament_create")
+    object TournamentHostRequest : Screen("tournament_host_request")
+    object TournamentEdit : Screen("tournament_edit/{tournamentId}") {
+        fun createRoute(tournamentId: String) = "tournament_edit/$tournamentId"
+    }
+    object TournamentHostManagement : Screen("tournament_host_management")
 }
 
 @Composable
@@ -135,6 +159,7 @@ fun AuthNavigation(
     settingsViewModel: SettingsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     newsViewModel: NewsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     lfgViewModel: com.mlbb.scrim.viewmodel.LfgViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    tournamentViewModel: com.mlbb.scrim.viewmodel.TournamentViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     navController: NavHostController = rememberNavController(),
     context: Context
 ) {
@@ -150,7 +175,6 @@ fun AuthNavigation(
     val matchResults by matchResultViewModel.matchResults.collectAsState()
     val matchResultIsLoading by matchResultViewModel.isLoading.collectAsState()
     val matchResultIsRefreshing by matchResultViewModel.isRefreshing.collectAsState()
-    val matchResultError by matchResultViewModel.error.collectAsState()
     val selectedMatchResult by matchResultViewModel.selectedMatchResult.collectAsState()
     val reportSuccess by matchResultViewModel.reportSuccess.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
@@ -189,9 +213,29 @@ fun AuthNavigation(
     val teamRatings by teamViewModel.teamRatings.collectAsState()
     val newsIsRefreshing by newsViewModel.isRefreshing.collectAsState()
 
+    // ── Tournament state ──
+    val tournaments by tournamentViewModel.tournaments.collectAsState()
+    val selectedTournament by tournamentViewModel.selectedTournament.collectAsState()
+    val tournamentRequirements by tournamentViewModel.requirements.collectAsState()
+    val tournamentTeams by tournamentViewModel.tournamentTeams.collectAsState()
+    val tournamentMatches by tournamentViewModel.matches.collectAsState()
+    val tournamentIsLoading by tournamentViewModel.isLoading.collectAsState()
+    val tournamentIsRefreshing by tournamentViewModel.isRefreshing.collectAsState()
+    val tournamentError by tournamentViewModel.error.collectAsState()
+    val hostedTournaments by tournamentViewModel.hostedTournaments.collectAsState()
+    val myApplications by tournamentViewModel.myApplications.collectAsState()
+    val myHostRequest by tournamentViewModel.myHostRequest.collectAsState()
+    val isTournamentHost = userProfile?.isTournamentHost == true
+
     val unreadCount = conversations.sumOf { it.unreadCount }
     val pendingInviteCount = notifications.count { !it.isRead && it.type == com.mlbb.scrim.data.model.NotificationType.TEAM_INVITE }
     val playerTeamIds = teams.filter { it.leaderId == userProfile?.id }.map { it.id }
+    val playerLedTeams = teams.filter { it.leaderId == userProfile?.id }
+
+    // Sync user's team IDs to TournamentViewModel for isMyMatch flag
+    LaunchedEffect(playerTeamIds) {
+        tournamentViewModel.setMyTeamIds(playerTeamIds)
+    }
     // Derive achievement stats from available user data.
     // NOTE: player_stats columns (best_win_streak, ratings_given, has_regional_top,
     // jungler_wins, roamer_wins, night_wins, five_star_matches, has_flawless_victory)
@@ -239,9 +283,19 @@ fun AuthNavigation(
     var pendingDirectChat by remember { mutableStateOf(false) }
     LaunchedEffect(selectedConversation) {
         val conv = selectedConversation
+        Timber.d("MessageFlow", "Nav: selectedConversation changed convId=${conv?.id} pendingDirectChat=$pendingDirectChat")
         if (pendingDirectChat && conv != null) {
             pendingDirectChat = false
+            Timber.d("MessageFlow", "Nav: navigating to chat/${conv.id}")
             navController.navigate(Screen.Chat.createRoute(conv.id))
+        }
+    }
+
+    // Reset pendingDirectChat if conversation start fails so it doesn't stick forever
+    LaunchedEffect(messageError) {
+        Timber.d("MessageFlow", "Nav: messageError=$messageError pendingDirectChat=$pendingDirectChat")
+        if (messageError != null && pendingDirectChat) {
+            pendingDirectChat = false
         }
     }
 
@@ -255,7 +309,7 @@ fun AuthNavigation(
             // Only handle logout navigation here
             !isLoggedIn && previousIsLoggedIn == true -> {
                 navController.navigate(Screen.Login.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
+                    popUpTo(0) { inclusive = true }
                 }
             }
         }
@@ -263,7 +317,10 @@ fun AuthNavigation(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(brush = com.mlbb.scrim.ui.theme.heroGradientBrush()),
+        containerColor = Color.Transparent, // Ensure background shows through
         bottomBar = {
             if (isLoggedIn) {
                 AppBottomNav(
@@ -275,7 +332,13 @@ fun AuthNavigation(
             }
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // We keep the padding to avoid content being hidden,
+                // but since the background is on the Scaffold, it will look seamless.
+                .padding(paddingValues)
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -333,8 +396,14 @@ fun AuthNavigation(
                         onFinish = {
                             if (!isInitializing) {
                                 if (isLoggedIn) {
-                                    navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    if (userProfile?.isBanned == true) {
+                                        navController.navigate(Screen.Banned.route) {
+                                            popUpTo(Screen.Splash.route) { inclusive = true }
+                                        }
+                                    } else {
+                                        navController.navigate(Screen.Home.route) {
+                                            popUpTo(Screen.Splash.route) { inclusive = true }
+                                        }
                                     }
                                 } else {
                                     navController.navigate(Screen.Login.route) {
@@ -349,8 +418,14 @@ fun AuthNavigation(
                     if (!isInitializing) {
                         LaunchedEffect(Unit) {
                             if (isLoggedIn) {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Splash.route) { inclusive = true }
+                                if (userProfile?.isBanned == true) {
+                                    navController.navigate(Screen.Banned.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Splash.route) { inclusive = true }
+                                    }
                                 }
                             } else {
                                 navController.navigate(Screen.Login.route) {
@@ -361,13 +436,209 @@ fun AuthNavigation(
                     }
                 }
 
+                composable(Screen.Banned.route) {
+                    val currentProfile by viewModel.userProfile.collectAsState()
+                    currentProfile?.let { profile ->
+                        BannedScreen(
+                            profile = profile,
+                            onLogout = {
+                                viewModel.signOut()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(Screen.Banned.route) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // ── Tournament Routes ──
+
+                composable(Screen.TournamentList.route) {
+                    LaunchedEffect(Unit) {
+                        viewModel.refreshProfile()
+                        tournamentViewModel.loadTournaments()
+                    }
+                    TournamentListScreen(
+                        tournaments = tournaments,
+                        isLoading = tournamentIsLoading,
+                        isRefreshing = tournamentIsRefreshing,
+                        error = tournamentError,
+                        isTournamentHost = isTournamentHost,
+                        hostedTournaments = hostedTournaments,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToTournamentDetail = { id ->
+                            navController.navigate(Screen.TournamentDetail.createRoute(id))
+                        },
+                        onNavigateToCreateTournament = {
+                            navController.navigate(Screen.TournamentCreate.route)
+                        },
+                        onNavigateToHostRequest = {
+                            navController.navigate(Screen.TournamentHostRequest.route)
+                        },
+                        onNavigateToHostManagement = {
+                            navController.navigate(Screen.TournamentHostManagement.route)
+                        },
+                        onSetStatusFilter = { tournamentViewModel.setStatusFilter(it) },
+                        onRefresh = {
+                            viewModel.refreshProfile()
+                            tournamentViewModel.loadTournaments(isRefresh = true)
+                        },
+                        onDismissError = { tournamentViewModel.clearError() }
+                    )
+                }
+
+                composable(
+                    route = Screen.TournamentDetail.route,
+                    arguments = listOf(navArgument("tournamentId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val tournamentId = backStackEntry.arguments?.getString("tournamentId") ?: ""
+                    val roomSecret by tournamentViewModel.roomSecret.collectAsState()
+                    LaunchedEffect(tournamentId) { tournamentViewModel.loadTournamentById(tournamentId) }
+                    TournamentDetailScreen(
+                        tournament = selectedTournament,
+                        requirements = tournamentRequirements,
+                        teams = tournamentTeams,
+                        matches = tournamentMatches,
+                        roomSecret = roomSecret,
+                        isLoading = tournamentIsLoading,
+                        error = tournamentError,
+                        myTeams = playerLedTeams,
+                        myApplications = myApplications,
+                        isHost = isTournamentHost && selectedTournament?.hostUserId == userProfile?.id,
+                        onNavigateBack = { navController.popBackStack() },
+                        onApply = { tid, teamId -> tournamentViewModel.applyForTournament(tid, teamId) },
+                        onCheckIn = { tid, teamId -> tournamentViewModel.checkInTeam(tid, teamId) },
+                        onRefresh = { tournamentViewModel.loadTournamentById(tournamentId) },
+                        onDismissError = { tournamentViewModel.clearError() },
+                        onNavigateToChat = { convId ->
+                            navController.navigate(Screen.Chat.createRoute(convId))
+                        },
+                        onNavigateToEdit = { tid ->
+                            navController.navigate(Screen.TournamentEdit.createRoute(tid))
+                        },
+                        onGeneratePairings = { tid -> tournamentViewModel.generateSwissPairings(tid) },
+                        onReviewApplication = { appId, approved, reason -> tournamentViewModel.reviewApplication(appId, approved, reason) },
+                        onSubmitMatchResult = { mid, winnerId, isDraw -> tournamentViewModel.submitMatchResult(mid, winnerId, isDraw) },
+                        onCancelTournament = { tid, reason -> tournamentViewModel.cancelTournament(tid, reason) },
+                        onCompleteTournament = { tid -> tournamentViewModel.completeTournament(tid) },
+                        onDisqualifyTeam = { tid, teamId, reason -> tournamentViewModel.disqualifyTeam(tid, teamId, reason) },
+                        onLoadRoomSecret = { mid -> tournamentViewModel.loadRoomSecret(mid) }
+                    )
+                }
+
+                composable(Screen.TournamentCreate.route) {
+                    val createResult by tournamentViewModel.createResult.collectAsState()
+                    LaunchedEffect(createResult) {
+                        if (createResult?.isSuccess == true) {
+                            navController.popBackStack()
+                        }
+                    }
+                    TournamentCreateScreen(
+                        isLoading = tournamentIsLoading,
+                        error = tournamentError,
+                        onCreate = { tournament ->
+                            tournamentViewModel.createTournament(tournament)
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onDismissError = { tournamentViewModel.clearError() }
+                    )
+                }
+
+                composable(Screen.TournamentHostRequest.route) {
+                    LaunchedEffect(Unit) { tournamentViewModel.loadMyHostRequest() }
+                    TournamentHostRequestScreen(
+                        existingRequest = myHostRequest,
+                        isLoading = tournamentIsLoading,
+                        error = tournamentError,
+                        onSubmit = { motivation, experience, telegram, links ->
+                            tournamentViewModel.submitHostRequest(motivation, experience, telegram, links)
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onDismissError = { tournamentViewModel.clearError() }
+                    )
+                }
+
+                composable(
+                    route = Screen.TournamentEdit.route,
+                    arguments = listOf(navArgument("tournamentId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val tournamentId = backStackEntry.arguments?.getString("tournamentId") ?: ""
+                    val updateResult by tournamentViewModel.updateResult.collectAsState()
+                    LaunchedEffect(tournamentId) {
+                        if (selectedTournament?.id != tournamentId) {
+                            tournamentViewModel.loadTournamentById(tournamentId)
+                        }
+                    }
+                    LaunchedEffect(updateResult) {
+                        if (updateResult?.isSuccess == true) {
+                            tournamentViewModel.clearUpdateResult()
+                            navController.popBackStack()
+                        }
+                    }
+                    TournamentEditScreen(
+                        tournament = selectedTournament ?: Tournament(),
+                        isLoading = tournamentIsLoading,
+                        error = tournamentError,
+                        onSave = { tid, updates ->
+                            tournamentViewModel.updateTournament(tid, updates)
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onDismissError = { tournamentViewModel.clearError() }
+                    )
+                }
+
+                composable(Screen.TournamentHostManagement.route) {
+                    TournamentHostManagementScreen(
+                        hostedTournaments = hostedTournaments,
+                        isLoading = tournamentIsLoading,
+                        isRefreshing = tournamentIsRefreshing,
+                        error = tournamentError,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToTournamentDetail = { id ->
+                            navController.navigate(Screen.TournamentDetail.createRoute(id))
+                        },
+                        onNavigateToEditTournament = { id ->
+                            navController.navigate(Screen.TournamentEdit.createRoute(id))
+                        },
+                        onCancelTournament = { tid, reason ->
+                            tournamentViewModel.cancelTournament(tid, reason)
+                        },
+                        onCompleteTournament = { tid ->
+                            tournamentViewModel.completeTournament(tid)
+                        },
+                        onRefresh = {
+                            tournamentViewModel.loadTournaments(isRefresh = true)
+                        },
+                        onDismissError = { tournamentViewModel.clearError() }
+                    )
+                }
+
+                // Redirect to BannedScreen if user becomes banned while logged in
+                composable("_ban_redirect") {
+                    LaunchedEffect(userProfile?.isBanned) {
+                        if (userProfile?.isBanned == true &&
+                            navController.currentDestination?.route != Screen.Banned.route
+                        ) {
+                            navController.navigate(Screen.Banned.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+
                 composable(Screen.Login.route) {
                     val authState by viewModel.authState.collectAsState()
                     LaunchedEffect(authState) {
                         when (authState) {
                             is com.mlbb.scrim.data.model.AuthResult.Success -> {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                if (userProfile?.isBanned == true) {
+                                    navController.navigate(Screen.Banned.route) {
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
                                 }
                                 viewModel.resetAuthState()
                             }
@@ -503,9 +774,17 @@ fun AuthNavigation(
                         onNavigateToScrimDetail = { scrimId ->
                             navController.navigate(Screen.ScrimDetail.createRoute(scrimId))
                         },
+                        onNavigateToTeamDetail = { teamId ->
+                            navController.navigate(Screen.TeamDetail.createRoute(teamId))
+                        },
+                        onNavigateToTournamentList = {
+                            navController.navigate(Screen.TournamentList.route)
+                        },
                         scrims = scrims,
+                        teams = teams,
                         notificationCount = notificationUnreadCount,
                         isRefreshing = scrimIsRefreshing,
+                        isTournamentHost = isTournamentHost,
                         onRefresh = {
                             scrimViewModel.loadScrims(isRefresh = true)
                             newsViewModel.refresh(languageCode)
@@ -929,7 +1208,7 @@ fun AuthNavigation(
                             },
                             onReportResult = { id, teamId, reporterId, reporterName, winnerId, notes ->
                                 matchResultViewModel.reportResult(
-                                    matchResultId = id,
+                                    scrimId = id,
                                     teamId = teamId,
                                     reporterId = reporterId,
                                     reporterName = reporterName,
@@ -985,8 +1264,12 @@ fun AuthNavigation(
                     )
                 ) { backStackEntry ->
                     val conversationId = backStackEntry.arguments?.getString("conversationId") ?: ""
-                    val conversation = conversations.find { it.id == conversationId }
-                        ?: selectedConversation
+                    // Prefer selectedConversation if it matches current ID (has freshest messages),
+                    // otherwise fall back to the conversations list
+                    val conversation = when {
+                        selectedConversation?.id == conversationId -> selectedConversation
+                        else -> conversations.find { it.id == conversationId }
+                    }
                     val userId = userProfile?.id ?: ""
 
                     // Media Pickers
@@ -1261,23 +1544,37 @@ fun AuthNavigation(
                                 discord = post.discord,
                                 telegram = post.telegram,
                                 vk = post.vk,
-                                facebook = post.facebook
+                                facebook = post.facebook,
+                                avatarUrl = post.avatarUrl
                             )
                         },
                         onDeletePost = { postId -> lfgViewModel.deletePost(postId) },
+                        onViewCountIncrement = { postId -> lfgViewModel.incrementViewCount(postId) },
                         onMessagePlayer = { post ->
-                            pendingDirectChat = true
-                            messageViewModel.startDirectConversation(
-                                senderId = userProfile?.id ?: "",
-                                senderName = userProfile?.username ?: "",
-                                recipientId = post.playerId,
-                                recipientName = post.playerName
-                            )
+                            val senderId = userProfile?.id
+                            val senderName = userProfile?.username
+                            if (!senderId.isNullOrBlank() && !senderName.isNullOrBlank()) {
+                                pendingDirectChat = true
+                                messageViewModel.startDirectConversation(
+                                    senderId = senderId,
+                                    senderName = senderName,
+                                    recipientId = post.playerId,
+                                    recipientName = post.playerName
+                                )
+                            } else {
+                                messageViewModel.setError("Profile not loaded yet. Please try again.")
+                            }
+                        },
+                        onInvitePlayer = { _ ->
+                            showInviteDialog = true
                         },
                         isRefreshing = lfgIsRefreshing,
                         onRefresh = { lfgViewModel.loadPosts(isRefresh = true) },
                         error = lfgError,
-                        onDismissError = { lfgViewModel.clearError() }
+                        onDismissError = { lfgViewModel.clearError() },
+                        messageLoading = messagesIsLoading,
+                        messageError = messageError,
+                        onDismissMessageError = { messageViewModel.clearError() }
                     )
                 }
             }

@@ -146,7 +146,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
     }
 
     override suspend fun reportResult(
-        matchResultId: String,
+        scrimId: String,
         teamId: String,
         reporterId: String,
         reporterName: String,
@@ -156,7 +156,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
     ): Flow<Result<MatchResult>> = flow {
         kotlinx.coroutines.delay(500)
 
-        val index = matchResults.indexOfFirst { it.id == matchResultId }
+        val index = matchResults.indexOfFirst { it.scrimId == scrimId }
         if (index == -1) {
             emit(Result.failure(Exception("Match result not found")))
             return@flow

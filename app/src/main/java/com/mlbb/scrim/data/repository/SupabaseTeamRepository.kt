@@ -8,7 +8,7 @@ import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
 import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
@@ -270,7 +270,10 @@ class SupabaseTeamRepository(
             val member = mr.body()!!.first()
             // Ownership: only the invited user (or team leader) may decline the invite
             val userId = AuthorizationUtils.currentUserId()
-            if (userId != member.userId && userId != member.invitedBy) {
+            val isLeader = try {
+                api.getTeamById(PostgrestFilter.eq(member.teamId)).body()?.firstOrNull()?.leaderId == userId
+            } catch (_: Exception) { false }
+            if (userId != member.userId && !isLeader) {
                 emit(Result.failure(SecurityException("Forbidden: you do not have permission to decline this invite")))
                 return@flow
             }
@@ -550,11 +553,11 @@ class SupabaseTeamRepository(
                         emit(mapTeamDtoToModel(dto))
                     }
                 } catch (e: Exception) {
-                    Log.w("TeamRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                    Timber.w("TeamRepo", "Failed to parse Realtime UPDATE: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("TeamRepo", "Realtime subscription failed for team $teamId: ${e.message}")
+            Timber.w("TeamRepo", "Realtime subscription failed for team $teamId: ${e.message}")
         }
     }
 
@@ -581,11 +584,11 @@ class SupabaseTeamRepository(
                     val enriched = enrichTeamInvite(partial)
                     emit(enriched)
                 } catch (e: Exception) {
-                    Log.w("TeamRepo", "Failed to parse Realtime invite event: ${e.message}")
+                    Timber.w("TeamRepo", "Failed to parse Realtime invite event: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("TeamRepo", "Realtime subscription failed for invites user $userId: ${e.message}")
+            Timber.w("TeamRepo", "Realtime subscription failed for invites user $userId: ${e.message}")
         }
     }
 
@@ -601,7 +604,7 @@ class SupabaseTeamRepository(
                 if (teamResponse.isSuccessful) {
                     result = result.copy(teamName = teamResponse.body()?.firstOrNull()?.name ?: "")
                 }
-            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich team name", e) }
+            } catch (e: Exception) { Timber.w("TeamRepo", "Failed to enrich team name", e) }
         }
         // Fetch inviter profile if name missing
         if (invite.invitedByName.isBlank() && invite.invitedBy.isNotBlank()) {
@@ -611,7 +614,7 @@ class SupabaseTeamRepository(
                 if (name.isNotBlank()) {
                     result = result.copy(invitedByName = name)
                 }
-            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich inviter name", e) }
+            } catch (e: Exception) { Timber.w("TeamRepo", "Failed to enrich inviter name", e) }
         }
         // Fetch invited user profile if name missing
         if (invite.invitedUserName.isBlank() && invite.invitedUserId.isNotBlank()) {
@@ -621,7 +624,7 @@ class SupabaseTeamRepository(
                 if (name.isNotBlank()) {
                     result = result.copy(invitedUserName = name)
                 }
-            } catch (e: Exception) { Log.w("TeamRepo", "Failed to enrich invited user name", e) }
+            } catch (e: Exception) { Timber.w("TeamRepo", "Failed to enrich invited user name", e) }
         }
         return result
     }

@@ -9,7 +9,7 @@ interface MatchResultRepositoryInterface {
     suspend fun getMatchResultsForScrim(scrimId: String): Flow<Result<MatchResult?>>
     suspend fun getMatchResultsForTeam(teamId: String): Flow<Result<List<MatchResult>>>
     suspend fun reportResult(
-        matchResultId: String,
+        scrimId: String,
         teamId: String,
         reporterId: String,
         reporterName: String,

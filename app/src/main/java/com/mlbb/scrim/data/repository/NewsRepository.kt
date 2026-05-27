@@ -1,7 +1,7 @@
 package com.mlbb.scrim.data.repository
 
 import android.content.Context
-import android.util.Log
+import timber.log.Timber
 import com.mlbb.scrim.data.localization.TranslationManager
 import com.mlbb.scrim.data.model.NewsArticle
 import com.mlbb.scrim.data.preferences.AppSettings
@@ -137,7 +137,7 @@ class NewsRepository(
             val effectiveForceRefresh = forceRefresh && !isThrottled
 
             if (isThrottled) {
-                Log.w(TAG, "Explicit refresh throttled. ${explicitCooldownRemaining / 1000 / 60} min remaining.")
+                Timber.w(TAG, "Explicit refresh throttled. ${explicitCooldownRemaining / 1000 / 60} min remaining.")
             }
 
             // Check if we have valid cached articles in memory
@@ -146,7 +146,7 @@ class NewsRepository(
                     (now - lastFetchTime) < memoryCacheMs
 
             val articles = if (useMemoryCache) {
-                Log.d(TAG, "Serving news from memory cache (${(now - lastFetchTime) / 1000 / 60} min old)")
+                Timber.d(TAG, "Serving news from memory cache (${(now - lastFetchTime) / 1000 / 60} min old)")
                 cachedArticles
             } else {
                 if (effectiveForceRefresh) {
@@ -171,7 +171,7 @@ class NewsRepository(
                 minutesUntilRefresh = if (isThrottled) (explicitCooldownRemaining / 1000 / 60).toInt() else 0
             )))
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching news", e)
+            Timber.e(TAG, "Error fetching news", e)
             val fallback = if (targetLanguage != "en") {
                 translateArticles(demoNews, targetLanguage)
             } else {
@@ -194,7 +194,7 @@ class NewsRepository(
             if (!forceRefresh) {
                 val diskArticles = localCache.loadCache()
                 if (diskArticles.isNotEmpty()) {
-                    Log.i(TAG, "Serving from local disk cache (${diskArticles.size} articles)")
+                    Timber.i(TAG, "Serving from local disk cache (${diskArticles.size} articles)")
                     return diskArticles
                 }
             }
@@ -203,7 +203,7 @@ class NewsRepository(
             // This is the preferred path for production.
             val proxyArticles = fetchFromProxy()
             if (proxyArticles.isNotEmpty()) {
-                Log.i(TAG, "Serving from backend proxy (${proxyArticles.size} articles)")
+                Timber.i(TAG, "Serving from backend proxy (${proxyArticles.size} articles)")
                 localCache.saveCache(proxyArticles, source = "proxy")
                 return proxyArticles
             }
@@ -212,16 +212,16 @@ class NewsRepository(
             // Priority 1: Official MLBB X (Twitter) account — only if quota allows
             val quotaStatus = checkXApiQuota(now)
             if (quotaStatus.canUse && (!quotaStatus.cacheValid || forceRefresh)) {
-                Log.d(TAG, "Fetching from X API (used ${quotaStatus.used}/$X_API_MONTHLY_LIMIT this month)")
+                Timber.d(TAG, "Fetching from X API (used ${quotaStatus.used}/$X_API_MONTHLY_LIMIT this month)")
                 val xArticles = fetchFromTwitter()
                 if (xArticles.isNotEmpty()) {
                     localCache.saveCache(xArticles, source = "x_api")
                     return xArticles
                 }
             } else if (quotaStatus.cacheValid && cachedArticles.isNotEmpty()) {
-                Log.d(TAG, "X API cached. Skipping fetch. Quota: ${quotaStatus.used}/$X_API_MONTHLY_LIMIT")
+                Timber.d(TAG, "X API cached. Skipping fetch. Quota: ${quotaStatus.used}/$X_API_MONTHLY_LIMIT")
             } else if (!quotaStatus.canUse) {
-                Log.w(TAG, "X API quota exhausted (${quotaStatus.used}/$X_API_MONTHLY_LIMIT). Using fallback.")
+                Timber.w(TAG, "X API quota exhausted (${quotaStatus.used}/$X_API_MONTHLY_LIMIT). Using fallback.")
             }
 
             // Priority 2: NewsAPI (gaming news sites) — no strict quota
@@ -242,7 +242,7 @@ class NewsRepository(
             localCache.saveCache(demoNews, source = "demo")
             demoNews
         } catch (e: Exception) {
-            Log.w(TAG, "Fetch failed, using demo data", e)
+            Timber.w(TAG, "Fetch failed, using demo data", e)
             localCache.saveCache(demoNews, source = "demo")
             demoNews
         }
@@ -263,7 +263,7 @@ class NewsRepository(
                 // 1. Tick the drip — unlock +1 article per 2h elapsed
                 val newlyUnlocked = appSettings.tickNewsDrip()
                 if (newlyUnlocked > 0) {
-                    Log.i(TAG, "Drip: $newlyUnlocked new article(s) unlocked")
+                    Timber.i(TAG, "Drip: $newlyUnlocked new article(s) unlocked")
                 }
 
                 // 2. Fetch articles up to current drip index
@@ -279,14 +279,14 @@ class NewsRepository(
                         appSettings.setNewsDripCountTotal(total)
                     }
 
-                    Log.d(TAG, "Proxy drip: ${articles.size} visible (offset=$dripIndex, unseen=${body?.unseen}, total=${body?.totalInArchive})")
+                    Timber.d(TAG, "Proxy drip: ${articles.size} visible (offset=$dripIndex, unseen=${body?.unseen}, total=${body?.totalInArchive})")
                     articles
                 } else {
-                    Log.w(TAG, "Proxy API error: ${response.code()}")
+                    Timber.w(TAG, "Proxy API error: ${response.code()}")
                     emptyList()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Proxy API unreachable — will try fallback sources. Reason: ${e.message}")
+                Timber.w(TAG, "Proxy API unreachable — will try fallback sources. Reason: ${e.message}")
                 emptyList()
             }
         }
@@ -303,7 +303,7 @@ class NewsRepository(
         // Detect new month — reset counter
         val currentMonthStart = getMonthStartTimestamp(now)
         if (monthStart == 0L || monthStart != currentMonthStart) {
-            Log.i(TAG, "New month detected. Resetting X API quota counter.")
+            Timber.i(TAG, "New month detected. Resetting X API quota counter.")
             appSettings.resetXApiQuota(currentMonthStart)
             used = 0
             monthStart = currentMonthStart
@@ -345,7 +345,7 @@ class NewsRepository(
                     appSettings.incrementXApiRequest()
                     appSettings.setXApiLastFetch(System.currentTimeMillis())
 
-                    Log.i(TAG, "X API: fetched ${tweets.size} tweets. Used +1 request.")
+                    Timber.i(TAG, "X API: fetched ${tweets.size} tweets. Used +1 request.")
 
                     tweets.mapNotNull { tweet ->
                         val imageUrl = tweet.attachments?.mediaKeys?.firstNotNullOfOrNull { key ->
@@ -372,7 +372,7 @@ class NewsRepository(
                     }
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    Log.w(TAG, "X API error: ${response.code()} - $errorBody")
+                    Timber.w(TAG, "X API error: ${response.code()} - $errorBody")
                     // If rate limited (429), don't count as used
                     if (response.code() != 429) {
                         appSettings.incrementXApiRequest()
@@ -380,7 +380,7 @@ class NewsRepository(
                     emptyList()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "X/Twitter fetch failed", e)
+                Timber.w(TAG, "X/Twitter fetch failed", e)
                 emptyList()
             }
         }
@@ -431,11 +431,11 @@ class NewsRepository(
                         )
                     }
                 } else {
-                    Log.w(TAG, "NewsAPI error: ${response.code()}")
+                    Timber.w(TAG, "NewsAPI error: ${response.code()}")
                     emptyList()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "NewsAPI fetch failed", e)
+                Timber.w(TAG, "NewsAPI fetch failed", e)
                 emptyList()
             }
         }
@@ -529,7 +529,7 @@ class NewsRepository(
                     emptyList()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Reddit fetch failed", e)
+                Timber.w(TAG, "Reddit fetch failed", e)
                 emptyList()
             }
         }
@@ -565,7 +565,7 @@ class NewsRepository(
         cachedArticles = emptyList()
         lastFetchTime = 0
         localCache.clearCache()
-        Log.d(TAG, "All caches cleared (memory + disk)")
+        Timber.d(TAG, "All caches cleared (memory + disk)")
     }
 
     fun close() {

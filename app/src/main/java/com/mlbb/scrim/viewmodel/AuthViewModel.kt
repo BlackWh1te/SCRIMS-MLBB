@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -118,42 +119,54 @@ class AuthViewModel @Inject constructor(
 
     private suspend fun checkAuthStatus() {
         _isInitializing.value = true
-        val hasToken = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            authRepository.isLoggedIn()
-        }
-        
-        if (hasToken) {
-            _isLoggedIn.value = true
-            // Eagerly connect Realtime on cold start with existing session
-            realtimeClient.connect()
-            // Load profile in background without blocking initialization
-            viewModelScope.launch {
+        try {
+            val hasToken = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                authRepository.isLoggedIn()
+            }
+            
+            if (hasToken) {
+                _isLoggedIn.value = true
+                // Eagerly connect Realtime on cold start with existing session
+                realtimeClient.connect()
+                
+                // Load profile in background
                 val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    authRepository.getUserProfile()
+                    try {
+                        authRepository.getUserProfile()
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to load profile during init")
+                        null
+                    }
                 }
                 handleProfileFetch(profile)
                 
-                // Update location in background
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    authRepository.updateLocationAndLastSeen()
+                // Update location and last seen in a completely separate job so it never blocks UI
+                viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        authRepository.updateLocationAndLastSeen()
+                    } catch (e: Exception) {
+                        Timber.w(e, "Silent location update failure")
+                    }
                 }
-                _isInitializing.value = false
+            } else {
+                _isLoggedIn.value = false
+                _userProfile.value = null
             }
-        } else {
+        } catch (e: Exception) {
+            Timber.e(e, "Critical init failure")
             _isLoggedIn.value = false
-            _userProfile.value = null
+        } finally {
             _isInitializing.value = false
         }
     }
 
     private suspend fun handleProfileFetch(profile: UserProfile?) {
         if (profile?.isBanned == true) {
-            authRepository.signOut()
+            // Keep user logged in but mark as banned — BannedScreen will handle the UI
+            _userProfile.value = profile
+            _isLoggedIn.value = true
             // Disconnect Realtime — banned user should not receive live updates
             realtimeClient.disconnect()
-            _isLoggedIn.value = false
-            _userProfile.value = null
-            _authState.value = AuthResult.Error("Your account has been banned.")
         } else {
             _userProfile.value = profile
         }
@@ -267,13 +280,15 @@ class AuthViewModel @Inject constructor(
         signOutJob?.cancel()
         signOutJob = viewModelScope.launch {
             authRepository.signOut().collect { result ->
-                _authState.value = result
                 if (result is AuthResult.Success) {
                     // Disconnect Realtime WebSocket to prevent stale auth state
                     realtimeClient.disconnect()
                     _isLoggedIn.value = false
                     _userProfile.value = null
                     pendingVerificationStartedAtMs = null
+                    // Reset authState to Idle (NOT Success) to prevent
+                    // the Login screen's LaunchedEffect from navigating back to Home
+                    _authState.value = AuthResult.Idle
                 }
             }
         }
@@ -284,13 +299,15 @@ class AuthViewModel @Inject constructor(
         _authState.value = AuthResult.Loading
         deleteAccountJob = viewModelScope.launch {
             authRepository.deleteAccount().collect { result ->
-                _authState.value = result
                 if (result is AuthResult.Success) {
                     // Disconnect Realtime WebSocket — account no longer exists
                     realtimeClient.disconnect()
                     _isLoggedIn.value = false
                     _userProfile.value = null
                     pendingVerificationStartedAtMs = null
+                    // Reset authState to Idle to prevent Login screen from
+                    // navigating back to Home
+                    _authState.value = AuthResult.Idle
                 }
             }
         }
@@ -359,6 +376,9 @@ class AuthViewModel @Inject constructor(
     fun refreshProfile() {
         viewModelScope.launch {
             _isProfileRefreshing.value = true
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                authRepository.invalidateProfileCache()
+            }
             val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 authRepository.getUserProfile()
             }

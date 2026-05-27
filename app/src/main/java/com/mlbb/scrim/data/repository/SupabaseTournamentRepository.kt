@@ -4,7 +4,7 @@ import com.mlbb.scrim.data.cache.UnifiedCacheManager
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
 import com.mlbb.scrim.security.AuthorizationUtils
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.delay
 
 /**
@@ -46,12 +46,14 @@ class SupabaseTournamentRepository(
         cacheManager.invalidateByPrefix("tournaments_")
     }
 
-    private suspend fun requireTournamentHost(tournamentId: String): Result<String> {
+    private suspend fun requireTournamentHost(tournamentId: String): Result<Unit> {
         val tournamentResponse = api.getTournamentById(PostgrestFilter.eq(tournamentId))
         val tournament = tournamentResponse.body()?.firstOrNull()
             ?: return Result.failure(Exception("Tournament not found"))
         val hostUserId = (tournament["host_user_id"] as? String) ?: ""
-        return AuthorizationUtils.requireOwner(hostUserId, "manage this tournament")
+        AuthorizationUtils.requireOwner(hostUserId, "manage this tournament")
+            .onFailure { return Result.failure(it) }
+        return Result.success(Unit)
     }
 
     // ── Tournament list ──────────────────────────────────────────
@@ -79,7 +81,7 @@ class SupabaseTournamentRepository(
             }
         }
     } catch (e: Exception) {
-        Log.e(TAG, "Error fetching tournaments", e)
+        Timber.e(TAG, "Error fetching tournaments", e)
         Result.failure(e)
     }
 
@@ -99,7 +101,7 @@ class SupabaseTournamentRepository(
             }
         }
     } catch (e: Exception) {
-        Log.e(TAG, "Error fetching tournament $tournamentId", e)
+        Timber.e(TAG, "Error fetching tournament $tournamentId", e)
         Result.failure(e)
     }
 
@@ -254,10 +256,20 @@ class SupabaseTournamentRepository(
         tournament.swissRounds?.let { body["swiss_rounds"] = it }
 
         // registration_deadline and check_in_deadline are NOT NULL in DB — always provide values
+        val now = System.currentTimeMillis()
         val regDeadline = if (tournament.registrationDeadline > 0) tournament.registrationDeadline
-            else System.currentTimeMillis() + 24 * 60 * 60 * 1000L   // default: 24h from now
+            else now + 24 * 60 * 60 * 1000L   // default: 24h from now
         val checkInDeadline = if (tournament.checkInDeadline > 0) tournament.checkInDeadline
             else regDeadline - 30 * 60 * 1000L                        // default: 30min before reg closes
+
+        // HARDENED: Validate deadlines are in the future and logically ordered
+        if (tournament.registrationDeadline > 0 && tournament.registrationDeadline <= now) {
+            return Result.failure(Exception("Registration deadline must be in the future"))
+        }
+        if (tournament.checkInDeadline > 0 && tournament.checkInDeadline >= regDeadline) {
+            return Result.failure(Exception("Check-in deadline must be before registration deadline"))
+        }
+
         body["registration_deadline"] = regDeadline.toIsoString()
         body["check_in_deadline"] = checkInDeadline.toIsoString()
 
@@ -268,7 +280,7 @@ class SupabaseTournamentRepository(
             Result.success(mapDtoToTournament(dto))
         } else {
             val errorBody = response.errorBody()?.string() ?: "Unknown error"
-            Log.e(TAG, "Tournament creation failed: ${response.code()} — $errorBody")
+            Timber.e(TAG, "Tournament creation failed: ${response.code()} — $errorBody")
             // Parse common PostgREST errors into user-friendly messages
             val userMessage = when {
                 errorBody.contains("weekly_tournament_limit", ignoreCase = true) ||
@@ -283,14 +295,15 @@ class SupabaseTournamentRepository(
             Result.failure(Exception(userMessage))
         }
     } catch (e: Exception) {
-        Log.e(TAG, "Tournament creation exception", e)
+        Timber.e(TAG, "Tournament creation exception", e)
         Result.failure(e)
     }
     }
 
     // ── Update tournament (host only, registration phase) ──────────
 
-    override suspend fun updateTournament(tournamentId: String, updates: Map<String, Any?>): Result<Tournament> = try {
+    override suspend fun updateTournament(tournamentId: String, updates: Map<String, Any?>): Result<Tournament> {
+        return try {
         // Ownership: only the tournament host may update it
         val tournamentResponse = api.getTournamentById(PostgrestFilter.eq(tournamentId))
         val tournament = tournamentResponse.body()?.firstOrNull()
@@ -311,7 +324,7 @@ class SupabaseTournamentRepository(
             Result.success(mapDtoToTournament(dto))
         } else {
             val errorBody = response.errorBody()?.string() ?: "Unknown error"
-            Log.e(TAG, "Tournament update failed: ${response.code()} — $errorBody")
+            Timber.e(TAG, "Tournament update failed: ${response.code()} — $errorBody")
             val userMessage = when {
                 errorBody.contains("violates row-level security", ignoreCase = true) ->
                     "You don't have permission to update this tournament."
@@ -322,8 +335,9 @@ class SupabaseTournamentRepository(
             Result.failure(Exception(userMessage))
         }
     } catch (e: Exception) {
-        Log.e(TAG, "Tournament update exception", e)
+        Timber.e(TAG, "Tournament update exception", e)
         Result.failure(e)
+    }
     }
 
     // ── Swiss matches ───────────────────────────────────────────

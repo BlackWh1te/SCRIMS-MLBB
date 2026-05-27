@@ -40,6 +40,8 @@ interface AuthRepositoryInterface {
 
     suspend fun getUserProfile(): UserProfile?
 
+    suspend fun invalidateProfileCache()
+
     suspend fun isLoggedIn(): Boolean
 
     fun isVerificationExpired(): Boolean

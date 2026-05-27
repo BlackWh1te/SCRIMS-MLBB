@@ -9,4 +9,5 @@ interface LfgRepositoryInterface {
     fun deletePost(postId: String): Flow<Result<Unit>>
     fun getPostsByPlayer(playerId: String): Flow<Result<List<LfgPost>>>
     fun subscribeToLfgPosts(): Flow<LfgPost>
+    suspend fun incrementViewCount(postId: String): Result<Unit>
 }

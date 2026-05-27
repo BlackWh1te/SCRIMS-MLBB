@@ -1,6 +1,6 @@
 package com.mlbb.scrim.data.cache
 
-import android.util.Log
+import timber.log.Timber
 import com.mlbb.scrim.data.local.ProfileDao
 import com.mlbb.scrim.data.local.ProfileEntity
 import com.mlbb.scrim.data.service.ProfileDto
@@ -81,7 +81,7 @@ class ProfileCacheRepository(
             }
             dto ?: roomProfile?.let { ProfileDto(id = it.id, username = it.username) }
         } catch (e: Exception) {
-            Log.w(TAG, "Network fetch failed for $userId, using Room fallback")
+            Timber.w(TAG, "Network fetch failed for $userId, using Room fallback")
             roomProfile?.let { ProfileDto(id = it.id, username = it.username) }
         }
     }
@@ -110,7 +110,7 @@ class ProfileCacheRepository(
         }
 
         if (uncachedIds.isEmpty()) {
-            Log.d(TAG, "Batch HIT: all ${userIds.size} profiles from memory")
+            Timber.d(TAG, "Batch HIT: all ${userIds.size} profiles from memory")
             return result
         }
 
@@ -131,7 +131,7 @@ class ProfileCacheRepository(
                         idFilter = PostgrestFilter.inList(stillUncached)
                     )
                     val fetched = response.body() ?: emptyList()
-                    Log.d(TAG, "Batch FETCH: ${stillUncached.size} requested, ${fetched.size} returned")
+                    Timber.d(TAG, "Batch FETCH: ${stillUncached.size} requested, ${fetched.size} returned")
 
                     val entities = mutableListOf<ProfileEntity>()
                     for (dto in fetched) {
@@ -155,7 +155,7 @@ class ProfileCacheRepository(
                         try { profileDao.insertProfiles(entities) } catch (_: Exception) { }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Batch fetch failed, trying Room fallback", e)
+                    Timber.w(TAG, "Batch fetch failed, trying Room fallback", e)
                     // Fallback: try Room for each uncached ID
                     for (id in stillUncached) {
                         try {

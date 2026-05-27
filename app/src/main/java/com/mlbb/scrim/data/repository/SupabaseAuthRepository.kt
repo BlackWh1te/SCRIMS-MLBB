@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.firstOrNull
 import com.mlbb.scrim.util.DateUtils
-import android.util.Log
+import timber.log.Timber
 
 import com.mlbb.scrim.data.cache.UnifiedCacheManager
 
@@ -370,7 +370,7 @@ class SupabaseAuthRepository(
                         userId = PostgrestFilter.eq(userId),
                         body = mapOf("deleted" to true, "deleted_at" to DateUtils.formatIsoUtc(System.currentTimeMillis()))
                     )
-                } catch (e: Exception) { Log.w("AuthRepo", "Failed to mark profile as deleted", e) }
+                } catch (e: Exception) { Timber.w(e, "Failed to mark profile as deleted") }
 
                 // Step 2: Delete auth user via Edge Function (requires service_role key)
                 try {
@@ -386,10 +386,10 @@ class SupabaseAuthRepository(
                         .build()
                     val response = okhttp3.OkHttpClient().newCall(request).execute()
                     if (!response.isSuccessful) {
-                        Log.w("AuthRepo", "Edge Function delete-user returned ${response.code}: ${response.body?.string()}")
+                        Timber.w("Edge Function delete-user returned %s", response.code)
                     }
                 } catch (e: Exception) {
-                    Log.w("AuthRepo", "Failed to call delete-user Edge Function: ${e.message}")
+                    Timber.w(e, "Failed to call delete-user Edge Function")
                 }
             }
             clearTokens()
@@ -479,7 +479,7 @@ class SupabaseAuthRepository(
                     emit(AuthResult.Success)
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    android.util.Log.e("AuthRepo", "updateProfile failed: ${response.code()} body=$errorBody")
+                    Timber.e("updateProfile failed: %s body=%s", response.code(), errorBody)
                     emit(AuthResult.Error("Failed to update profile"))
                 }
             } ?: emit(AuthResult.Error("Not authenticated"))
@@ -498,7 +498,7 @@ class SupabaseAuthRepository(
                 emit(AuthResult.Success)
             } else {
                 val errorBody = response.errorBody()?.string()
-                android.util.Log.e("AuthRepo", "updateAvatar failed: ${response.code()} body=$errorBody")
+                Timber.e("updateAvatar failed: %s body=%s", response.code(), errorBody)
                 emit(AuthResult.Error("Failed to update avatar: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -525,7 +525,7 @@ class SupabaseAuthRepository(
                     emit(AuthResult.Success)
                 } else {
                     val errorBody = updateResponse.errorBody()?.string()
-                    android.util.Log.e("AuthRepo", "uploadAndSetAvatar profile update failed: ${updateResponse.code()} body=$errorBody")
+                    Timber.e("uploadAndSetAvatar profile update failed: %s body=%s", updateResponse.code(), errorBody)
                     emit(AuthResult.Error("Avatar uploaded but profile update failed"))
                 }
             }.onFailure { e ->
@@ -750,7 +750,7 @@ class SupabaseAuthRepository(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("AuthRepo", "Failed to update location: ${e.message}")
+            Timber.w(e, "Failed to update location")
         }
     }
 }

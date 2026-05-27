@@ -19,12 +19,12 @@
             <!-- Add your Supabase certificate pinning here for additional security -->
             <!-- <certificates src="@raw/supabase_certificate" /> -->
         </trust-anchors>
-        <!-- TODO: Pin the Supabase certificate (get the actual hash from Supabase) -->
-        <!-- For production, uncomment and fill in when certificate pinning is configured:
-        <pin-set>
-            <pin digest="SHA-256">BASE64_HASH_HERE</pin>
+        <!-- Certificate pinning for Supabase -->
+        <!-- Leaf pin + intermediate backup pin to survive cert rotation -->
+        <pin-set expiration="2027-01-01">
+            <pin digest="SHA-256">p51goejPCgGH+Oog/MU2k6PObcEfTrrr73jUcuWJ7w0=</pin>
+            <pin digest="SHA-256">kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=</pin>
         </pin-set>
-        -->
     </domain-config>
 
     <!-- Local development backend on the Android emulator -->

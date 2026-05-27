@@ -2,6 +2,7 @@ package com.mlbb.scrim.util
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import timber.log.Timber
 import java.io.ByteArrayOutputStream
 
 /**
@@ -74,7 +75,7 @@ object ImageUtils {
             
             return result
         } catch (e: Exception) {
-            android.util.Log.e("ImageUtils", "Compression failed, returning original: ${e.message}")
+            Timber.e(e, "Compression failed, returning original")
             return bytes
         }
     }

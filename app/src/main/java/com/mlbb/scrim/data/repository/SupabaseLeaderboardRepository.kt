@@ -10,7 +10,7 @@ import com.mlbb.scrim.data.service.LeaderboardEntryDto
 import com.mlbb.scrim.data.service.SupabaseConfig
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
@@ -177,11 +177,11 @@ class SupabaseLeaderboardRepository(
                     val entry = parseRealtimeRecordToLeaderboardEntry(event.record!!)
                     emit(entry)
                 } catch (e: Exception) {
-                    Log.w("LeaderboardRepo", "Failed to parse Realtime UPDATE: ${e.message}")
+                    Timber.w("LeaderboardRepo", "Failed to parse Realtime UPDATE: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("LeaderboardRepo", "Realtime subscription failed for leaderboard: ${e.message}")
+            Timber.w("LeaderboardRepo", "Realtime subscription failed for leaderboard: ${e.message}")
         }
     }
 

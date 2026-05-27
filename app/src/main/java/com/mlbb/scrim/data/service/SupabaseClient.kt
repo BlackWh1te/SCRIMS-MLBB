@@ -153,6 +153,7 @@ object SupabaseRetrofitClient {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .authenticator(SupabaseAuthenticator())
+            .addInterceptor(RetryInterceptor())
             .addInterceptor { chain ->
                 val bearerToken = SupabaseSession.getAccessTokenOrNull() ?: SupabaseConfig.SUPABASE_ANON_KEY
                 val request = chain.request().newBuilder()
@@ -188,6 +189,7 @@ object SupabaseAuthRetrofitClient {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(RetryInterceptor())
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("apikey", SupabaseConfig.SUPABASE_ANON_KEY)

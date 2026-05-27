@@ -10,7 +10,7 @@ import com.mlbb.scrim.data.model.SkillLevel
 import com.mlbb.scrim.data.service.*
 import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
@@ -120,11 +120,11 @@ class SupabaseLfgRepository(
                 }
             } else {
                 val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                Log.e("LfgRepo", "LFG post creation failed: ${response.code()} — $errorBody")
+                Timber.e("LfgRepo", "LFG post creation failed: ${response.code()} — $errorBody")
                 emit(Result.failure(Exception("Failed to create LFG post: ${response.code()}")))
             }
         } catch (e: Exception) {
-            Log.e("LfgRepo", "LFG post creation exception", e)
+            Timber.e("LfgRepo", "LFG post creation exception", e)
             emit(Result.failure(e))
         }
     }
@@ -358,11 +358,11 @@ class SupabaseLfgRepository(
                     val post = mapDtoToModel(parseRealtimeRecordToLfgPostDto(event.record!!))
                     emit(post)
                 } catch (e: Exception) {
-                    Log.w("LfgRepo", "Failed to parse Realtime LFG event: ${e.message}")
+                    Timber.w("LfgRepo", "Failed to parse Realtime LFG event: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("LfgRepo", "Realtime subscription failed for LFG posts: ${e.message}")
+            Timber.w("LfgRepo", "Realtime subscription failed for LFG posts: ${e.message}")
         }
     }
 

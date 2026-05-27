@@ -1,5 +1,6 @@
 package com.mlbb.scrim.viewmodel
 
+import timber.log.Timber
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.Conversation
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import java.util.UUID
 
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -29,7 +32,9 @@ class MessageViewModel @Inject constructor(
 
 
     private var chatPollingJob: Job? = null
+    private var convPollingJob: Job? = null
     private var typingStatusJob: Job? = null
+    private var conversationUpdatesJob: Job? = null
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
@@ -74,7 +79,6 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    private var convPollingJob: Job? = null
     fun startConversationsPolling(userId: String) {
         convPollingJob?.cancel()
         convPollingJob = viewModelScope.launch {
@@ -82,7 +86,7 @@ class MessageViewModel @Inject constructor(
                 messageRepository.getConversationsForUser(userId).collect { result ->
                     result.onSuccess { _conversations.value = it }
                 }
-                delay(10000) // Poll for new convs every 10s
+                delay(30_000) // Poll every 30s (reduced from 10s — cache handles freshness)
             }
         }
     }
@@ -97,11 +101,16 @@ class MessageViewModel @Inject constructor(
             // Mark as read when entering
             messageRepository.markConversationAsRead(conversationId, userId).collect {}
 
+            // Load conversation first to ensure _selectedConversation is populated
+            messageRepository.getConversationById(conversationId).collect { result ->
+                result.onSuccess { _selectedConversation.value = it }
+            }
+
             // Merge Realtime + polling fallback, deduplicate by message ID
             val realtimeFlow = messageRepository.subscribeToMessages(conversationId)
             val pollingFlow = flow {
                 while (isActive) {
-                    delay(15_000) // Poll every 15s as fallback
+                    delay(30_000) // Poll every 30s as fallback (reduced from 15s — cache handles freshness)
                     try {
                         messageRepository.getConversationById(conversationId).collect { result ->
                             result.onSuccess { conv ->
@@ -112,21 +121,30 @@ class MessageViewModel @Inject constructor(
                 }
             }
             merge(realtimeFlow, pollingFlow)
-                .distinctUntilChangedBy { it.id }
                 .collect { newMessage ->
                     val current = _selectedConversation.value
                     if (current != null && current.id == conversationId) {
-                        if (current.messages.none { it.id == newMessage.id }) {
-                            _selectedConversation.value = current.copy(
-                                messages = current.messages + newMessage
-                            )
+                        val existingIndex = current.messages.indexOfFirst { it.id == newMessage.id }
+                        val localIndex = current.messages.indexOfFirst { it.id.startsWith("local_") && it.content == newMessage.content }
+                        
+                        if (existingIndex == -1) {
+                            if (localIndex != -1) {
+                                val updatedMessages = current.messages.toMutableList()
+                                updatedMessages[localIndex] = newMessage
+                                _selectedConversation.value = current.copy(messages = updatedMessages)
+                            } else {
+                                _selectedConversation.value = current.copy(
+                                    messages = (current.messages + newMessage).sortedBy { it.timestamp }
+                                )
+                            }
                         }
                     }
                 }
         }
 
         // Subscribe to conversation updates (typing status, etc.)
-        viewModelScope.launch {
+        conversationUpdatesJob?.cancel()
+        conversationUpdatesJob = viewModelScope.launch {
             messageRepository.subscribeToConversation(conversationId).collect { updated ->
                 val current = _selectedConversation.value
                 if (current != null && current.id == conversationId) {
@@ -141,9 +159,39 @@ class MessageViewModel @Inject constructor(
 
     fun stopChatPolling() {
         chatPollingJob?.cancel()
+        conversationUpdatesJob?.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        chatPollingJob?.cancel()
+        convPollingJob?.cancel()
+        typingStatusJob?.cancel()
+        conversationUpdatesJob?.cancel()
     }
 
     fun sendMessage(conversationId: String, senderId: String, senderName: String, content: String) {
+        val tempId = "local_${UUID.randomUUID()}"
+        val tempMessage = Message(
+            id = tempId,
+            conversationId = conversationId,
+            senderId = senderId,
+            senderName = senderName,
+            content = content,
+            timestamp = System.currentTimeMillis(),
+            isRead = true,
+            type = MessageType.TEXT
+        )
+        
+        val current = _selectedConversation.value
+        if (current != null && current.id == conversationId) {
+            _selectedConversation.value = current.copy(
+                messages = current.messages + tempMessage,
+                lastMessage = content,
+                lastMessageTime = tempMessage.timestamp
+            )
+        }
+
         viewModelScope.launch {
             messageRepository.sendMessage(
                 conversationId = conversationId,
@@ -152,7 +200,17 @@ class MessageViewModel @Inject constructor(
                 content = content,
                 type = MessageType.TEXT
             ).collect { result ->
-                result.onFailure { _error.value = it.message }
+                result.onSuccess { sentMessage ->
+                    val currentConv = _selectedConversation.value
+                    if (currentConv != null && currentConv.id == conversationId) {
+                        val localIndex = currentConv.messages.indexOfFirst { it.id == tempId }
+                        if (localIndex != -1) {
+                            val updatedMessages = currentConv.messages.toMutableList()
+                            updatedMessages[localIndex] = sentMessage
+                            _selectedConversation.value = currentConv.copy(messages = updatedMessages)
+                        }
+                    }
+                }.onFailure { _error.value = it.message }
             }
         }
     }
@@ -205,7 +263,14 @@ class MessageViewModel @Inject constructor(
     fun updateTypingStatus(conversationId: String, userId: String, isTyping: Boolean) {
         typingStatusJob?.cancel()
         typingStatusJob = viewModelScope.launch {
-            messageRepository.setTypingStatus(conversationId, userId, isTyping).collect {}
+            // HARDENED: Debounce typing status: send true immediately, auto-false after 3s inactivity
+            if (isTyping) {
+                messageRepository.setTypingStatus(conversationId, userId, true).collect {}
+                delay(3000)
+                messageRepository.setTypingStatus(conversationId, userId, false).collect {}
+            } else {
+                messageRepository.setTypingStatus(conversationId, userId, false).collect {}
+            }
         }
     }
 
@@ -243,19 +308,39 @@ class MessageViewModel @Inject constructor(
         recipientName: String
     ) {
         viewModelScope.launch {
+            Timber.d("MessageFlow", "VM: startDirectConversation called sender=$senderId recipient=$recipientId")
             _isLoading.value = true
-            messageRepository.startDirectConversation(
-                senderId, senderName, recipientId, recipientName
-            ).collect { result ->
-                result.onSuccess { 
-                    _selectedConversation.value = it
-                    // Optionally refresh list
-                    loadConversations(senderId)
+            try {
+                withTimeout(10000) {
+                    messageRepository.startDirectConversation(
+                        senderId, senderName, recipientId, recipientName
+                    ).collect { result ->
+                        result.onSuccess {
+                            Timber.d("MessageFlow", "VM: success convId=${it.id}")
+                            // Clear first to guarantee StateFlow emits even if value is equal
+                            _selectedConversation.value = null
+                            _selectedConversation.value = it
+                            // Optionally refresh list
+                            loadConversations(senderId)
+                        }.onFailure {
+                            Timber.d("MessageFlow", "VM: failure error=${it.message}")
+                            _error.value = it.message ?: "Failed to start conversation"
+                        }
+                    }
                 }
-                _isLoading.value = false
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Timber.d("MessageFlow", "VM: timeout after 10s")
+                _error.value = "Request timed out. Check your connection."
+            } catch (e: Exception) {
+                Timber.d("MessageFlow", "VM: exception ${e.javaClass.simpleName}: ${e.message}")
+                _error.value = e.message ?: "Unknown error"
             }
+            _isLoading.value = false
+            Timber.d("MessageFlow", "VM: isLoading set to false")
         }
     }
+
+    fun setError(message: String) { _error.value = message }
 
     fun clearError() { _error.value = null }
 

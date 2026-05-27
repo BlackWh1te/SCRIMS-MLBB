@@ -5,7 +5,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.util.Log
+import timber.log.Timber
 import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
@@ -120,9 +120,9 @@ object HapticFeedback {
             if (!vibrator.hasVibrator()) return
             block(vibrator)
         } catch (e: SecurityException) {
-            Log.w(TAG, "Vibrate permission missing", e)
+            Timber.w(TAG, "Vibrate permission missing", e)
         } catch (e: Exception) {
-            Log.w(TAG, "Vibrate failed", e)
+            Timber.w(TAG, "Vibrate failed", e)
         }
     }
 

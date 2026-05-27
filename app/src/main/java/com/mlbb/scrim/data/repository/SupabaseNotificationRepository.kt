@@ -11,7 +11,7 @@ import com.mlbb.scrim.data.service.SupabaseConfig
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
 import com.mlbb.scrim.util.DateUtils
-import android.util.Log
+import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
@@ -180,11 +180,11 @@ class SupabaseNotificationRepository(
                         emit(mapDtoToModel(dto))
                     }
                 } catch (e: Exception) {
-                    Log.w("NotifRepo", "Failed to parse Realtime INSERT: ${e.message}")
+                    Timber.w("NotifRepo", "Failed to parse Realtime INSERT: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.w("NotifRepo", "Realtime subscription failed for user $userId: ${e.message}")
+            Timber.w("NotifRepo", "Realtime subscription failed for user $userId: ${e.message}")
         }
     }
 

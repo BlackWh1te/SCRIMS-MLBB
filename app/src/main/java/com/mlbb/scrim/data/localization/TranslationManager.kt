@@ -1,6 +1,6 @@
 package com.mlbb.scrim.data.localization
 
-import android.util.Log
+import timber.log.Timber
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
@@ -64,7 +64,7 @@ class TranslationManager {
                 // Translate
                 translateWithTranslator(translator, text)
             } catch (e: Exception) {
-                Log.e(TAG, "Translation failed for lang=$targetLanguageCode", e)
+                Timber.e(TAG, "Translation failed for lang=$targetLanguageCode", e)
                 text // Return original on failure
             }
         }
@@ -83,7 +83,7 @@ class TranslationManager {
                 val translatedContent = translateText(content, targetLanguageCode)
                 Triple(translatedTitle, translatedDesc, translatedContent)
             } catch (e: Exception) {
-                Log.e(TAG, "Article translation failed", e)
+                Timber.e(TAG, "Article translation failed", e)
                 Triple(title, description, content)
             }
         }

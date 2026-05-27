@@ -1,6 +1,6 @@
 package com.mlbb.scrim.data.service
 
-import android.util.Log
+import timber.log.Timber
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -153,7 +153,7 @@ class SupabaseRealtimeClient @Inject constructor() {
         val request = Request.Builder().url(url).build()
         ws = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.d(TAG, "WebSocket connected")
+                Timber.d(TAG, "WebSocket connected")
                 isConnected.set(true)
                 _connectionState.value = ConnectionState.CONNECTED
                 reconnectAttempt.set(0)
@@ -171,17 +171,17 @@ class SupabaseRealtimeClient @Inject constructor() {
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                Log.w(TAG, "WebSocket closing: $code $reason")
+                Timber.w(TAG, "WebSocket closing: $code $reason")
                 webSocket.close(1000, null)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.d(TAG, "WebSocket closed: $code $reason")
+                Timber.d(TAG, "WebSocket closed: $code $reason")
                 handleDisconnect()
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "WebSocket failure: ${t.message}")
+                Timber.e(TAG, "WebSocket failure: ${t.message}")
                 handleDisconnect()
             }
         })
@@ -314,7 +314,7 @@ class SupabaseRealtimeClient @Inject constructor() {
         val message = gson.toJson(arrayOf(joinRef, ref, topic, event, payload))
         val sent = ws?.send(message)
         if (sent != true) {
-            Log.w(TAG, "Failed to send Phoenix message: topic=$topic event=$event")
+            Timber.w(TAG, "Failed to send Phoenix message: topic=$topic event=$event")
         }
         return ref
     }
@@ -344,9 +344,9 @@ class SupabaseRealtimeClient @Inject constructor() {
         val message = gson.toJson(arrayOf(joinRef, ref, channelName, PHOENIX_EVENT_JOIN, payload))
         val sent = ws?.send(message)
         if (sent != true) {
-            Log.w(TAG, "Failed to join channel: $channelName")
+            Timber.w(TAG, "Failed to join channel: $channelName")
         } else {
-            Log.d(TAG, "Joined channel: $channelName with ${configs.size} postgres_changes")
+            Timber.d(TAG, "Joined channel: $channelName with ${configs.size} postgres_changes")
         }
     }
 
@@ -354,7 +354,7 @@ class SupabaseRealtimeClient @Inject constructor() {
         // join_ref=0 for non-join messages per Phoenix protocol
         sendPhoenixMessage(channelName, PHOENIX_EVENT_CLOSE, joinRef = 0L)
         channelJoinRefs.remove(channelName)
-        Log.d(TAG, "Left channel: $channelName")
+        Timber.d(TAG, "Left channel: $channelName")
     }
 
     private fun resubscribeAll() {
@@ -387,7 +387,7 @@ class SupabaseRealtimeClient @Inject constructor() {
         val attempt = reconnectAttempt.getAndIncrement()
         reconnectJob.set(scope.launch {
             val delayMs = minOf(30_000L, (1000L * (1L shl attempt.coerceAtMost(4))))
-            Log.d(TAG, "Reconnecting in ${delayMs}ms (attempt ${attempt + 1})")
+            Timber.d(TAG, "Reconnecting in ${delayMs}ms (attempt ${attempt + 1})")
             delay(delayMs)
             if (activeChannels.isNotEmpty()) {
                 connect()
@@ -413,11 +413,11 @@ class SupabaseRealtimeClient @Inject constructor() {
                     pendingJoins.remove(ref)?.complete(true)
                 }
                 PHOENIX_EVENT_ERROR -> {
-                    Log.e(TAG, "Phoenix error on topic=$topic: $payload")
+                    Timber.e(TAG, "Phoenix error on topic=$topic: $payload")
                     pendingJoins.remove(ref)?.complete(false)
                 }
                 PHOENIX_EVENT_CLOSE -> {
-                    Log.d(TAG, "Phoenix channel closed: $topic")
+                    Timber.d(TAG, "Phoenix channel closed: $topic")
                 }
                 PHOENIX_EVENT_HEARTBEAT -> {
                     // Heartbeat reply — connection alive
@@ -431,7 +431,7 @@ class SupabaseRealtimeClient @Inject constructor() {
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse Phoenix message: ${e.message}")
+            Timber.w(TAG, "Failed to parse Phoenix message: ${e.message}")
         }
     }
 
@@ -474,7 +474,7 @@ class SupabaseRealtimeClient @Inject constructor() {
                 _events.emit(realtimeEvent)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse Realtime event: ${e.message}")
+            Timber.w(TAG, "Failed to parse Realtime event: ${e.message}")
         }
     }
 

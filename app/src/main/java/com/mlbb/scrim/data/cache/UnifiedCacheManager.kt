@@ -1,6 +1,6 @@
 package com.mlbb.scrim.data.cache
 
-import android.util.Log
+import timber.log.Timber
 import com.mlbb.scrim.data.local.CacheMetadataDao
 import com.mlbb.scrim.data.local.CacheMetadataEntity
 import kotlinx.coroutines.sync.Mutex
@@ -61,7 +61,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
         // L1: Memory cache
         val memEntry = memoryCache[key]
         if (memEntry != null && memEntry.isValid()) {
-            Log.d(TAG, "L1 HIT [$key] (${(System.currentTimeMillis() - memEntry.cachedAt) / 1000}s old)")
+            Timber.d(TAG, "L1 HIT [$key] (${(System.currentTimeMillis() - memEntry.cachedAt) / 1000}s old)")
             return memEntry.data as T
         }
 
@@ -79,7 +79,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
             if (metadata != null && System.currentTimeMillis() < metadata.expiresAt) {
                 val roomData = roomLoader()
                 if (roomData != null) {
-                    Log.d(TAG, "L2 HIT [$key] (Room, expires in ${(metadata.expiresAt - System.currentTimeMillis()) / 1000}s)")
+                    Timber.d(TAG, "L2 HIT [$key] (Room, expires in ${(metadata.expiresAt - System.currentTimeMillis()) / 1000}s)")
                     // Promote to L1
                     memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
                     return@withLock roomData
@@ -87,7 +87,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
             }
 
             // L3: Network fetch
-            Log.d(TAG, "MISS [$key] → fetching from network")
+            Timber.d(TAG, "MISS [$key] → fetching from network")
             val freshData = networkLoader()
 
             // Save to L1
@@ -102,7 +102,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
                     expiresAt = System.currentTimeMillis() + roomTtlMs
                 ))
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to save [$key] to Room", e)
+                Timber.w(TAG, "Failed to save [$key] to Room", e)
             }
 
             freshData
@@ -166,7 +166,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
                 ))
                 emit(freshData)
             } catch (e: Exception) {
-                Log.w(TAG, "Network fetch failed for [$key]", e)
+                Timber.w(TAG, "Network fetch failed for [$key]", e)
                 // If we haven't emitted anything at all, throw the error
                 if (memoryCache[key] == null && metadataDao.get(key) == null) {
                     throw e
@@ -182,7 +182,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
     suspend fun invalidate(key: String) {
         memoryCache.remove(key)
         metadataDao.delete(key)
-        Log.d(TAG, "INVALIDATED [$key]")
+        Timber.d(TAG, "INVALIDATED [$key]")
     }
 
     /**
@@ -192,7 +192,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
     suspend fun invalidateByPrefix(prefix: String) {
         memoryCache.keys.filter { it.startsWith(prefix) }.forEach { memoryCache.remove(it) }
         metadataDao.deleteByPrefix(prefix)
-        Log.d(TAG, "INVALIDATED prefix [$prefix*]")
+        Timber.d(TAG, "INVALIDATED prefix [$prefix*]")
     }
 
     /**
@@ -215,7 +215,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
                 expiresAt = System.currentTimeMillis() + roomTtlMs
             ))
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to put [$key] to Room", e)
+            Timber.w(TAG, "Failed to put [$key] to Room", e)
         }
     }
 
@@ -235,6 +235,6 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
     suspend fun clearAll() {
         memoryCache.clear()
         metadataDao.clearAll()
-        Log.d(TAG, "ALL CACHES CLEARED")
+        Timber.d(TAG, "ALL CACHES CLEARED")
     }
 }
