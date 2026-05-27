@@ -319,12 +319,10 @@ class SupabaseAuthRepository(
                 val errorBody = response.errorBody()?.string() ?: "Unknown error"
                 val errorCode = response.code()
                 val friendlyMessage = when {
-                    // Invalid credentials (wrong password or non-existent user)
-                    errorCode == 400 || errorBody.contains("invalid_grant", ignoreCase = true) ||
-                    errorBody.contains("Invalid login credentials", ignoreCase = true) ||
-                    errorBody.contains("Email not confirmed", ignoreCase = true) == false ->
-                        "Invalid email or password. Please check your credentials and try again."
-                    // Email not verified
+                    // Email not verified — must be checked BEFORE the generic 400 guard,
+                    // because Supabase returns HTTP 400 for both "wrong password" and
+                    // "email not confirmed". Without this ordering the branch below would
+                    // swallow the email-not-confirmed case and show the wrong message.
                     errorBody.contains("Email not confirmed", ignoreCase = true) ->
                         "Please verify your email address first. Check your inbox for the verification link."
                     // Account locked or disabled
@@ -335,6 +333,10 @@ class SupabaseAuthRepository(
                     // Network/server errors
                     errorCode == 503 || errorCode == 502 || errorCode == 504 ->
                         "Service temporarily unavailable. Please try again later."
+                    // Invalid credentials (wrong password or non-existent user)
+                    errorCode == 400 || errorBody.contains("invalid_grant", ignoreCase = true) ||
+                    errorBody.contains("Invalid login credentials", ignoreCase = true) ->
+                        "Invalid email or password. Please check your credentials and try again."
                     // Fallback for other errors
                     else -> "Sign in failed: Invalid email or password."
                 }
@@ -385,7 +387,16 @@ class SupabaseAuthRepository(
                             com.google.gson.Gson().toJson(mapOf("user_id" to userId))
                         ))
                         .build()
-                    val response = okhttp3.OkHttpClient().newCall(request).execute()
+                    // Reuse the shared Retrofit OkHttpClient — do NOT create a new
+                    // OkHttpClient() per call (spawns a new thread pool each time, never released).
+                    val response = SupabaseRetrofitClient.retrofit.callFactory()
+                        .let { it as? okhttp3.OkHttpClient }
+                        ?.newCall(request)?.execute()
+                        ?: okhttp3.OkHttpClient.Builder()
+                            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                            .build()
+                            .newCall(request).execute()
                     if (!response.isSuccessful) {
                         Timber.w("Edge Function delete-user returned %s", response.code)
                     }
@@ -540,21 +551,35 @@ class SupabaseAuthRepository(
     override suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            // In Supabase, updating email requires current password
-            // This is typically done through the auth.update() method
-            // For REST API, we'd need to call the auth endpoint directly
-            kotlinx.coroutines.delay(800)
+            val header = authHeader() ?: run {
+                emit(AuthResult.Error("Not authenticated"))
+                return@flow
+            }
+            val userId = getUserId() ?: run {
+                emit(AuthResult.Error("Not authenticated"))
+                return@flow
+            }
 
-            getUserId()?.let { userId ->
-                val response = api.updateProfile(PostgrestFilter.eq(userId), mapOf("email" to newEmail))
-                if (response.isSuccessful) {
-                    cacheManager.invalidate("current_user_profile_$userId")
-                    secureStorage.storeEncrypted(KEY_USER_EMAIL, newEmail)
-                    emit(AuthResult.Success)
-                } else {
-                    emit(AuthResult.Error("Failed to update email"))
-                }
-            } ?: emit(AuthResult.Error("Not authenticated"))
+            // Step 1: Update the actual Supabase Auth email so the user can log in
+            // with the new address going forward.
+            val authResponse = authApi.updateUser(header, mapOf("email" to newEmail))
+            if (!authResponse.isSuccessful) {
+                val errorBody = authResponse.errorBody()?.string()
+                Timber.e("updateEmail auth failed: %s body=%s", authResponse.code(), errorBody)
+                emit(AuthResult.Error("Failed to update email: ${errorBody ?: authResponse.code()}"))
+                return@flow
+            }
+
+            // Step 2: Mirror the new email to the profiles table for display purposes.
+            try {
+                api.updateProfile(PostgrestFilter.eq(userId), mapOf("email" to newEmail))
+            } catch (e: Exception) {
+                Timber.w(e, "updateEmail: profile table mirror failed (non-fatal)")
+            }
+
+            cacheManager.invalidate("current_user_profile_$userId")
+            secureStorage.storeEncrypted(KEY_USER_EMAIL, newEmail)
+            emit(AuthResult.Success)
         } catch (e: Exception) {
             emit(AuthResult.Error("Error: ${e.message}"))
         }
@@ -573,6 +598,20 @@ class SupabaseAuthRepository(
             }
             if (currentPassword == newPassword) {
                 emit(AuthResult.Error("New password must be different from current password."))
+                return@flow
+            }
+
+            // Verify the current password by re-authenticating with Supabase before
+            // allowing the change. Without this check anyone who obtains an active JWT
+            // (e.g. a shared device) can silently change the account password.
+            val email = secureStorage.getEncrypted(KEY_USER_EMAIL, "")
+            if (email.isBlank()) {
+                emit(AuthResult.Error("Could not verify identity. Please sign out and sign back in."))
+                return@flow
+            }
+            val reAuthResponse = authApi.signIn(SignInRequest(email = email, password = currentPassword))
+            if (!reAuthResponse.isSuccessful) {
+                emit(AuthResult.Error("Current password is incorrect."))
                 return@flow
             }
 

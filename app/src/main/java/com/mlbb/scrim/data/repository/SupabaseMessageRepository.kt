@@ -15,7 +15,10 @@ import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseService
 import com.mlbb.scrim.util.DateUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -69,6 +72,11 @@ class SupabaseMessageRepository(
         private const val MAX_MESSAGE_LENGTH = 2000
     }
 
+    // ── Repository-scoped coroutine scope ──
+    // Using a named scope instead of GlobalScope so the internal bridge coroutine
+    // is tied to the repository's lifecycle and can be cancelled on cleanup.
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     // ── Concurrency guards ──
     private val sendMutex = Mutex()
     private val cacheMutex = Mutex()
@@ -102,8 +110,10 @@ class SupabaseMessageRepository(
     override fun observeConnectionState(): Flow<ChatConnectionState> = _connectionState.asStateFlow()
 
     init {
-        // Bridge realtime client internal state to our domain state
-        kotlinx.coroutines.GlobalScope.launch {
+        // Bridge realtime client internal state to our domain state.
+        // Uses repositoryScope (not GlobalScope) so this coroutine is properly
+        // cancelled when the repository is no longer needed.
+        repositoryScope.launch {
             realtimeClient.connectionState.collect { internalState ->
                 _connectionState.value = when (internalState) {
                     SupabaseRealtimeClient.ConnectionState.CONNECTED -> ChatConnectionState.CONNECTED

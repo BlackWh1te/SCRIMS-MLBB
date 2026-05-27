@@ -6,6 +6,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 /**
  * Uploads files to Supabase Storage buckets.
@@ -18,16 +19,23 @@ import okhttp3.RequestBody.Companion.toRequestBody
  */
 object SupabaseStorageUpload {
 
-    private val client = OkHttpClient()
-
-    companion object {
-        private const val MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024 // 10 MB
-        private val ALLOWED_CONTENT_TYPES = setOf(
-            "image/jpeg",
-            "image/jpg",
-            "image/png"
-        )
-    }
+    // Shared client with explicit timeouts — avoids connection hangs and ANRs.
+    // A bare OkHttpClient() has no timeouts at all, which can block the IO thread forever.
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS) // uploads can be large
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
+    private const val MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024 // 10 MB
+    private val ALLOWED_CONTENT_TYPES = setOf(
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "audio/m4a",
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/mp4"
+    )
 
     /**
      * Upload a file to a Supabase Storage bucket.

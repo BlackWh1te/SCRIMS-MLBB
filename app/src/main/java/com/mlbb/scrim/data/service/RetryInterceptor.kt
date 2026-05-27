@@ -19,6 +19,13 @@ class RetryInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+
+        // Only retry safe, idempotent methods — never POST/PUT/PATCH/DELETE, as retrying
+        // those can cause duplicate mutations (double-send messages, double-create records, etc.)
+        if (request.method != "GET" && request.method != "HEAD") {
+            return chain.proceed(request)
+        }
+
         var lastException: IOException? = null
 
         for (attempt in 0..maxRetries) {

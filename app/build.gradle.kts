@@ -119,6 +119,13 @@ android {
     }
 }
 
+// Tell KSP (Room annotation processor) where to write the schema JSON files.
+// Commit the generated app/schemas/ directory to version control so CI can detect
+// missing migration paths before they reach users.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     // Core Android

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.mlbb.scrim.BuildConfig
 
 @Database(
     entities = [
@@ -19,8 +20,11 @@ import androidx.room.RoomDatabase
         LfgPostEntity::class,
         NotificationEntity::class
     ],
-    version = 11,
-    exportSchema = false
+    version = 12,
+    // exportSchema = true so Room generates schema JSON files under app/schemas/.
+    // Commit these files to version control to validate that all migration paths are
+    // correct in CI and to prevent accidental data loss from missing migrations.
+    exportSchema = true
 )
 abstract class MLBBScrimDatabase : RoomDatabase() {
     // Existing DAOs
@@ -43,14 +47,22 @@ abstract class MLBBScrimDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): MLBBScrimDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                val builder = Room.databaseBuilder(
                     context.applicationContext,
                     MLBBScrimDatabase::class.java,
                     "mlbb_scrim_database"
                 )
-                .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
-                .fallbackToDestructiveMigration()
-                .build()
+                .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+
+                // fallbackToDestructiveMigration() silently wipes the entire local
+                // database (messages, conversations, notifications, cached profiles)
+                // whenever a migration path is missing — unacceptable in production.
+                // Allow it only on debug builds where data loss is acceptable.
+                if (BuildConfig.DEBUG) {
+                    builder.fallbackToDestructiveMigration()
+                }
+
+                val instance = builder.build()
                 INSTANCE = instance
                 instance
             }
