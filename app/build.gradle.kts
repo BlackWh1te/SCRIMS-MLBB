@@ -135,18 +135,18 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
 
     // Image loading
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // ML Kit Translation (on-device)
-    implementation("com.google.mlkit:translate:17.0.2")
+    implementation("com.google.mlkit:translate:17.0.3")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -175,6 +175,8 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.9")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
