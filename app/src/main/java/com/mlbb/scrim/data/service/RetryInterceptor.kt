@@ -27,7 +27,7 @@ class RetryInterceptor(
                 // Retry on 5xx or 408/429 (server errors, timeout, rate limit)
                 if (attempt < maxRetries && response.code in RETRYABLE_CODES) {
                     Timber.w("Retry %d/%d for %s (HTTP %d)", attempt + 1, maxRetries, request.url, response.code)
-                    response.close()
+                    response.body?.close()
                     Thread.sleep(initialDelayMs * (1 shl attempt)) // exponential backoff
                     continue
                 }

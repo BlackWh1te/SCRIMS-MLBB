@@ -13,7 +13,7 @@ class LogSanitizerTest {
 
     private fun sanitize(message: String): String {
         return message
-            .replace(Regex("(?i)(token|bearer|password|secret|key)=\\S+"), "$1=***REDACTED***")
+            .replace(Regex("(?i)(token|bearer|password|secret|key)=[^&\\s]+"), "$1=***REDACTED***")
             .replace(Regex("(?i)(Authorization: )Bearer \\S+"), "$1***REDACTED***")
     }
 

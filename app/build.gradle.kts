@@ -6,9 +6,16 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
     id("dagger.hilt.android.plugin")
-    // Firebase Crashlytics (requires google-services.json in app/ directory)
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
+}
+
+// Conditional Firebase plugins — only apply when google-services.json is present.
+// This keeps CI and fresh clones buildable without Firebase credentials.
+val hasGoogleServicesJson = file("google-services.json").exists()
+    || file("src/debug/google-services.json").exists()
+    || file("src/release/google-services.json").exists()
+if (hasGoogleServicesJson) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 val localProperties = Properties()

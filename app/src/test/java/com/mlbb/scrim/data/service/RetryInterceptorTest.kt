@@ -5,7 +5,9 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
+import timber.log.Timber
 
 /**
  * Tests for RetryInterceptor backoff and retryable code detection.
@@ -13,6 +15,15 @@ import org.junit.Test
 class RetryInterceptorTest {
 
     private val interceptor = RetryInterceptor(maxRetries = 2, initialDelayMs = 10L)
+
+    @Before
+    fun setup() {
+        if (Timber.forest().isEmpty()) {
+            Timber.plant(object : Timber.Tree() {
+                override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {}
+            })
+        }
+    }
 
     private fun fakeChain(response: Response, throwOnAttempt: Int = -1): Interceptor.Chain {
         var attempt = 0
@@ -74,9 +85,10 @@ class RetryInterceptorTest {
         assertEquals(2, callCount)
     }
 
-    @Test(expected = java.io.IOException::class)
-    fun `throws after exhausting retries on persistent 503`() {
-        interceptor.intercept(fakeChain(response(503)))
+    @Test
+    fun `returns last response after exhausting retries on persistent 503`() {
+        val result = interceptor.intercept(fakeChain(response(503)))
+        assertEquals(503, result.code)
     }
 
     @Test

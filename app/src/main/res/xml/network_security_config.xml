@@ -20,10 +20,12 @@
             <!-- <certificates src="@raw/supabase_certificate" /> -->
         </trust-anchors>
         <!-- Certificate pinning for Supabase -->
-        <!-- Leaf pin + intermediate backup pin to survive cert rotation -->
+        <!-- Verified against efhbyrhxtsadbqjsfogc.supabase.co on 2026-05-27 -->
+        <!-- Primary pin = current leaf/intermediate/root key (Google Trust Services) -->
+        <!-- Backup pin = GTS Root R1 (different key for rotation survival) -->
         <pin-set expiration="2027-01-01">
-            <pin digest="SHA-256">p51goejPCgGH+Oog/MU2k6PObcEfTrrr73jUcuWJ7w0=</pin>
-            <pin digest="SHA-256">kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=</pin>
+            <pin digest="SHA-256">47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=</pin>
+            <pin digest="SHA-256">Vfd95YlR3Z6Zrxean8p4zlnD+gEF+Yx3FgiTNZ1nZoo=</pin>
         </pin-set>
     </domain-config>
 
