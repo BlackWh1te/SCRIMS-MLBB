@@ -43,11 +43,25 @@ object SupabaseConfig {
     const val TABLE_CONVERSATIONS = "conversations"
     const val TABLE_NOTIFICATIONS = "app_notifications"
 
+    // Tournament tables
+    const val TABLE_TOURNAMENTS = "tournaments"
+    const val TABLE_TOURNAMENT_REQUIREMENTS = "tournament_requirements"
+    const val TABLE_TOURNAMENT_APPLICATIONS = "tournament_applications"
+    const val TABLE_TOURNAMENT_TEAMS = "tournament_teams"
+    const val TABLE_TOURNAMENT_SWISS_MATCHES = "tournament_swiss_matches"
+    const val TABLE_TOURNAMENT_MATCH_ROSTERS = "tournament_match_rosters"
+    const val TABLE_TOURNAMENT_MATCH_ROOM_SECRETS = "tournament_match_room_secrets"
+    const val TABLE_TOURNAMENT_HOST_REQUESTS = "tournament_host_requests"
+    const val TABLE_TOURNAMENT_HOST_ACCOUNTS = "tournament_host_accounts"
+    const val TABLE_TOURNAMENT_PLAYER_STATS = "tournament_player_stats"
+    const val TABLE_CONVERSATION_PARTICIPANTS = "conversation_participants"
+
     // Storage bucket names
     const val BUCKET_SCREENSHOTS = "match-screenshots"
     const val BUCKET_AVATARS = "user-avatars"
     const val BUCKET_TEAM_LOGOS = "team-logos"
     const val BUCKET_LFG_SCREENSHOTS = "lfg-screenshots"
+    const val BUCKET_TOURNAMENT_LOGOS = "tournament-logos"
 }
 
 /**
@@ -89,7 +103,6 @@ object SupabaseSession {
  * Authenticator that handles 401 errors by refreshing the Supabase token.
  */
 class SupabaseAuthenticator : okhttp3.Authenticator {
-    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
 
     override fun authenticate(route: okhttp3.Route?, response: okhttp3.Response): okhttp3.Request? {
         if (response.count() > 2) return null
@@ -97,15 +110,14 @@ class SupabaseAuthenticator : okhttp3.Authenticator {
         val refreshToken = SupabaseSession.getRefreshTokenOrNull() ?: return null
 
         val authClient = SupabaseAuthRetrofitClient.retrofit.create(SupabaseAuthService::class.java)
-        val refreshResponse = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                authClient.refreshToken(RefreshTokenRequest(refreshToken))
-            } catch (e: Exception) {
-                null
-            }
+        val refreshResponse = try {
+            authClient.refreshTokenSync(RefreshTokenRequest(refreshToken))
+                .execute()
+        } catch (e: Exception) {
+            return null
         }
 
-        if (refreshResponse?.isSuccessful == true) {
+        if (refreshResponse.isSuccessful) {
             val body = refreshResponse.body()
             if (body?.accessToken != null && body?.refreshToken != null) {
                 SupabaseSession.saveTokens(body.accessToken, body.refreshToken)

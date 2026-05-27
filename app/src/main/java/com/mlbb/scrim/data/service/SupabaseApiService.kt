@@ -387,6 +387,9 @@ interface SupabaseAuthService {
     @POST("token?grant_type=refresh_token")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthResponse>
 
+    @POST("token?grant_type=refresh_token")
+    fun refreshTokenSync(@Body request: RefreshTokenRequest): retrofit2.Call<AuthResponse>
+
     @POST("logout")
     suspend fun signOut(@Header("Authorization") authHeader: String): Response<Unit>
 
@@ -597,6 +600,13 @@ interface SupabaseApiService {
         @Query("id") id: String
     ): Response<List<ScrimDto>>
 
+    // HARDENED: Batch query for scrims by IDs (avoids N+1 in match history)
+    @GET("scrims")
+    suspend fun getScrimsByIds(
+        @Query("id") idFilter: String,
+        @Query("select") select: String = "*"
+    ): Response<List<ScrimDto>>
+
     @POST("scrims")
     suspend fun createScrim(@Body scrim: ScrimDto): Response<List<ScrimDto>>
 
@@ -722,6 +732,12 @@ interface SupabaseApiService {
     @GET("match_results")
     suspend fun getMatchResults(
         @Query("match_id") matchId: String? = null
+    ): Response<List<MatchResultDto>>
+
+    // HARDENED: Batch query for match results by match IDs (avoids N+1 in match history)
+    @GET("match_results")
+    suspend fun getMatchResultsByMatchIds(
+        @Query("match_id") matchIdFilter: String
     ): Response<List<MatchResultDto>>
 
     @POST("match_results")

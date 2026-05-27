@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.firstOrNull
 import com.mlbb.scrim.util.DateUtils
 import android.util.Log
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 import com.mlbb.scrim.data.cache.UnifiedCacheManager
 
@@ -102,9 +100,12 @@ class SupabaseAuthRepository(
             currentTier = RankTier.fromXp(rankXp),
             emailVerified = profileDto?.emailVerified == true || authUser?.emailConfirmedAt != null,
             isBanned = profileDto?.isBanned ?: false,
+            banReason = profileDto?.banReason,
+            bannedAt = profileDto?.bannedAt,
             mainHeroes = profileDto?.mainHeroes ?: emptyList(),
             role = profileDto?.role ?: "",
-            bio = profileDto?.bio ?: ""
+            bio = profileDto?.bio ?: "",
+            isTournamentHost = profileDto?.isTournamentHost ?: false
         )
     }
 
@@ -477,6 +478,8 @@ class SupabaseAuthRepository(
                     getUserProfile() // Refresh Room cache
                     emit(AuthResult.Success)
                 } else {
+                    val errorBody = response.errorBody()?.string()
+                    android.util.Log.e("AuthRepo", "updateProfile failed: ${response.code()} body=$errorBody")
                     emit(AuthResult.Error("Failed to update profile"))
                 }
             } ?: emit(AuthResult.Error("Not authenticated"))
@@ -489,11 +492,13 @@ class SupabaseAuthRepository(
         emit(AuthResult.Loading)
         try {
             val userId = getUserId() ?: throw Exception("Not authenticated")
-            val response = api.updateProfile(userId, mapOf("avatar_url" to avatarUrl))
+            val response = api.updateProfile(PostgrestFilter.eq(userId), mapOf("avatar_url" to avatarUrl))
             if (response.isSuccessful) {
                 cacheManager.invalidate("profile_$userId")
                 emit(AuthResult.Success)
             } else {
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("AuthRepo", "updateAvatar failed: ${response.code()} body=$errorBody")
                 emit(AuthResult.Error("Failed to update avatar: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -513,11 +518,14 @@ class SupabaseAuthRepository(
                 contentType = contentType
             )
             uploadResult.onSuccess { publicUrl ->
-                val updateResponse = api.updateProfile(userId, mapOf("avatar_url" to publicUrl))
+                val updateResponse = api.updateProfile(PostgrestFilter.eq(userId), mapOf("avatar_url" to publicUrl))
                 if (updateResponse.isSuccessful) {
                     cacheManager.invalidate("profile_$userId")
+                    cacheManager.invalidate("current_user_profile_$userId")
                     emit(AuthResult.Success)
                 } else {
+                    val errorBody = updateResponse.errorBody()?.string()
+                    android.util.Log.e("AuthRepo", "uploadAndSetAvatar profile update failed: ${updateResponse.code()} body=$errorBody")
                     emit(AuthResult.Error("Avatar uploaded but profile update failed"))
                 }
             }.onFailure { e ->
@@ -584,6 +592,14 @@ class SupabaseAuthRepository(
 
     override fun getCurrentUser(): String? = getUserId()
 
+    override suspend fun invalidateProfileCache() {
+        try {
+            cacheManager.invalidateByPrefix("current_user_profile_")
+        } catch (_: Exception) {
+            // Ignore
+        }
+    }
+
     override suspend fun getUserProfile(): UserProfile? {
         val userId = getUserId() ?: return null
 
@@ -646,7 +662,9 @@ class SupabaseAuthRepository(
             avatarUrl = entity.avatarUrl,
             currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.BRONZE,
             pts = entity.points,
-            isBanned = entity.isBanned
+            isBanned = entity.isBanned,
+            banReason = entity.banReason,
+            bannedAt = entity.bannedAt
         )
     }
 
@@ -664,6 +682,8 @@ class SupabaseAuthRepository(
             mainHeroes = profile.mainHeroes.joinToString(","),
             points = profile.pts,
             isBanned = profile.isBanned,
+            banReason = profile.banReason,
+            bannedAt = profile.bannedAt,
             lastUpdated = System.currentTimeMillis()
         )
     }
@@ -698,33 +718,39 @@ class SupabaseAuthRepository(
         try {
             val userId = getUserId() ?: return
             
-            val client = okhttp3.OkHttpClient()
+            // Use a specific client for this with short timeouts to avoid hanging
+            val client = okhttp3.OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
             val request = okhttp3.Request.Builder()
                 .url("https://get.geojs.io/v1/ip/geo.json")
                 .build()
                 
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyString = response.body?.string()
-                if (bodyString != null) {
-                    val jsonObject = org.json.JSONObject(bodyString)
-                    val country = jsonObject.optString("country", "")
-                    val city = jsonObject.optString("city", "")
-                    
-                    if (country.isNotEmpty() || city.isNotEmpty()) {
-                        val nowIso = DateUtils.formatIsoUtcWithMs(System.currentTimeMillis())
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val bodyString = response.body?.string()
+                    if (bodyString != null) {
+                        val jsonObject = org.json.JSONObject(bodyString)
+                        val country = jsonObject.optString("country", "")
+                        val city = jsonObject.optString("city", "")
                         
-                        val updateMap = mapOf(
-                            "country" to country,
-                            "city" to city,
-                            "last_seen" to nowIso
-                        )
-                        api.updateProfile(PostgrestFilter.eq(userId), updateMap)
+                        if (country.isNotEmpty() || city.isNotEmpty()) {
+                            val nowIso = DateUtils.formatIsoUtcWithMs(System.currentTimeMillis())
+                            
+                            val updateMap = mapOf(
+                                "country" to country,
+                                "city" to city,
+                                "last_seen" to nowIso
+                            )
+                            api.updateProfile(PostgrestFilter.eq(userId), updateMap)
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.w("AuthRepo", "Failed to update location: ${e.message}")
         }
     }
 }
