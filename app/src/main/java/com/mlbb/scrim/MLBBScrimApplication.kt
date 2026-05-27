@@ -2,6 +2,8 @@ package com.mlbb.scrim
 
 import android.app.Application
 import android.os.StrictMode
+import com.google.firebase.FirebaseApp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseSession
 import com.mlbb.scrim.security.SecurityUtils
@@ -35,6 +37,15 @@ class MLBBScrimApplication : Application() {
             Timber.plant(Timber.DebugTree())
         } else {
             Timber.plant(ReleaseTree())
+        }
+
+        // Initialize Firebase Crashlytics (gracefully skips if google-services.json missing)
+        try {
+            FirebaseApp.initializeApp(this)
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!isDebuggable())
+            Timber.i("Firebase Crashlytics initialized")
+        } catch (e: Exception) {
+            Timber.w(e, "Firebase not configured (missing google-services.json?)")
         }
 
         // Run potentially slow initializations (like DB and security checks) in the background

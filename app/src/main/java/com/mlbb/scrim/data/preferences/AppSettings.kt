@@ -40,6 +40,8 @@ class AppSettings(private val context: Context) {
 
         // LFG post views tracking (one view per user per post)
         val VIEWED_POSTS = stringPreferencesKey("viewed_posts")
+        val PRIVACY_CONSENT_ACCEPTED = booleanPreferencesKey("privacy_consent_accepted")
+        val PRIVACY_CONSENT_VERSION = intPreferencesKey("privacy_consent_version")
     }
 
     val notificationsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.NOTIFICATIONS_ENABLED] ?: true }
@@ -191,5 +193,22 @@ class AppSettings(private val context: Context) {
             val current = prefs[Keys.VIEWED_POSTS] ?: ""
             current.contains(key)
         }.first()
+    }
+
+    // ── Privacy Consent ──────────────────────────────────────────
+
+    val privacyConsentAccepted: Flow<Boolean> = context.settingsDataStore.data.map {
+        it[Keys.PRIVACY_CONSENT_ACCEPTED] == true && (it[Keys.PRIVACY_CONSENT_VERSION] ?: 0) >= CURRENT_PRIVACY_VERSION
+    }
+
+    suspend fun acceptPrivacyConsent() {
+        context.settingsDataStore.edit {
+            it[Keys.PRIVACY_CONSENT_ACCEPTED] = true
+            it[Keys.PRIVACY_CONSENT_VERSION] = CURRENT_PRIVACY_VERSION
+        }
+    }
+
+    companion object {
+        private const val CURRENT_PRIVACY_VERSION = 1
     }
 }
