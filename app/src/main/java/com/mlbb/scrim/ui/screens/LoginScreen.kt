@@ -256,7 +256,7 @@ fun LoginScreen(
                                     .fillMaxSize()
                                     .background(
                                         brush = if (!isLoading)
-                                            Brush.horizontalGradient(BlueGradient)
+                                            Brush.horizontalGradient(GoldGradient)
                                         else
                                             Brush.linearGradient(listOf(SurfaceOverlay, SurfaceOverlay)),
                                         shape = RoundedCornerShape(14.dp)

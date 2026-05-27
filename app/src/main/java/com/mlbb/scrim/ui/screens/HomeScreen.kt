@@ -33,8 +33,11 @@ import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.AnimatedEntrance
+import com.mlbb.scrim.ui.components.LivePulseDot
 import com.mlbb.scrim.ui.components.PremiumGlassCard
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
+import com.mlbb.scrim.ui.components.RankBadge
+import com.mlbb.scrim.ui.components.RankBadgeSize
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,9 +51,13 @@ fun HomeScreen(
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToScrimDetail: (String) -> Unit = {},
+    onNavigateToTeamDetail: (String) -> Unit = {},
+    onNavigateToTournamentList: () -> Unit = {},
     scrims: List<com.mlbb.scrim.data.model.Scrim> = emptyList(),
+    teams: List<com.mlbb.scrim.data.model.Team> = emptyList(),
     notificationCount: Int = 0,
     isRefreshing: Boolean = false,
+    isTournamentHost: Boolean = false,
     onRefresh: () -> Unit = {}
 ) {
     PullToRefreshContainer(
@@ -95,10 +102,41 @@ fun HomeScreen(
                             )
                         )
                         Spacer(Modifier.height(2.dp))
-                        Text(
-                            text  = userProfile?.username ?: stringResource(R.string.player_default),
-                            style = iOSTitle1.copy(color = TextPrimary)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text  = userProfile?.username ?: stringResource(R.string.player_default),
+                                style = iOSTitle1.copy(color = TextPrimary)
+                            )
+                            if (isTournamentHost) {
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(GoldPrimary.copy(alpha = 0.2f))
+                                        .border(1.dp, GoldPrimary.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        .clickable { onNavigateToTournamentList() }
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.EmojiEvents,
+                                            contentDescription = null,
+                                            tint = GoldPrimary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = "Host",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = GoldPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Notification button
@@ -136,41 +174,79 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // ── Stat Strip ─────────────────────────────────────
+            // ── Player Rank Hero Card ────────────────────────────
             AnimatedEntrance(delayMillis = 80) {
-                Row(
-                    modifier            = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    HomeStatCard(
-                        icon     = Icons.Default.SportsEsports,
-                        label    = stringResource(R.string.matches),
-                        value    = (userProfile?.totalMatches ?: 0).toString(),
-                        gradient = BlueGradient,
-                        modifier = Modifier.weight(1f)
-                    )
-                    HomeStatCard(
-                        icon     = Icons.Default.EmojiEvents,
-                        label    = stringResource(R.string.wins),
-                        value    = (userProfile?.wins ?: 0).toString(),
-                        gradient = SuccessGradient,
-                        modifier = Modifier.weight(1f)
-                    )
-                    HomeStatCard(
-                        icon     = Icons.Default.TrendingUp,
-                        label    = stringResource(R.string.win_rate),
-                        value    = userProfile?.winRate ?: "—",
-                        gradient = GoldGradient,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                PlayerRankCard(
+                    userProfile = userProfile,
+                    modifier    = Modifier.padding(horizontal = 20.dp)
+                )
             }
 
             Spacer(Modifier.height(24.dp))
+
+            // ── My Teams ────────────────────────────────────────
+            if (teams.isNotEmpty()) {
+                AnimatedEntrance(delayMillis = 135) {
+                    Row(
+                        modifier              = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(SuccessGreen.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Groups, null,
+                                    tint     = SuccessGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                stringResource(R.string.my_teams),
+                                style = iOSTitle3.copy(color = TextPrimary)
+                            )
+                        }
+                        TextButton(onClick = onNavigateToCreateTeam) {
+                            Text(
+                                "Create Team",
+                                style      = iOSCallout.copy(
+                                    color      = BluePrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                AnimatedEntrance(delayMillis = 150) {
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        teams.take(5).forEach { team ->
+                            TeamHomeCard(
+                                team  = team,
+                                onClick = { onNavigateToTeamDetail(team.id) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+            }
 
             // ── Upcoming Scrims ─────────────────────────────────
             val upcomingScrims = scrims.filter {
@@ -205,6 +281,8 @@ fun HomeScreen(
                                 stringResource(R.string.upcoming_scrims),
                                 style = iOSTitle3.copy(color = TextPrimary)
                             )
+                            Spacer(Modifier.width(8.dp))
+                            LivePulseDot(color = SuccessGreen)
                         }
                         TextButton(onClick = onNavigateToSchedule) {
                             Text(
@@ -374,14 +452,6 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── XP Progress Card ────────────────────────────────
-            AnimatedEntrance(delayMillis = 340) {
-                XpProgressCard(
-                    userProfile = userProfile,
-                    modifier    = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
             // Bottom padding for nav bar
             Spacer(Modifier.height(96.dp))
         }
@@ -472,6 +542,188 @@ private fun HomeActionCard(
                 Text(title,    style = iOSHeadline.copy(color = TextPrimary), maxLines = 1)
                 Text(subtitle, style = iOSCaption1.copy(color = TextSecondary), maxLines = 1)
             }
+        }
+    }
+}
+
+// ── Player Rank Hero Card ────────────────────────────────────
+
+@Composable
+private fun PlayerRankCard(
+    userProfile: com.mlbb.scrim.data.model.UserProfile?,
+    modifier   : Modifier = Modifier
+) {
+    val tier          = userProfile?.currentTier ?: com.mlbb.scrim.data.model.RankTier.BRONZE
+    val tierColor     = tier.tierColor
+    val tierGrad      = tier.badgeGradient
+    val xp            = userProfile?.xp ?: 0
+    val progress      = userProfile?.xpProgress ?: 0f
+    val xpToNext      = userProfile?.xpToNext ?: 0
+    val nextTierName  = userProfile?.nextTierName ?: "Silver"
+
+    val animatedProgress by animateFloatAsState(
+        targetValue   = progress.coerceIn(0.03f, 1f),
+        animationSpec = tween(900, delayMillis = 300, easing = AppEaseOutCubic),
+        label         = "rankCardXP"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        tierColor.copy(alpha = 0.18f),
+                        SurfaceCard,
+                        SurfaceCard.copy(alpha = 0.95f)
+                    )
+                )
+            )
+            .border(1.dp, tierColor.copy(alpha = 0.30f), RoundedCornerShape(22.dp))
+            .padding(18.dp)
+    ) {
+        Column {
+            // ── Rank badge + tier info + win rate ──
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RankBadge(
+                    tier     = tier,
+                    size     = RankBadgeSize.LARGE,
+                    modifier = Modifier.size(52.dp)
+                )
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text  = tier.displayName,
+                        style = iOSTitle3.copy(color = tierColor)
+                    )
+                    Text(
+                        text  = if (xpToNext > 0)
+                            "$xp XP  •  $xpToNext to $nextTierName"
+                        else
+                            "$xp XP  •  Max Tier!",
+                        style = iOSCaption1.copy(color = TextSecondary)
+                    )
+                }
+                // Win-rate pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(tierColor.copy(alpha = 0.14f))
+                        .border(1.dp, tierColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text  = userProfile?.winRate ?: "0%",
+                            style = PremiumStatsM.copy(fontSize = 17.sp, color = tierColor)
+                        )
+                        Text(
+                            text  = "WIN RATE",
+                            style = iOSCaption2.copy(
+                                color         = TextSecondary,
+                                letterSpacing = 0.5.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── XP Progress bar ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(SurfaceOverlay)
+            ) {
+                // Fill
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Brush.horizontalGradient(tierGrad))
+                )
+                // Shimmer shine overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    White.copy(alpha = 0.28f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Stats row ──
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                HeroStatPill(
+                    label    = "Matches",
+                    value    = (userProfile?.totalMatches ?: 0).toString(),
+                    color    = BluePrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                HeroStatPill(
+                    label    = "Wins",
+                    value    = (userProfile?.wins ?: 0).toString(),
+                    color    = SuccessGreen,
+                    modifier = Modifier.weight(1f)
+                )
+                HeroStatPill(
+                    label    = "Points",
+                    value    = userProfile?.ptsDisplay ?: "0",
+                    color    = GoldPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroStatPill(
+    label   : String,
+    value   : String,
+    color   : Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier         = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.09f))
+            .padding(vertical = 10.dp, horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text     = value,
+                style    = PremiumStatsM.copy(fontSize = 17.sp, color = color),
+                maxLines = 1
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text     = label,
+                style    = iOSCaption2.copy(color = TextSecondary),
+                maxLines = 1
+            )
         }
     }
 }
@@ -581,66 +833,173 @@ private fun ScrimCarouselCard(
 
     Box(
         modifier = Modifier
-            .width(180.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .width(210.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(statusColor.copy(alpha = 0.10f), SurfaceCard)
+                )
+            )
+            .border(1.dp, statusColor.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .padding(14.dp)
     ) {
         Column {
+            // Status bar at top
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                Text(
-                    scrim.teamName,
-                    style    = iOSHeadline.copy(color = TextPrimary),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(statusColor, CircleShape)
+                    )
+                    Text(
+                        text  = scrim.status.name.replace("_", " "),
+                        style = iOSCaption2.copy(color = statusColor, fontWeight = FontWeight.SemiBold)
+                    )
+                }
+                // Region tag
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
-                        .background(statusColor, CircleShape)
-                )
+                        .background(BluePrimary.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        scrim.region.name,
+                        style = iOSCaption2.copy(color = BluePrimary, fontWeight = FontWeight.SemiBold)
+                    )
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.SportsEsports, null, tint = TextSecondary, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    scrim.gameMode.name.lowercase().replaceFirstChar { it.uppercase() },
-                    style = iOSCaption1.copy(color = TextSecondary)
-                )
-            }
+            Text(
+                scrim.teamName,
+                style    = iOSHeadline.copy(color = TextPrimary),
+                maxLines = 1
+            )
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.People, null, tint = TextSecondary, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "${scrim.currentPlayers}/${scrim.maxPlayers}",
-                    style = iOSCaption1.copy(color = TextSecondary)
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            Box(
-                modifier = Modifier
-                    .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
             ) {
-                Text(
-                    scrim.region.name,
-                    style = iOSCaption2.copy(color = BluePrimary, fontWeight = FontWeight.SemiBold)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.SportsEsports, null, tint = TextSecondary, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(scrim.gameMode.displayName, style = iOSCaption1.copy(color = TextSecondary))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.People, null, tint = statusColor.copy(alpha = 0.8f), modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        "${scrim.currentPlayers}/${scrim.maxPlayers}",
+                        style = iOSCaption1.copy(color = statusColor, fontWeight = FontWeight.SemiBold)
+                    )
+                }
             }
         }
     }
+}
+
+// ── Team Home Card ─────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TeamHomeCard(
+    team  : com.mlbb.scrim.data.model.Team,
+    onClick: () -> Unit
+) {
+    val isFull = team.players.size >= team.maxPlayers
+    val statusColor = if (isFull) SuccessGreen else BluePrimary
+    val statusText  = if (isFull) "Full" else "Recruiting"
+
+    Box(
+        modifier = Modifier
+            .width(210.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(SurfaceCard)
+            .border(1.dp, statusColor.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .padding(14.dp)
+    ) {
+        Column {
+            // Team avatar + status badge
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Team avatar circle with initials
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(statusColor.copy(alpha = 0.5f), statusColor.copy(alpha = 0.2f))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text  = team.name.take(2).uppercase(),
+                        style = iOSHeadline.copy(color = White, fontWeight = FontWeight.Bold)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        team.name,
+                        style    = iOSHeadline.copy(color = TextPrimary),
+                        maxLines = 1
+                    )
+                    Box(
+                        modifier = Modifier
+                            .background(statusColor.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            statusText,
+                            style = iOSCaption2.copy(color = statusColor, fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Player count progress
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Groups, null, tint = statusColor.copy(alpha = 0.8f), modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "${team.players.size}/${team.maxPlayers}",
+                        style = iOSCaption1.copy(color = TextSecondary)
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = GoldPrimary, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        "${team.reputation}",
+                        style = iOSCaption1.copy(color = GoldPrimary, fontWeight = FontWeight.SemiBold)
+                    )
+                }
+            }
+        }
     }
+}

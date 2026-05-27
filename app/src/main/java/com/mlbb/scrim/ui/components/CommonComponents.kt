@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
@@ -1343,5 +1345,47 @@ fun ErrorSnackbar(
                 }
             }
         }
+    }
+}
+
+// ============================================
+// Live Pulse Dot — animated "live" indicator
+// ============================================
+
+@Composable
+fun LivePulseDot(
+    modifier: Modifier = Modifier,
+    color: Color = com.mlbb.scrim.ui.theme.SuccessGreen,
+    sizeDp: androidx.compose.ui.unit.Dp = 8.dp
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "live")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue  = 0.45f,
+        targetValue   = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(750, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "livePulse"
+    )
+    Box(
+        modifier         = modifier.size(sizeDp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer glow ring
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(pulse * 0.40f)
+                .clip(CircleShape)
+                .background(color)
+        )
+        // Solid core dot
+        Box(
+            modifier = Modifier
+                .size(sizeDp * 0.60f)
+                .clip(CircleShape)
+                .background(color)
+        )
     }
 }

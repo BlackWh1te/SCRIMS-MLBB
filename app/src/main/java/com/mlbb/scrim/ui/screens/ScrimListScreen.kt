@@ -187,14 +187,14 @@ fun ScrimListScreen(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            GameMode.entries.forEach { mode ->
+                            GameMode.selectable.forEach { mode ->
                                 FilterChip(
                                     selected = selectedGameMode == mode,
                                     onClick = {
                                         selectedGameMode = if (selectedGameMode == mode) null else mode
                                         onSearch(searchQuery, selectedGameMode, selectedRegion, selectedSkillLevel, null)
                                     },
-                                    label = { Text(mode.name, fontSize = 12.sp) },
+                                    label = { Text(mode.displayName, fontSize = 12.sp) },
                                     modifier = Modifier.height(36.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = BluePrimary.copy(alpha = 0.25f),
@@ -443,12 +443,29 @@ fun PremiumScrimCard(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(elevation = 8.dp, spotColor = statusColor.copy(alpha = 0.15f), shape = RoundedCornerShape(24.dp)),
+            .shadow(elevation = 8.dp, spotColor = statusColor.copy(alpha = 0.18f), shape = RoundedCornerShape(24.dp)),
         colors = CardDefaults.cardColors(containerColor = SurfaceGlass),
         shape = RoundedCornerShape(24.dp),
         onClick = onClick,
         interactionSource = interactionSource
     ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // ── Status accent bar at top ─────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                statusColor.copy(alpha = 0.9f),
+                                statusColor.copy(alpha = 0.5f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -464,26 +481,8 @@ fun PremiumScrimCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Team Avatar with gradient
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .shadow(4.dp, CircleShape, spotColor = BluePrimary.copy(alpha = 0.3f))
-                            .clip(CircleShape)
-                            .background(
-                                brush = Brush.linearGradient(listOf(BluePrimary, Color(0xFF0A5A9F)))
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                            Text(
-                                text = scrim.teamName.take(2).uppercase(),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = White
-                            )
-                        )
-                    }
+                    // Team Avatar — colorful initials using TeamAvatar component
+                    TeamAvatar(name = scrim.teamName)
 
                     Column {
                         Text(
@@ -504,7 +503,7 @@ fun PremiumScrimCard(
                                 color = BluePrimary.copy(alpha = 0.15f)
                             ) {
                                 Text(
-                                    text = scrim.gameMode.name,
+                                    text = scrim.gameMode.displayName,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = iOSCaption1.copy(color = BluePrimary, fontWeight = FontWeight.SemiBold)
                                 )
@@ -630,6 +629,7 @@ fun PremiumScrimCard(
                 }
             }
         }
+        } // close outer Column
     }
 }
 
