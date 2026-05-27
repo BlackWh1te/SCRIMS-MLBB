@@ -1,9 +1,14 @@
 import requests
 import json
+import os
 
-# Supabase configuration
-SUPABASE_URL = "https://efhbyrhxtsadbqjsfogc.supabase.co"
-SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmaGJ5cmh4dHNhZGJxanNmb2djIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYxOTMyNCwiZXhwIjoyMDk0MTk1MzI0fQ.PO8zk6lfZjSMdz3QzjJaJm8xLuRK-utQbQz3dHqAl_Q"
+# Supabase configuration — use environment variables
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+if not SUPABASE_URL or not SERVICE_ROLE_KEY:
+    print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required")
+    exit(1)
 
 def execute_rpc_function(function_name, params):
     """Execute a Supabase RPC function"""

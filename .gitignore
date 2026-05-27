@@ -39,3 +39,7 @@ local.properties
 # Misc
 *.jks
 *.keystore
+
+# Supabase CLI
+supabase.exe
+supabase/.temp/

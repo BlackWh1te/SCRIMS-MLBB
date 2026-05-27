@@ -1,12 +1,16 @@
 import psycopg2
 import os
 
-# Database connection
-DB_HOST = "db.efhbyrhxtsadbqjsfogc.supabase.co"
-DB_NAME = "postgres"
-DB_USER = "postgres"
-DB_PASSWORD = "+KjkpPVMr639E/n"
-DB_PORT = "5432"
+# Database connection — use environment variables
+DB_HOST = os.environ.get("DB_HOST", "")
+DB_NAME = os.environ.get("DB_NAME", "postgres")
+DB_USER = os.environ.get("DB_USER", "postgres")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+
+if not DB_HOST or not DB_PASSWORD:
+    print("ERROR: DB_HOST and DB_PASSWORD environment variables are required")
+    exit(1)
 
 def execute_sql_file(filename):
     """Read and execute SQL from a file"""

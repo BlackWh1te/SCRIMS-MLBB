@@ -31,7 +31,7 @@ val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY")
 
 val newsApiKey = localProperties.getProperty("NEWSAPI_KEY") ?: "\"\""
 val xBearerToken = localProperties.getProperty("X_BEARER_TOKEN") ?: "\"\""
-val newsServiceApiKey = localProperties.getProperty("NEWS_SERVICE_API_KEY") ?: "\"mlbb-news-secret-2024\""
+val newsServiceApiKey = localProperties.getProperty("NEWS_SERVICE_API_KEY") ?: "\"\""
 
 // Release signing config (reads from local.properties or environment variables)
 val keystorePath = localProperties.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")

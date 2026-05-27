@@ -2,12 +2,13 @@ const { Client } = require('pg');
 const fs = require('fs');
 
 async function applySecurityFixes() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    console.error('DATABASE_URL environment variable is required');
+    process.exit(1);
+  }
   const client = new Client({
-    host: 'db.efhbyrhxtsadbqjsfogc.supabase.co',
-    port: 5432,
-    database: 'postgres',
-    user: 'postgres',
-    password: '+KjkpPVMr639E/n',
+    connectionString,
     ssl: { rejectUnauthorized: false }
   });
 
