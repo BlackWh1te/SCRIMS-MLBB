@@ -63,7 +63,10 @@ data class ProfileDto(
     @SerializedName("mlbb_id") val mlbbId: String? = null,
     @SerializedName("is_admin") val isAdmin: Boolean = false,
     @SerializedName("is_banned") val isBanned: Boolean = false,
+    @SerializedName("ban_reason") val banReason: String? = null,
+    @SerializedName("banned_at") val bannedAt: String? = null,
     @SerializedName("email_verified") val emailVerified: Boolean = false,
+    @SerializedName("is_tournament_host") val isTournamentHost: Boolean = false,
     @SerializedName("avatar_url") val avatarUrl: String? = null,
     @SerializedName("created_at") val createdAt: String = "",
     @SerializedName("role") val role: String? = null,
@@ -249,6 +252,9 @@ data class LfgPostDto(
     @SerializedName("total_matches") val totalMatches: Int? = null,
     @SerializedName("win_rate") val winRate: String? = null,
     @SerializedName("ranked_win_rate") val rankedWinRate: String? = null,
+    @SerializedName("wins") val wins: Int? = null,
+    @SerializedName("losses") val losses: Int? = null,
+    @SerializedName("pts") val pts: Int? = null,
     @SerializedName("in_game_id") val inGameId: String? = null,
     @SerializedName("city") val city: String? = null,
     @SerializedName("screenshot_url") val screenshotUrl: String? = null,
@@ -259,6 +265,8 @@ data class LfgPostDto(
     @SerializedName("telegram") val telegram: String? = null,
     @SerializedName("vk") val vk: String? = null,
     @SerializedName("facebook") val facebook: String? = null,
+    @SerializedName("avatar_url") val avatarUrl: String? = null,
+    @SerializedName("view_count") val viewCount: Int? = null,
     @SerializedName("created_at") val createdAt: String? = null
 )
 
@@ -324,7 +332,7 @@ data class NotificationDto(
 // ─── Message DTO ───
 
 data class MessageDto(
-    @SerializedName("id") val id: String = "",
+    @SerializedName("id") val id: String? = null,              // null = DB auto-generates UUID
     @SerializedName("conversation_id") val conversationId: String = "",
     @SerializedName("match_id") val matchId: String? = null,
     @SerializedName("sender_id") val senderId: String = "",
@@ -337,12 +345,13 @@ data class MessageDto(
     @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("voice_url") val voice_url: String? = null,
     @SerializedName("voice_duration") val voiceDuration: Int? = null,
-    @SerializedName("created_at") val createdAt: String = ""
+    @SerializedName("created_at") val createdAt: String? = null   // null = DB auto-generates timestamp
 )
 
 data class ConversationDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("scrim_id") val scrimId: String? = null,
+    @SerializedName("tournament_match_id") val tournamentMatchId: String? = null,
     @SerializedName("participant_a_id") val participantAId: String = "",
     @SerializedName("participant_a_name") val participantAName: String = "",
     @SerializedName("participant_a_team_id") val participantATeamId: String = "",
@@ -356,7 +365,8 @@ data class ConversationDto(
     @SerializedName("chat_opens_at") val chatOpensAt: String = "",
     @SerializedName("participant_a_typing") val participantATyping: Boolean = false,
     @SerializedName("participant_b_typing") val participantBTyping: Boolean = false,
-    @SerializedName("unread_count") val unreadCount: Int = 0
+    @SerializedName("unread_count") val unreadCount: Int = 0,
+    @SerializedName("participant_count") val participantCount: Int = 2
 )
 
 /**
@@ -553,6 +563,11 @@ interface SupabaseApiService {
         @Query("status") status: String? = null
     ): Response<List<TeamApplicationDto>>
 
+    @GET("team_applications")
+    suspend fun getTeamApplicationById(
+        @Query("id") id: String
+    ): Response<List<TeamApplicationDto>>
+
     @POST("team_applications")
     suspend fun createTeamApplication(@Body application: TeamApplicationDto): Response<List<TeamApplicationDto>>
 
@@ -606,6 +621,13 @@ interface SupabaseApiService {
     @GET("matches")
     suspend fun getMatchById(
         @Query("id") id: String
+    ): Response<List<MatchDto>>
+
+    // HARDENED: Batch query for team match history (avoids fetching ALL matches)
+    @GET("matches")
+    suspend fun getMatchesForTeam(
+        @Query("or") orFilter: String,
+        @Query("order") order: String = "created_at.desc"
     ): Response<List<MatchDto>>
 
     @POST("matches")
@@ -673,11 +695,27 @@ interface SupabaseApiService {
         @Query("order") order: String = "created_at.desc"
     ): Response<List<LfgPostDto>>
 
+    @GET("lfg_posts")
+    suspend fun getLfgPostById(
+        @Query("id") id: String
+    ): Response<List<LfgPostDto>>
+
     @POST("lfg_posts")
     suspend fun createLfgPost(@Body post: LfgPostDto): Response<List<LfgPostDto>>
 
+    @PATCH("lfg_posts")
+    suspend fun updateLfgPost(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<LfgPostDto>>
+
     @DELETE("lfg_posts")
     suspend fun deleteLfgPost(@Query("id") id: String): Response<Unit>
+
+    // ─── LFG RPC ───
+
+    @POST("rpc/increment_lfg_view_count")
+    suspend fun rpcIncrementLfgViewCount(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
 
     // ─── Match Result Endpoints ───
 
@@ -701,19 +739,23 @@ interface SupabaseApiService {
     suspend fun getMessages(
         @Query("conversation_id") conversationId: String? = null,
         @Query("order") order: String = "created_at.asc",
-        @Query("created_at") createdAfter: String? = null
+        @Query("created_at") createdAfter: String? = null,
+        @Query("id") idFilter: String? = null
     ): Response<List<MessageDto>>
 
     @POST("messages")
     suspend fun sendMessage(@Body message: MessageDto): Response<List<MessageDto>>
 
     @POST("conversations")
-    suspend fun createConversation(@Body conversation: ConversationDto): Response<List<ConversationDto>>
+    suspend fun createConversation(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<List<ConversationDto>>
 
     @GET("conversations")
     suspend fun getConversations(
         @Query("or") orFilter: String? = null,
-        @Query("id") idFilter: String? = null
+        @Query("id") idFilter: String? = null,
+        @Query("participant_a_id") participantAId: String? = null,
+        @Query("participant_b_id") participantBId: String? = null,
+        @Query("scrim_id") scrimId: String? = null
     ): Response<List<ConversationDto>>
 
     @PATCH("conversations")
@@ -793,7 +835,187 @@ interface SupabaseApiService {
         @Query("id") userId: String,
         @Body body: Map<String, @JvmSuppressWildcards Any> = mapOf("deleted" to true)
     ): Response<List<ProfileDto>>
+
+    // ─── Ban Appeals RPC ───
+
+    @POST("rpc/submit_ban_appeal")
+    suspend fun submitBanAppeal(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/get_user_appeal_status")
+    suspend fun getUserAppealStatus(@Body params: Map<String, String>): Response<List<BanAppealDto>>
+
+    // ─── Tournament Endpoints ───
+
+    @GET("tournaments")
+    suspend fun getTournaments(
+        @Query("select") select: String? = null,
+        @Query("status") status: String? = null,
+        @Query("region") region: String? = null,
+        @Query("skill_level") skillLevel: String? = null,
+        @Query("order") order: String = "created_at.desc",
+        @Header("Range") range: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @GET("tournaments")
+    suspend fun getTournamentById(
+        @Query("id") id: String,
+        @Query("select") select: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @POST("tournaments")
+    suspend fun insertTournament(
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @PATCH("tournaments")
+    suspend fun updateTournament(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Requirements ───
+
+    @GET("tournament_requirements")
+    suspend fun getTournamentRequirements(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("order") order: String = "sort_order.asc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @POST("tournament_requirements")
+    suspend fun insertTournamentRequirement(
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @DELETE("tournament_requirements")
+    suspend fun deleteTournamentRequirement(@Query("id") id: String): Response<Unit>
+
+    // ─── Tournament Teams ───
+
+    @GET("tournament_teams")
+    suspend fun getTournamentTeams(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("select") select: String? = null,
+        @Query("order") order: String = "swiss_points.desc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Applications ───
+
+    @GET("tournament_applications")
+    suspend fun getTournamentApplications(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("team_id") teamId: String? = null,
+        @Query("select") select: String? = null,
+        @Query("order") order: String = "applied_at.desc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Host Requests ───
+
+    @GET("tournament_host_requests")
+    suspend fun getTournamentHostRequests(
+        @Query("user_id") userId: String? = null,
+        @Query("status") status: String? = null,
+        @Query("order") order: String = "created_at.desc",
+        @Query("limit") limit: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @POST("tournament_host_requests")
+    suspend fun insertTournamentHostRequest(
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Swiss Matches ───
+
+    @GET("tournament_swiss_matches")
+    suspend fun getTournamentSwissMatches(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("select") select: String? = null,
+        @Query("order") order: String = "round_number.asc,match_number.asc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Match Rosters ───
+
+    @GET("tournament_match_rosters")
+    suspend fun getTournamentMatchRosters(
+        @Query("match_id") matchId: String? = null,
+        @Query("team_id") teamId: String? = null,
+        @Query("game_number") gameNumber: String? = null,
+        @Query("select") select: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Match Room Secrets ───
+
+    @GET("tournament_match_room_secrets")
+    suspend fun getTournamentMatchRoomSecrets(
+        @Query("match_id") matchId: String? = null,
+        @Query("limit") limit: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament Host Accounts ───
+
+    @GET("tournament_host_accounts")
+    suspend fun getTournamentHostAccounts(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("limit") limit: String? = null
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @POST("tournament_host_accounts")
+    suspend fun createHostAccount(
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── Tournament RPCs ───
+
+    @POST("rpc/apply_for_tournament")
+    suspend fun rpcApplyForTournament(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/review_tournament_application")
+    suspend fun rpcReviewTournamentApplication(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/generate_swiss_pairings")
+    suspend fun rpcGenerateSwissPairings(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/set_tournament_match_roster")
+    suspend fun rpcSetTournamentMatchRoster(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/submit_tournament_match_result")
+    suspend fun rpcSubmitTournamentMatchResult(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/award_tournament_match_points")
+    suspend fun rpcAwardTournamentMatchPoints(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/update_tournament_scores")
+    suspend fun rpcUpdateTournamentScores(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/recalculate_tiebreakers")
+    suspend fun rpcRecalculateTiebreakers(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/disqualify_tournament_team")
+    suspend fun rpcDisqualifyTournamentTeam(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/check_tournament_no_shows")
+    suspend fun rpcCheckTournamentNoShows(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/cancel_tournament")
+    suspend fun rpcCancelTournament(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/complete_tournament")
+    suspend fun rpcCompleteTournament(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/check_in_tournament_team")
+    suspend fun rpcCheckInTournamentTeam(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 }
+
+// ─── Ban Appeal DTO ───
+
+data class BanAppealDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("status") val status: String = "pending",
+    @SerializedName("ban_reason") val banReason: String? = null,
+    @SerializedName("appeal_message") val appealMessage: String = "",
+    @SerializedName("admin_notes") val adminNotes: String? = null,
+    @SerializedName("created_at") val createdAt: String = "",
+    @SerializedName("reviewed_at") val reviewedAt: String? = null
+)
 
 /**
  * Singleton accessor for Supabase API service.

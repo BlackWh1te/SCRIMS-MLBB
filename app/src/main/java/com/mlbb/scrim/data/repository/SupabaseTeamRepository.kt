@@ -6,6 +6,7 @@ import com.mlbb.scrim.data.local.TeamDao
 import com.mlbb.scrim.data.local.TeamEntity
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
 import android.util.Log
 import kotlinx.coroutines.flow.Flow
@@ -173,19 +174,57 @@ class SupabaseTeamRepository(
 
     override suspend fun updatePlayerRole(teamId: String, playerId: String, newRole: PlayerRole): Flow<Result<Team>> = flow {
         try {
+            // Ownership: only team leader may change roles
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            AuthorizationUtils.requireLeader(team.leaderId, "update player roles")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val roleStr = when (newRole) {
                 PlayerRole.LEADER -> TeamRole.LEADER
                 PlayerRole.CO_LEADER -> TeamRole.CO_LEADER
                 PlayerRole.MEMBER -> TeamRole.MEMBER
             }
+
+            // If we are handing over leadership
+            if (newRole == PlayerRole.LEADER) {
+                // 1. Get the current team to find the old leader
+                val teamResponse = api.getTeamById(PostgrestFilter.eq(teamId))
+                val oldLeaderId = teamResponse.body()?.firstOrNull()?.leaderId
+
+                // 2. Update the teams table with the new leader_id
+                api.updateTeam(teamId, mapOf("leader_id" to playerId))
+
+                // 3. Demote the old leader to CO_LEADER (if they exist and are different from the new leader)
+                if (oldLeaderId != null && oldLeaderId != playerId) {
+                    api.updateTeamMemberRole(PostgrestFilter.eq(teamId), PostgrestFilter.eq(oldLeaderId), mapOf("role" to TeamRole.CO_LEADER))
+                }
+            }
+
+            // 4. Update the target member's role
             val r = api.updateTeamMemberRole(PostgrestFilter.eq(teamId), PostgrestFilter.eq(playerId), mapOf("role" to roleStr))
-            if (r.isSuccessful) { invalidateTeamCaches(); getTeam(teamId).collect { emit(it) } }
-            else emit(Result.failure(Exception("Failed to update player role")))
-        } catch (e: Exception) { emit(Result.failure(e)) }
+            
+            if (r.isSuccessful) {
+                invalidateTeamCaches()
+                getTeam(teamId).collect { emit(it) }
+            } else {
+                emit(Result.failure(Exception("Failed to update player role")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 
     override suspend fun deleteTeam(teamId: String): Flow<Result<Unit>> = flow {
         try {
+            // Ownership: only team leader may delete the team
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            AuthorizationUtils.requireLeader(team.leaderId, "delete this team")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.deleteTeam(PostgrestFilter.eq(teamId))
             if (r.isSuccessful) { invalidateTeamCaches(); teamDao.deleteById(teamId); emit(Result.success(Unit)) }
             else emit(Result.failure(Exception("Failed to delete team")))
@@ -194,6 +233,13 @@ class SupabaseTeamRepository(
 
     override suspend fun sendInvite(teamId: String, teamName: String, invitedBy: String, invitedByName: String, invitedUserId: String, invitedUserName: String): Flow<Result<TeamInvite>> = flow {
         try {
+            // Ownership: only team leader may send invites
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            AuthorizationUtils.requireLeader(team.leaderId, "send invites for this team")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.addTeamMember(AddTeamMemberRequest(teamId = teamId, userId = invitedUserId, role = TeamRole.INVITED))
             if (r.isSuccessful) {
                 invalidateTeamCaches()
@@ -207,6 +253,9 @@ class SupabaseTeamRepository(
             val mr = api.getTeamMembers(id = PostgrestFilter.eq(inviteId))
             if (!mr.isSuccessful || mr.body().isNullOrEmpty()) { emit(Result.failure(Exception("Invite not found"))); return@flow }
             val member = mr.body()!!.first()
+            // Ownership: only the invited user may accept the invite
+            AuthorizationUtils.requireOwner(member.userId, "accept this invite")
+                .onFailure { emit(Result.failure(it)); return@flow }
             val ur = api.updateTeamMemberRole(PostgrestFilter.eq(member.teamId), PostgrestFilter.eq(member.userId), mapOf("role" to TeamRole.MEMBER))
             if (!ur.isSuccessful) { emit(Result.failure(Exception("Failed to accept invite"))); return@flow }
             invalidateTeamCaches()
@@ -219,6 +268,12 @@ class SupabaseTeamRepository(
             val mr = api.getTeamMembers(id = PostgrestFilter.eq(inviteId))
             if (!mr.isSuccessful || mr.body().isNullOrEmpty()) { emit(Result.success(Unit)); return@flow }
             val member = mr.body()!!.first()
+            // Ownership: only the invited user (or team leader) may decline the invite
+            val userId = AuthorizationUtils.currentUserId()
+            if (userId != member.userId && userId != member.invitedBy) {
+                emit(Result.failure(SecurityException("Forbidden: you do not have permission to decline this invite")))
+                return@flow
+            }
             val dr = api.removeTeamMember(PostgrestFilter.eq(member.teamId), PostgrestFilter.eq(member.userId))
             if (dr.isSuccessful) { invalidateTeamCaches(); emit(Result.success(Unit)) }
             else emit(Result.failure(Exception("Failed to decline invite")))
@@ -297,6 +352,15 @@ class SupabaseTeamRepository(
 
     override suspend fun removePlayer(teamId: String, playerId: String): Flow<Result<Team>> = flow {
         try {
+            // Ownership: only team leader or the player themselves may remove a player
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            val userId = AuthorizationUtils.currentUserId()
+            if (userId != team.leaderId && userId != playerId) {
+                emit(Result.failure(SecurityException("Forbidden: you do not have permission to remove this player")))
+                return@flow
+            }
             api.removeTeamMember(PostgrestFilter.eq(teamId), PostgrestFilter.eq(playerId))
             invalidateTeamCaches()
             getTeam(teamId).collect { emit(it) }
@@ -313,7 +377,7 @@ class SupabaseTeamRepository(
         val profilesByUserId = profileCache.getProfiles(userIds)
         return Team(id = dto.id, name = dto.name, leaderId = dto.leaderId, players = members.map { m ->
             val profile = profilesByUserId[m.userId]
-            Player(id = m.userId, name = profile?.username ?: m.userId.take(8), role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER, email = profile?.email ?: "")
+            Player(id = m.userId, name = profile?.username ?: m.userId.take(8), role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER, email = profile?.email ?: "", avatarUrl = profile?.avatarUrl)
         }, maxPlayers = dto.maxPlayers, minPlayers = dto.minPlayers, totalScrims = dto.completedScrims, completedScrims = dto.completedScrims, reputation = dto.reputation, noShows = dto.noShows, canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil), logoUrl = dto.logoUrl, isOpenForApplications = dto.isOpenForApplications, createdAt = parseCreatedAt(dto.createdAt))
     }
 
@@ -396,14 +460,27 @@ class SupabaseTeamRepository(
 
     override suspend fun acceptApplication(applicationId: String): Flow<Result<Team>> = flow {
         try {
+            // Fetch application first to determine team and verify ownership
+            val appResponse = api.getTeamApplicationById(applicationId)
+            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
+                emit(Result.failure(Exception("Application not found")))
+                return@flow
+            }
+            val app = appResponse.body()!!.first()
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(app.teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            AuthorizationUtils.requireLeader(team.leaderId, "accept applications for this team")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateTeamApplication(applicationId, mapOf("status" to "Accepted", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) {
-                val app = r.body()?.firstOrNull()
-                if (app != null) {
+                val updatedApp = r.body()?.firstOrNull()
+                if (updatedApp != null) {
                     // Add applicant as team member
-                    api.addTeamMember(AddTeamMemberRequest(teamId = app.teamId, userId = app.applicantUserId, role = TeamRole.MEMBER))
+                    api.addTeamMember(AddTeamMemberRequest(teamId = updatedApp.teamId, userId = updatedApp.applicantUserId, role = TeamRole.MEMBER))
                     invalidateTeamCaches()
-                    getTeam(app.teamId).collect { emit(it) }
+                    getTeam(updatedApp.teamId).collect { emit(it) }
                 } else emit(Result.failure(Exception("Application not found")))
             } else emit(Result.failure(Exception("Failed to accept application")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -411,6 +488,19 @@ class SupabaseTeamRepository(
 
     override suspend fun declineApplication(applicationId: String): Flow<Result<Unit>> = flow {
         try {
+            // Fetch application first to determine team and verify ownership
+            val appResponse = api.getTeamApplicationById(applicationId)
+            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
+                emit(Result.failure(Exception("Application not found")))
+                return@flow
+            }
+            val app = appResponse.body()!!.first()
+            val teamResponse = api.getTeamById(PostgrestFilter.eq(app.teamId))
+            val team = teamResponse.body()?.firstOrNull()
+            if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
+            AuthorizationUtils.requireLeader(team.leaderId, "decline applications for this team")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateTeamApplication(applicationId, mapOf("status" to "Declined", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) emit(Result.success(Unit))
             else emit(Result.failure(Exception("Failed to decline application")))

@@ -8,6 +8,7 @@ import com.mlbb.scrim.data.model.LfgPost
 import com.mlbb.scrim.data.model.Region
 import com.mlbb.scrim.data.model.SkillLevel
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
 import android.util.Log
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,14 @@ class SupabaseLfgRepository(
 
     override fun createPost(post: LfgPost): Flow<Result<LfgPost>> = flow {
         try {
+            // Ensure player_id matches the authenticated user (required by RLS)
+            val authUserId = SupabaseSession.getUserIdOrNull()
+            if (authUserId != null && post.playerId != authUserId) {
+                emit(Result.failure(Exception("Player ID must match authenticated user")))
+                return@flow
+            }
             val dto = LfgPostDto(
+                id = null,  // Let Supabase auto-generate UUID
                 playerId = post.playerId,
                 playerName = post.playerName,
                 role = post.role.name,
@@ -84,6 +92,9 @@ class SupabaseLfgRepository(
                 totalMatches = post.totalMatches,
                 winRate = post.winRate,
                 rankedWinRate = post.rankedWinRate,
+                wins = post.wins,
+                losses = post.losses,
+                pts = post.pts,
                 inGameId = post.inGameId,
                 city = post.city,
                 screenshotUrl = post.screenshotUrl,
@@ -93,28 +104,40 @@ class SupabaseLfgRepository(
                 discord = post.discord,
                 telegram = post.telegram,
                 vk = post.vk,
-                facebook = post.facebook
+                facebook = post.facebook,
+                avatarUrl = post.avatarUrl
             )
             val response = api.createLfgPost(dto)
             if (response.isSuccessful) {
                 val created = response.body()?.firstOrNull()
                 if (created != null) {
-                    // Invalidate cache on write
+                    // Invalidate cache on write (both memory and Room)
                     cacheManager.invalidateByPrefix("lfg_")
+                    lfgPostDao.deleteAll()
                     emit(Result.success(mapDtoToModel(created)))
                 } else {
                     emit(Result.failure(Exception("Created post not returned")))
                 }
             } else {
-                emit(Result.failure(Exception("Failed to create LFG post")))
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                Log.e("LfgRepo", "LFG post creation failed: ${response.code()} — $errorBody")
+                emit(Result.failure(Exception("Failed to create LFG post: ${response.code()}")))
             }
         } catch (e: Exception) {
+            Log.e("LfgRepo", "LFG post creation exception", e)
             emit(Result.failure(e))
         }
     }
 
     override fun deletePost(postId: String): Flow<Result<Unit>> = flow {
         try {
+            // Ownership: only the post author may delete it
+            val postResponse = api.getLfgPostById(PostgrestFilter.eq(postId))
+            val post = postResponse.body()?.firstOrNull()
+            if (post == null) { emit(Result.failure(Exception("Post not found"))); return@flow }
+            AuthorizationUtils.requireOwner(post.playerId, "delete this LFG post")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val response = api.deleteLfgPost(PostgrestFilter.eq(postId))
             if (response.isSuccessful) {
                 // Invalidate cache on delete
@@ -126,6 +149,53 @@ class SupabaseLfgRepository(
             }
         } catch (e: Exception) {
             emit(Result.failure(e))
+        }
+    }
+
+    override suspend fun incrementViewCount(postId: String): Result<Unit> = try {
+        // Use RPC for atomic increment; fall back to read-then-write if RPC unavailable
+        val response = api.rpcIncrementLfgViewCount(mapOf("p_post_id" to postId))
+        if (response.isSuccessful) {
+            // Invalidate LFG cache so next load fetches fresh view counts from server
+            cacheManager.invalidate(CACHE_KEY_ALL)
+            Result.success(Unit)
+        } else {
+            // Fallback: read current count and PATCH with +1
+            try {
+                val current = api.getLfgPosts(playerId = null, range = null)
+                if (current.isSuccessful) {
+                    val post = current.body()?.find { it.id == postId }
+                    val newCount = (post?.viewCount ?: 0) + 1
+                    val patchResponse = api.updateLfgPost(
+                        id = PostgrestFilter.eq(postId),
+                        body = mapOf("view_count" to newCount)
+                    )
+                    if (patchResponse.isSuccessful) {
+                        cacheManager.invalidate(CACHE_KEY_ALL)
+                        Result.success(Unit)
+                    }
+                    else Result.failure(Exception("Failed to increment view count"))
+                } else {
+                    Result.failure(Exception("Failed to fetch post for view count update"))
+                }
+            } catch (e2: Exception) {
+                Result.failure(e2)
+            }
+        }
+    } catch (e: Exception) {
+        // Fallback for when RPC doesn't exist yet
+        try {
+            val patchResponse = api.updateLfgPost(
+                id = PostgrestFilter.eq(postId),
+                body = mapOf("view_count" to 1)  // Best-effort: set to 1 if we can't read current
+            )
+            if (patchResponse.isSuccessful) {
+                cacheManager.invalidate(CACHE_KEY_ALL)
+                Result.success(Unit)
+            }
+            else Result.failure(Exception("Failed to increment view count"))
+        } catch (e2: Exception) {
+            Result.failure(e2)
         }
     }
 
@@ -175,6 +245,9 @@ class SupabaseLfgRepository(
             totalMatches = dto.totalMatches ?: 0,
             winRate = dto.winRate ?: "",
             rankedWinRate = dto.rankedWinRate ?: "",
+            wins = dto.wins ?: 0,
+            losses = dto.losses ?: 0,
+            pts = dto.pts ?: 0,
             inGameId = dto.inGameId ?: "",
             city = dto.city ?: "",
             screenshotUrl = dto.screenshotUrl ?: "",
@@ -185,6 +258,8 @@ class SupabaseLfgRepository(
             telegram = dto.telegram ?: "",
             vk = dto.vk ?: "",
             facebook = dto.facebook ?: "",
+            avatarUrl = dto.avatarUrl,
+            viewCount = dto.viewCount ?: 0,
             createdAt = DateUtils.parseIsoToMillis(dto.createdAt)
         )
     }
@@ -204,6 +279,9 @@ class SupabaseLfgRepository(
             totalMatches = post.totalMatches,
             winRate = post.winRate,
             rankedWinRate = post.rankedWinRate,
+            wins = post.wins,
+            losses = post.losses,
+            pts = post.pts,
             inGameId = post.inGameId,
             city = post.city,
             screenshotUrl = post.screenshotUrl,
@@ -214,6 +292,8 @@ class SupabaseLfgRepository(
             telegram = post.telegram,
             vk = post.vk,
             facebook = post.facebook,
+            avatarUrl = post.avatarUrl,
+            viewCount = post.viewCount,
             createdAt = post.createdAt,
             lastUpdated = System.currentTimeMillis()
         )
@@ -234,6 +314,9 @@ class SupabaseLfgRepository(
             totalMatches = entity.totalMatches,
             winRate = entity.winRate ?: "",
             rankedWinRate = entity.rankedWinRate ?: "",
+            wins = entity.wins,
+            losses = entity.losses,
+            pts = entity.pts,
             inGameId = entity.inGameId ?: "",
             city = entity.city ?: "",
             screenshotUrl = entity.screenshotUrl ?: "",
@@ -244,6 +327,8 @@ class SupabaseLfgRepository(
             telegram = entity.telegram ?: "",
             vk = entity.vk ?: "",
             facebook = entity.facebook ?: "",
+            avatarUrl = entity.avatarUrl,
+            viewCount = entity.viewCount,
             createdAt = entity.createdAt
         )
     }
@@ -296,6 +381,9 @@ class SupabaseLfgRepository(
             totalMatches = record.get("total_matches")?.asInt,
             winRate = record.get("win_rate")?.asString,
             rankedWinRate = record.get("ranked_win_rate")?.asString,
+            wins = record.get("wins")?.asInt,
+            losses = record.get("losses")?.asInt,
+            pts = record.get("pts")?.asInt,
             inGameId = record.get("in_game_id")?.asString,
             city = record.get("city")?.asString,
             screenshotUrl = record.get("screenshot_url")?.asString,
@@ -306,6 +394,8 @@ class SupabaseLfgRepository(
             telegram = record.get("telegram")?.asString,
             vk = record.get("vk")?.asString,
             facebook = record.get("facebook")?.asString,
+            avatarUrl = record.get("avatar_url")?.asString,
+            viewCount = record.get("view_count")?.asInt,
             createdAt = record.get("created_at")?.asString ?: ""
         )
     }

@@ -5,6 +5,7 @@ import com.mlbb.scrim.data.local.ScrimDao
 import com.mlbb.scrim.data.local.ScrimEntity
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.data.service.*
+import com.mlbb.scrim.security.AuthorizationUtils
 import com.mlbb.scrim.util.DateUtils
 import android.util.Log
 import kotlinx.coroutines.delay
@@ -160,6 +161,13 @@ class SupabaseScrimRepository(
 
     override suspend fun updateScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only the team that created the scrim may update it
+            val existingResponse = api.getScrimById(PostgrestFilter.eq(scrim.id))
+            val existing = existingResponse.body()?.firstOrNull()
+            if (existing == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            AuthorizationUtils.requireOwner(existing.teamId, "update this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val dto = mapScrimToDto(scrim)
             val updates = mutableMapOf<String, Any>("team_id" to dto.teamId, "scheduled_date" to dto.scheduledDate, "scheduled_time" to dto.scheduledTime, "best_of" to dto.bestOf, "status" to dto.status)
             dto.description?.let { updates["description"] = it }
@@ -177,6 +185,13 @@ class SupabaseScrimRepository(
 
     override suspend fun deleteScrim(id: String): Flow<Result<Unit>> = flow {
         try {
+            // Ownership: only the team that created the scrim may delete it
+            val existingResponse = api.getScrimById(PostgrestFilter.eq(id))
+            val existing = existingResponse.body()?.firstOrNull()
+            if (existing == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            AuthorizationUtils.requireOwner(existing.teamId, "delete this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.deleteScrim(PostgrestFilter.eq(id))
             if (r.isSuccessful) { invalidateScrimCaches(); scrimDao.deleteById(id); emit(Result.success(Unit)) }
             else emit(Result.failure(Exception("Failed to delete scrim")))
@@ -196,6 +211,13 @@ class SupabaseScrimRepository(
 
     override suspend fun approveApplication(scrimId: String, applicationId: String, conversationId: String): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only the scrim poster may approve applications
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrim = scrimResponse.body()?.firstOrNull()
+            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            AuthorizationUtils.requireOwner(scrim.teamId, "approve applications for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
             if (!appResponse.isSuccessful) { emit(Result.failure(Exception("Failed to fetch application"))); return@flow }
             val application = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
@@ -214,6 +236,13 @@ class SupabaseScrimRepository(
 
     override suspend fun rejectApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only the scrim poster may reject applications
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrim = scrimResponse.body()?.firstOrNull()
+            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            AuthorizationUtils.requireOwner(scrim.teamId, "reject applications for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to "REJECTED"))
             if (r.isSuccessful) { invalidateScrimCaches(); getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) } }
             else emit(Result.failure(Exception("Failed to reject application")))
@@ -222,6 +251,16 @@ class SupabaseScrimRepository(
 
     override suspend fun cancelApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only the applicant team may cancel their application
+            val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
+            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
+                emit(Result.failure(Exception("Application not found")))
+                return@flow
+            }
+            val app = appResponse.body()!!.first()
+            AuthorizationUtils.requireOwner(app.applicantTeamId, "cancel this application")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to "CANCELLED"))
             if (r.isSuccessful) { invalidateScrimCaches(); getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) } }
             else emit(Result.failure(Exception("Failed to cancel application")))
@@ -230,6 +269,14 @@ class SupabaseScrimRepository(
 
     override suspend fun setScrimRoster(scrimId: String, teamId: String, roster: List<ScrimRosterEntry>): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only participating teams may set their roster
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrim = scrimResponse.body()?.firstOrNull()
+            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val participantIds = listOfNotNull(scrim.teamId, scrim.opponentTeamId)
+            AuthorizationUtils.requireParticipant(participantIds, "set roster for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val existing = api.getScrimRosters(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId))
             if (existing.isSuccessful) { existing.body()?.forEach { api.deleteScrimRosterEntry(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId), PostgrestFilter.eq(it.userId)) } }
             roster.forEach { entry -> api.createScrimRosterEntry(ScrimRosterDto(scrimId = scrimId, teamId = teamId, userId = entry.playerId, isActive = entry.isActive)) }
@@ -240,6 +287,13 @@ class SupabaseScrimRepository(
 
     override suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only the scrim poster may transition to ready check
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrim = scrimResponse.body()?.firstOrNull()
+            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            AuthorizationUtils.requireOwner(scrim.teamId, "transition this scrim to ready check")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to "READY_CHECK"))
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Transition failed"))) }
             else emit(Result.failure(Exception("Error transitioning scrim")))
@@ -251,6 +305,10 @@ class SupabaseScrimRepository(
             val sr = api.getScrimById(PostgrestFilter.eq(scrimId))
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val participantIds = listOfNotNull(existing.teamId, existing.opponentTeamId)
+            AuthorizationUtils.requireParticipant(participantIds, "mark ready for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val isTeamA = existing.teamId == teamId
             val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
@@ -267,6 +325,10 @@ class SupabaseScrimRepository(
             val sr = api.getScrimById(PostgrestFilter.eq(scrimId))
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim for upload"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val participantIds = listOfNotNull(existing.teamId, existing.opponentTeamId)
+            AuthorizationUtils.requireParticipant(participantIds, "upload screenshots for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val isTeamA = existing.teamId == teamId
             val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
@@ -279,6 +341,14 @@ class SupabaseScrimRepository(
 
     override suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only participating teams may complete the scrim
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val existingScrim = scrimResponse.body()?.firstOrNull()
+            if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val participantIds = listOfNotNull(existingScrim.teamId, existingScrim.opponentTeamId)
+            AuthorizationUtils.requireParticipant(participantIds, "complete this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to "COMPLETED", "winner_team_id" to winnerTeamId))
             if (!r.isSuccessful) { emit(Result.failure(Exception("Error completing scrim: ${r.errorBody()?.string()}"))); return@flow }
             val updated = r.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Complete failed: no data returned"))); return@flow }
@@ -308,6 +378,14 @@ class SupabaseScrimRepository(
 
     override suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>> = flow {
         try {
+            // Ownership: only participating teams may submit results
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val existingScrim = scrimResponse.body()?.firstOrNull()
+            if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val participantIds = listOfNotNull(existingScrim.teamId, existingScrim.opponentTeamId)
+            AuthorizationUtils.requireParticipant(participantIds, "submit results for this scrim")
+                .onFailure { emit(Result.failure(it)); return@flow }
+
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to "COMPLETED", "winner_team_id" to winnerTeamId))
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Submit result failed"))) }
             else emit(Result.failure(Exception("Error submitting result")))
