@@ -60,7 +60,7 @@ class SupabaseScrimRepository(
     override fun getAllScrims(): Flow<Result<List<Scrim>>> = flow {
         try {
             cacheManager.getFlow<List<Scrim>>(
-                key = CACHE_KEY_ALL, memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
+                key = SupabaseSession.userScopedKey(CACHE_KEY_ALL), memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
                 roomLoader = {
                     val c = scrimDao.getAll()
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null

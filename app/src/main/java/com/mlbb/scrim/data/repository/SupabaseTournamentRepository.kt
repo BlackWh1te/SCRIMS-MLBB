@@ -238,6 +238,14 @@ class SupabaseTournamentRepository(
         return try {
             val userId = SupabaseSession.getUserIdOrNull()
                 ?: return Result.failure(Exception("Not authenticated"))
+
+            // Client-side host approval enforcement
+            val profileResponse = api.getProfileById(PostgrestFilter.eq(userId))
+            val profile = profileResponse.body()?.firstOrNull()
+            if (profile?.isTournamentHost != true) {
+                return Result.failure(Exception("You don't have permission to create tournaments. Make sure you're approved as a host."))
+            }
+
         val body = mutableMapOf<String, Any>(
             "host_user_id" to userId,
             "title" to tournament.title,

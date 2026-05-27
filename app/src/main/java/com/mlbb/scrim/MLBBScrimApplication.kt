@@ -4,6 +4,10 @@ import android.app.Application
 import android.os.StrictMode
 import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import com.mlbb.scrim.data.repository.MessageRepositoryInterface
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
 import com.mlbb.scrim.data.service.SupabaseSession
 import com.mlbb.scrim.security.SecurityUtils
@@ -27,14 +31,18 @@ class MLBBScrimApplication : Application() {
     @Inject
     lateinit var realtimeClient: SupabaseRealtimeClient
 
+    @Inject
+    lateinit var messageRepository: MessageRepositoryInterface
+
     private val appScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreate() {
         super.onCreate()
 
         // Initialize logging: full logs in debug, WARN+ only in release
         if (isDebuggable()) {
-            Timber.plant(Timber.DebugTree())
+            Timber.plant(SafeDebugTree())
         } else {
             Timber.plant(ReleaseTree())
         }
@@ -94,11 +102,11 @@ class MLBBScrimApplication : Application() {
      * Release-safe Timber tree: only WARN and ERROR are logged in production.
      * No DEBUG/INFO logs reach crash reporting or logcat in release builds.
      */
-    private class ReleaseTree : Timber.Tree() {
+    private inner class ReleaseTree : Timber.Tree() {
         override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
             if (priority < android.util.Log.WARN) return
             // Strip any potential PII before sending to crash reporter
-            val sanitized = sanitizeLogMessage(message)
+            val sanitized = this@MLBBScrimApplication.sanitizeLogMessage(message)
             if (t != null) {
                 android.util.Log.println(priority, tag, sanitized)
                 // Future: send to Firebase Crashlytics here
@@ -106,11 +114,24 @@ class MLBBScrimApplication : Application() {
                 android.util.Log.println(priority, tag, sanitized)
             }
         }
+    }
 
-        private fun sanitizeLogMessage(message: String): String {
-            return message
-                .replace(Regex("(?i)(token|bearer|password|secret|key)=\\S+"), "$1=***REDACTED***")
-                .replace(Regex("(?i)(Authorization: )Bearer \\S+"), "$1***REDACTED***")
+    private fun sanitizeLogMessage(message: String): String {
+        return message
+            .replace(Regex("(?i)(Authorization:\\s*Bearer\\s+)\\S+"), "$1***REDACTED***")
+            .replace(Regex("(?i)(apikey:\\s*)\\S+"), "$1***REDACTED***")
+            .replace(Regex("(?i)(access_token=)[^&\\s]+"), "$1***REDACTED***")
+            .replace(Regex("(?i)(refresh_token[\"']?\\s*[:=]\\s*)[\"']?[^\"'\\s,&]+[\"']?"), "$1***REDACTED***")
+            .replace(Regex("(?i)(token|bearer|password|secret|key)=\\S+"), "$1=***REDACTED***")
+    }
+
+    /**
+     * Debug-safe Timber tree that redacts auth tokens and secrets before logging.
+     */
+    private inner class SafeDebugTree : Timber.DebugTree() {
+        override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+            val sanitized = this@MLBBScrimApplication.sanitizeLogMessage(message)
+            super.log(priority, tag, sanitized, t)
         }
     }
 

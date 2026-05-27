@@ -65,12 +65,15 @@ class SupabaseRealtimeClient @Inject constructor() {
         }
 
         /** Build the WebSocket URL from the Supabase HTTP URL. */
-        fun buildWsUrl(): String {
+        fun buildWsUrl(accessToken: String? = null): String {
             val httpUrl = SupabaseConfig.SUPABASE_URL.trimEnd('/')
             val wsUrl = httpUrl
                 .replace("https://", "wss://")
                 .replace("http://", "ws://")
-            return "$wsUrl/realtime/v1/websocket?apikey=${SupabaseConfig.SUPABASE_ANON_KEY}&vsn=1.0.0"
+            val tokenParam = accessToken?.let {
+                "&access_token=${java.net.URLEncoder.encode(it, "UTF-8")}"
+            } ?: ""
+            return "$wsUrl/realtime/v1/websocket?apikey=${SupabaseConfig.SUPABASE_ANON_KEY}&vsn=1.0.0$tokenParam"
         }
     }
 
@@ -149,7 +152,8 @@ class SupabaseRealtimeClient @Inject constructor() {
         if (isConnected.get() && ws != null) return true
 
         _connectionState.value = ConnectionState.CONNECTING
-        val url = buildWsUrl()
+        val accessToken = SupabaseSession.getAccessTokenOrNull()
+        val url = buildWsUrl(accessToken)
         val request = Request.Builder().url(url).build()
         ws = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {

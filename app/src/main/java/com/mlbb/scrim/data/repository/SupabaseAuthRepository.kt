@@ -66,7 +66,8 @@ class SupabaseAuthRepository(
         secureStorage.remove(KEY_USER_ID)
         secureStorage.remove(KEY_USER_EMAIL)
         cachedProfile = null
-        try { cacheManager.invalidateByPrefix("current_user_profile_") } catch (_: Exception) {}
+        // Purge ALL caches on logout to prevent cross-user data leakage
+        try { cacheManager.clearAll() } catch (_: Exception) {}
     }
 
     private fun authHeader(): String? = getAccessToken()?.let { "Bearer $it" }

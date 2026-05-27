@@ -4,6 +4,7 @@ import android.content.Context
 import com.mlbb.scrim.security.SecureStorage
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import timber.log.Timber
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.mlbb.scrim.BuildConfig
@@ -97,6 +98,34 @@ object SupabaseSession {
         secureStorage?.storeEncrypted(KEY_ACCESS_TOKEN, accessToken)
         secureStorage?.storeEncrypted(KEY_REFRESH_TOKEN, refreshToken)
     }
+
+    /**
+     * Suffix a cache key with the current user ID to prevent cross-user cache contamination.
+     * Falls back to the original key when no user is signed in.
+     */
+    fun userScopedKey(key: String): String {
+        val userId = getUserIdOrNull() ?: return key
+        return "${key}_${userId}"
+    }
+}
+
+/**
+ * HttpLoggingInterceptor.Logger that redacts auth tokens and API keys from log output.
+ */
+object SafeHttpLogger : HttpLoggingInterceptor.Logger {
+    private val AUTH_PATTERN = Regex("(?i)(Authorization:\\s*Bearer\\s+)\\S+")
+    private val APIKEY_PATTERN = Regex("(?i)(apikey:\\s*)\\S+")
+    private val ACCESS_TOKEN_PATTERN = Regex("(?i)(access_token=)[^&\\s]+")
+    private val REFRESH_TOKEN_PATTERN = Regex("(?i)(refresh_token[\"']?\\s*[:=]\\s*)[\"']?[^\"'\\s,&]+[\"']?")
+
+    override fun log(message: String) {
+        val sanitized = message
+            .replace(AUTH_PATTERN, "$1***REDACTED***")
+            .replace(APIKEY_PATTERN, "$1***REDACTED***")
+            .replace(ACCESS_TOKEN_PATTERN, "$1***REDACTED***")
+            .replace(REFRESH_TOKEN_PATTERN, "$1***REDACTED***")
+        Timber.tag("OkHttp").d(sanitized)
+    }
 }
 
 /**
@@ -164,7 +193,7 @@ object SupabaseRetrofitClient {
                     .build()
                 chain.proceed(request)
             }
-            .addInterceptor(HttpLoggingInterceptor().apply {
+            .addInterceptor(HttpLoggingInterceptor(SafeHttpLogger).apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
             })
             .build()
@@ -197,7 +226,7 @@ object SupabaseAuthRetrofitClient {
                     .build()
                 chain.proceed(request)
             }
-            .addInterceptor(HttpLoggingInterceptor().apply {
+            .addInterceptor(HttpLoggingInterceptor(SafeHttpLogger).apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
             })
             .build()

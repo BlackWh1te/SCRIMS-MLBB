@@ -33,7 +33,7 @@ class SupabaseLfgRepository(
     override fun getAllPosts(): Flow<Result<List<LfgPost>>> = flow {
         try {
             cacheManager.getFlow<List<LfgPost>>(
-                key = CACHE_KEY_ALL,
+                key = SupabaseSession.userScopedKey(CACHE_KEY_ALL),
                 memoryTtlMs = MEMORY_TTL_MS,
                 roomTtlMs = ROOM_TTL_MS,
                 roomLoader = {
@@ -171,7 +171,7 @@ class SupabaseLfgRepository(
                         body = mapOf("view_count" to newCount)
                     )
                     if (patchResponse.isSuccessful) {
-                        cacheManager.invalidate(CACHE_KEY_ALL)
+                        cacheManager.invalidate(SupabaseSession.userScopedKey(CACHE_KEY_ALL))
                         Result.success(Unit)
                     }
                     else Result.failure(Exception("Failed to increment view count"))
@@ -190,7 +190,7 @@ class SupabaseLfgRepository(
                 body = mapOf("view_count" to 1)  // Best-effort: set to 1 if we can't read current
             )
             if (patchResponse.isSuccessful) {
-                cacheManager.invalidate(CACHE_KEY_ALL)
+                cacheManager.invalidate(SupabaseSession.userScopedKey(CACHE_KEY_ALL))
                 Result.success(Unit)
             }
             else Result.failure(Exception("Failed to increment view count"))
