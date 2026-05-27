@@ -60,9 +60,9 @@ fun ChatScreen(
     onNavigateBack  : () -> Unit,
     onSendMessage   : (String) -> Unit,
     onSendImage     : () -> Unit,
-    onSendVoice     : () -> Unit,
     onUpdateTyping  : (Boolean) -> Unit,
     onViewTeamInfo  : (teamId: String, teamName: String) -> Unit,
+    onReportUser    : (userId: String, userName: String) -> Unit = { _, _ -> },
     isLoading       : Boolean = false,
     error           : String? = null,
     onDismissError  : () -> Unit = {},
@@ -97,6 +97,7 @@ fun ChatScreen(
     val otherName   = if (isCurrentUserParticipantA) conversation.participantBName  else conversation.participantAName
     val otherTeam   = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
     val otherTeamId = if (isCurrentUserParticipantA) conversation.participantBTeamId else conversation.participantATeamId
+    val otherUserId = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
     val isOtherTyping = conversation.isOtherTyping(currentUserId)
 
     Box(
@@ -150,7 +151,7 @@ fun ChatScreen(
                                 fontSize   = 18.sp
                             )
                         }
-                        // Online dot
+                        // Presence dot — neutral gray (no real-time presence tracking yet)
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
@@ -161,7 +162,7 @@ fun ChatScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(SuccessGreen, CircleShape)
+                                    .background(DimGray, CircleShape)
                             )
                         }
                     }
@@ -189,16 +190,37 @@ fun ChatScreen(
                                     Text(stringResource(R.string.typing_status), fontSize = 12.sp, color = GoldPrimary)
                                 }
                             } else {
-                                Text(
-                                    text     = if (otherTeam.isNotBlank()) otherTeam else stringResource(R.string.online),
-                                    fontSize = 12.sp,
-                                    color    = SuccessGreen,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                if (otherTeam.isNotBlank()) {
+                                    Text(
+                                        text     = otherTeam,
+                                        fontSize = 12.sp,
+                                        color    = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
+
+                    // Report button
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceOverlay)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .clickable { onReportUser(otherUserId, otherName) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Report, null,
+                            tint     = ErrorRed.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
 
                     // Info button
                     Box(
@@ -315,18 +337,6 @@ fun ChatScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Outlined.Image, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-                            }
-                            Spacer(Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(SurfaceOverlay)
-                                    .border(1.dp, GlassBorder, CircleShape)
-                                    .clickable { onSendVoice() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Outlined.Mic, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
                             }
                         }
 
@@ -494,7 +504,11 @@ private fun MessageBubble(
             ) {
                 when (message.type) {
                     MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
-                    MessageType.VOICE -> VoiceContent(duration = message.voiceDuration ?: 0)
+                    MessageType.VOICE -> Text(
+                        text = "🎤 Voice Note",
+                        color = if (isFromMe) White.copy(alpha = 0.7f) else TextSecondary,
+                        fontSize = 14.sp
+                    )
                     MessageType.APPLY -> ApplyContent(message.content, onViewTeamInfo)
                     else              -> Text(
                         text       = message.content,
@@ -554,36 +568,6 @@ private fun ImageContent(url: String) {
             }
         }
     )
-}
-
-@Composable
-private fun VoiceContent(duration: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(White.copy(alpha = 0.18f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.PlayArrow, null, tint = White, modifier = Modifier.size(20.dp))
-        }
-        Spacer(Modifier.width(10.dp))
-        // Waveform
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.width(90.dp)) {
-            val bars = listOf(6, 12, 18, 14, 20, 10, 16, 8, 22, 12, 18, 6, 14, 10, 8)
-            bars.forEach { h ->
-                Box(
-                    Modifier
-                        .width(3.dp)
-                        .height(h.dp)
-                        .clip(RoundedCornerShape(1.5.dp))
-                        .background(White.copy(alpha = 0.55f))
-                )
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        Text("${duration}s", fontSize = 12.sp, color = White.copy(alpha = 0.8f))
-    }
 }
 
 @Composable

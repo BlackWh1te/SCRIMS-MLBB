@@ -30,11 +30,7 @@ object SupabaseStorageUpload {
     private val ALLOWED_CONTENT_TYPES = setOf(
         "image/jpeg",
         "image/jpg",
-        "image/png",
-        "audio/m4a",
-        "audio/mpeg",
-        "audio/ogg",
-        "audio/mp4"
+        "image/png"
     )
 
     /**

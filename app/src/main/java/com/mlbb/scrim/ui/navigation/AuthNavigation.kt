@@ -3,6 +3,7 @@ package com.mlbb.scrim.ui.navigation
 import android.content.Context
 import android.net.Uri
 import timber.log.Timber
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.animation.slideInHorizontally
@@ -69,6 +71,7 @@ import com.mlbb.scrim.ui.screens.TeamListScreen
 import com.mlbb.scrim.ui.screens.FindTeamsScreen
 import com.mlbb.scrim.ui.screens.LfgBoardScreen
 import com.mlbb.scrim.ui.screens.PlayerFinderScreen
+import com.mlbb.scrim.ui.screens.TeamSelectionDialog
 import com.mlbb.scrim.ui.screens.TournamentListScreen
 import com.mlbb.scrim.ui.screens.TournamentDetailScreen
 import com.mlbb.scrim.ui.screens.TournamentCreateScreen
@@ -77,6 +80,8 @@ import com.mlbb.scrim.ui.screens.TournamentHostRequestScreen
 import com.mlbb.scrim.ui.screens.TournamentHostManagementScreen
 import com.mlbb.scrim.data.model.Tournament
 import com.mlbb.scrim.ui.components.AppBottomNav
+import com.mlbb.scrim.ui.components.ReportDialog
+import com.mlbb.scrim.ui.components.UserReportReason
 import com.mlbb.scrim.viewmodel.AuthViewModel
 import com.mlbb.scrim.viewmodel.LeaderboardViewModel
 import com.mlbb.scrim.viewmodel.MatchResultViewModel
@@ -228,7 +233,9 @@ fun AuthNavigation(
     val isTournamentHost = userProfile?.isTournamentHost == true
 
     val unreadCount = conversations.sumOf { it.unreadCount }
-    val pendingInviteCount = notifications.count { !it.isRead && it.type == com.mlbb.scrim.data.model.NotificationType.TEAM_INVITE }
+    val pendingInviteCount = if (notificationsEnabled)
+        notifications.count { !it.isRead && it.type == com.mlbb.scrim.data.model.NotificationType.TEAM_INVITE }
+    else 0
     val playerTeamIds = teams.filter { it.leaderId == userProfile?.id }.map { it.id }
     val playerLedTeams = teams.filter { it.leaderId == userProfile?.id }
 
@@ -276,6 +283,11 @@ fun AuthNavigation(
 
     // Dialog states
     var showInviteDialog by remember { mutableStateOf(false) }
+    var inviteLfgPost by remember { mutableStateOf<com.mlbb.scrim.data.model.LfgPost?>(null) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportTargetUserId by remember { mutableStateOf("") }
+    var reportTargetUserName by remember { mutableStateOf("") }
+    var reportTargetAvatarUrl by remember { mutableStateOf<String?>(null) }
 
     // Direct-chat navigation gate: set true when Message tapped in PlayerFinder,
     // so the LaunchedEffect below knows to push Chat (not MessageList) once
@@ -1309,14 +1321,6 @@ fun AuthNavigation(
                                 )
                             },
                             onSendImage = { imageLauncher.launch("image/*") },
-                            onSendVoice = {
-                                // In a real app, this would open a recording UI
-                                // For now, we simulate a small voice note
-                                messageViewModel.sendVoiceMessage(
-                                    conversationId, userId, userProfile?.username ?: "",
-                                    ByteArray(100), 5 // 5 second mock
-                                )
-                            },
                             onUpdateTyping = { isTyping ->
                                 messageViewModel.updateTypingStatus(conversationId, userId, isTyping)
                             },
@@ -1325,6 +1329,12 @@ fun AuthNavigation(
                                 if (team != null) {
                                     navController.navigate(Screen.TeamDetail.createRoute(teamId))
                                 }
+                            },
+                            onReportUser = { userId, userName ->
+                                reportTargetUserId = userId
+                                reportTargetUserName = userName
+                                reportTargetAvatarUrl = null
+                                showReportDialog = true
                             },
                             isLoading = messagesIsLoading,
                             error = messageError,
@@ -1353,6 +1363,12 @@ fun AuthNavigation(
                         },
                         onDismissError = {
                             leaderboardViewModel.clearError()
+                        },
+                        onReportUser = { userId, username, avatarUrl ->
+                            reportTargetUserId = userId
+                            reportTargetUserName = username
+                            reportTargetAvatarUrl = avatarUrl
+                            showReportDialog = true
                         }
                     )
                 }
@@ -1382,8 +1398,6 @@ fun AuthNavigation(
                         onToggleSound = { settingsViewModel.toggleSound(it) },
                         onToggleVibration = { settingsViewModel.toggleVibration(it) },
                         onSetLanguage = { code ->
-                            // MainActivity observes the languageCode flow and recreates itself
-                            // automatically once the new value is persisted.
                             settingsViewModel.setLanguage(code)
                         },
 
@@ -1565,7 +1579,8 @@ fun AuthNavigation(
                                 messageViewModel.setError("Profile not loaded yet. Please try again.")
                             }
                         },
-                        onInvitePlayer = { _ ->
+                        onInvitePlayer = { post ->
+                            inviteLfgPost = post
                             showInviteDialog = true
                         },
                         isRefreshing = lfgIsRefreshing,
@@ -1579,27 +1594,61 @@ fun AuthNavigation(
                 }
             }
             
-            // Invite Dialog
-            if (showInviteDialog) {
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { showInviteDialog = false },
-                    title = { Text("Invite Player") },
-                    text = { Text("Share invite link with other players to join your team.") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = { 
-                                showInviteDialog = false
-                                // Copy link functionality would go here
-                            }
-                        ) {
-                            Text("Copy Link")
-                        }
+            // Invite Dialog - Team Selection
+            if (showInviteDialog && inviteLfgPost != null) {
+                val playerLedTeams = teams.filter { it.leaderId == userProfile?.id }
+                TeamSelectionDialog(
+                    playerName = inviteLfgPost!!.playerName,
+                    myTeams = playerLedTeams,
+                    onDismiss = {
+                        showInviteDialog = false
+                        inviteLfgPost = null
                     },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showInviteDialog = false }
-                        ) {
-                            Text("Cancel")
+                    onTeamSelected = { team ->
+                        teamViewModel.sendInvite(
+                            teamId = team.id,
+                            teamName = team.name,
+                            invitedBy = userProfile?.id ?: "",
+                            invitedByName = userProfile?.username ?: "",
+                            invitedUserId = inviteLfgPost!!.playerId,
+                            invitedUserName = inviteLfgPost!!.playerName
+                        )
+                        showInviteDialog = false
+                        inviteLfgPost = null
+                    }
+                )
+            }
+
+            // Report User Dialog
+            if (showReportDialog) {
+                val scope = rememberCoroutineScope()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                ReportDialog(
+                    targetName = reportTargetUserName,
+                    reasons = UserReportReason.values().map { it.label },
+                    onDismiss = { showReportDialog = false },
+                    onSubmit = { reason, description ->
+                        scope.launch {
+                            try {
+                                val response = com.mlbb.scrim.data.service.SupabaseService.api.createUserReport(
+                                    mapOf(
+                                        "reporter_id" to (userProfile?.id ?: ""),
+                                        "reporter_name" to (userProfile?.username ?: ""),
+                                        "reported_user_id" to reportTargetUserId,
+                                        "reported_user_name" to reportTargetUserName,
+                                        "reported_avatar_url" to (reportTargetAvatarUrl ?: ""),
+                                        "reason" to reason,
+                                        "description" to description
+                                    )
+                                )
+                                if (response.isSuccessful) {
+                                    android.widget.Toast.makeText(context, "Report submitted", android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    android.widget.Toast.makeText(context, "Failed to submit report", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Timber.e("ReportDialog", "Error submitting report: ${e.message}")
+                            }
                         }
                     }
                 )

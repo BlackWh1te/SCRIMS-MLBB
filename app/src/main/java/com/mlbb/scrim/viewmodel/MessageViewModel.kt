@@ -248,30 +248,6 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    fun sendVoiceMessage(conversationId: String, senderId: String, senderName: String, voiceBytes: ByteArray, duration: Int) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val clientMessageId = "cm_${UUID.randomUUID()}"
-            val path = "chat/$conversationId/${System.currentTimeMillis()}.m4a"
-            val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, voiceBytes, "audio/m4a")
-
-            uploadResult.onSuccess { url ->
-                messageRepository.sendMessage(
-                    conversationId = conversationId,
-                    senderId = senderId,
-                    senderName = senderName,
-                    content = "[Voice Note]",
-                    type = MessageType.VOICE,
-                    clientMessageId = clientMessageId,
-                    voiceUrl = url,
-                    voiceDuration = duration
-                ).collect { _isLoading.value = false }
-            }.onFailure {
-                _error.value = "Voice upload failed: ${it.message}"
-                _isLoading.value = false
-            }
-        }
-    }
 
     // ── Typing status (debounced + distinctUntilChanged + auto-timeout) ──
     fun updateTypingStatus(conversationId: String, userId: String, isTyping: Boolean) {
