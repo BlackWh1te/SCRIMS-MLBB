@@ -103,11 +103,12 @@ fun ChatScreen(
     }
 
     val isCurrentUserParticipantA = conversation.participantAId == currentUserId
-    val otherName   = if (isCurrentUserParticipantA) conversation.participantBName  else conversation.participantAName
-    val otherTeam   = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
-    val otherTeamId = if (isCurrentUserParticipantA) conversation.participantBTeamId else conversation.participantATeamId
-    val otherUserId = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
-    val isOtherTyping = conversation.isOtherTyping(currentUserId)
+    val otherName      = if (isCurrentUserParticipantA) conversation.participantBName  else conversation.participantAName
+    val otherTeam      = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
+    val otherTeamId    = if (isCurrentUserParticipantA) conversation.participantBTeamId else conversation.participantATeamId
+    val otherUserId    = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
+    val otherAvatarUrl = if (isCurrentUserParticipantA) conversation.participantBAvatarUrl else conversation.participantAAvatarUrl
+    val isOtherTyping  = conversation.isOtherTyping(currentUserId)
 
     Box(
         modifier = Modifier
@@ -144,21 +145,62 @@ fun ChatScreen(
 
                     // Avatar
                     Box {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(
-                                    brush = Brush.linearGradient(BlueGradient),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                color      = White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize   = 18.sp
+                        if (otherAvatarUrl != null) {
+                            SubcomposeAsyncImage(
+                                model              = otherAvatarUrl,
+                                contentDescription = otherName,
+                                modifier           = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape),
+                                contentScale       = ContentScale.Crop,
+                                loading = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(brush = Brush.linearGradient(BlueGradient), shape = CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                            color      = White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize   = 18.sp
+                                        )
+                                    }
+                                },
+                                error = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(brush = Brush.linearGradient(BlueGradient), shape = CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                            color      = White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize   = 18.sp
+                                        )
+                                    }
+                                }
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        brush = Brush.linearGradient(BlueGradient),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                    color      = White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize   = 18.sp
+                                )
+                            }
                         }
                         // Presence dot — neutral gray (no real-time presence tracking yet)
                         Box(

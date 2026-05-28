@@ -16,6 +16,13 @@ DROP POLICY IF EXISTS "Allow read messages" ON messages;
 DROP POLICY IF EXISTS "Match participants can view messages" ON messages;
 DROP POLICY IF EXISTS "Match participants can send messages" ON messages;
 DROP POLICY IF EXISTS "Users can view their conversations" ON conversations;
+DROP POLICY IF EXISTS "Conversation participants can view" ON conversations;
+DROP POLICY IF EXISTS "Conversation participants can insert" ON conversations;
+DROP POLICY IF EXISTS "Conversation participants can update" ON conversations;
+DROP POLICY IF EXISTS "Conversation members can view messages" ON messages;
+DROP POLICY IF EXISTS "Conversation members can send messages" ON messages;
+DROP POLICY IF EXISTS "Message sender can update" ON messages;
+DROP POLICY IF EXISTS "Message sender can delete" ON messages;
 
 -- ═══════════════════════════════════════════════════════════════
 -- CONVERSATIONS POLICIES

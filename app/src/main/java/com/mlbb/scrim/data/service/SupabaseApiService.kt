@@ -351,6 +351,7 @@ data class MessageDto(
     @SerializedName("sender_id") val senderId: String = "",
     @SerializedName("sender_team_id") val senderTeamId: String? = null,
     @SerializedName("sender_name") val senderName: String? = null,
+    @SerializedName("sender_avatar_url") val senderAvatarUrl: String? = null,
     @SerializedName("content") val content: String = "",
     @SerializedName("is_read") val isRead: Boolean = false,
     @SerializedName("read_at") val readAt: String? = null,
@@ -358,6 +359,8 @@ data class MessageDto(
     @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("voice_url") val voice_url: String? = null,
     @SerializedName("voice_duration") val voiceDuration: Int? = null,
+    @SerializedName("client_message_id") val clientMessageId: String? = null,
+    @SerializedName("delivery_status") val deliveryStatus: String? = null,
     @SerializedName("created_at") val createdAt: String? = null   // null = DB auto-generates timestamp
 )
 
@@ -369,17 +372,23 @@ data class ConversationDto(
     @SerializedName("participant_a_name") val participantAName: String = "",
     @SerializedName("participant_a_team_id") val participantATeamId: String = "",
     @SerializedName("participant_a_team_name") val participantATeamName: String = "",
+    @SerializedName("participant_a_avatar_url") val participantAAvatarUrl: String? = null,
     @SerializedName("participant_b_id") val participantBId: String = "",
     @SerializedName("participant_b_name") val participantBName: String = "",
     @SerializedName("participant_b_team_id") val participantBTeamId: String = "",
     @SerializedName("participant_b_team_name") val participantBTeamName: String = "",
+    @SerializedName("participant_b_avatar_url") val participantBAvatarUrl: String? = null,
     @SerializedName("last_message") val lastMessage: String = "",
     @SerializedName("last_message_time") val lastMessageTime: String = "",
     @SerializedName("chat_opens_at") val chatOpensAt: String = "",
     @SerializedName("participant_a_typing") val participantATyping: Boolean = false,
     @SerializedName("participant_b_typing") val participantBTyping: Boolean = false,
     @SerializedName("unread_count") val unreadCount: Int = 0,
-    @SerializedName("participant_count") val participantCount: Int = 2
+    @SerializedName("participant_count") val participantCount: Int = 2,
+    @SerializedName("team_id") val teamId: String? = null,
+    @SerializedName("is_team_chat") val isTeamChat: Boolean = false,
+    @SerializedName("is_pinned") val isPinned: Boolean = false,
+    @SerializedName("group_name") val groupName: String? = null
 )
 
 /**
@@ -769,7 +778,8 @@ interface SupabaseApiService {
         @Query("conversation_id") conversationId: String? = null,
         @Query("order") order: String = "created_at.asc",
         @Query("created_at") createdAfter: String? = null,
-        @Query("id") idFilter: String? = null
+        @Query("id") idFilter: String? = null,
+        @Query("client_message_id") clientMessageId: String? = null
     ): Response<List<MessageDto>>
 
     @POST("messages")
@@ -1040,6 +1050,9 @@ interface SupabaseApiService {
     @POST("rpc/check_in_tournament_team")
     suspend fun rpcCheckInTournamentTeam(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    @POST("rpc/resolve_tournament_dispute")
+    suspend fun rpcResolveTournamentDispute(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     @GET("user_reports")
     suspend fun getUserReports(
         @Query("select") select: String = "*",
@@ -1064,6 +1077,8 @@ data class BanAppealDto(
  * Singleton accessor for Supabase API service.
  */
 object SupabaseService {
+    var realtimeClient: SupabaseRealtimeClient? = null
+
     val api: SupabaseApiService by lazy {
         SupabaseRetrofitClient.retrofit.create(SupabaseApiService::class.java)
     }

@@ -3,6 +3,7 @@ package com.mlbb.scrim.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -71,16 +73,16 @@ fun CreateScrimScreen(
     var description by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    // Date/time picker state — defaults to today's date, current year
+    // Date/time picker state
     val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-    val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) // 0-based
+    val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH)
     val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)
     val availableYears = listOf(currentYear, currentYear + 1)
-    var selectedYearIndex by remember { mutableIntStateOf(0) } // 0 = current year
+    var selectedYearIndex by remember { mutableIntStateOf(0) }
     val selectedYear = availableYears.getOrElse(selectedYearIndex) { currentYear }
     var selectedMonth by remember { mutableIntStateOf(currentMonth) }
     var selectedDay by remember { mutableIntStateOf(currentDay) }
-    var selectedHour by remember { mutableIntStateOf(18) } // 6 PM default
+    var selectedHour by remember { mutableIntStateOf(18) }
     var selectedMinute by remember { mutableIntStateOf(0) }
 
     val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -92,20 +94,18 @@ fun CreateScrimScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = heroGradientBrush()
-            )
+            .background(brush = heroGradientBrush())
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header
+            // ── Header ──────────────────────────────────────────
             AnimatedEntrance(delayMillis = 0) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
-                        .padding(top = 20.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -116,535 +116,375 @@ fun CreateScrimScreen(
                             shape = RoundedCornerShape(12.dp)
                         )
                     )
-
                     Text(
                         text = stringResource(R.string.post_scrim),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        style = iOSTitle3.copy(color = White, fontWeight = FontWeight.Bold)
                     )
-
                     Spacer(modifier = Modifier.width(44.dp))
                 }
             }
 
+            // ── Scrollable Content ──────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 100.dp)
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Team Info Card — Clickable to switch team if multiple
-                AnimatedEntrance(delayMillis = 100) {
-                    Card(
+                // ── Team Card (compact) ──────────────────────────
+                AnimatedEntrance(delayMillis = 80) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(
-                                elevation = 4.dp,
-                                spotColor = BluePrimary.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = DarkNavy
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        onClick = { if (teams.size > 1) showTeamPicker = true }
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceCard)
+                            .then(
+                                if (teams.size > 1) Modifier.clickable { showTeamPicker = true }
+                                else Modifier
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(colors = listOf(BluePrimary, Color(0xFF0A5A9F))),
+                                    shape = RoundedCornerShape(10.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = teamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.posting_as),
+                                style = iOSCaption1.copy(color = TextSecondary)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = teamName,
+                                    style = iOSHeadline.copy(color = TextPrimary),
+                                    maxLines = 1,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (teams.size > 1) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        Icons.Default.SwapHoriz,
+                                        contentDescription = stringResource(R.string.content_desc_switch_team),
+                                        tint = BluePrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                        // Player count badge
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = if (meetsMinPlayers) SuccessGreen.copy(alpha = 0.15f) else WarningOrange.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.People, null,
+                                    tint = if (meetsMinPlayers) SuccessGreen else WarningOrange,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "$currentPlayerCount/5",
+                                    style = iOSCaption2.copy(
+                                        color = if (meetsMinPlayers) SuccessGreen else WarningOrange,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // ── Single compact form card ─────────────────────
+                AnimatedEntrance(delayMillis = 120) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(SurfaceCard)
+                            .padding(16.dp)
+                    ) {
+
+                        // ── Game Mode ────────────────────────────
+                        FormSectionLabel(stringResource(R.string.game_mode))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(20.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(BluePrimary, Color(0xFF0A5A9F))
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = teamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = White
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.posting_as),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 13.sp,
-                                        color = LightGray
-                                    )
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = teamName,
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = White
-                                        ),
-                                        modifier = Modifier.weight(1f, fill = false),
-                                        maxLines = 1
-                                    )
-                                    if (teams.size > 1) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Icon(
-                                            Icons.Default.SwapHoriz,
-                                            contentDescription = stringResource(R.string.content_desc_switch_team),
-                                            tint = BluePrimary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                // Player count indicator
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.People,
-                                        contentDescription = null,
-                                        tint = if (meetsMinPlayers) SuccessGreen else WarningOrange,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "$currentPlayerCount/5 players",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (meetsMinPlayers) SuccessGreen else WarningOrange
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Game Mode Selection
-                AnimatedEntrance(delayMillis = 150) {
-                    SelectionCard(title = stringResource(R.string.game_mode)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            GameMode.values().forEach { mode ->
-                                FilterChip(
+                            GameMode.selectable.forEach { mode ->
+                                CompactChip(
+                                    text = mode.displayName,
                                     selected = selectedGameMode == mode,
                                     onClick = { selectedGameMode = mode },
-                                    label = { Text(mode.name, fontSize = 11.sp) },
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = BluePrimary.copy(alpha = 0.2f),
-                                        selectedLabelColor = BluePrimary,
-                                        containerColor = White.copy(alpha = 0.1f),
-                                        labelColor = LightGray
-                                    ),
-                                    border = null
+                                    selectedColor = BluePrimary
                                 )
                             }
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Region Selection
-                AnimatedEntrance(delayMillis = 200) {
-                    SelectionCard(title = stringResource(R.string.region)) {
+                        // ── Region ───────────────────────────────
+                        FormSectionLabel(stringResource(R.string.region))
                         Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Region.values().forEach { region ->
-                                FilterChip(
+                                CompactChip(
+                                    text = region.displayName,
                                     selected = selectedRegion == region,
                                     onClick = { selectedRegion = region },
-                                    label = { Text(region.displayName, fontSize = 11.sp) },
-                                    modifier = Modifier.width(80.dp).height(48.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                        selectedLabelColor = GoldPrimary,
-                                        containerColor = White.copy(alpha = 0.1f),
-                                        labelColor = LightGray
-                                    ),
-                                    border = null
+                                    selectedColor = GoldPrimary
                                 )
                             }
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Skill Level Selection
-                AnimatedEntrance(delayMillis = 250) {
-                    SelectionCard(title = stringResource(R.string.skill_level)) {
+                        // ── Skill Level ──────────────────────────
+                        FormSectionLabel(stringResource(R.string.skill_level))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             SkillLevel.values().forEach { level ->
-                                FilterChip(
+                                CompactChip(
+                                    text = level.name,
                                     selected = selectedSkillLevel == level,
                                     onClick = { selectedSkillLevel = level },
-                                    label = { Text(level.name, fontSize = 13.sp) },
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Purple.copy(alpha = 0.2f),
-                                        selectedLabelColor = Purple,
-                                        containerColor = White.copy(alpha = 0.1f),
-                                        labelColor = LightGray
-                                    ),
-                                    border = null
+                                    selectedColor = Purple
                                 )
                             }
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Best Of Selection
-                AnimatedEntrance(delayMillis = 275) {
-                    SelectionCard(title = stringResource(R.string.number_of_games)) {
+                        // ── Best Of ──────────────────────────────
+                        FormSectionLabel(stringResource(R.string.number_of_games))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             BestOf.values().forEach { bestOf ->
-                                FilterChip(
+                                CompactChip(
+                                    text = stringResource(R.string.bo_format, bestOf.games),
                                     selected = selectedBestOf == bestOf,
                                     onClick = { selectedBestOf = bestOf },
-                                    label = { Text(stringResource(R.string.bo_format, bestOf.games), fontSize = 13.sp) },
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                        selectedLabelColor = GoldPrimary,
-                                        containerColor = White.copy(alpha = 0.1f),
-                                        labelColor = LightGray
-                                    ),
-                                    border = null
+                                    selectedColor = GoldPrimary
                                 )
                             }
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Scheduled Date & Time
-                AnimatedEntrance(delayMillis = 300) {
-                    SelectionCard(title = stringResource(R.string.date_and_time)) {
-                        Column {
-                            // Date Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Year selector
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.year),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    var yearExpanded by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(
-                                            onClick = { yearExpanded = true },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 4.dp)
-                                                .height(40.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = White.copy(alpha = 0.1f)
-                                            ),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, White.copy(alpha = 0.3f)),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                selectedYear.toString(),
-                                                color = GoldPrimary,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = yearExpanded,
-                                            onDismissRequest = { yearExpanded = false },
-                                            modifier = Modifier.background(DarkNavy)
-                                        ) {
-                                            availableYears.forEachIndexed { index, year ->
-                                                DropdownMenuItem(
-                                                    text = { Text(year.toString(), color = White) },
-                                                    onClick = {
-                                                        selectedYearIndex = index
-                                                        yearExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                        // ── Date & Time ───────────────────────────
+                        FormSectionLabel(stringResource(R.string.date_and_time))
 
-                                // Month dropdown
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.month),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    var monthExpanded by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(
-                                            onClick = { monthExpanded = true },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 4.dp)
-                                                .height(40.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = White.copy(alpha = 0.1f)
-                                            ),
-                                            border = androidx.compose.ui.graphics.SolidColor(White.copy(alpha = 0.3f))
-                                                .let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                months[selectedMonth],
-                                                color = White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = monthExpanded,
-                                            onDismissRequest = { monthExpanded = false },
-                                            modifier = Modifier.background(DarkNavy)
-                                        ) {
-                                            months.forEachIndexed { index, month ->
-                                                DropdownMenuItem(
-                                                    text = { Text(month, color = White) },
-                                                    onClick = {
-                                                        selectedMonth = index
-                                                        monthExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Day dropdown
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.day),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    var dayExpanded by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(
-                                            onClick = { dayExpanded = true },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 4.dp)
-                                                .height(40.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = White.copy(alpha = 0.1f)
-                                            ),
-                                            border = androidx.compose.ui.graphics.SolidColor(White.copy(alpha = 0.3f))
-                                                .let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                selectedDay.toString(),
-                                                color = White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = dayExpanded,
-                                            onDismissRequest = { dayExpanded = false },
-                                            modifier = Modifier.background(DarkNavy)
-                                        ) {
-                                            (1..maxDay).forEach { day ->
-                                                DropdownMenuItem(
-                                                    text = { Text(day.toString(), color = White) },
-                                                    onClick = {
-                                                        selectedDay = day
-                                                        dayExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Time Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Hour dropdown
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.hour),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    var hourExpanded by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(
-                                            onClick = { hourExpanded = true },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 4.dp)
-                                                .height(40.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = White.copy(alpha = 0.1f)
-                                            ),
-                                            border = androidx.compose.ui.graphics.SolidColor(White.copy(alpha = 0.3f))
-                                                .let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                String.format("%02d", selectedHour),
-                                                color = White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = hourExpanded,
-                                            onDismissRequest = { hourExpanded = false },
-                                            modifier = Modifier.background(DarkNavy)
-                                        ) {
-                                            (0..23).forEach { hour ->
-                                                DropdownMenuItem(
-                                                    text = { Text(String.format("%02d", hour), color = White) },
-                                                    onClick = {
-                                                        selectedHour = hour
-                                                        hourExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Minute dropdown
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.minute),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    var minuteExpanded by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(
-                                            onClick = { minuteExpanded = true },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 4.dp)
-                                                .height(40.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = White.copy(alpha = 0.1f)
-                                            ),
-                                            border = androidx.compose.ui.graphics.SolidColor(White.copy(alpha = 0.3f))
-                                                .let { androidx.compose.foundation.BorderStroke(1.dp, it) },
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                String.format("%02d", selectedMinute),
-                                                color = White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = minuteExpanded,
-                                            onDismissRequest = { minuteExpanded = false },
-                                            modifier = Modifier.background(DarkNavy)
-                                        ) {
-                                            listOf(0, 15, 30, 45).forEach { minute ->
-                                                DropdownMenuItem(
-                                                    text = { Text(String.format("%02d", minute), color = White) },
-                                                    onClick = {
-                                                        selectedMinute = minute
-                                                        minuteExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // UTC offset display
-                                Column(modifier = Modifier.weight(1.2f)) {
-                                    Text(
-                                        text = stringResource(R.string.timezone),
-                                        fontSize = 12.sp,
-                                        color = MidGray
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 4.dp)
-                                            .background(
-                                                color = BluePrimary.copy(alpha = 0.15f),
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 8.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            text = selectedRegion.utcOffset,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = BluePrimary
+                        // Date: scrollable month/day/year chips
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Month
+                            var monthExpanded by remember { mutableStateOf(false) }
+                            Box {
+                                CompactChip(
+                                    text = months[selectedMonth],
+                                    selected = true,
+                                    onClick = { monthExpanded = true },
+                                    selectedColor = BluePrimary
+                                )
+                                DropdownMenu(
+                                    expanded = monthExpanded,
+                                    onDismissRequest = { monthExpanded = false },
+                                    modifier = Modifier.background(DarkNavy)
+                                ) {
+                                    months.forEachIndexed { index, month ->
+                                        DropdownMenuItem(
+                                            text = { Text(month, color = White) },
+                                            onClick = { selectedMonth = index; monthExpanded = false }
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = "Scrim will start: ${months[selectedMonth]} $selectedDay, $selectedYear at ${String.format("%02d", selectedHour)}:${String.format("%02d", selectedMinute)} ${selectedRegion.utcOffset}",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = 13.sp,
-                                    color = MidGray
+                            // Day
+                            var dayExpanded by remember { mutableStateOf(false) }
+                            Box {
+                                CompactChip(
+                                    text = selectedDay.toString(),
+                                    selected = true,
+                                    onClick = { dayExpanded = true },
+                                    selectedColor = BluePrimary
                                 )
-                            )
+                                DropdownMenu(
+                                    expanded = dayExpanded,
+                                    onDismissRequest = { dayExpanded = false },
+                                    modifier = Modifier.background(DarkNavy)
+                                ) {
+                                    (1..maxDay).forEach { day ->
+                                        DropdownMenuItem(
+                                            text = { Text(day.toString(), color = White) },
+                                            onClick = { selectedDay = day; dayExpanded = false }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Year
+                            var yearExpanded by remember { mutableStateOf(false) }
+                            Box {
+                                CompactChip(
+                                    text = selectedYear.toString(),
+                                    selected = true,
+                                    onClick = { yearExpanded = true },
+                                    selectedColor = BluePrimary
+                                )
+                                DropdownMenu(
+                                    expanded = yearExpanded,
+                                    onDismissRequest = { yearExpanded = false },
+                                    modifier = Modifier.background(DarkNavy)
+                                ) {
+                                    availableYears.forEachIndexed { index, year ->
+                                        DropdownMenuItem(
+                                            text = { Text(year.toString(), color = White) },
+                                            onClick = { selectedYearIndex = index; yearExpanded = false }
+                                        )
+                                    }
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Time row: Hour / Minute / Timezone
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Hour
+                            var hourExpanded by remember { mutableStateOf(false) }
+                            Box(modifier = Modifier.weight(1f)) {
+                                CompactChip(
+                                    text = String.format("%02d", selectedHour) + "h",
+                                    selected = true,
+                                    onClick = { hourExpanded = true },
+                                    selectedColor = GoldPrimary,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownMenu(
+                                    expanded = hourExpanded,
+                                    onDismissRequest = { hourExpanded = false },
+                                    modifier = Modifier.background(DarkNavy)
+                                ) {
+                                    (0..23).forEach { hour ->
+                                        DropdownMenuItem(
+                                            text = { Text(String.format("%02d", hour), color = White) },
+                                            onClick = { selectedHour = hour; hourExpanded = false }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(":", color = TextSecondary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                            // Minute
+                            var minuteExpanded by remember { mutableStateOf(false) }
+                            Box(modifier = Modifier.weight(1f)) {
+                                CompactChip(
+                                    text = String.format("%02d", selectedMinute),
+                                    selected = true,
+                                    onClick = { minuteExpanded = true },
+                                    selectedColor = GoldPrimary,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownMenu(
+                                    expanded = minuteExpanded,
+                                    onDismissRequest = { minuteExpanded = false },
+                                    modifier = Modifier.background(DarkNavy)
+                                ) {
+                                    listOf(0, 15, 30, 45).forEach { minute ->
+                                        DropdownMenuItem(
+                                            text = { Text(String.format("%02d", minute), color = White) },
+                                            onClick = { selectedMinute = minute; minuteExpanded = false }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            // Timezone badge
+                            Box(
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(BluePrimary.copy(alpha = 0.12f))
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = selectedRegion.utcOffset,
+                                    style = iOSCallout.copy(color = BluePrimary, fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Summary line
+                        Text(
+                            text = "${months[selectedMonth]} $selectedDay, $selectedYear at ${String.format("%02d", selectedHour)}:${String.format("%02d", selectedMinute)} ${selectedRegion.utcOffset}",
+                            style = iOSCaption1.copy(color = TextSecondary)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Description
-                AnimatedEntrance(delayMillis = 350) {
-                    SelectionCard(title = stringResource(R.string.description_optional)) {
+                // ── Description card ────────────────────────────
+                AnimatedEntrance(delayMillis = 200) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(SurfaceCard)
+                            .padding(16.dp)
+                    ) {
+                        FormSectionLabel(stringResource(R.string.description_optional))
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
@@ -653,8 +493,6 @@ fun CreateScrimScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GoldPrimary,
                                 unfocusedBorderColor = White.copy(alpha = 0.3f),
-                                focusedLabelColor = GoldPrimary,
-                                unfocusedLabelColor = White.copy(alpha = 0.7f),
                                 cursorColor = GoldPrimary,
                                 focusedTextColor = White,
                                 unfocusedTextColor = White,
@@ -662,15 +500,15 @@ fun CreateScrimScreen(
                                 unfocusedContainerColor = White.copy(alpha = 0.05f)
                             ),
                             shape = RoundedCornerShape(12.dp),
-                            minLines = 3,
-                            maxLines = 5
+                            minLines = 2,
+                            maxLines = 4
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Error Message
+                // ── Error Message ────────────────────────────────
                 AnimatedVisibility(
                     visible = errorMessage.isNotEmpty(),
                     enter = fadeIn() + expandVertically(),
@@ -680,44 +518,36 @@ fun CreateScrimScreen(
                         text = errorMessage,
                         color = ErrorRed,
                         fontSize = 14.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
 
-                // Team size warning
+                // ── Team size warning ────────────────────────────
                 if (currentPlayerCount < 5) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = WarningOrange.copy(alpha = 0.15f)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(WarningOrange.copy(alpha = 0.12f))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = WarningOrange,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Your team has $currentPlayerCount/5 players. Post scrims requires at least 5 players.",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = WarningOrange,
-                                    fontSize = 13.sp
-                                )
-                            )
-                        }
+                        Icon(
+                            Icons.Default.Warning, null,
+                            tint = WarningOrange,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "$currentPlayerCount/5 players — need at least 5 to post.",
+                            style = iOSCaption1.copy(color = WarningOrange)
+                        )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Post Button — gated on minimum 5 players
-                AnimatedEntrance(delayMillis = 400) {
+                // ── Post Button ──────────────────────────────────
+                AnimatedEntrance(delayMillis = 280) {
                     GradientButton(
                         text = stringResource(R.string.post_scrim),
                         onClick = {
@@ -729,36 +559,18 @@ fun CreateScrimScreen(
                                 calendar.set(java.util.Calendar.MILLISECOND, 0)
                                 val scheduledTime = calendar.timeInMillis
                                 onCreateScrim(
-                                    teamId,
-                                    teamName,
-                                    selectedGameMode,
-                                    selectedRegion,
-                                    selectedSkillLevel,
-                                    selectedBestOf,
-                                    scheduledTime,
-                                    description
+                                    teamId, teamName, selectedGameMode, selectedRegion,
+                                    selectedSkillLevel, selectedBestOf, scheduledTime, description
                                 )
                             }
                         },
                         gradient = GoldGradient,
-                        height = 56.dp,
+                        height = 52.dp,
                         enabled = meetsMinPlayers
                     )
-                    if (!meetsMinPlayers) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.team_needs_5_players_to_post_scrims),
-                            color = WarningOrange,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp)
-                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -870,7 +682,6 @@ fun CreateScrimScreen(
                         color = MidGray,
                         fontSize = 13.sp
                     )
-                    // Show other teams that DO have 5 players
                     val eligibleTeams = teams.filter { it.meetsMinPlayers && it.id != teamId }
                     if (eligibleTeams.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -916,41 +727,52 @@ fun CreateScrimScreen(
     }
 }
 
+// ── Compact chip for selections ──────────────────────────────────
+
 @Composable
-fun SelectionCard(
-    title: String,
-    content: @Composable () -> Unit
+private fun CompactChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    selectedColor: Color,
+    modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = White
-                )
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                if (selected) selectedColor.copy(alpha = 0.18f)
+                else White.copy(alpha = 0.08f)
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            content()
-        }
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = iOSCallout.copy(
+                color = if (selected) selectedColor else TextSecondary,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+            )
+        )
     }
+}
+
+// ── Form section label ────────────────────────────────────────────
+
+@Composable
+private fun FormSectionLabel(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .background(GoldPrimary, RoundedCornerShape(2.dp))
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = iOSHeadline.copy(color = TextPrimary)
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
 }

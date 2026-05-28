@@ -63,7 +63,7 @@ class MatchResultRepositoryTest {
         val all = repository.getAllMatchResults().first().getOrNull()!!
         val match = all.first { it.verificationStatus == VerificationStatus.PENDING }
         val result = repository.reportResult(
-            matchResultId = match.id,
+            scrimId = match.scrimId,
             teamId = match.teamAId,
             reporterId = "player1",
             reporterName = "Player1",
@@ -76,7 +76,7 @@ class MatchResultRepositoryTest {
     @Test
     fun `reportResult returns failure for nonexistent match`() = runBlocking {
         val result = repository.reportResult(
-            matchResultId = "nonexistent",
+            scrimId = "nonexistent",
             teamId = "team1",
             reporterId = "player1",
             reporterName = "Player1",
@@ -90,7 +90,7 @@ class MatchResultRepositoryTest {
         val all = repository.getAllMatchResults().first().getOrNull()!!
         val match = all.first()
         val result = repository.reportResult(
-            matchResultId = match.id,
+            scrimId = match.scrimId,
             teamId = "unrelated_team",
             reporterId = "player1",
             reporterName = "Player1",
@@ -105,8 +105,8 @@ class MatchResultRepositoryTest {
         val all = repository.getAllMatchResults().first().getOrNull()!!
         val match = all.first { it.verificationStatus == VerificationStatus.PENDING }
 
-        repository.reportResult(match.id, match.teamAId, "p1", "P1", match.teamAId).first()
-        val result = repository.reportResult(match.id, match.teamBId, "p2", "P2", match.teamAId).first()
+        repository.reportResult(match.scrimId, match.teamAId, "p1", "P1", match.teamAId).first()
+        val result = repository.reportResult(match.scrimId, match.teamBId, "p2", "P2", match.teamAId).first()
 
         assertTrue(result.isSuccess)
         assertEquals(VerificationStatus.CONFIRMED, result.getOrNull()?.verificationStatus)
@@ -119,8 +119,8 @@ class MatchResultRepositoryTest {
         val all = repository.getAllMatchResults().first().getOrNull()!!
         val match = all.first { it.verificationStatus == VerificationStatus.PENDING }
 
-        repository.reportResult(match.id, match.teamAId, "p1", "P1", match.teamAId).first()
-        val result = repository.reportResult(match.id, match.teamBId, "p2", "P2", match.teamBId).first()
+        repository.reportResult(match.scrimId, match.teamAId, "p1", "P1", match.teamAId).first()
+        val result = repository.reportResult(match.scrimId, match.teamBId, "p2", "P2", match.teamBId).first()
 
         assertTrue(result.isSuccess)
         assertEquals(VerificationStatus.DISPUTED, result.getOrNull()?.verificationStatus)

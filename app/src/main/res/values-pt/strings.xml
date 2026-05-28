@@ -332,4 +332,39 @@
     <string name="in_progress">Em andamento</string>
     <string name="completed">Concluído</string>
     <string name="cancelled">Cancelado</string>
+    <string name="bio_placeholder">Bio (algo sobre você)</string>
+    <string name="cancel_btn">Cancelar</string>
+    <string name="content_desc_change_avatar">Alterar avatar</string>
+    <string name="content_desc_profile_avatar">Avatar do perfil</string>
+    <string name="copy_email">Copiar e-mail</string>
+    <string name="email_copied">E-mail copiado</string>
+    <string name="error_enter_current_password">Digite sua senha atual</string>
+    <string name="error_enter_new_email">Digite um novo e-mail</string>
+    <string name="error_enter_valid_email">Digite um e-mail válido</string>
+    <string name="error_password_min_length">A nova senha deve ter pelo menos 6 caracteres</string>
+    <string name="error_password_must_differ">A nova senha deve ser diferente</string>
+    <string name="error_passwords_not_match">As novas senhas não coincidem</string>
+    <string name="host_credentials">Credenciais de host</string>
+    <string name="host_credentials_sub">Copie seu e-mail e use a senha do app</string>
+    <string name="host_email_label">E-mail</string>
+    <string name="host_password_hint">Use a senha do app</string>
+    <string name="host_stat_cancelled">Cancelados</string>
+    <string name="host_stat_completed">Concluídos</string>
+    <string name="host_stats">Estatísticas de host</string>
+    <string name="hosted">Organizados</string>
+    <string name="new_email">Novo e-mail</string>
+    <string name="open_dashboard">Abrir painel</string>
+    <string name="pts_label">PTS</string>
+    <string name="role_placeholder">Função principal (ex.: Jungler, Roamer)</string>
+    <string name="sign_out">Sair</string>
+    <string name="sign_out_confirm_message">Tem certeza de que deseja sair? Você precisará inserir suas credenciais para entrar novamente.</string>
+    <string name="sign_out_sub">Sair da sua conta</string>
+    <string name="top_3_main_heroes_hint">Top 3 heróis principais (separados por vírgula)</string>
+    <string name="tournament_host_badge">HOST DE TORNEIOS</string>
+    <string name="update_password_sub">Atualizar a senha da conta</string>
+
+    <!-- Team Chat -->
+    <string name="team_chat_default_name">Chat da equipe</string>
+    <string name="team_badge">EQUIPE</string>
+    <string name="team_chat_placeholder">Comece a conversar com sua equipe…</string>
 </resources>

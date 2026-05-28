@@ -2,6 +2,7 @@ package com.mlbb.scrim.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.data.model.MatchResult
+import com.mlbb.scrim.data.model.MatchType
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.R
@@ -219,6 +221,22 @@ private fun MatchHistoryCard(
                         fontWeight = FontWeight.SemiBold,
                         color = statusColor
                     )
+                    if (match.matchType == MatchType.TOURNAMENT) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(Purple.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .border(1.dp, Purple.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tournament_match),
+                                color = Purple,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(match.createdAt)),
@@ -228,6 +246,17 @@ private fun MatchHistoryCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Tournament info
+            if (match.matchType == MatchType.TOURNAMENT && match.tournamentTitle != null) {
+                Text(
+                    text = "${match.tournamentTitle}${match.roundNumber?.let { " - Round $it" } ?: ""}",
+                    fontSize = 12.sp,
+                    color = Purple.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
 
             // Teams
             Row(

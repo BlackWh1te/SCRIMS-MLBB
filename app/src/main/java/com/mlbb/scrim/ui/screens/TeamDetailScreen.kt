@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
+import coil.compose.AsyncImage
 import com.mlbb.scrim.ui.components.AnimatedEntrance
 import com.mlbb.scrim.ui.components.GlassBackButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -383,6 +385,9 @@ fun TeamDetailScreen(
                             isLeader = isLeader,
                             onChangeRole = if (isLeader && player.role != com.mlbb.scrim.data.model.PlayerRole.LEADER) {
                                 { onUpdatePlayerRole?.invoke(player.id, it) }
+                            } else null,
+                            onKick = if (isLeader && player.role != com.mlbb.scrim.data.model.PlayerRole.LEADER) {
+                                { onRemovePlayer?.invoke(player.id) }
                             } else null
                         )
                     }
@@ -844,9 +849,12 @@ fun TeamDetailScreen(
 fun PlayerCard(
     player: com.mlbb.scrim.data.model.Player,
     isLeader: Boolean = false,
-    onChangeRole: ((com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null
+    onChangeRole: ((com.mlbb.scrim.data.model.PlayerRole) -> Unit)? = null,
+    onKick: (() -> Unit)? = null
 ) {
     var showRoleDialog by remember { mutableStateOf(false) }
+    var showHandoverConfirm by remember { mutableStateOf(false) }
+    var showKickConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -857,7 +865,7 @@ fun PlayerCard(
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable {
-                if (isLeader && onChangeRole != null) {
+                if (isLeader && player.role != com.mlbb.scrim.data.model.PlayerRole.LEADER) {
                     showRoleDialog = true
                 }
             },
@@ -889,12 +897,21 @@ fun PlayerCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.player_initial_fallback),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BluePrimary
-                )
+                if (player.avatarUrl != null) {
+                    AsyncImage(
+                        model = player.avatarUrl,
+                        contentDescription = player.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.player_initial_fallback),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -921,7 +938,7 @@ fun PlayerCard(
                 )
             }
 
-            // Role Badge
+            // Role Badge & Actions
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -944,14 +961,49 @@ fun PlayerCard(
                     )
                 }
 
-                if (isLeader && onChangeRole != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.content_desc_change_role),
-                        tint = MidGray,
-                        modifier = Modifier.size(18.dp)
-                    )
+                if (isLeader && player.role != com.mlbb.scrim.data.model.PlayerRole.LEADER) {
+                    var showMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.content_desc_player_actions),
+                                tint = MidGray,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(DarkNavy)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.change_role), color = White) },
+                                onClick = {
+                                    showMenu = false
+                                    showRoleDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = BluePrimary) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.handover_leadership), color = GoldPrimary) },
+                                onClick = {
+                                    showMenu = false
+                                    showHandoverConfirm = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Stars, contentDescription = null, tint = GoldPrimary) }
+                            )
+                            Divider(color = White.copy(alpha = 0.1f))
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.kick_player), color = ErrorRed) },
+                                onClick = {
+                                    showMenu = false
+                                    showKickConfirm = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.PersonRemove, contentDescription = null, tint = ErrorRed) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1026,6 +1078,80 @@ fun PlayerCard(
             },
             confirmButton = {
                 TextButton(onClick = { showRoleDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = MidGray)
+                }
+            }
+        )
+    }
+
+    // Handover Confirmation
+    if (showHandoverConfirm) {
+        AlertDialog(
+            onDismissRequest = { showHandoverConfirm = false },
+            containerColor = DarkNavy,
+            title = {
+                Text(
+                    text = stringResource(R.string.handover_leadership_confirm),
+                    color = White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.handover_leadership_message, player.name),
+                    color = LightGray,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onChangeRole?.invoke(com.mlbb.scrim.data.model.PlayerRole.LEADER)
+                        showHandoverConfirm = false
+                    }
+                ) {
+                    Text(stringResource(R.string.handover), color = GoldPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHandoverConfirm = false }) {
+                    Text(stringResource(R.string.cancel), color = MidGray)
+                }
+            }
+        )
+    }
+
+    // Kick Confirmation
+    if (showKickConfirm) {
+        AlertDialog(
+            onDismissRequest = { showKickConfirm = false },
+            containerColor = DarkNavy,
+            title = {
+                Text(
+                    text = stringResource(R.string.kick_player_confirm),
+                    color = White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.kick_player_message, player.name),
+                    color = LightGray,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onKick?.invoke()
+                        showKickConfirm = false
+                    }
+                ) {
+                    Text(stringResource(R.string.kick), color = ErrorRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showKickConfirm = false }) {
                     Text(stringResource(R.string.cancel), color = MidGray)
                 }
             }

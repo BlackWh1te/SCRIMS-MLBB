@@ -20,5 +20,7 @@ data class ProfileEntity(
     val mainHeroes: String? = null,
     val points: Int = 0,
     val isBanned: Boolean = false,
+    val banReason: String? = null,
+    val bannedAt: String? = null,
     val lastUpdated: Long = System.currentTimeMillis()
 )

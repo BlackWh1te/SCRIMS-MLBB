@@ -38,7 +38,7 @@ fun ReportMatchResultScreen(
     currentTeamId: String,
     onNavigateBack: () -> Unit,
     onReportResult: (
-        matchResultId: String,
+        scrimId: String,
         teamId: String,
         reporterId: String,
         reporterName: String,
@@ -394,7 +394,7 @@ fun ReportMatchResultScreen(
                                                     errorMessage = ""
                                                     selectedWinnerId?.let { winnerId ->
                                                         onReportResult(
-                                                            matchResult.id,
+                                                            matchResult.scrimId,
                                                             currentTeamId,
                                                             currentUserId,
                                                             currentUserName,

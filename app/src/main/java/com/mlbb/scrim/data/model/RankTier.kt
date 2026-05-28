@@ -110,9 +110,9 @@ enum class RegionalRank(val displayPrefix: String, val rank: Int, val badgeColor
 
     companion object {
         fun fromWins(wins: Int, region: String): RegionalRank? {
-            // KRD = Korea, MSK = Moscow, EKB = East KB
+            // KRD = Krasnodar, MSK = Moscow, EKB = Ekaterinburg
             // These are RU-region scrim servers
-            val ruRegions = listOf("KRD", "MSK", "EKB", "MCK")
+            val ruRegions = listOf("KRD", "MSK", "EKB")
             if (region !in ruRegions) return null
             return when {
                 wins >= 50 -> TOP1

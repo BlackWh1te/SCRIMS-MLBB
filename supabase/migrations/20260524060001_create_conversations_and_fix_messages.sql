@@ -290,8 +290,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 12. REALTIME: ensure conversations and messages are published
 -- ═══════════════════════════════════════════════════════════════
 
-ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
-ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'conversations'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+    END IF;
+END $$;
 
 -- ═══════════════════════════════════════════════════════════════
 -- 13. ADD avatar_url to profiles (if not exists)

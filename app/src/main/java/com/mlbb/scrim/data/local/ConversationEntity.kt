@@ -13,15 +13,27 @@ data class ConversationEntity(
     val participantAName: String,
     val participantATeamId: String?,
     val participantATeamName: String,
+    val participantAAvatarUrl: String? = null,
     val participantBId: String,
     val participantBName: String,
     val participantBTeamId: String?,
     val participantBTeamName: String,
+    val participantBAvatarUrl: String? = null,
     val lastMessage: String,
     val lastMessageTime: Long,
     val chatOpensAt: Long,
     val isParticipantATyping: Boolean,
-    val isParticipantBTyping: Boolean
+    val isParticipantBTyping: Boolean,
+    // ── Tournament match chat ──
+    val tournamentMatchId: String? = null,
+    val participantCount: Int = 2,
+    val isGroupChat: Boolean = false,
+    val unreadCount: Int = 0,
+    // ── Team group chat ──
+    val teamId: String? = null,
+    val isTeamChat: Boolean = false,
+    val isPinned: Boolean = false,
+    val groupName: String? = null
 ) {
     fun toDomainModel() = Conversation(
         id = id,
@@ -31,15 +43,27 @@ data class ConversationEntity(
         participantAName = participantAName,
         participantATeamId = participantATeamId ?: "",
         participantATeamName = participantATeamName,
+        participantAAvatarUrl = participantAAvatarUrl,
         participantBId = participantBId,
         participantBName = participantBName,
         participantBTeamId = participantBTeamId ?: "",
         participantBTeamName = participantBTeamName,
+        participantBAvatarUrl = participantBAvatarUrl,
         lastMessage = lastMessage,
         lastMessageTime = lastMessageTime,
         chatOpensAt = chatOpensAt,
         isParticipantATyping = isParticipantATyping,
         isParticipantBTyping = isParticipantBTyping,
-        messages = emptyList() // Loaded separately
+        messages = emptyList(), // Loaded separately
+        // ── Tournament match chat ──
+        tournamentMatchId = tournamentMatchId,
+        participantCount = participantCount,
+        isGroupChat = isGroupChat,
+        unreadCount = unreadCount,
+        // ── Team group chat ──
+        teamId = teamId,
+        isTeamChat = isTeamChat,
+        isPinned = isPinned,
+        groupName = groupName ?: ""
     )
 }

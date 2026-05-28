@@ -16,6 +16,10 @@ interface AuthRepositoryInterface {
 
     suspend fun verifyOtp(email: String, token: String, password: String): Flow<AuthResult>
 
+    suspend fun sendPasswordResetOtp(email: String): Flow<AuthResult>
+
+    suspend fun verifyPasswordResetOtp(email: String, token: String, newPassword: String): Flow<AuthResult>
+
     suspend fun signIn(email: String, password: String): Flow<AuthResult>
 
     suspend fun signOut(): Flow<AuthResult>

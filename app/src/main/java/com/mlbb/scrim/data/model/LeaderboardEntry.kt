@@ -5,6 +5,7 @@ data class LeaderboardEntry(
     val playerId: String = "",
     val username: String = "",
     val teamName: String = "",
+    val avatarUrl: String? = null,
     val xp: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,

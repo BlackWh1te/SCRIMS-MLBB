@@ -98,6 +98,28 @@ class AuthRepository : AuthRepositoryInterface {
         }
     }
 
+    override suspend fun sendPasswordResetOtp(email: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(800)
+        if (email.contains("@")) {
+            emit(AuthResult.EmailNotVerified(email))
+        } else {
+            emit(AuthResult.Error("Invalid email address"))
+        }
+    }
+
+    override suspend fun verifyPasswordResetOtp(email: String, token: String, newPassword: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        kotlinx.coroutines.delay(1000)
+        when {
+            token.length != 8 || !token.all { it.isDigit() } ->
+                emit(AuthResult.Error("Invalid code. Please enter the 8-digit code from your email."))
+            newPassword.length < 6 ->
+                emit(AuthResult.Error("New password must be at least 6 characters."))
+            else -> emit(AuthResult.Success)
+        }
+    }
+
     override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(1200) // Simulate network delay

@@ -73,9 +73,10 @@ class AppSettings(private val context: Context) {
     }
 
     suspend fun setLanguageCode(code: String) {
-        context.settingsDataStore.edit { it[Keys.LANGUAGE_CODE] = code }
-        // Also update SharedPreferences for synchronous access
+        // Keep the sync value ahead of DataStore emission so Activity recreation
+        // reads the new locale in attachBaseContext.
         setLanguageCodeSync(code)
+        context.settingsDataStore.edit { it[Keys.LANGUAGE_CODE] = code }
     }
 
     suspend fun setDarkMode(enabled: Boolean) {

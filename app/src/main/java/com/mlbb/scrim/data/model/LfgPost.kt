@@ -18,6 +18,9 @@ data class LfgPost(
     val totalMatches: Int = 0,
     val winRate: String = "",
     val rankedWinRate: String = "",
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val pts: Int = 0,
     val inGameId: String = "",
     val city: String = "",
     val screenshotUrl: String = "",
@@ -28,6 +31,8 @@ data class LfgPost(
     val telegram: String = "",
     val vk: String = "",
     val facebook: String = "",
+    val avatarUrl: String? = null,
+    val viewCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )
 

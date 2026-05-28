@@ -2,7 +2,7 @@
 -- Date: 2026-05-23
 
 CREATE TABLE IF NOT EXISTS team_ratings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
     rater_team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
     rater_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,

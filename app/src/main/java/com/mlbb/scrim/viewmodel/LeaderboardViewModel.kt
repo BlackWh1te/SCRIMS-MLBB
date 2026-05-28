@@ -94,4 +94,10 @@ class LeaderboardViewModel @Inject constructor(
     fun clearRefreshing() {
         _isRefreshing.value = false
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        loadLeaderboardJob?.cancel()
+        filterByTierJob?.cancel()
+    }
 }

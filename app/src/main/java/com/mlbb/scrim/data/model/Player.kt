@@ -6,6 +6,7 @@ data class Player(
     val role: PlayerRole = PlayerRole.MEMBER,
     val email: String = "",
     val joinedAt: Long = System.currentTimeMillis(),
+    val avatarUrl: String? = null,
     // ── Player stats ──
     val pts: Int = 0,              // Points earned/lost from scrims
     val wins: Int = 0,

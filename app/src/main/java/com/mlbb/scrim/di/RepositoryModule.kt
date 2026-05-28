@@ -5,6 +5,7 @@ import com.mlbb.scrim.data.cache.UnifiedCacheManager
 import com.mlbb.scrim.data.local.*
 import com.mlbb.scrim.data.repository.*
 import com.mlbb.scrim.data.service.SupabaseRealtimeClient
+import com.mlbb.scrim.data.service.SupabaseService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,7 +19,11 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideRealtimeClient(): SupabaseRealtimeClient {
-        return SupabaseRealtimeClient()
+        val client = SupabaseRealtimeClient()
+        // Wire into SupabaseService so SupabaseAuthenticator can trigger
+        // a channel re-join after a silent JWT refresh.
+        SupabaseService.realtimeClient = client
+        return client
     }
 
     @Provides

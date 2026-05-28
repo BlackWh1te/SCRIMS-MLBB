@@ -6,13 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModelProvider
 import com.mlbb.scrim.data.localization.LocaleManager
 import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.ui.navigation.AuthNavigation
@@ -27,11 +24,21 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private var lastAppliedLanguage: String? = null
+    private var currentLanguageCode: String = "en"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lastAppliedLanguage = AppSettings(this).getLanguageCodeSync()
+
+        lifecycleScope.launch {
+            val settings = AppSettings(this@MainActivity)
+            settings.languageCode.collect { code ->
+                if (code != currentLanguageCode) {
+                    currentLanguageCode = code
+                    LocaleManager.setLocale(this@MainActivity, code)
+                    recreate()
+                }
+            }
+        }
 
         // Wake up the Render backend asynchronously
         lifecycleScope.launch {
@@ -43,21 +50,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val context = LocalContext.current
-            val appSettings = remember { AppSettings(context) }
+            val appSettings = remember { AppSettings(this@MainActivity) }
             val darkMode by appSettings.darkMode.collectAsState(initial = true)
-            val languageCode by appSettings.languageCode.collectAsState(initial = lastAppliedLanguage ?: "en")
-
-            // Auto-recreate activity when language changes so resources reload.
-            LaunchedEffect(languageCode) {
-                val current = lastAppliedLanguage
-                if (current != null && current != languageCode) {
-                    lastAppliedLanguage = languageCode
-                    recreate()
-                } else {
-                    lastAppliedLanguage = languageCode
-                }
-            }
 
             MLBBScrimHostTheme(darkTheme = darkMode) {
                 Surface(
@@ -76,6 +70,7 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
         val localeContext = LocaleManager.applySavedLocale(newBase)
+        currentLanguageCode = AppSettings(newBase).getLanguageCodeSync()
         super.attachBaseContext(localeContext)
     }
 }

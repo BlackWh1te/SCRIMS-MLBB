@@ -150,6 +150,8 @@ class SupabaseAuthenticator : okhttp3.Authenticator {
             val body = refreshResponse.body()
             if (body?.accessToken != null && body?.refreshToken != null) {
                 SupabaseSession.saveTokens(body.accessToken, body.refreshToken)
+                // Re-join Realtime channels so they pick up the refreshed JWT for RLS
+                SupabaseService.realtimeClient?.refreshAccessToken()
 
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer ${body.accessToken}")

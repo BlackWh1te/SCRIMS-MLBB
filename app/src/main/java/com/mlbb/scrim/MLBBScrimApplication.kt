@@ -18,6 +18,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+import com.mlbb.scrim.notifications.LocalNotificationHelper
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -39,6 +40,9 @@ class MLBBScrimApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Create notification channels (Android O+); safe to call repeatedly
+        LocalNotificationHelper.createChannels(this)
 
         // Initialize logging: full logs in debug, WARN+ only in release
         if (isDebuggable()) {
@@ -72,11 +76,14 @@ class MLBBScrimApplication : Application() {
         if (isDebuggable()) {
             enableStrictMode()
         }
+
+        registerNetworkRestoreSync()
     }
 
     override fun onTerminate() {
         super.onTerminate()
         // Clean up Realtime WebSocket connection
+        unregisterNetworkRestoreSync()
         realtimeClient.disconnect()
         appScope.cancel()
     }
@@ -152,5 +159,52 @@ class MLBBScrimApplication : Application() {
                 .penaltyLog()
                 .build()
         )
+    }
+
+    private fun registerNetworkRestoreSync() {
+        val connectivityManager = getSystemService(ConnectivityManager::class.java) ?: return
+        if (networkCallback != null) return
+
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                appScope.launch {
+                    try {
+                        val result = messageRepository.syncOutbox()
+                        result.onSuccess { count ->
+                            if (count > 0) Timber.i("Synced $count queued messages after network restore")
+                        }.onFailure { Timber.w(it, "Network restore outbox sync failed") }
+                    } catch (e: Exception) {
+                        Timber.w(e, "Network restore callback failed")
+                    }
+                    try {
+                        realtimeClient.connect()
+                    } catch (e: Exception) {
+                        Timber.w(e, "Realtime reconnect after network restore failed")
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                Timber.d("Network lost; messaging will use outbox and polling fallback")
+            }
+        }
+
+        try {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback!!)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to register network callback")
+            networkCallback = null
+        }
+    }
+
+    private fun unregisterNetworkRestoreSync() {
+        val callback = networkCallback ?: return
+        val connectivityManager = getSystemService(ConnectivityManager::class.java) ?: return
+        try {
+            connectivityManager.unregisterNetworkCallback(callback)
+        } catch (_: Exception) {
+        } finally {
+            networkCallback = null
+        }
     }
 }

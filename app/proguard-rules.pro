@@ -148,11 +148,22 @@
 #     native <methods>;
 # }
 
-# --- RETROFIT DTOs (com.mlbb.scrim.data.service) ---
-# Keep all request/response data classes used by Retrofit/Gson
+# --- DATA MODELS & RETROFIT DTOs ---
+# Keep all data models used for UI and DB
+-keep class com.mlbb.scrim.data.model.** {
+    <fields>;
+    <init>(...);
+}
+
+# Keep all request/response data classes used by Retrofit/Gson/Supabase
 -keep class com.mlbb.scrim.data.service.** {
     <fields>;
     <init>(...);
+}
+
+# Ensure SerializedName is respected if present, but keep all fields anyway
+-keepclassmembers class com.mlbb.scrim.data.model.** {
+    @com.google.gson.annotations.SerializedName <fields>;
 }
 -keepclassmembers class com.mlbb.scrim.data.service.** {
     @com.google.gson.annotations.SerializedName <fields>;
@@ -166,9 +177,6 @@
 }
 
 # --- FINAL OPTIMIZATION ---
-
-# Remove unused code aggressively
--shrinkresources true
 
 # Don't optimize for size (security over size)
 -dontoptimize

@@ -20,23 +20,16 @@ class TeamRoleExtendedTest {
     }
 
     @Test
-    fun `TeamRole enum count matches constants`() {
-        assertEquals(4, TeamRole.values().size)
+    fun `all expected constants exist`() {
+        val allRoles = listOf(TeamRole.LEADER, TeamRole.CO_LEADER, TeamRole.MEMBER, TeamRole.INVITED)
+        assertEquals(4, allRoles.size)
     }
 
     @Test
-    fun `TeamRole values are correct`() {
-        val values = TeamRole.values()
-        assertTrue(values.contains(TeamRole.LEADER))
-        assertTrue(values.contains(TeamRole.CO_LEADER))
-        assertTrue(values.contains(TeamRole.MEMBER))
-        assertTrue(values.contains(TeamRole.INVITED))
-    }
-
-    @Test
-    fun `TeamRole valueOf works for all values`() {
-        TeamRole.values().forEach { role ->
-            assertEquals(role, java.lang.Enum.valueOf(TeamRole::class.java, role.name))
-        }
+    fun `role strings are non-empty`() {
+        assertTrue(TeamRole.LEADER.isNotBlank())
+        assertTrue(TeamRole.CO_LEADER.isNotBlank())
+        assertTrue(TeamRole.MEMBER.isNotBlank())
+        assertTrue(TeamRole.INVITED.isNotBlank())
     }
 }

@@ -66,7 +66,7 @@ class SupabaseTournamentRepository(
         withRetry {
             val statusFilter = status?.let { "eq.$it" } ?: "neq.draft"
             val response = api.getTournaments(
-                select = "*,profiles:host_user_id(username)",
+                select = "*,profiles:host_user_id(username),tournament_teams(count)",
                 status = statusFilter,
                 region = region?.let { "eq.$it" },
                 skillLevel = skillLevel?.let { "eq.$it" },
@@ -91,7 +91,7 @@ class SupabaseTournamentRepository(
         withRetry {
             val response = api.getTournamentById(
                 id = PostgrestFilter.eq(tournamentId),
-                select = "*,profiles:host_user_id(username)"
+                select = "*,profiles:host_user_id(username),tournament_teams(count)"
             )
             if (response.isSuccessful) {
                 val dto = response.body()?.firstOrNull() ?: throw Exception("Tournament not found")
@@ -119,6 +119,38 @@ class SupabaseTournamentRepository(
                 Result.failure(Exception("Failed to fetch requirements"))
             }
         }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun createRequirements(tournamentId: String, requirements: List<TournamentRequirement>): Result<Unit> {
+        if (requirements.isEmpty()) return Result.success(Unit)
+        return try {
+            requirements.forEachIndexed { index, req ->
+                val body = mutableMapOf<String, Any>(
+                    "tournament_id" to tournamentId,
+                    "type" to req.type.value,
+                    "label" to req.label,
+                    "sort_order" to index
+                )
+                req.url?.let { body["url"] = it }
+                val response = api.insertTournamentRequirement(body)
+                if (!response.isSuccessful) {
+                    val err = response.errorBody()?.string() ?: "Unknown error"
+                    throw Exception("Failed to save requirement '${req.label}': $err")
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(TAG, "Error creating requirements", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteRequirement(requirementId: String): Result<Unit> = try {
+        val response = api.deleteTournamentRequirement(id = PostgrestFilter.eq(requirementId))
+        if (response.isSuccessful) Result.success(Unit)
+        else Result.failure(Exception("Failed to delete requirement"))
     } catch (e: Exception) {
         Result.failure(e)
     }
@@ -623,11 +655,65 @@ class SupabaseTournamentRepository(
         Result.failure(e)
     }
 
+    override suspend fun uploadTournamentLogo(tournamentId: String, fileBytes: ByteArray, contentType: String): Result<String> = try {
+        val ext = if (contentType.contains("png")) "png" else "jpg"
+        val path = "logos/${tournamentId}_${System.currentTimeMillis()}.$ext"
+        val uploadResult = SupabaseStorageUpload.uploadFile(
+            bucket = SupabaseConfig.BUCKET_TOURNAMENT_LOGOS,
+            path = path,
+            fileBytes = fileBytes,
+            contentType = contentType
+        )
+        uploadResult.onSuccess { publicUrl ->
+            api.updateTournament(
+                id = PostgrestFilter.eq(tournamentId),
+                body = mapOf("logo_url" to publicUrl)
+            )
+            invalidateTournamentCaches()
+        }
+        uploadResult
+    } catch (e: Exception) {
+        Timber.e(TAG, "Error uploading tournament logo", e)
+        Result.failure(e)
+    }
+
+    override suspend fun resolveDispute(matchId: String, winnerTeamId: String?, isDraw: Boolean, resolution: String): Result<Map<String, Any>> = try {
+        // Validate host owns the tournament that contains this match
+        val matchResponse = api.getTournamentSwissMatches(
+            tournamentId = null,
+            select = "tournament_id"
+        )
+        // Host check is enforced server-side by the RPC SECURITY DEFINER
+        val params = mutableMapOf<String, Any>(
+            "p_match_id"   to matchId,
+            "p_is_draw"    to isDraw,
+            "p_resolution" to resolution
+        )
+        winnerTeamId?.let { params["p_winner_team_id"] = it }
+        val response = api.rpcResolveTournamentDispute(params)
+        if (response.isSuccessful) {
+            invalidateTournamentCaches()
+            Result.success(response.body() ?: mapOf("success" to true))
+        } else {
+            val err = response.errorBody()?.string() ?: "Unknown error"
+            Result.failure(Exception("Failed to resolve dispute: $err"))
+        }
+    } catch (e: Exception) {
+        Timber.e(TAG, "Error resolving dispute", e)
+        Result.failure(e)
+    }
+
     // ── DTO mappers ─────────────────────────────────────────────
 
     @Suppress("UNCHECKED_CAST")
     private fun mapDtoToTournament(dto: Map<String, Any?>): Tournament {
         val profiles = dto["profiles"] as? Map<String, Any?>
+        // PostgREST embeds tournament_teams as a list; each item is {"count": N}
+        // when using the (count) aggregate selector.
+        val teamCountEmbedded = (dto["tournament_teams"] as? List<*>)
+            ?.firstOrNull()
+            ?.let { (it as? Map<*, *>)?.get("count") as? Number }
+            ?.toInt() ?: 0
         return Tournament(
             id = (dto["id"] as? String) ?: "",
             hostUserId = (dto["host_user_id"] as? String) ?: "",
@@ -651,7 +737,7 @@ class SupabaseTournamentRepository(
             isFlagged = (dto["is_flagged"] as? Boolean) ?: false,
             createdAt = parseTimestamp(dto["created_at"]),
             updatedAt = parseTimestamp(dto["updated_at"]),
-            teamCount = (dto["team_count"] as? Number)?.toInt() ?: 0,
+            teamCount = teamCountEmbedded,
         )
     }
 

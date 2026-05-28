@@ -58,10 +58,15 @@ fun PlayerFinderScreen(
     onCreatePost: (LfgPost) -> Unit,
     onDeletePost: (String) -> Unit,
     onMessagePlayer: (LfgPost) -> Unit,
+    onInvitePlayer: (LfgPost) -> Unit = {},
+    onViewCountIncrement: (String) -> Unit = {},
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     error: String? = null,
-    onDismissError: () -> Unit = {}
+    onDismissError: () -> Unit = {},
+    messageLoading: Boolean = false,
+    messageError: String? = null,
+    onDismissMessageError: () -> Unit = {}
 ) {
     var showCreateSheet by remember { mutableStateOf(false) }
     var selectedRoleFilter by remember { mutableStateOf<GameRole?>(null) }
@@ -76,7 +81,6 @@ fun PlayerFinderScreen(
     }
 
     val filteredPosts = posts.filter { post ->
-        post.playerId != currentUserId &&
         (selectedRoleFilter == null || post.role == selectedRoleFilter) &&
         (selectedCityFilter == null || post.city == selectedCityFilter)
     }
@@ -156,12 +160,22 @@ fun PlayerFinderScreen(
                                         .background(SuccessGreen, CircleShape)
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.your_post_is_live),
-                                    color = SuccessGreen,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.your_post_is_live),
+                                        color = SuccessGreen,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    val twentyFourHoursAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
+                                    if (myPost.createdAt > twentyFourHoursAgo) {
+                                        Text(
+                                            text = stringResource(R.string.lfg_post_limit_reached),
+                                            color = LightGray.copy(alpha = 0.7f),
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -250,9 +264,11 @@ fun PlayerFinderScreen(
                                 PlayerCard(
                                     post = post,
                                     isTeamLeader = isTeamLeader,
+                                    isMyPost = post.playerId == currentUserId,
                                     onMessage = { onMessagePlayer(post) },
-                                    onInvite = { onMessagePlayer(post) },
-                                    onScreenshotClick = { url -> showScreenshotDialog = url }
+                                    onInvite = { onInvitePlayer(post) },
+                                    onScreenshotClick = { url -> showScreenshotDialog = url },
+                                    onExpanded = { onViewCountIncrement(post.id) }
                                 )
                             }
                         }
@@ -300,11 +316,28 @@ fun PlayerFinderScreen(
             )
         }
 
-        // Error snackbar
+        // Messaging loading overlay
+        if (messageLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = GoldPrimary)
+            }
+        }
+
+        // Error snackbars
         ErrorSnackbar(
             error = error,
             onDismiss = onDismissError,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+        ErrorSnackbar(
+            error = messageError,
+            onDismiss = onDismissMessageError,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp)
         )
     }
 }
@@ -318,10 +351,13 @@ fun PlayerFinderScreen(
 private fun PlayerCard(
     post: LfgPost,
     isTeamLeader: Boolean,
+    isMyPost: Boolean = false,
     onMessage: () -> Unit,
     onInvite: () -> Unit,
-    onScreenshotClick: (String) -> Unit
+    onScreenshotClick: (String) -> Unit,
+    onExpanded: () -> Unit = {}
 ) {
+    var expanded by remember { mutableStateOf(false) }
     val roleColor = roleColor(post.role)
 
     // Stable gradient per player name
@@ -336,6 +372,20 @@ private fun PlayerCard(
         palettes[Math.abs(post.playerName.hashCode()) % palettes.size]
     }
 
+    // Time ago
+    val timeAgo = remember(post.createdAt) {
+        val diff = System.currentTimeMillis() - post.createdAt
+        when {
+            diff < 60_000 -> "Just now"
+            diff < 3600_000 -> "${diff / 60_000}m ago"
+            diff < 86400_000 -> "${diff / 3600_000}h ago"
+            else -> "${diff / 86400_000}d ago"
+        }
+    }
+    
+    // Online status indicator based on recent post time (< 1 hr)
+    val isOnline = System.currentTimeMillis() - post.createdAt < 3600_000
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -343,54 +393,97 @@ private fun PlayerCard(
             .background(SurfaceCard)
             .border(
                 width = 1.dp,
-                color = roleColor.copy(alpha = 0.15f),
+                color = roleColor.copy(alpha = 0.25f),
                 shape = RoundedCornerShape(24.dp)
             )
+            .clickable {
+                val wasExpanded = expanded
+                expanded = !expanded
+                // Increment view count when expanding for the first time
+                if (!wasExpanded && expanded) onExpanded()
+            }
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column {
+            // Gradient Header Strip
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .background(Brush.horizontalGradient(listOf(roleColor, roleColor.copy(alpha = 0.5f))))
+            )
+            
+            Column(modifier = Modifier.padding(18.dp)) {
 
-            // ── Top Row: Avatar + Name + Stats ────────────────
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Avatar
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(avatarGradient)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = post.playerName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = White
-                        )
-                    }
-                }
-
-                Spacer(Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = post.playerName,
-                            style = iOSHeadline.copy(color = TextPrimary),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (post.useMic) {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(
-                                Icons.Default.Mic, stringResource(R.string.content_desc_post),
-                                tint = BluePrimary, modifier = Modifier.size(16.dp)
+                // ── Top Row: Avatar + Name + Stats ────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Avatar
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(avatarGradient))
+                                .border(2.dp, roleColor.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!post.avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = post.avatarUrl,
+                                    contentDescription = post.playerName,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(
+                                    text = post.playerName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = White
+                                )
+                            }
+                        }
+                        if (isOnline) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .align(Alignment.BottomEnd)
+                                    .offset(x = (-2).dp, y = (-2).dp)
+                                    .clip(CircleShape)
+                                    .background(SuccessGreen)
+                                    .border(2.dp, SurfaceCard, CircleShape)
                             )
                         }
                     }
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = post.playerName,
+                                style = iOSHeadline.copy(color = TextPrimary),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (post.useMic) {
+                                Spacer(Modifier.width(6.dp))
+                                Icon(
+                                    Icons.Default.Mic, stringResource(R.string.content_desc_post),
+                                    tint = BluePrimary, modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = timeAgo,
+                                color = TextTertiary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
 
                     Spacer(Modifier.height(4.dp))
 
@@ -401,6 +494,16 @@ private fun PlayerCard(
                     ) {
                         if (post.city.isNotBlank()) {
                             CityBadge(post.city)
+                        }
+                        if (isMyPost) {
+                            Box(
+                                modifier = Modifier
+                                    .background(SuccessGreen.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                    .border(1.dp, SuccessGreen.copy(alpha = 0.30f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("My Post", color = SuccessGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Box(
                             modifier = Modifier
@@ -460,6 +563,127 @@ private fun PlayerCard(
                     }
                 }
             }
+
+            // ── Actions (Message & Invite) ────────────────────
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onMessage,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.message_action), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                if (isTeamLeader) {
+                    Button(
+                        onClick = onInvite,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Brush.horizontalGradient(SuccessGradient), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Expand indicator + View count ──────────────────
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // View count badge
+                if (post.viewCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(BluePrimary.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+                            .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Visibility,
+                            contentDescription = stringResource(R.string.views),
+                            tint = BluePrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = post.viewCount.toString(),
+                            color = BluePrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
+                    tint = TextTertiary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // ── Expanded: Full Profile Stats ────────────────────
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column {
+                    // Wins / Losses / PTS row
+                    if (post.wins > 0 || post.losses > 0 || post.pts != 0) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatBadge(
+                                icon = Icons.Default.EmojiEvents,
+                                label = stringResource(R.string.wins_label),
+                                value = post.wins.toString(),
+                                color = SuccessGreen,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatBadge(
+                                icon = Icons.Default.Close,
+                                label = stringResource(R.string.losses_label),
+                                value = post.losses.toString(),
+                                color = ErrorRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatBadge(
+                                icon = Icons.Default.Star,
+                                label = stringResource(R.string.pts_label),
+                                value = (if (post.pts >= 0) "+" else "") + post.pts.toString(),
+                                color = GoldPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
 
             // ── In-Game ID ───────────────────────────────────────
             if (post.inGameId.isNotBlank()) {
@@ -576,54 +800,12 @@ private fun PlayerCard(
                 }
             }
 
-            // ── Divider + Actions ──────────────────────────────
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = GlassBorder)
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onMessage,
-                    modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.message_action), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                if (isTeamLeader) {
-                    Button(
-                        onClick = onInvite,
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Brush.horizontalGradient(SuccessGradient), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+                } // end AnimatedVisibility Column
+            } // end AnimatedVisibility
+        } // end padded column
+    } // end main card column
+    } // end Box
+} // end fun PlayerCard
 
 @Composable
 private fun CityBadge(city: String) {
@@ -738,7 +920,7 @@ private fun CreatePostSheet(
     val allTags = listOf("Aggressive", "Tactical", "Shotcaller", "Late Game", "Team Player", "Objective Focus")
     var selectedTags by remember { mutableStateOf(setOf<String>()) }
 
-    val cities = listOf("MSK", "SPB", "KRD", "EKB", "KZN", "NSK", "UFA", "VVO", "MCK", "OTHER")
+    val cities = listOf("MSK", "SPB", "KRD", "EKB", "KZN", "NSK", "UFA", "VVO", "OTHER")
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1111,6 +1293,7 @@ private fun CreatePostSheet(
                                 telegram = telegram,
                                 vk = vk,
                                 facebook = facebook,
+                                avatarUrl = currentUserProfile?.avatarUrl,
                                 createdAt = System.currentTimeMillis()
                             )
                         )
@@ -1238,4 +1421,133 @@ private fun roleColor(role: GameRole): Color = when (role) {
     GameRole.MARKSMAN -> Color(0xFF2196F3)
     GameRole.SUPPORT -> Color(0xFF00BCD4)
     GameRole.FLEX -> Color(0xFF607D8B)
+}
+
+@Composable
+fun TeamSelectionDialog(
+    playerName: String,
+    myTeams: List<Team>,
+    onDismiss: () -> Unit,
+    onTeamSelected: (Team) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkNavy,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Column {
+                Text(
+                    text = "Invite $playerName",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = White
+                    )
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Select which team to invite them to",
+                    fontSize = 13.sp,
+                    color = LightGray
+                )
+            }
+        },
+        text = {
+            if (myTeams.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.GroupOff,
+                            contentDescription = null,
+                            tint = MidGray,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "You need to be a team leader",
+                            color = MidGray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    myTeams.forEach { team ->
+                        Surface(
+                            onClick = { onTeamSelected(team) },
+                            shape = RoundedCornerShape(14.dp),
+                            color = White.copy(alpha = 0.05f),
+                            border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Brush.linearGradient(BlueGradient)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (!team.logoUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = team.logoUrl,
+                                            contentDescription = team.name,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = team.name,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = White
+                                    )
+                                    Text(
+                                        text = "${team.currentPlayerCount}/${team.maxPlayers} members",
+                                        fontSize = 12.sp,
+                                        color = MidGray
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = LightGray)
+            }
+        }
+    )
 }

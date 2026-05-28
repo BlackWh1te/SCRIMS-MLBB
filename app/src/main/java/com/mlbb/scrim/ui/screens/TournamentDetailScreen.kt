@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalUriHandler
 import com.mlbb.scrim.data.model.*
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.*
@@ -61,7 +62,8 @@ fun TournamentDetailScreen(
     onCancelTournament: (String, String?) -> Unit = { _, _ -> },
     onCompleteTournament: (String) -> Unit = {},
     onDisqualifyTeam: (String, String, String) -> Unit = { _, _, _ -> },
-    onLoadRoomSecret: (String) -> Unit = {}
+    onLoadRoomSecret: (String) -> Unit = {},
+    onResolveDispute: (matchId: String, winnerTeamId: String?, isDraw: Boolean, resolution: String) -> Unit = { _, _, _, _ -> }
 ) {
     val t = tournament ?: return
 
@@ -72,6 +74,13 @@ fun TournamentDetailScreen(
     var selectedMatchId by remember { mutableStateOf<String?>(null) }
     var showDqDialog by remember { mutableStateOf(false) }
     var selectedDqTeamId by remember { mutableStateOf<String?>(null) }
+    var showDisputeDialog by remember { mutableStateOf(false) }
+    var disputeMatchId by remember { mutableStateOf<String?>(null) }
+    var disputeResolution by remember { mutableStateOf("") }
+    var disputeWinnerTeamId by remember { mutableStateOf<String?>(null) }
+    var disputeIsDraw by remember { mutableStateOf(false) }
+    // selectedMatchTeams is used to display team names in the resolve dialog
+    var disputeMatch by remember { mutableStateOf<TournamentSwissMatch?>(null) }
 
     // Check if user already applied
     val myApp = myApplications.find { it.tournamentId == t.id }
@@ -173,9 +182,19 @@ fun TournamentDetailScreen(
                             RoundFilteredMatches(
                                 matches = matches,
                                 isHost = isHost,
+                                myTeamIds = myTeams.map { it.id },
+                                bestOf = t.bestOf,
                                 onNavigateToChat = onNavigateToChat,
                                 onSubmitResult = { mid -> selectedMatchId = mid; showResultDialog = true },
-                                onViewRoomSecret = onLoadRoomSecret
+                                onViewRoomSecret = onLoadRoomSecret,
+                                onResolveDispute = { match ->
+                                    disputeMatch = match
+                                    disputeMatchId = match.id
+                                    disputeWinnerTeamId = null
+                                    disputeIsDraw = false
+                                    disputeResolution = ""
+                                    showDisputeDialog = true
+                                }
                             )
                         }
                     }
@@ -729,6 +748,100 @@ fun TournamentDetailScreen(
                 containerColor = DarkNavy
             )
         }
+
+        // ── Resolve Dispute Dialog ──
+        if (showDisputeDialog && disputeMatchId != null) {
+            val dm = disputeMatch
+            AlertDialog(
+                onDismissRequest = { showDisputeDialog = false },
+                containerColor = DarkNavy,
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Gavel, null, tint = WarningOrange, modifier = Modifier.size(18.dp))
+                        Text("Resolve Dispute", color = White)
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (dm != null) {
+                            Text(
+                                "${dm.teamAName}  vs  ${dm.teamBName ?: "BYE"}",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary, fontWeight = FontWeight.Bold)
+                            )
+                        }
+                        // Draw option
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Checkbox(
+                                checked = disputeIsDraw,
+                                onCheckedChange = { disputeIsDraw = it; if (it) disputeWinnerTeamId = null },
+                                colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
+                            )
+                            Text("Declare draw", color = if (disputeIsDraw) GoldPrimary else TextSecondary)
+                        }
+                        // Winner selector (hidden when draw)
+                        if (!disputeIsDraw && dm != null) {
+                            Text("Select winner:", style = MaterialTheme.typography.labelMedium.copy(color = TextTertiary))
+                            listOfNotNull(
+                                dm.teamAId to dm.teamAName,
+                                dm.teamBId?.let { it to (dm.teamBName ?: "Team B") }
+                            ).forEach { (id, name) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { disputeWinnerTeamId = id }
+                                        .background(
+                                            if (disputeWinnerTeamId == id) GoldPrimary.copy(alpha = 0.12f) else Color.Transparent,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = disputeWinnerTeamId == id,
+                                        onClick = { disputeWinnerTeamId = id },
+                                        colors = RadioButtonDefaults.colors(selectedColor = GoldPrimary)
+                                    )
+                                    Text(name, color = if (disputeWinnerTeamId == id) GoldPrimary else White)
+                                }
+                            }
+                        }
+                        // Resolution notes
+                        OutlinedTextField(
+                            value = disputeResolution,
+                            onValueChange = { disputeResolution = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Resolution notes (required)", color = TextTertiary, fontSize = 12.sp) },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = WarningOrange,
+                                unfocusedBorderColor = Separator,
+                                focusedContainerColor = SurfaceElevated,
+                                unfocusedContainerColor = SurfaceElevated,
+                                focusedTextColor = White,
+                                unfocusedTextColor = White
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onResolveDispute(disputeMatchId!!, if (disputeIsDraw) null else disputeWinnerTeamId, disputeIsDraw, disputeResolution)
+                            showDisputeDialog = false
+                        },
+                        enabled = disputeResolution.isNotBlank() && (disputeIsDraw || disputeWinnerTeamId != null)
+                    ) { Text("Resolve", color = WarningOrange, fontWeight = FontWeight.Bold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDisputeDialog = false }) { Text("Cancel", color = TextSecondary) }
+                }
+            )
+        }
     }
 }
 
@@ -976,9 +1089,12 @@ private fun StatLabel(label: String, value: String, color: Color) {
 private fun RoundFilteredMatches(
     matches: List<TournamentSwissMatch>,
     isHost: Boolean,
+    myTeamIds: List<String> = emptyList(),
+    bestOf: Int = 1,
     onNavigateToChat: (String) -> Unit,
     onSubmitResult: (String) -> Unit,
-    onViewRoomSecret: (String) -> Unit
+    onViewRoomSecret: (String) -> Unit,
+    onResolveDispute: (TournamentSwissMatch) -> Unit = {}
 ) {
     val rounds = matches.map { it.roundNumber }.distinct().sorted()
     var selectedRound by remember { mutableStateOf(rounds.firstOrNull() ?: 1) }
@@ -1027,12 +1143,20 @@ private fun RoundFilteredMatches(
 
         // Match cards for selected round
         filteredMatches.forEach { match ->
+            val myTeamId = when {
+                match.teamAId in myTeamIds -> match.teamAId
+                match.teamBId != null && match.teamBId in myTeamIds -> match.teamBId
+                else -> null
+            }
             MatchVsCard(
                 match = match,
                 isHost = isHost,
+                myTeamId = myTeamId,
+                bestOf = bestOf,
                 onNavigateToChat = onNavigateToChat,
                 onSubmitResult = onSubmitResult,
-                onViewRoomSecret = onViewRoomSecret
+                onViewRoomSecret = onViewRoomSecret,
+                onResolveDispute = onResolveDispute
             )
         }
     }
@@ -1042,10 +1166,17 @@ private fun RoundFilteredMatches(
 private fun MatchVsCard(
     match: TournamentSwissMatch,
     isHost: Boolean,
+    myTeamId: String? = null,
+    bestOf: Int = 1,
     onNavigateToChat: (String) -> Unit,
     onSubmitResult: (String) -> Unit,
-    onViewRoomSecret: (String) -> Unit
+    onViewRoomSecret: (String) -> Unit,
+    onResolveDispute: (TournamentSwissMatch) -> Unit = {}
 ) {
+    val uriHandler = LocalUriHandler.current
+    // Per-match roster game-number toggle (only relevant for BO2 and user's own matches)
+    var selectedGameNumber by remember(match.id) { mutableIntStateOf(1) }
+    var showRosterInfo by remember(match.id) { mutableStateOf(false) }
     val matchStatusColor = when (match.status) {
         MatchStatus.SCHEDULED -> BluePrimary
         MatchStatus.IN_PROGRESS -> ErrorRed
@@ -1267,6 +1398,66 @@ private fun MatchVsCard(
                             Icon(Icons.Default.VideogameAsset, null, tint = PurplePrimary, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Room", color = PurplePrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    // BO2 game toggle — visible to participants in active BO2 matches
+                    if (myTeamId != null && bestOf >= 2 &&
+                        match.status in listOf(MatchStatus.SCHEDULED, MatchStatus.IN_PROGRESS)
+                    ) {
+                        // Game 1 / Game 2 selector chip
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(1, 2).forEach { g ->
+                                FilterChip(
+                                    selected = selectedGameNumber == g,
+                                    onClick  = { selectedGameNumber = g },
+                                    label    = { Text("Game $g", fontSize = 11.sp) },
+                                    modifier = Modifier.height(30.dp),
+                                    colors   = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
+                                        selectedLabelColor = GoldPrimary,
+                                        containerColor = SurfaceElevated,
+                                        labelColor = LightGray
+                                    )
+                                )
+                            }
+                            // Label showing which game lineup is active
+                            Text(
+                                "lineup",
+                                modifier = Modifier.align(Alignment.CenterVertically),
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary)
+                            )
+                        }
+                    }
+                    // Watch Live button — visible to everyone when stream URL is set
+                    if (!match.liveStreamUrl.isNullOrBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                try { uriHandler.openUri(match.liveStreamUrl) } catch (_: Exception) {}
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Videocam, null, tint = ErrorRed, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Watch Live", color = ErrorRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    if (isHost && match.status == MatchStatus.DISPUTED) {
+                        OutlinedButton(
+                            onClick = { onResolveDispute(match) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarningOrange.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Gavel, null, tint = WarningOrange, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Resolve Dispute", color = WarningOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

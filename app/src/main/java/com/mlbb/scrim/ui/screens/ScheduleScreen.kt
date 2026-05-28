@@ -40,7 +40,8 @@ fun ScheduleScreen(
     val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     val grouped = remember(scrims) {
-        scrims.sortedBy { it.scheduledTime }
+        scrims.filter { it.status != ScrimStatus.COMPLETED && it.status != ScrimStatus.CANCELLED }
+            .sortedBy { it.scheduledTime }
             .groupBy { getDayLabel(it.scheduledTime) }
             .toList()
     }
@@ -254,7 +255,7 @@ private fun ScheduleCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${scrim.gameMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${scrim.region.displayName} ${scrim.region.utcOffset}",
+                        text = "${scrim.gameMode.displayName} · ${scrim.region.displayName} ${scrim.region.utcOffset}",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 13.sp,
                             color = MidGray

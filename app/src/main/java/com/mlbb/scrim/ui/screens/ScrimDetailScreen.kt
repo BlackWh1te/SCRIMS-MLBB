@@ -224,7 +224,7 @@ fun ScrimDetailScreen(
                         InfoCard(
                             icon = Icons.Default.SportsEsports,
                             label = stringResource(R.string.game_mode),
-                            value = scrim.gameMode.name
+                            value = scrim.gameMode.displayName
                         )
                     }
                 }

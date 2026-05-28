@@ -79,6 +79,8 @@ import com.mlbb.scrim.ui.screens.TournamentEditScreen
 import com.mlbb.scrim.ui.screens.TournamentHostRequestScreen
 import com.mlbb.scrim.ui.screens.TournamentHostManagementScreen
 import com.mlbb.scrim.data.model.Tournament
+import com.mlbb.scrim.data.model.TournamentApplicationStatus
+import com.mlbb.scrim.data.model.NotificationType
 import com.mlbb.scrim.ui.components.AppBottomNav
 import com.mlbb.scrim.ui.components.ReportDialog
 import com.mlbb.scrim.ui.components.UserReportReason
@@ -184,6 +186,7 @@ fun AuthNavigation(
     val reportSuccess by matchResultViewModel.reportSuccess.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
     val selectedConversation by messageViewModel.selectedConversation.collectAsState()
+    val messagesWithDelivery by messageViewModel.messagesWithDelivery.collectAsState()
     val messagesIsLoading by messageViewModel.isLoading.collectAsState()
     val messagesIsRefreshing by messageViewModel.isRefreshing.collectAsState()
     val messageError by messageViewModel.error.collectAsState()
@@ -469,6 +472,14 @@ fun AuthNavigation(
                     LaunchedEffect(Unit) {
                         viewModel.refreshProfile()
                         tournamentViewModel.loadTournaments()
+                        tournamentViewModel.loadMyApplications()
+                    }
+                    // Derive the set of tournament IDs where the user's team was accepted
+                    val myRegisteredTournamentIds = remember(myApplications) {
+                        myApplications
+                            .filter { it.status == TournamentApplicationStatus.ACCEPTED }
+                            .map { it.tournamentId }
+                            .toSet()
                     }
                     TournamentListScreen(
                         tournaments = tournaments,
@@ -477,6 +488,7 @@ fun AuthNavigation(
                         error = tournamentError,
                         isTournamentHost = isTournamentHost,
                         hostedTournaments = hostedTournaments,
+                        myRegisteredTournamentIds = myRegisteredTournamentIds,
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToTournamentDetail = { id ->
                             navController.navigate(Screen.TournamentDetail.createRoute(id))
@@ -494,6 +506,7 @@ fun AuthNavigation(
                         onRefresh = {
                             viewModel.refreshProfile()
                             tournamentViewModel.loadTournaments(isRefresh = true)
+                            tournamentViewModel.loadMyApplications()
                         },
                         onDismissError = { tournamentViewModel.clearError() }
                     )
@@ -506,6 +519,11 @@ fun AuthNavigation(
                     val tournamentId = backStackEntry.arguments?.getString("tournamentId") ?: ""
                     val roomSecret by tournamentViewModel.roomSecret.collectAsState()
                     LaunchedEffect(tournamentId) { tournamentViewModel.loadTournamentById(tournamentId) }
+                    // Start / stop realtime for this tournament while the screen is visible
+                    androidx.compose.runtime.DisposableEffect(tournamentId) {
+                        tournamentViewModel.startTournamentRealtime(tournamentId)
+                        onDispose { tournamentViewModel.stopTournamentRealtime() }
+                    }
                     TournamentDetailScreen(
                         tournament = selectedTournament,
                         requirements = tournamentRequirements,
@@ -534,7 +552,8 @@ fun AuthNavigation(
                         onCancelTournament = { tid, reason -> tournamentViewModel.cancelTournament(tid, reason) },
                         onCompleteTournament = { tid -> tournamentViewModel.completeTournament(tid) },
                         onDisqualifyTeam = { tid, teamId, reason -> tournamentViewModel.disqualifyTeam(tid, teamId, reason) },
-                        onLoadRoomSecret = { mid -> tournamentViewModel.loadRoomSecret(mid) }
+                        onLoadRoomSecret = { mid -> tournamentViewModel.loadRoomSecret(mid) },
+                        onResolveDispute = { mid, winId, isDraw, resolution -> tournamentViewModel.resolveDispute(mid, winId, isDraw, resolution) }
                     )
                 }
 
@@ -545,11 +564,24 @@ fun AuthNavigation(
                             navController.popBackStack()
                         }
                     }
+                    val createContext = androidx.compose.ui.platform.LocalContext.current
                     TournamentCreateScreen(
                         isLoading = tournamentIsLoading,
                         error = tournamentError,
-                        onCreate = { tournament ->
-                            tournamentViewModel.createTournament(tournament)
+                        onCreate = { tournament, requirements, logoUri ->
+                            tournamentViewModel.createTournament(tournament, requirements)
+                            // Upload logo after creation — VM listens on createResult to get the ID
+                            if (logoUri != null) {
+                                val bytes = try {
+                                    createContext.contentResolver.openInputStream(logoUri)?.readBytes()
+                                } catch (_: Exception) { null }
+                                if (bytes != null) {
+                                    val mime = createContext.contentResolver.getType(logoUri) ?: "image/jpeg"
+                                    // We need the tournament ID — handled in VM after createResult emits
+                                    tournamentViewModel.pendingLogoBytes = bytes
+                                    tournamentViewModel.pendingLogoMime = mime
+                                }
+                            }
                         },
                         onNavigateBack = { navController.popBackStack() },
                         onDismissError = { tournamentViewModel.clearError() }
@@ -587,12 +619,26 @@ fun AuthNavigation(
                             navController.popBackStack()
                         }
                     }
+                    val editContext = androidx.compose.ui.platform.LocalContext.current
                     TournamentEditScreen(
                         tournament = selectedTournament ?: Tournament(),
+                        existingRequirements = tournamentRequirements,
                         isLoading = tournamentIsLoading,
                         error = tournamentError,
                         onSave = { tid, updates ->
                             tournamentViewModel.updateTournament(tid, updates)
+                        },
+                        onSaveRequirements = { tid, reqs ->
+                            tournamentViewModel.saveRequirements(tid, reqs)
+                        },
+                        onUploadLogo = { tid, uri ->
+                            val bytes = try {
+                                editContext.contentResolver.openInputStream(uri)?.readBytes()
+                            } catch (_: Exception) { null }
+                            if (bytes != null) {
+                                val mime = editContext.contentResolver.getType(uri) ?: "image/jpeg"
+                                tournamentViewModel.uploadTournamentLogo(tid, bytes, mime)
+                            }
                         },
                         onNavigateBack = { navController.popBackStack() },
                         onDismissError = { tournamentViewModel.clearError() }
@@ -1248,7 +1294,7 @@ fun AuthNavigation(
                         onDispose { messageViewModel.stopConversationsPolling() }
                     }
                     MessageListScreen(
-                        conversations = conversations,
+                        conversations = conversations.filterNot { it.isTeamChat },
                         isLoading = messagesIsLoading,
                         currentUserId = userId,
                         isTab = true,
@@ -1265,7 +1311,8 @@ fun AuthNavigation(
                         },
                         isRefreshing = messagesIsRefreshing,
                         error = messageError,
-                        onDismissError = { messageViewModel.clearError() }
+                        onDismissError = { messageViewModel.clearError() },
+                        teamConversation = conversations.firstOrNull { it.isTeamChat }
                     )
                 }
 
@@ -1340,7 +1387,10 @@ fun AuthNavigation(
                             error = messageError,
                             onDismissError = { messageViewModel.clearError() },
                             isRefreshing = messagesIsRefreshing,
-                            onRefresh = { messageViewModel.loadConversation(conversationId) }
+                            onRefresh = { messageViewModel.loadConversation(conversationId) },
+                            messagesWithDelivery = messagesWithDelivery,
+                            onRetryMessage = { messageViewModel.retryMessage(it) },
+                            onCancelMessage = { messageViewModel.cancelMessage(it) }
                         )
                     }
                 }
@@ -1426,9 +1476,20 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.ForgotPassword.route) {
+                    val authState by viewModel.authState.collectAsState()
                     ForgotPasswordScreen(
                         onNavigateBack = {
                             navController.popBackStack()
+                        },
+                        authResult = authState,
+                        onSendResetOtp = { email ->
+                            viewModel.sendPasswordResetOtp(email)
+                        },
+                        onConfirmResetPassword = { email, otp, newPassword ->
+                            viewModel.verifyPasswordResetOtp(email, otp, newPassword)
+                        },
+                        onResetAuthState = {
+                            viewModel.resetAuthState()
                         }
                     )
                 }
@@ -1496,6 +1557,53 @@ fun AuthNavigation(
                         },
                         onDismissError = {
                             notificationViewModel.clearError()
+                        },
+                        onNotificationClick = { notification ->
+                            // Mark as read on tap
+                            if (!notification.isRead) notificationViewModel.markAsRead(notification.id)
+                            val id = notification.actionId
+                            when (notification.type) {
+                                // ── Scrim notifications ──
+                                NotificationType.SCRIM_INVITE,
+                                NotificationType.SCRIM_APPLICATION_NEW,
+                                NotificationType.SCRIM_APPLICATION_APPROVED,
+                                NotificationType.SCRIM_APPLICATION_REJECTED -> {
+                                    if (id.isNotBlank()) navController.navigate(Screen.ScrimDetail.createRoute(id))
+                                }
+                                // ── Team notifications ──
+                                NotificationType.TEAM_INVITE -> {
+                                    if (id.isNotBlank()) navController.navigate(Screen.TeamDetail.createRoute(id))
+                                }
+                                // ── Message notifications ──
+                                NotificationType.MESSAGE -> {
+                                    if (id.isNotBlank()) navController.navigate(Screen.Chat.createRoute(id))
+                                }
+                                // ── Tournament notifications ──
+                                NotificationType.TOURNAMENT_APPLICATION_NEW,
+                                NotificationType.TOURNAMENT_APPLICATION_ACCEPTED,
+                                NotificationType.TOURNAMENT_APPLICATION_REJECTED,
+                                NotificationType.TOURNAMENT_APPLICATION_BLOCKED,
+                                NotificationType.TOURNAMENT_APPLICATION_STATUS,
+                                NotificationType.TOURNAMENT_CANCELLED,
+                                NotificationType.TOURNAMENT_COMPLETED,
+                                NotificationType.TOURNAMENT_ROUND_ADVANCED,
+                                NotificationType.TOURNAMENT_ROUND_START,
+                                NotificationType.TOURNAMENT_TEAM_DISQUALIFIED,
+                                NotificationType.TOURNAMENT_ROSTER_LOCKED,
+                                NotificationType.TOURNAMENT_MATCH_RESULT,
+                                NotificationType.TOURNAMENT_MATCH_SCHEDULED,
+                                NotificationType.TOURNAMENT_HOST_REQUEST_STATUS,
+                                NotificationType.TOURNAMENT_HOST_APPROVED,
+                                NotificationType.TOURNAMENT_HOST_REJECTED -> {
+                                    if (id.isNotBlank()) navController.navigate(Screen.TournamentDetail.createRoute(id))
+                                }
+                                // ── Match result notifications ──
+                                NotificationType.MATCH_RESULT -> {
+                                    if (id.isNotBlank()) navController.navigate(Screen.MatchResultDetail.createRoute(id))
+                                }
+                                // ── No-op for types with no destination ──
+                                else -> { /* XP_GAIN, TIER_UP, SYSTEM — no target screen */ }
+                            }
                         }
                     )
                 }

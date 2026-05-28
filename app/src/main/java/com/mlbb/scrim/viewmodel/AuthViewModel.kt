@@ -52,6 +52,8 @@ class AuthViewModel @Inject constructor(
     private var confirmEmailJob: Job? = null
     private var resendEmailJob: Job? = null
     private var verifyOtpJob: Job? = null
+    private var sendPasswordResetOtpJob: Job? = null
+    private var verifyPasswordResetOtpJob: Job? = null
     private var deleteAccountJob: Job? = null
     private var uploadAvatarJob: Job? = null
 
@@ -272,6 +274,31 @@ class AuthViewModel @Inject constructor(
                     _resentSuccess.value = true
                 }
                 // We don't emit this as authState; UI watches resentSuccess separately
+            }
+        }
+    }
+
+    fun sendPasswordResetOtp(email: String) {
+        sendPasswordResetOtpJob?.cancel()
+        _authState.value = AuthResult.Loading
+        sendPasswordResetOtpJob = viewModelScope.launch {
+            authRepository.sendPasswordResetOtp(email).collect { result ->
+                _authState.value = result
+            }
+        }
+    }
+
+    fun verifyPasswordResetOtp(email: String, token: String, newPassword: String) {
+        verifyPasswordResetOtpJob?.cancel()
+        _authState.value = AuthResult.Loading
+        verifyPasswordResetOtpJob = viewModelScope.launch {
+            authRepository.verifyPasswordResetOtp(email, token, newPassword).collect { result ->
+                _authState.value = result
+                if (result is AuthResult.Success) {
+                    _isLoggedIn.value = false
+                    _userProfile.value = null
+                    realtimeClient.disconnect()
+                }
             }
         }
     }

@@ -103,6 +103,21 @@ CREATE TABLE IF NOT EXISTS app_notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- Ban Appeals table (users can appeal their ban, admins review)
+CREATE TABLE IF NOT EXISTS ban_appeals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    ban_reason TEXT,                          -- the admin's reason for the ban (copied from profiles)
+    appeal_message TEXT NOT NULL,             -- user's appeal text
+    status TEXT NOT NULL DEFAULT 'pending'    -- pending / under_review / approved / rejected
+        CHECK (status IN ('pending', 'under_review', 'approved', 'rejected')),
+    admin_notes TEXT,                         -- admin's notes during review
+    reviewed_by UUID REFERENCES profiles(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
 -- Scrims table (available scrims posted by teams)
 CREATE TABLE IF NOT EXISTS scrims (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -212,7 +227,12 @@ CREATE TABLE IF NOT EXISTS conversations (
     chat_opens_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     participant_a_typing BOOLEAN DEFAULT FALSE,
     participant_b_typing BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    -- ── Team group chat ──
+    team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+    is_team_chat BOOLEAN DEFAULT FALSE,
+    is_pinned BOOLEAN DEFAULT FALSE,
+    group_name TEXT
 );
 
 -- Match results table
@@ -258,6 +278,10 @@ CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_a ON conversations(participant_a_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_b ON conversations(participant_b_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_team_id ON conversations(team_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_is_team_chat ON conversations(is_team_chat);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_team_chat ON conversations(team_id)
+    WHERE is_team_chat = TRUE;
 CREATE INDEX IF NOT EXISTS idx_conversations_scrim ON conversations(scrim_id);
 CREATE INDEX IF NOT EXISTS idx_match_results_match ON match_results(match_id);
 CREATE INDEX IF NOT EXISTS idx_team_invitations_team ON team_invitations(team_id);
@@ -306,25 +330,46 @@ ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 -- REALTIME RLS Policies — Allow authenticated users to subscribe
 -- ═══════════════════════════════════════════════════════════════
 
--- Messages: sender OR any participant of the parent conversation can view messages
+-- Messages: sender OR any participant of the parent conversation OR team member (for team chats) can view
 CREATE POLICY "Conversation members can view messages" ON messages
     FOR SELECT USING (
         sender_id = auth.uid()
         OR EXISTS (
             SELECT 1 FROM conversations c
             WHERE c.id = messages.conversation_id
-            AND (c.participant_a_id = auth.uid() OR c.participant_b_id = auth.uid())
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                    )
+                )
+            )
         )
     );
 
--- INSERT: sender must be a participant of the parent conversation
+-- INSERT: sender must be a participant of the parent conversation OR an active team member (for team chats)
 CREATE POLICY "Conversation members can send messages" ON messages
     FOR INSERT WITH CHECK (
         sender_id = auth.uid()
         AND EXISTS (
             SELECT 1 FROM conversations c
             WHERE c.id = messages.conversation_id
-            AND (c.participant_a_id = auth.uid() OR c.participant_b_id = auth.uid())
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                    )
+                )
+            )
+            AND c.chat_opens_at <= TIMEZONE('utc', NOW())
         )
     );
 
@@ -372,10 +417,18 @@ CREATE POLICY "Users can view their invitations" ON team_invitations
 CREATE POLICY "Users can view team members" ON team_members
     FOR SELECT USING (true);
 
--- Conversations: participants can see their conversations
+-- Conversations: participants OR active team members can view
 CREATE POLICY "Conversation participants can view" ON conversations
     FOR SELECT USING (
-        participant_a_id = auth.uid() OR participant_b_id = auth.uid()
+        participant_a_id = auth.uid()
+        OR participant_b_id = auth.uid()
+        OR (
+            is_team_chat = TRUE
+            AND team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+            )
+        )
     );
 
 -- INSERT: authenticated users can create conversations where they are a participant
@@ -384,10 +437,18 @@ CREATE POLICY "Conversation participants can insert" ON conversations
         participant_a_id = auth.uid() OR participant_b_id = auth.uid()
     );
 
--- UPDATE: participants can update typing status / last_message
+-- UPDATE: participants OR active team members can update typing status / last_message
 CREATE POLICY "Conversation participants can update" ON conversations
     FOR UPDATE USING (
-        participant_a_id = auth.uid() OR participant_b_id = auth.uid()
+        participant_a_id = auth.uid()
+        OR participant_b_id = auth.uid()
+        OR (
+            is_team_chat = TRUE
+            AND team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+            )
+        )
     );
 
 -- Scrim applications: team members can see applications for their scrims
@@ -609,7 +670,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Get conversations with unread counts for a user
+-- Get conversations with unread counts for a user (includes team chats)
 CREATE OR REPLACE FUNCTION get_conversations_for_user(p_user_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -618,17 +679,23 @@ RETURNS TABLE (
     participant_a_name TEXT,
     participant_a_team_id UUID,
     participant_a_team_name TEXT,
+    participant_a_avatar_url TEXT,
     participant_b_id UUID,
     participant_b_name TEXT,
     participant_b_team_id UUID,
     participant_b_team_name TEXT,
+    participant_b_avatar_url TEXT,
     last_message TEXT,
     last_message_time TIMESTAMP WITH TIME ZONE,
     chat_opens_at TIMESTAMP WITH TIME ZONE,
     participant_a_typing BOOLEAN,
     participant_b_typing BOOLEAN,
     unread_count BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE
+    created_at TIMESTAMP WITH TIME ZONE,
+    team_id UUID,
+    is_team_chat BOOLEAN,
+    is_pinned BOOLEAN,
+    group_name TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -639,10 +706,12 @@ BEGIN
         c.participant_a_name,
         c.participant_a_team_id,
         c.participant_a_team_name,
+        pa.avatar_url AS participant_a_avatar_url,
         c.participant_b_id,
         c.participant_b_name,
         c.participant_b_team_id,
         c.participant_b_team_name,
+        pb.avatar_url AS participant_b_avatar_url,
         c.last_message,
         c.last_message_time,
         c.chat_opens_at,
@@ -655,10 +724,24 @@ BEGIN
                AND m.is_read = FALSE),
             0
         )::BIGINT AS unread_count,
-        c.created_at
+        c.created_at,
+        c.team_id,
+        c.is_team_chat,
+        c.is_pinned,
+        c.group_name
     FROM conversations c
-    WHERE c.participant_a_id = p_user_id OR c.participant_b_id = p_user_id
-    ORDER BY c.last_message_time DESC;
+    LEFT JOIN profiles pa ON pa.id = c.participant_a_id
+    LEFT JOIN profiles pb ON pb.id = c.participant_b_id
+    WHERE
+        (c.participant_a_id = p_user_id OR c.participant_b_id = p_user_id)
+        OR (
+            c.is_team_chat = TRUE
+            AND c.team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = p_user_id AND tm.status = 'ACTIVE'
+            )
+        )
+    ORDER BY c.is_pinned DESC, c.last_message_time DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -715,3 +798,99 @@ END $$;
 
 -- Notify PostgREST to reload schema cache after adding columns
 NOTIFY pgrst, 'reload schema';
+
+-- ═══════════════════════════════════════════════════════════════
+-- SECURITY & LOGIC FIXES (2026-05-27 Deep Code Logic Audit)
+-- ═══════════════════════════════════════════════════════════════
+
+-- 1. Unique constraint on direct conversations (prevents duplicate DMs)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_direct_conversation ON conversations (
+    LEAST(participant_a_id, participant_b_id),
+    GREATEST(participant_a_id, participant_b_id)
+) WHERE scrim_id IS NULL;
+
+-- 2. Hardened messages INSERT RLS policy with chat gate check
+DROP POLICY IF EXISTS "Conversation members can send messages" ON messages;
+CREATE POLICY "Conversation members can send messages" ON messages
+    FOR INSERT WITH CHECK (
+        sender_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM conversations c
+            WHERE c.id = messages.conversation_id
+            AND (c.participant_a_id = auth.uid() OR c.participant_b_id = auth.uid())
+            AND c.chat_opens_at <= TIMEZONE('utc', NOW())
+        )
+    );
+
+-- 3. Player stats RLS (prevents client-side manipulation of pts/wins/losses)
+ALTER TABLE player_stats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view player stats" ON player_stats
+    FOR SELECT USING (true);
+
+-- Users can create their own initial record, but cannot update/delete
+CREATE POLICY "Users can insert own player stats" ON player_stats
+    FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Direct client updates are BLOCKED; pts must be awarded via award_scrim_points RPC only
+CREATE POLICY "Block direct player_stats updates" ON player_stats
+    FOR UPDATE USING (false);
+
+CREATE POLICY "Block direct player_stats deletes" ON player_stats
+    FOR DELETE USING (false);
+
+-- 4. Add missing columns with safe migration guards
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'is_edited'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN is_edited BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'scrims' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE scrims ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW());
+    END IF;
+END $$;
+
+-- 5. Auto-update triggers for new columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc', NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_messages_updated_at ON messages;
+CREATE TRIGGER trg_messages_updated_at
+    BEFORE UPDATE ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_scrims_updated_at ON scrims;
+CREATE TRIGGER trg_scrims_updated_at
+    BEFORE UPDATE ON scrims
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 6. Add missing conversation composite indexes for performance
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_a_time ON conversations(participant_a_id, last_message_time DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_b_time ON conversations(participant_b_id, last_message_time DESC);

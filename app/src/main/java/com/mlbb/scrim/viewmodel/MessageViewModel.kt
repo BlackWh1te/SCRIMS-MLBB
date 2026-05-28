@@ -31,6 +31,7 @@ class MessageViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var chatSubscriptionJob: Job? = null
+    private var chatPollingJob: Job? = null
     private var convPollingJob: Job? = null
     private var typingDebounceJob: Job? = null
     private var conversationUpdatesJob: Job? = null
@@ -117,6 +118,7 @@ class MessageViewModel @Inject constructor(
     // ── Chat screen subscription (Realtime primary, no conflicting polling) ──
     fun startChatSubscription(conversationId: String, userId: String) {
         chatSubscriptionJob?.cancel()
+        chatPollingJob?.cancel()
         messageRepository.unsubscribeFromMessages(conversationId)
 
         chatSubscriptionJob = viewModelScope.launch {
@@ -128,7 +130,7 @@ class MessageViewModel @Inject constructor(
                 result.onSuccess { conv ->
                     _selectedConversation.value = conv
                     conv?.messages?.let { msgs ->
-                        _messagesWithDelivery.value = msgs.map { MessageWithDelivery(message = it) }
+                        setMessagesWithDelivery(msgs.map { MessageWithDelivery(message = it) })
                     }
                 }
             }
@@ -136,6 +138,20 @@ class MessageViewModel @Inject constructor(
             // Subscribe to new messages via Realtime
             messageRepository.subscribeToMessages(conversationId).collect { newMessage ->
                 integrateMessage(newMessage)
+            }
+        }
+
+        chatPollingJob = viewModelScope.launch {
+            while (isActive) {
+                delay(5_000)
+                messageRepository.getConversationById(conversationId).collect { result ->
+                    result.onSuccess { conv ->
+                        val polled = conv?.messages.orEmpty()
+                        if (polled.isNotEmpty()) {
+                            mergeServerMessages(polled)
+                        }
+                    }
+                }
             }
         }
 
@@ -157,6 +173,7 @@ class MessageViewModel @Inject constructor(
 
     fun stopChatSubscription(conversationId: String) {
         chatSubscriptionJob?.cancel()
+        chatPollingJob?.cancel()
         conversationUpdatesJob?.cancel()
         typingDebounceJob?.cancel()
         messageRepository.unsubscribeFromMessages(conversationId)
@@ -185,7 +202,7 @@ class MessageViewModel @Inject constructor(
                 clientMessageId = clientMessageId
             )
         )
-        _messagesWithDelivery.value = current
+        setMessagesWithDelivery(current)
 
         viewModelScope.launch {
             messageRepository.sendMessage(
@@ -352,7 +369,7 @@ class MessageViewModel @Inject constructor(
                 current.add(MessageWithDelivery(message = newMessage))
             }
         }
-        _messagesWithDelivery.value = current.sortedBy { it.message.timestamp }
+        setMessagesWithDelivery(current.sortedBy { it.message.timestamp })
     }
 
     private fun updateDeliveryState(clientMessageId: String, delivery: MessageWithDelivery) {
@@ -360,14 +377,41 @@ class MessageViewModel @Inject constructor(
         val index = current.indexOfFirst { it.clientMessageId == clientMessageId }
         if (index != -1) {
             current[index] = delivery
-            _messagesWithDelivery.value = current.sortedBy { it.message.timestamp }
+            setMessagesWithDelivery(current.sortedBy { it.message.timestamp })
         }
     }
 
     private fun removeMessage(clientMessageId: String) {
-        _messagesWithDelivery.value = _messagesWithDelivery.value.filter {
-            it.clientMessageId != clientMessageId
+        setMessagesWithDelivery(_messagesWithDelivery.value.filter { it.clientMessageId != clientMessageId })
+    }
+
+    private fun mergeServerMessages(messages: List<Message>) {
+        val current = _messagesWithDelivery.value.toMutableList()
+        messages.forEach { serverMessage ->
+            val existingIndex = current.indexOfFirst { it.message.id == serverMessage.id }
+            val pendingIndex = current.indexOfFirst {
+                it.clientMessageId != null &&
+                    it.message.content == serverMessage.content &&
+                    it.message.senderId == serverMessage.senderId
+            }
+            when {
+                existingIndex != -1 -> current[existingIndex] = current[existingIndex].copy(message = serverMessage)
+                pendingIndex != -1 -> current[pendingIndex] = MessageWithDelivery(
+                    message = serverMessage,
+                    status = DeliveryStatus.SENT,
+                    clientMessageId = current[pendingIndex].clientMessageId
+                )
+                else -> current.add(MessageWithDelivery(message = serverMessage))
+            }
         }
+        setMessagesWithDelivery(current.sortedBy { it.message.timestamp })
+    }
+
+    private fun setMessagesWithDelivery(messages: List<MessageWithDelivery>) {
+        _messagesWithDelivery.value = messages
+        _selectedConversation.value = _selectedConversation.value?.copy(
+            messages = messages.map { it.message }
+        )
     }
 
     fun setError(message: String) { _error.value = message }
@@ -377,6 +421,7 @@ class MessageViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         chatSubscriptionJob?.cancel()
+        chatPollingJob?.cancel()
         convPollingJob?.cancel()
         typingDebounceJob?.cancel()
         conversationUpdatesJob?.cancel()

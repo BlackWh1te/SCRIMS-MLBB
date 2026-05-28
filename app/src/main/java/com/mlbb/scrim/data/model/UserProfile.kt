@@ -15,9 +15,18 @@ data class UserProfile(
     val currentTier: RankTier = RankTier.BRONZE,
     val emailVerified: Boolean = false,
     val isBanned: Boolean = false,
+    val banReason: String? = null,
+    val bannedAt: String? = null,
     val mainHeroes: List<String> = emptyList(),
     val role: String = "",
-    val bio: String = ""
+    val bio: String = "",
+    // Tournament host fields
+    val telegramUsername: String? = null,
+    val isTournamentHost: Boolean = false,
+    val hostTrustScore: Float = 5.0f,
+    val tournamentsHosted: Int = 0,
+    val tournamentsCompleted: Int = 0,
+    val tournamentsCancelled: Int = 0,
 ) {
     val winRate: String
         get() = if (totalMatches > 0) "${(wins * 100 / totalMatches)}%" else "0%"

@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -495,8 +497,9 @@ private fun ConversationCard(
         isCurrentUserParticipantA -> conversation.participantBName
         else -> conversation.participantAName
     }
-    val otherUserId = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
-    val otherTeam   = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
+    val otherUserId    = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
+    val otherTeam      = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
+    val otherAvatarUrl = if (isCurrentUserParticipantA) conversation.participantBAvatarUrl else conversation.participantAAvatarUrl
     val hasUnread = conversation.unreadCount > 0
 
     // Stable gradient per name
@@ -552,19 +555,62 @@ private fun ConversationCard(
         ) {
             // Avatar + online indicator
             Box {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(avatarColors)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                        fontSize   = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color      = White
+                if (otherAvatarUrl != null) {
+                    SubcomposeAsyncImage(
+                        model              = otherAvatarUrl,
+                        contentDescription = otherName,
+                        modifier           = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape),
+                        contentScale       = ContentScale.Crop,
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(avatarColors)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                    fontSize   = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color      = White
+                                )
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(avatarColors)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                    fontSize   = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color      = White
+                                )
+                            }
+                        }
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(avatarColors)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                            fontSize   = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color      = White
+                        )
+                    }
                 }
                 // Online dot placeholder (gray = offline/unknown)
                 Box(

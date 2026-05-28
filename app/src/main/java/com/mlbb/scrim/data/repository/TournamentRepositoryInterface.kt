@@ -17,6 +17,10 @@ interface TournamentRepositoryInterface {
     // ── Tournament requirements ──────────────────────────────────
     suspend fun getTournamentRequirements(tournamentId: String): Result<List<TournamentRequirement>>
 
+    suspend fun createRequirements(tournamentId: String, requirements: List<TournamentRequirement>): Result<Unit>
+
+    suspend fun deleteRequirement(requirementId: String): Result<Unit>
+
     // ── Tournament teams ─────────────────────────────────────────
     suspend fun getTournamentTeams(tournamentId: String): Result<List<TournamentTeam>>
 
@@ -84,4 +88,8 @@ interface TournamentRepositoryInterface {
     suspend fun checkInTeam(tournamentId: String, teamId: String): Result<Map<String, Any>>
 
     suspend fun reviewApplication(applicationId: String, approved: Boolean, rejectionReason: String?): Result<Map<String, Any>>
+
+    suspend fun resolveDispute(matchId: String, winnerTeamId: String?, isDraw: Boolean, resolution: String): Result<Map<String, Any>>
+
+    suspend fun uploadTournamentLogo(tournamentId: String, fileBytes: ByteArray, contentType: String): Result<String>
 }

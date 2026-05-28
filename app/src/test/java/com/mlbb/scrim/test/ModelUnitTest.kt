@@ -462,9 +462,9 @@ class ModelUnitTest {
 
     @Test
     fun `PlayerAchievements isUnlocked checks list membership`() {
-        val stats = PlayerAchievements(unlockedAchievements = listOf("test_achievement"))
-        assertTrue(stats.isUnlocked(Achievement(id = "test_achievement", displayName = "", description = "", iconLetter = "", badgeColor = com.mlbb.scrim.ui.theme.GoldRank, glowColor = com.mlbb.scrim.ui.theme.GoldRank, condition = AchievementCondition.MatchesPlayed(1))))
-        assertFalse(stats.isUnlocked(Achievement.FIRST_SCRIM))
+        val stats = PlayerAchievements(unlockedAchievements = listOf("first_scrim"))
+        assertTrue(stats.isUnlocked(Achievement.FIRST_SCRIM))
+        assertFalse(stats.isUnlocked(Achievement.WIN_STREAK_5))
     }
 
     // ═══════════════════════════════════════════════════════════════

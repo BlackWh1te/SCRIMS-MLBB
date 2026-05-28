@@ -332,4 +332,39 @@
     <string name="in_progress">En progreso</string>
     <string name="completed">Completado</string>
     <string name="cancelled">Cancelado</string>
+    <string name="bio_placeholder">Bio (algo sobre ti)</string>
+    <string name="cancel_btn">Cancelar</string>
+    <string name="content_desc_change_avatar">Cambiar avatar</string>
+    <string name="content_desc_profile_avatar">Avatar de perfil</string>
+    <string name="copy_email">Copiar correo</string>
+    <string name="email_copied">Correo copiado</string>
+    <string name="error_enter_current_password">Introduce tu contraseña actual</string>
+    <string name="error_enter_new_email">Introduce un nuevo correo</string>
+    <string name="error_enter_valid_email">Introduce un correo válido</string>
+    <string name="error_password_min_length">La nueva contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_password_must_differ">La nueva contraseña debe ser diferente</string>
+    <string name="error_passwords_not_match">Las nuevas contraseñas no coinciden</string>
+    <string name="host_credentials">Credenciales de host</string>
+    <string name="host_credentials_sub">Copia tu correo y usa tu contraseña de la app</string>
+    <string name="host_email_label">Correo</string>
+    <string name="host_password_hint">Usa tu contraseña de la app</string>
+    <string name="host_stat_cancelled">Cancelados</string>
+    <string name="host_stat_completed">Completados</string>
+    <string name="host_stats">Estadísticas de host</string>
+    <string name="hosted">Organizados</string>
+    <string name="new_email">Nuevo correo</string>
+    <string name="open_dashboard">Abrir panel</string>
+    <string name="pts_label">PTS</string>
+    <string name="role_placeholder">Rol principal (ej.: Jungla, Roamer)</string>
+    <string name="sign_out">Cerrar sesión</string>
+    <string name="sign_out_confirm_message">¿Seguro que quieres cerrar sesión? Tendrás que introducir tus credenciales para volver a entrar.</string>
+    <string name="sign_out_sub">Salir de tu cuenta</string>
+    <string name="top_3_main_heroes_hint">Tus 3 héroes principales (separados por comas)</string>
+    <string name="tournament_host_badge">HOST DE TORNEOS</string>
+    <string name="update_password_sub">Actualiza la contraseña de tu cuenta</string>
+
+    <!-- Team Chat -->
+    <string name="team_chat_default_name">Chat del equipo</string>
+    <string name="team_badge">EQUIPO</string>
+    <string name="team_chat_placeholder">Empieza a chatear con tu equipo…</string>
 </resources>

@@ -409,7 +409,7 @@ class SupabaseMessageRepository(
             // return the existing success without re-sending.
             val existing = pendingMessageDao.getByClientId(pending.clientMessageId)
             if (existing != null && DeliveryStatus.valueOf(existing.status) == DeliveryStatus.SENT) {
-                return existing.toDomainModel()
+                return@withLock existing.toDomainModel()
             }
 
             pendingMessageDao.updateStatus(pending.clientMessageId, DeliveryStatus.SENDING.name)
@@ -421,7 +421,7 @@ class SupabaseMessageRepository(
                     if (cachedConv.chatOpensAt > 0L && System.currentTimeMillis() < cachedConv.chatOpensAt) {
                         val reason = "Chat is locked"
                         pendingMessageDao.markFailed(pending.clientMessageId, reason)
-                        return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                        return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                     }
                 }
 
@@ -429,12 +429,12 @@ class SupabaseMessageRepository(
                 if (pending.content.isBlank() && pending.imageUrl.isNullOrBlank() && pending.voiceUrl.isNullOrBlank()) {
                     val reason = "Message cannot be empty"
                     pendingMessageDao.markFailed(pending.clientMessageId, reason)
-                    return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                    return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                 }
                 if (pending.content.length > MAX_MESSAGE_LENGTH) {
                     val reason = "Message too long (max $MAX_MESSAGE_LENGTH)"
                     pendingMessageDao.markFailed(pending.clientMessageId, reason)
-                    return pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                    return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                 }
                 val sanitized = pending.content.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
 
@@ -447,7 +447,9 @@ class SupabaseMessageRepository(
                     type = pending.type,
                     imageUrl = pending.imageUrl,
                     voice_url = pending.voiceUrl,
-                    voiceDuration = pending.voiceDuration
+                    voiceDuration = pending.voiceDuration,
+                    clientMessageId = pending.clientMessageId,
+                    deliveryStatus = DeliveryStatus.PENDING.name.lowercase()
                 )
                 val response = api.sendMessage(dto)
                 if (response.isSuccessful) {
@@ -486,7 +488,36 @@ class SupabaseMessageRepository(
                             )
                         } catch (e: Exception) { Timber.w(TAG, "Failed to update conversation last_message", e) }
 
-                        return MessageWithDelivery(
+                        return@withLock MessageWithDelivery(
+                            message = message,
+                            status = DeliveryStatus.SENT,
+                            clientMessageId = pending.clientMessageId
+                        )
+                    }
+                }
+                if (response.code() == 409) {
+                    val duplicate = api.getMessages(
+                        conversationId = PostgrestFilter.eq(pending.conversationId),
+                        clientMessageId = PostgrestFilter.eq(pending.clientMessageId)
+                    )
+                    val existing = if (duplicate.isSuccessful) duplicate.body()?.firstOrNull() else null
+                    if (existing != null) {
+                        val message = mapDtoToMessage(existing)
+                        try {
+                            messageDao.insertMessage(
+                                mapMessageToEntity(message).copy(
+                                    deliveryStatus = DeliveryStatus.SENT.name,
+                                    clientMessageId = pending.clientMessageId
+                                )
+                            )
+                            conversationDao.updateLastMessage(
+                                pending.conversationId,
+                                message.content,
+                                message.timestamp
+                            )
+                        } catch (e: Exception) { Timber.w(TAG, "Failed to persist duplicate-confirmed message", e) }
+                        pendingMessageDao.delete(pending.clientMessageId)
+                        return@withLock MessageWithDelivery(
                             message = message,
                             status = DeliveryStatus.SENT,
                             clientMessageId = pending.clientMessageId
@@ -494,12 +525,12 @@ class SupabaseMessageRepository(
                     }
                 }
                 // Retryable failure
-                return handleRetryableFailure(pending, "HTTP ${response.code()}")
+                return@withLock handleRetryableFailure(pending, "HTTP ${response.code()}")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.e(TAG, "Send exception", e)
-                return handleRetryableFailure(pending, e.message ?: "Network error")
+                return@withLock handleRetryableFailure(pending, e.message ?: "Network error")
             }
         }
     }
@@ -884,7 +915,7 @@ class SupabaseMessageRepository(
             timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
             readAt = dto.readAt?.let { DateUtils.parseIsoToMillis(it) },
-            type = MessageType.valueOf(dto.type),
+            type = MessageType.valueOf(dto.type.uppercase()),
             imageUrl = dto.imageUrl,
             voiceUrl = dto.voice_url,
             voiceDuration = dto.voiceDuration
@@ -900,10 +931,12 @@ class SupabaseMessageRepository(
             participantAName = dto.participantAName ?: "",
             participantATeamId = dto.participantATeamId ?: "",
             participantATeamName = dto.participantATeamName ?: "",
+            participantAAvatarUrl = dto.participantAAvatarUrl,
             participantBId = dto.participantBId ?: "",
             participantBName = dto.participantBName ?: "",
             participantBTeamId = dto.participantBTeamId ?: "",
             participantBTeamName = dto.participantBTeamName ?: "",
+            participantBAvatarUrl = dto.participantBAvatarUrl,
             lastMessage = dto.lastMessage ?: "",
             lastMessageTime = DateUtils.parseIsoToMillis(dto.lastMessageTime),
             unreadCount = dto.unreadCount ?: 0,
@@ -912,7 +945,11 @@ class SupabaseMessageRepository(
             isParticipantBTyping = dto.participantBTyping ?: false,
             tournamentMatchId = dto.tournamentMatchId,
             participantCount = dto.participantCount,
-            isGroupChat = dto.tournamentMatchId != null || dto.participantCount > 2
+            isGroupChat = dto.tournamentMatchId != null || dto.participantCount > 2 || dto.isTeamChat,
+            teamId = dto.teamId,
+            isTeamChat = dto.isTeamChat,
+            isPinned = dto.isPinned,
+            groupName = dto.groupName ?: ""
         )
     }
 
@@ -931,7 +968,9 @@ class SupabaseMessageRepository(
             readAt = record.get("read_at")?.asString,
             imageUrl = record.get("image_url")?.asString,
             voice_url = record.get("voice_url")?.asString,
-            voiceDuration = record.get("voice_duration")?.asInt
+            voiceDuration = record.get("voice_duration")?.asInt,
+            clientMessageId = record.get("client_message_id")?.asString,
+            deliveryStatus = record.get("delivery_status")?.asString
         )
     }
 
@@ -944,10 +983,12 @@ class SupabaseMessageRepository(
             participantAName = record.get("participant_a_name")?.asString ?: "",
             participantATeamId = record.get("participant_a_team_id")?.asString ?: "",
             participantATeamName = record.get("participant_a_team_name")?.asString ?: "",
+            participantAAvatarUrl = record.get("participant_a_avatar_url")?.takeIf { !it.isJsonNull }?.asString,
             participantBId = record.get("participant_b_id")?.asString ?: "",
             participantBName = record.get("participant_b_name")?.asString ?: "",
             participantBTeamId = record.get("participant_b_team_id")?.asString ?: "",
             participantBTeamName = record.get("participant_b_team_name")?.asString ?: "",
+            participantBAvatarUrl = record.get("participant_b_avatar_url")?.takeIf { !it.isJsonNull }?.asString,
             lastMessage = record.get("last_message")?.asString ?: "",
             lastMessageTime = record.get("last_message_time")?.asString ?: "",
             chatOpensAt = record.get("chat_opens_at")?.asString ?: "",
@@ -966,10 +1007,12 @@ class SupabaseMessageRepository(
             participantAName = conv.participantAName,
             participantATeamId = conv.participantATeamId,
             participantATeamName = conv.participantATeamName,
+            participantAAvatarUrl = conv.participantAAvatarUrl,
             participantBId = conv.participantBId,
             participantBName = conv.participantBName,
             participantBTeamId = conv.participantBTeamId,
             participantBTeamName = conv.participantBTeamName,
+            participantBAvatarUrl = conv.participantBAvatarUrl,
             lastMessage = conv.lastMessage,
             lastMessageTime = conv.lastMessageTime,
             chatOpensAt = conv.chatOpensAt,
@@ -978,7 +1021,11 @@ class SupabaseMessageRepository(
             tournamentMatchId = conv.tournamentMatchId,
             participantCount = conv.participantCount,
             isGroupChat = conv.isGroupChat,
-            unreadCount = conv.unreadCount
+            unreadCount = conv.unreadCount,
+            teamId = conv.teamId,
+            isTeamChat = conv.isTeamChat,
+            isPinned = conv.isPinned,
+            groupName = conv.groupName
         )
     }
 

@@ -25,7 +25,11 @@ data class MatchResult(
     val reviewedByAdminId: String? = null,
     val reviewedAt: Long? = null,
     val noShowTeamId: String? = null,     // Team that didn't show up
-    val matchActuallyPlayed: Boolean = false
+    val matchActuallyPlayed: Boolean = false,
+    // ── Match type: scrim or tournament ──
+    val matchType: MatchType = MatchType.SCRIM,
+    val tournamentTitle: String? = null,
+    val roundNumber: Int? = null
 ) {
     val isDisputed: Boolean
         get() = teamAReport != null && teamBReport != null &&
@@ -70,6 +74,11 @@ enum class AdminVerdict {
     TECHNICAL_ISSUE,    // Server/client issues prevented match
     INVALID_REPORT,     // False report / trolling
     UNDER_REVIEW        // Still investigating
+}
+
+enum class MatchType {
+    SCRIM,
+    TOURNAMENT
 }
 
 /** Player info from scrim roster for match result display */

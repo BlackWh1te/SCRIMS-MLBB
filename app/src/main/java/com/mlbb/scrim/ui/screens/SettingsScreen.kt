@@ -12,6 +12,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.ContactSupport
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.R
@@ -31,6 +36,7 @@ import com.mlbb.scrim.data.localization.Language
 import com.mlbb.scrim.ui.theme.*
 import com.mlbb.scrim.ui.components.PremiumFadeIn
 import com.mlbb.scrim.ui.components.GlassBackButton
+import com.mlbb.scrim.ui.components.rememberResponsiveMetrics
 
 @Composable
 fun SettingsScreen(
@@ -57,6 +63,7 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val responsive = rememberResponsiveMetrics()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -81,30 +88,42 @@ fun SettingsScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // ── Header ──────────────────────────────────────────
             PremiumFadeIn(delayMillis = 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    GlassBackButton(onClick = onNavigateBack)
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = responsive.contentMaxWidth)
+                            .align(Alignment.Center)
+                            .statusBarsPadding()
+                            .padding(horizontal = responsive.horizontalPadding, vertical = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GlassBackButton(onClick = onNavigateBack)
 
-                    Text(
-                        text = stringResource(R.string.settings),
-                        style = iOSTitle2.copy(color = TextPrimary)
-                    )
+                        Text(
+                            text = stringResource(R.string.settings),
+                            style = iOSTitle2.copy(color = TextPrimary),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 12.dp)
+                        )
 
-                    Spacer(modifier = Modifier.width(44.dp))
+                        Spacer(modifier = Modifier.width(44.dp))
+                    }
                 }
             }
 
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .widthIn(max = responsive.contentMaxWidth)
+                    .align(Alignment.CenterHorizontally)
+                    .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = responsive.horizontalPadding)
             ) {
                 // ── Notifications ─────────────────────────────────
                 PremiumFadeIn(delayMillis = 100) {
@@ -134,7 +153,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(10.dp))
                 PremiumFadeIn(delayMillis = 250) {
                     SettingsToggleCard(
-                        icon = Icons.Filled.Chat,
+                        icon = Icons.AutoMirrored.Filled.Chat,
                         title = stringResource(R.string.message_alerts),
                         subtitle = stringResource(R.string.message_alerts_sub),
                         checked = messageNotifications && notificationsEnabled,
@@ -142,15 +161,37 @@ fun SettingsScreen(
                         onCheckedChange = onToggleMessageNotifications
                     )
                 }
+                Spacer(Modifier.height(10.dp))
+                PremiumFadeIn(delayMillis = 275) {
+                    SettingsToggleCard(
+                        icon = Icons.AutoMirrored.Filled.VolumeUp,
+                        title = stringResource(R.string.sound),
+                        subtitle = stringResource(R.string.sound_sub),
+                        checked = soundEnabled && notificationsEnabled,
+                        enabled = notificationsEnabled,
+                        onCheckedChange = onToggleSound
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                PremiumFadeIn(delayMillis = 300) {
+                    SettingsToggleCard(
+                        icon = Icons.Default.Vibration,
+                        title = stringResource(R.string.vibration),
+                        subtitle = stringResource(R.string.vibration_sub),
+                        checked = vibrationEnabled && notificationsEnabled,
+                        enabled = notificationsEnabled,
+                        onCheckedChange = onToggleVibration
+                    )
+                }
 
                 Spacer(Modifier.height(32.dp))
 
                 // ── Appearance ───────────────────────────────────
-                PremiumFadeIn(delayMillis = 300) {
+                PremiumFadeIn(delayMillis = 325) {
                     SettingsSectionTitle(stringResource(R.string.appearance))
                 }
                 Spacer(Modifier.height(12.dp))
-                PremiumFadeIn(delayMillis = 350) {
+                PremiumFadeIn(delayMillis = 375) {
                     SettingsToggleCard(
                         icon = Icons.Default.DarkMode,
                         title = stringResource(R.string.dark_mode),
@@ -160,7 +201,7 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                PremiumFadeIn(delayMillis = 400) {
+                PremiumFadeIn(delayMillis = 425) {
                     val currentLang = Language.fromCode(languageCode)
                     SettingsValueCard(
                         icon = Icons.Default.Translate,
@@ -174,13 +215,13 @@ fun SettingsScreen(
                 Spacer(Modifier.height(32.dp))
 
                 // ── Support ──────────────────────────────────────
-                PremiumFadeIn(delayMillis = 450) {
+                PremiumFadeIn(delayMillis = 475) {
                     SettingsSectionTitle(stringResource(R.string.support))
                 }
                 Spacer(Modifier.height(12.dp))
-                PremiumFadeIn(delayMillis = 500) {
+                PremiumFadeIn(delayMillis = 525) {
                     SettingsActionCard(
-                        icon = Icons.Default.ContactSupport,
+                        icon = Icons.AutoMirrored.Filled.ContactSupport,
                         title = stringResource(R.string.contact_support),
                         subtitle = stringResource(R.string.contact_support_sub),
                         onClick = {
@@ -196,13 +237,13 @@ fun SettingsScreen(
                 Spacer(Modifier.height(32.dp))
 
                 // ── Account ──────────────────────────────────────
-                PremiumFadeIn(delayMillis = 550) {
+                PremiumFadeIn(delayMillis = 575) {
                     SettingsSectionTitle(stringResource(R.string.account))
                 }
                 Spacer(Modifier.height(12.dp))
-                PremiumFadeIn(delayMillis = 600) {
+                PremiumFadeIn(delayMillis = 625) {
                     SettingsActionCard(
-                        icon = Icons.Default.Logout,
+                        icon = Icons.AutoMirrored.Filled.Logout,
                         title = stringResource(R.string.log_out),
                         subtitle = stringResource(R.string.log_out_sub),
                         color = WarningOrange,
@@ -210,7 +251,7 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                PremiumFadeIn(delayMillis = 650) {
+                PremiumFadeIn(delayMillis = 675) {
                     SettingsActionCard(
                         icon = Icons.Default.Delete,
                         title = stringResource(R.string.delete_account),
@@ -366,6 +407,8 @@ private fun SettingsToggleCard(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val responsive = rememberResponsiveMetrics()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -385,9 +428,23 @@ private fun SettingsToggleCard(
                 Icon(icon, null, tint = if (enabled) BluePrimary else TextTertiary, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = iOSHeadline.copy(color = if (enabled) TextPrimary else TextTertiary))
-                Text(subtitle, style = iOSFootnote.copy(color = TextSecondary))
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(end = if (responsive.isCompact) 8.dp else 12.dp)
+            ) {
+                Text(
+                    title,
+                    style = iOSHeadline.copy(color = if (enabled) TextPrimary else TextTertiary),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    subtitle,
+                    style = iOSFootnote.copy(color = TextSecondary),
+                    maxLines = if (responsive.isCompact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Switch(
                 checked = checked,
@@ -412,6 +469,8 @@ private fun SettingsValueCard(
     value: String,
     onClick: () -> Unit
 ) {
+    val responsive = rememberResponsiveMetrics()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -432,11 +491,31 @@ private fun SettingsValueCard(
                 Icon(icon, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = iOSHeadline.copy(color = TextPrimary))
-                Text(subtitle, style = iOSFootnote.copy(color = TextSecondary))
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp)
+            ) {
+                Text(
+                    title,
+                    style = iOSHeadline.copy(color = TextPrimary),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    subtitle,
+                    style = iOSFootnote.copy(color = TextSecondary),
+                    maxLines = if (responsive.isCompact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Text(value, style = iOSCallout.copy(color = GoldPrimary, fontWeight = FontWeight.Bold))
+            Text(
+                value,
+                style = iOSCallout.copy(color = GoldPrimary, fontWeight = FontWeight.Bold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = if (responsive.isCompact) 96.dp else 150.dp)
+            )
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
         }
@@ -451,6 +530,8 @@ private fun SettingsActionCard(
     color: Color = BluePrimary,
     onClick: () -> Unit
 ) {
+    val responsive = rememberResponsiveMetrics()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -472,9 +553,19 @@ private fun SettingsActionCard(
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, style = iOSHeadline.copy(color = TextPrimary))
+                Text(
+                    title,
+                    style = iOSHeadline.copy(color = TextPrimary),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 if (subtitle.isNotBlank()) {
-                    Text(subtitle, style = iOSFootnote.copy(color = TextSecondary))
+                    Text(
+                        subtitle,
+                        style = iOSFootnote.copy(color = TextSecondary),
+                        maxLines = if (responsive.isCompact) 1 else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
             Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))

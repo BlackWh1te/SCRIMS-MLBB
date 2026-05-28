@@ -28,13 +28,23 @@ enum class ReportReason(val label: String) {
     OTHER("Other")
 }
 
+enum class UserReportReason(val label: String) {
+    SCAM("Scam / Fraud"),
+    SUSPICIOUS("Suspicious Behavior"),
+    INAPPROPRIATE("Inappropriate Content"),
+    HARASSMENT("Harassment"),
+    CHEATING("Cheating"),
+    OTHER("Other")
+}
+
 @Composable
 fun ReportDialog(
     targetName: String,
+    reasons: List<String> = ReportReason.values().map { it.label },
     onDismiss: () -> Unit,
-    onSubmit: (ReportReason, String) -> Unit
+    onSubmit: (String, String) -> Unit
 ) {
-    var selectedReason by remember { mutableStateOf<ReportReason?>(null) }
+    var selectedReason by remember { mutableStateOf<String?>(null) }
     var description by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -96,7 +106,7 @@ fun ReportDialog(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
-                ReportReason.values().forEach { reason ->
+                reasons.forEach { reason ->
                     val isSelected = selectedReason == reason
                     Surface(
                         onClick = { selectedReason = reason },
@@ -124,7 +134,7 @@ fun ReportDialog(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = reason.label,
+                                text = reason,
                                 fontSize = 14.sp,
                                 color = if (isSelected) White else LightGray.copy(alpha = 0.7f),
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal

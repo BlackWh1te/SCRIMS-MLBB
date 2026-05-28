@@ -35,6 +35,9 @@ import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.RankBadge
 import com.mlbb.scrim.ui.components.RankBadgeSize
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
+import com.mlbb.scrim.ui.components.ReportDialog
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,8 +50,11 @@ fun LeaderboardScreen(
     onTierFilter: (RankTier?) -> Unit = {},
     onNavigateBack: () -> Unit,
     onRefresh: () -> Unit = {},
-    onDismissError: () -> Unit = {}
+    onDismissError: () -> Unit = {},
+    onReportUser: (userId: String, username: String, avatarUrl: String?) -> Unit = { _, _, _ -> }
 ) {
+    var reportTarget by remember { mutableStateOf<Triple<String, String, String?>?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -178,7 +184,10 @@ fun LeaderboardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(20.dp))
                                 Text(
-                                    text = stringResource(R.string.no_entries),
+                                    text = if (selectedTier != null)
+                                        "No ${selectedTier.displayName} players yet"
+                                    else
+                                        stringResource(R.string.no_entries),
                                     style = iOSTitle3.copy(color = White)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -200,7 +209,10 @@ fun LeaderboardScreen(
                                     AnimatedEntrance(delayMillis = 150 + index * 60) {
                                         LeaderboardRow(
                                             entry = entry,
-                                            isTopThree = entry.rank <= 3
+                                            isTopThree = entry.rank <= 3,
+                                            onReportUser = { userId, username, avatarUrl ->
+                                                reportTarget = Triple(userId, username, avatarUrl)
+                                            }
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(10.dp))
@@ -209,6 +221,18 @@ fun LeaderboardScreen(
                         }
                     }
                 }
+            }
+
+            if (reportTarget != null) {
+                ReportDialog(
+                    targetName = reportTarget!!.second,
+                    reasons = com.mlbb.scrim.ui.components.UserReportReason.values().map { it.label },
+                    onDismiss = { reportTarget = null },
+                    onSubmit = { reason, description ->
+                        onReportUser(reportTarget!!.first, reportTarget!!.second, reportTarget!!.third)
+                        reportTarget = null
+                    }
+                )
             }
         }
     }
@@ -267,7 +291,8 @@ private fun ScrollableTierFilter(
 @Composable
 private fun LeaderboardRow(
     entry: LeaderboardEntry,
-    isTopThree: Boolean
+    isTopThree: Boolean,
+    onReportUser: (userId: String, username: String, avatarUrl: String?) -> Unit = { _, _, _ -> }
 ) {
     val rankColor = when (entry.rank) {
         1 -> GoldPrimary
@@ -348,15 +373,27 @@ private fun LeaderboardRow(
                         brush = Brush.verticalGradient(
                             colors = listOf(BluePrimary.copy(alpha = 0.4f), BluePrimary.copy(alpha = 0.1f))
                         )
-                    ),
+                    )
+                    .clickable {
+                        onReportUser(entry.playerId, entry.username, entry.avatarUrl)
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = entry.username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BluePrimary
-                )
+                if (!entry.avatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = entry.avatarUrl,
+                        contentDescription = entry.username,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = entry.username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))

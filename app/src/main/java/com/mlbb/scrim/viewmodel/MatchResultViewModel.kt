@@ -104,7 +104,7 @@ class MatchResultViewModel @Inject constructor(
     }
 
     fun reportResult(
-        matchResultId: String,
+        scrimId: String,
         teamId: String,
         reporterId: String,
         reporterName: String,
@@ -119,7 +119,7 @@ class MatchResultViewModel @Inject constructor(
             _reportSuccess.value = false
 
             matchResultRepository.reportResult(
-                matchResultId = matchResultId,
+                scrimId = scrimId,
                 teamId = teamId,
                 reporterId = reporterId,
                 reporterName = reporterName,
@@ -212,5 +212,15 @@ class MatchResultViewModel @Inject constructor(
 
     fun clearReportSuccess() {
         _reportSuccess.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        loadMatchResultsJob?.cancel()
+        loadMatchResultByIdJob?.cancel()
+        loadMatchResultsForTeamJob?.cancel()
+        reportResultJob?.cancel()
+        createMatchResultJob?.cancel()
+        resolveDisputeJob?.cancel()
     }
 }

@@ -107,3 +107,30 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_client_id ON messages(clientMessageId)")
     }
 }
+
+/**
+ * Migration from version 11 to 12.
+ * Adds team group chat fields to cached conversations.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE conversations ADD COLUMN teamId TEXT")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN isTeamChat INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN groupName TEXT")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_conversations_team_chat ON conversations(teamId, isTeamChat)")
+    }
+}
+
+/**
+ * Migration from version 12 to 13.
+ * Adds participant avatar URL columns to cached conversations so real
+ * profile pictures can be shown in the chat list and chat header without
+ * an extra network fetch.
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE conversations ADD COLUMN participantAAvatarUrl TEXT")
+        db.execSQL("ALTER TABLE conversations ADD COLUMN participantBAvatarUrl TEXT")
+    }
+}

@@ -1,12 +1,15 @@
 package com.mlbb.scrim.viewmodel
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mlbb.scrim.data.model.GameRole
 import com.mlbb.scrim.data.model.LfgPost
 import com.mlbb.scrim.data.model.Region
 import com.mlbb.scrim.data.model.SkillLevel
+import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.data.repository.LfgRepositoryInterface
+import com.mlbb.scrim.data.service.SupabaseSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,8 +21,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LfgViewModel @Inject constructor(
+    private val application: Application,
     private val lfgRepository: LfgRepositoryInterface
 ) : ViewModel() {
+
+    private val appSettings = AppSettings(application.applicationContext)
 
     private val _posts = MutableStateFlow<List<LfgPost>>(emptyList())
     val posts: StateFlow<List<LfgPost>> = _posts.asStateFlow()
@@ -78,8 +84,19 @@ class LfgViewModel @Inject constructor(
         discord: String = "",
         telegram: String = "",
         vk: String = "",
-        facebook: String = ""
+        facebook: String = "",
+        avatarUrl: String? = null
     ) {
+        // Enforce 1 post per day per user
+        val myRecentPost = _posts.value.find { it.playerId == playerId }
+        if (myRecentPost != null) {
+            val twentyFourHoursAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
+            if (myRecentPost.createdAt > twentyFourHoursAgo) {
+                _error.value = "You can only create 1 post per day. Delete your current post first."
+                return
+            }
+        }
+
         viewModelScope.launch {
             val post = LfgPost(
                 id = UUID.randomUUID().toString(),
@@ -104,6 +121,7 @@ class LfgViewModel @Inject constructor(
                 telegram = telegram,
                 vk = vk,
                 facebook = facebook,
+                avatarUrl = avatarUrl,
                 createdAt = System.currentTimeMillis()
             )
 
@@ -136,6 +154,33 @@ class LfgViewModel @Inject constructor(
                     loadPosts()
                 }
             }
+        }
+    }
+
+    /**
+     * Increment the view count on a post when a user expands the card.
+     * Only counts once per user per post. Updates local state optimistically
+     * and syncs to server, then invalidates cache so fresh data loads on restart.
+     */
+    fun incrementViewCount(postId: String) {
+        val userId = SupabaseSession.getUserIdOrNull() ?: return
+
+        viewModelScope.launch {
+            // Guard: only count one view per user per post
+            if (appSettings.hasViewedPost(userId, postId)) {
+                return@launch
+            }
+
+            // Mark as viewed locally first (prevents double-count even if network fails)
+            appSettings.markPostViewed(userId, postId)
+
+            // Optimistic local update
+            _posts.value = _posts.value.map { post ->
+                if (post.id == postId) post.copy(viewCount = post.viewCount + 1) else post
+            }
+
+            // Sync to server
+            lfgRepository.incrementViewCount(postId)
         }
     }
 

@@ -114,22 +114,29 @@ enum class BestOf(val games: Int, val displayName: String) {
     }
 }
 
-enum class GameMode {
-    RANKED,
-    CUSTOM,
-    TOURNAMENT,
-    CASUAL
+enum class GameMode(val displayName: String) {
+    RANKED("Ranked"),
+    CLASSIC("Classic"),
+    @Deprecated("Kept for DB backward compat, not shown in UI")
+    TOURNAMENT("Tournament"),
+    @Deprecated("Kept for DB backward compat, not shown in UI")
+    CASUAL("Casual");
+
+    companion object {
+        /** Modes shown in the scrim posting UI */
+        val selectable: List<GameMode> = entries.filter { it == RANKED || it == CLASSIC }
+    }
 }
 
 enum class Region(val displayName: String, val utcOffset: String) {
     UTC("UTC", "UTC+0"),
     EU("Europe", "UTC+1"),
-    MCK("Moscow", "UTC+3"),
+    MSK("Moscow", "UTC+3"),
     SA("South Asia", "UTC+5:30"),
     ASIA("Southeast Asia", "UTC+8"),
-    KRD("Korea", "UTC+9"),
+    KRD("Krasnodar", "UTC+3"),
     NA("North America", "UTC-5"),
-    EKB("East KB", "UTC+9");
+    EKB("Ekaterinburg", "UTC+5");
 
     companion object {
         fun fromDisplayName(name: String): Region = values().find { it.displayName == name } ?: UTC

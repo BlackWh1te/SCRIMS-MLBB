@@ -38,6 +38,17 @@ class SupabaseTeamRepository(
 
     override suspend fun createTeam(name: String, leaderId: String, description: String, isOpenForApplications: Boolean): Flow<Result<Team>> = flow {
         try {
+            // 1-team limit: check if user already belongs to a team
+            val existingTeamsResponse = api.getTeamMembers(userId = PostgrestFilter.eq(leaderId))
+            if (existingTeamsResponse.isSuccessful) {
+                val memberships = existingTeamsResponse.body() ?: emptyList()
+                val activeMemberships = memberships.filter { it.role != TeamRole.INVITED }
+                if (activeMemberships.isNotEmpty()) {
+                    emit(Result.failure(Exception("You can only be in one team at a time. Leave your current team first.")))
+                    return@flow
+                }
+            }
+
             val request = CreateTeamRequest(name = name, leaderId = leaderId, description = description, minPlayers = 5, maxPlayers = 7, isOpenForApplications = isOpenForApplications)
             val response = api.createTeam(request)
             if (response.isSuccessful) {

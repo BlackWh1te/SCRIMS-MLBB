@@ -11,6 +11,7 @@ data class LeaderboardEntity(
     @PrimaryKey val odinalRank: Int,
     val userId: String,
     val username: String,
+    val avatarUrl: String? = null,
     val pts: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,

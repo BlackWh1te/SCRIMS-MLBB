@@ -229,6 +229,73 @@ class SupabaseAuthRepository(
 
     // ─── Auth Operations ───
 
+    override suspend fun sendPasswordResetOtp(email: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val response = authApi.sendOtp(OtpRequest(email = email, type = "recovery"))
+            if (response.isSuccessful) {
+                emit(AuthResult.EmailNotVerified(email))
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                val message = mapOtpError(errorBody, "Failed to send password reset code")
+                emit(AuthResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Failed to send password reset code: ${e.message}"))
+        }
+    }
+
+    override suspend fun verifyPasswordResetOtp(email: String, token: String, newPassword: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            if (newPassword.length < 6) {
+                emit(AuthResult.Error("New password must be at least 6 characters."))
+                return@flow
+            }
+
+            val verifyResponse = authApi.verifyOtp(VerifyOtpRequest(email = email, token = token, type = "recovery"))
+            if (!verifyResponse.isSuccessful) {
+                val errorBody = verifyResponse.errorBody()?.string() ?: "Unknown error"
+                val message = when {
+                    errorBody.contains("otp_expired", ignoreCase = true) ||
+                        errorBody.contains("token_expired", ignoreCase = true) ->
+                        "Code expired. Please request a new one."
+                    errorBody.contains("user_not_found", ignoreCase = true) ->
+                        "No account found for this email."
+                    else -> "Invalid code. Please try again."
+                }
+                emit(AuthResult.Error(message))
+                return@flow
+            }
+
+            val authData = verifyResponse.body()
+            val recoveryToken = authData?.accessToken
+            if (recoveryToken.isNullOrBlank()) {
+                emit(AuthResult.Error("Code verified, but no recovery session was created. Please request a new code."))
+                return@flow
+            }
+
+            val updateResponse = authApi.updateUser(
+                authHeader = "Bearer $recoveryToken",
+                request = mapOf("password" to newPassword)
+            )
+            if (updateResponse.isSuccessful) {
+                try {
+                    authApi.signOut("Bearer $recoveryToken")
+                } catch (_: Exception) {
+                    // Recovery sessions are temporary. Local state is still cleared below.
+                }
+                clearTokens()
+                emit(AuthResult.Success)
+            } else {
+                val errorBody = updateResponse.errorBody()?.string()
+                emit(AuthResult.Error("Failed to update password: ${errorBody ?: updateResponse.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Password reset failed: ${e.message}"))
+        }
+    }
+
     override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {

@@ -9,6 +9,7 @@ import com.mlbb.scrim.data.model.isMatchType
 import com.mlbb.scrim.data.model.isMessageType
 import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.data.repository.SupabaseNotificationRepository
+import com.mlbb.scrim.notifications.LocalNotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -31,7 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val repository: SupabaseNotificationRepository,
-    @ApplicationContext context: Context
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val appSettings = AppSettings(context)
@@ -63,6 +64,8 @@ class NotificationViewModel @Inject constructor(
     private val _notificationsEnabled = MutableStateFlow(true)
     private val _matchNotifications   = MutableStateFlow(true)
     private val _messageNotifications = MutableStateFlow(true)
+    private val _soundEnabled         = MutableStateFlow(true)
+    private val _vibrationEnabled     = MutableStateFlow(true)
 
     init {
         observeSettings()
@@ -89,6 +92,8 @@ class NotificationViewModel @Inject constructor(
                 recomputeUnreadCount()
             }
         }
+        viewModelScope.launch { appSettings.soundEnabled.collect     { _soundEnabled.value = it } }
+        viewModelScope.launch { appSettings.vibrationEnabled.collect { _vibrationEnabled.value = it } }
     }
 
     /**
@@ -139,6 +144,13 @@ class NotificationViewModel @Inject constructor(
                     current.add(0, newNotification)
                     _notifications.value = current
                     recomputeUnreadCount()
+                    // Post a heads-up system notification (respects sound/vibration settings)
+                    LocalNotificationHelper.show(
+                        context          = context,
+                        notification     = newNotification,
+                        soundEnabled     = _soundEnabled.value,
+                        vibrationEnabled = _vibrationEnabled.value
+                    )
                 }
             }
         }

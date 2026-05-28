@@ -21,6 +21,9 @@ data class LfgPostEntity(
     val totalMatches: Int = 0,
     val winRate: String? = null,
     val rankedWinRate: String? = null,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val pts: Int = 0,
     val inGameId: String? = null,
     val city: String? = null,
     val screenshotUrl: String? = null,
@@ -31,6 +34,8 @@ data class LfgPostEntity(
     val telegram: String? = null,
     val vk: String? = null,
     val facebook: String? = null,
+    val avatarUrl: String? = null,
+    val viewCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val lastUpdated: Long = System.currentTimeMillis()
 )

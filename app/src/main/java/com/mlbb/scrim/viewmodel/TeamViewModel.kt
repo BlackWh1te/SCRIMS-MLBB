@@ -88,9 +88,7 @@ class TeamViewModel @Inject constructor(
     private val _averageRating = MutableStateFlow(0.0)
     val averageRating: StateFlow<Double> = _averageRating.asStateFlow()
 
-    init {
-        loadTeams()
-    }
+    // init { loadTeams() } removed to prevent flashing old cached teams before setUserId is called
     
     fun loadTeams(isRefresh: Boolean = false) {
         loadTeamsJob?.cancel()
@@ -122,8 +120,14 @@ class TeamViewModel @Inject constructor(
         }
     }
 
-    /** Set the current user ID so loadTeams() fetches only the user's teams */
+    /** Set the current user ID so loadTeams() fetches only the user's teams.
+     *  Clears stale cached data when the user changes to prevent flashing
+     *  another user's teams after reinstall or account switch. */
     fun setUserId(userId: String?) {
+        if (currentUserId != userId) {
+            _teams.value = emptyList()
+            _currentTeam.value = null
+        }
         currentUserId = userId
         if (userId != null) loadTeams()
     }

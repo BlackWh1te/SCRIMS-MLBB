@@ -296,6 +296,25 @@ class SupabaseRealtimeClient @Inject constructor() {
     }
 
     /**
+     * Call after a JWT refresh so active channels re-join with the updated token.
+     *
+     * Supabase Realtime v2 evaluates RLS at channel-join time using the
+     * access_token in the phx_join payload.  When the token expires and is
+     * silently refreshed by RetryInterceptor, existing channels keep receiving
+     * events (the TCP connection stays open), but new subscriptions started
+     * after the refresh would use the new token automatically via joinChannel().
+     *
+     * Calling this method forces a re-join of ALL active channels, ensuring the
+     * server updates its auth context for each one — necessary for long sessions.
+     */
+    fun refreshAccessToken() {
+        if (isConnected.get() && activeChannels.isNotEmpty()) {
+            scope.launch { resubscribeAll() }
+            Timber.d(TAG, "Refreshed access token — re-joined ${activeChannels.size} channels")
+        }
+    }
+
+    /**
      * Check if currently connected.
      */
     fun isConnected(): Boolean = isConnected.get()
@@ -336,8 +355,13 @@ class SupabaseRealtimeClient @Inject constructor() {
                 }
                 postgresChanges.add(changeObj)
             }
-
             add("postgres_changes", postgresChanges)
+
+            // Include access_token in the phx_join payload so Supabase Realtime v2
+            // can apply per-channel RLS (auth.uid() checks).
+            // Falls back to the anon key when no user session exists.
+            val token = SupabaseSession.getAccessTokenOrNull() ?: SupabaseConfig.SUPABASE_ANON_KEY
+            addProperty("access_token", token)
         }
 
         // Per-channel joinRef — only incremented on actual phx_join

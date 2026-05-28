@@ -160,7 +160,7 @@ class SecurityAuditTest {
         val all = repo.getAllMatchResults().first().getOrNull()!!
         val match = all.first()
         val result = repo.reportResult(
-            match.id, "unrelated_team", "p1", "P1", "winner"
+            match.scrimId, "unrelated_team", "p1", "P1", "winner"
         ).first()
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("not part") == true)
@@ -171,8 +171,8 @@ class SecurityAuditTest {
         val repo = MatchResultRepository()
         val all = repo.getAllMatchResults().first().getOrNull()!!
         val match = all.first { it.verificationStatus == VerificationStatus.PENDING }
-        repo.reportResult(match.id, match.teamAId, "p1", "P1", match.teamAId).first()
-        repo.reportResult(match.id, match.teamBId, "p2", "P2", match.teamBId).first()
+        repo.reportResult(match.scrimId, match.teamAId, "p1", "P1", match.teamAId).first()
+        repo.reportResult(match.scrimId, match.teamBId, "p2", "P2", match.teamBId).first()
         val afterDispute = repo.getMatchResultById(match.id).first().getOrNull()!!
         assertEquals(VerificationStatus.DISPUTED, afterDispute.verificationStatus)
     }
