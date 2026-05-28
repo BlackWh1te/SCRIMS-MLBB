@@ -8,6 +8,47 @@
 
 ---
 
+## 2026-05-28 21:50 [Session: Remove News Feature] — Completely deleted news feature to eliminate all trademarked content from APK
+
+### Commits
+- `92e65aa` — remove(news): completely delete news feature to eliminate trademarked content
+
+### Changed
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/ui/screens/NewsScreen.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/viewmodel/NewsViewModel.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/data/repository/NewsRepository.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/data/repository/NewsCacheManager.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/data/service/NewsApiService.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/data/service/TwitterApiService.kt`
+- **Deleted:** `app/src/main/java/com/mlbb/scrim/data/model/NewsArticle.kt`
+- **Deleted:** `app/src/test/java/com/mlbb/scrim/data/model/NewsArticleTest.kt`
+- **Deleted:** `app/src/test/java/com/mlbb/scrim/data/repository/NewsRepositoryQuotaTest.kt`
+- **File:** `app/src/main/java/com/mlbb/scrim/data/preferences/AppSettings.kt`
+  - Removed X API v2 quota tracking (x_api_requests_used, x_api_month_start, x_api_last_fetch, x_api_last_explicit_refresh)
+  - Removed news drip-feed tracking (news_drip_index, news_drip_last_update, news_drip_count_total, tickNewsDrip)
+- **File:** `app/build.gradle.kts`
+  - Removed BuildConfig fields: `NEWSAPI_KEY`, `X_BEARER_TOKEN`
+  - Renamed `NEWS_SERVICE_API_KEY` → `BACKEND_API_KEY` (used by OTP service)
+- **File:** `app/src/main/java/com/mlbb/scrim/data/service/OtpApiService.kt`
+  - Updated BuildConfig reference from `NEWS_SERVICE_API_KEY` to `BACKEND_API_KEY`
+- **File:** `app/src/main/res/values/strings.xml` + all `values-*/strings.xml` (10 locales)
+  - Removed: `nav_news`, `latest_news`, `news`, `news_subtitle`, `news_detail`, `no_news`, `no_news_subtitle`
+
+### Why
+The news feature was the single largest source of trademarked content in the APK:
+- Reddit API endpoint: `r/mobilelegends`
+- NewsAPI query: `"Mobile Legends" OR "Moonton Games" OR "MLBB" OR "MPL..."`
+- Twitter API query: `from:MobileLegendsOL`
+- `isMlbbRelated()` filter checked for 50+ trademarked terms (hero names, tournaments, ranks)
+- Even though NewsScreen was not wired into navigation, all of these strings compiled into the APK
+
+Removing the entire feature is the only way to guarantee zero trademarked strings in the compiled output.
+
+### Verdict
+- `[DO NOT UNDO]` — Do not re-add the news feature. It would reintroduce hundreds of trademarked strings and risk Google Play rejection.
+
+---
+
 ## 2026-05-28 21:35 [Session: UGC Moderation + ToS + game_id rename] — Added content moderation, signup compliance, and API field migration
 
 ### Commits
