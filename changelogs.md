@@ -12,8 +12,7 @@
 
 ### Commits
 - `eb63675` — fix(ui): smooth navbar corners and gold pill fade animation
-- `05cc7af` — docs: update changelogs.md with navbar UI fix
-- `98edd91` — docs: add commit hash to navbar fix changelog entry
+- (changelog updates)
 
 ### Changed
 - **File:** `app/src/main/java/com/mlbb/scrim/ui/components/BottomNav.kt`
