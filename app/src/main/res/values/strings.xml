@@ -53,6 +53,15 @@
     <string name="passwords_not_match">Passwords do not match</string>
     <string name="password_min_length">Password must be at least 6 characters</string>
     <string name="invalid_email">Please enter a valid email</string>
+    <string name="terms_checkbox_label">I agree to the</string>
+    <string name="terms_of_service_link">Terms of Service</string>
+    <string name="privacy_policy_link">Privacy Policy</string>
+    <string name="and">and</string>
+    <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
+    <string name="message_inappropriate">Message blocked: inappropriate language</string>
+    <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
+    <string name="report_image">Report Image</string>
+    <string name="image_reported">Image reported for review</string>
     <string name="take_tour">Take a tour</string>
     <string name="welcome_back_label">Welcome back,</string>
     <string name="player_default">Player</string>

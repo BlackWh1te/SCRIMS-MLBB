@@ -387,4 +387,13 @@
     <string name="top_3_main_heroes_hint">أفضل 3 أبطال رئيسيين (مفصولة بفواصل)</string>
     <string name="tournament_host_badge">مضيف البطولات</string>
     <string name="update_password_sub">تحديث كلمة مرور الحساب</string>
+    <string name="terms_checkbox_label">I agree to the</string>
+    <string name="terms_of_service_link">Terms of Service</string>
+    <string name="privacy_policy_link">Privacy Policy</string>
+    <string name="and">and</string>
+    <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
+    <string name="message_inappropriate">Message blocked: inappropriate language</string>
+    <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
+    <string name="report_image">Report Image</string>
+    <string name="image_reported">Image reported for review</string>
 </resources>

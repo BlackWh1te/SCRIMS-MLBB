@@ -51,7 +51,9 @@ fun SignupScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isCaptchaVerified by remember { mutableStateOf(false) }
+    var termsAgreed by remember { mutableStateOf(false) }
     val captchaError = stringResource(R.string.captcha_verify_human)
+    val termsError = stringResource(R.string.terms_required)
 
     val authState by viewModel.authState.collectAsState()
 
@@ -259,7 +261,66 @@ fun SignupScreen(
                             onVerified = { isCaptchaVerified = it }
                         )
 
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(16.dp))
+
+                        // ── Terms Agreement ─────────────────────────────
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = termsAgreed,
+                                onCheckedChange = { termsAgreed = it; errorMessage = "" },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = GoldPrimary,
+                                    uncheckedColor = TextTertiary
+                                )
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val termsLabel = stringResource(R.string.terms_checkbox_label)
+                            val termsLink = stringResource(R.string.terms_of_service_link)
+                            val andText = stringResource(R.string.and)
+                            val privacyLink = stringResource(R.string.privacy_policy_link)
+                            Text(
+                                text = "$termsLabel ",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = termsLink,
+                                color = GoldPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable {
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                            data = android.net.Uri.parse("https://scrimslegends.app/terms")
+                                        }
+                                    )
+                                }
+                            )
+                            Text(
+                                text = " $andText ",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = privacyLink,
+                                color = GoldPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable {
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                            data = android.net.Uri.parse("https://scrimslegends.app/privacy")
+                                        }
+                                    )
+                                }
+                            )
+                        }
+
+                        Spacer(Modifier.height(20.dp))
 
                         val fillAllFields = stringResource(R.string.fill_all_fields)
                         val passwordsNotMatch = stringResource(R.string.passwords_not_match)
@@ -286,6 +347,7 @@ fun SignupScreen(
                                         password != confirmPassword -> errorMessage = passwordsNotMatch
                                         password.length < 6 -> errorMessage = passwordMinLength
                                         !email.contains("@") -> errorMessage = invalidEmail
+                                        !termsAgreed -> errorMessage = termsError
                                         !isCaptchaVerified -> errorMessage = captchaError
                                         else -> viewModel.signUp(email, password, username, inGameId)
                                     }

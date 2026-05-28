@@ -60,7 +60,7 @@ data class ProfileDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("username") val username: String = "",
     @SerializedName("email") val email: String = "",
-    @SerializedName("mlbb_id") val mlbbId: String? = null,
+    @SerializedName("game_id") val gameId: String? = null,
     @SerializedName("is_admin") val isAdmin: Boolean = false,
     @SerializedName("is_banned") val isBanned: Boolean = false,
     @SerializedName("ban_reason") val banReason: String? = null,
@@ -462,8 +462,8 @@ interface SupabaseApiService {
     ): Response<List<ProfileDto>>
 
     @GET("profiles")
-    suspend fun getProfileByMlbbId(
-        @Query("mlbb_id") mlbbId: String,
+    suspend fun getProfileByGameId(
+        @Query("game_id") gameId: String,
         @Query("select") select: String = "id,is_banned"
     ): Response<List<ProfileDto>>
 

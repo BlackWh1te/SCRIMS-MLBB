@@ -49,6 +49,7 @@ import com.mlbb.scrim.ui.components.ErrorSnackbar
 import com.mlbb.scrim.ui.components.GlassBackButton
 import com.mlbb.scrim.ui.components.PullToRefreshContainer
 import com.mlbb.scrim.ui.theme.*
+import com.mlbb.scrim.util.ContentModerationUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,6 +77,7 @@ fun ChatScreen(
     onCancelMessage : (String) -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
+    var moderationError by remember { mutableStateOf<String?>(null) }
     val listState   = rememberLazyListState()
     val scope       = rememberCoroutineScope()
     val displayedMessages = remember(conversation.messages, messagesWithDelivery) {
@@ -377,6 +379,33 @@ fun ChatScreen(
                         .imePadding()
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
+                    // Moderation error
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = moderationError != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ErrorRed.copy(alpha = 0.10f))
+                                .border(1.dp, ErrorRed.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.ErrorOutline, null,
+                                tint = ErrorRed, modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                moderationError ?: "",
+                                color = ErrorRed, fontSize = 12.sp
+                            )
+                        }
+                    }
                     Row(
                         modifier          = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Bottom
@@ -421,8 +450,17 @@ fun ChatScreen(
                             keyboardActions = KeyboardActions(
                                 onSend = {
                                     if (messageText.isNotBlank()) {
-                                        onSendMessage(messageText)
-                                        messageText = ""
+                                        val result = ContentModerationUtils.validateChatMessage(messageText)
+                                        when (result) {
+                                            is ContentModerationUtils.ValidationResult.Valid -> {
+                                                moderationError = null
+                                                onSendMessage(messageText)
+                                                messageText = ""
+                                            }
+                                            is ContentModerationUtils.ValidationResult.Blocked -> {
+                                                moderationError = result.reason
+                                            }
+                                        }
                                     }
                                 }
                             ),
@@ -445,8 +483,17 @@ fun ChatScreen(
                                 .background(sendBg)
                                 .clickable {
                                     if (sendEnabled) {
-                                        onSendMessage(messageText)
-                                        messageText = ""
+                                        val result = ContentModerationUtils.validateChatMessage(messageText)
+                                        when (result) {
+                                            is ContentModerationUtils.ValidationResult.Valid -> {
+                                                moderationError = null
+                                                onSendMessage(messageText)
+                                                messageText = ""
+                                            }
+                                            is ContentModerationUtils.ValidationResult.Blocked -> {
+                                                moderationError = result.reason
+                                            }
+                                        }
                                     }
                                 },
                             contentAlignment = Alignment.Center

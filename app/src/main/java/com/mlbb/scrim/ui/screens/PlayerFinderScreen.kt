@@ -1161,6 +1161,14 @@ private fun CreatePostSheet(
                         Text(stringResource(R.string.tap_upload_screenshot), color = TextSecondary, fontSize = 13.sp)
                     }
                 }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.image_content_warning),
+                    color = TextTertiary,
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(20.dp))

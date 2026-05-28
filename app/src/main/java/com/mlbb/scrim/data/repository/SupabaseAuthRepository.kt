@@ -84,13 +84,13 @@ class SupabaseAuthRepository(
         val fallbackEmail = authUser?.email ?: secureStorage.getEncrypted(KEY_USER_EMAIL, "")
         val fallbackUsername = (authUser?.userMetadata?.get("username") as? String)
             ?: fallbackEmail.substringBefore('@', "Player")
-        val fallbackInGameId = (authUser?.userMetadata?.get("mlbb_id") as? String).orEmpty()
+        val fallbackInGameId = (authUser?.userMetadata?.get("game_id") as? String).orEmpty()
 
         return UserProfile(
             id = userId,
             username = profileDto?.username?.takeIf { it.isNotBlank() } ?: fallbackUsername,
             email = profileDto?.email?.takeIf { it.isNotBlank() } ?: fallbackEmail,
-            inGameId = profileDto?.mlbbId?.takeIf { it.isNotBlank() } ?: fallbackInGameId,
+            inGameId = profileDto?.gameId?.takeIf { it.isNotBlank() } ?: fallbackInGameId,
             avatarUrl = profileDto?.avatarUrl,
             createdAt = DateUtils.parseIsoToMillis(profileDto?.createdAt),
             xp = rankXp,
@@ -130,7 +130,7 @@ class SupabaseAuthRepository(
         emit(AuthResult.Loading)
         try {
             // Check if MLBB ID is already taken or banned
-            val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+            val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                 val profile = checkResponse.body()!!.first()
                 if (profile.isBanned) {
@@ -186,7 +186,7 @@ class SupabaseAuthRepository(
                     try {
                         val profileUpdate = mapOf(
                             "username" to (pendingUsername.ifBlank { email.substringBefore("@") }),
-                            "mlbb_id" to (pendingInGameId.ifBlank { "" })
+                            "game_id" to (pendingInGameId.ifBlank { "" })
                         )
                         val updateResult = api.updateProfile(PostgrestFilter.eq(authData.user.id), profileUpdate)
                         if (!updateResult.isSuccessful) {
@@ -197,7 +197,7 @@ class SupabaseAuthRepository(
                                     id = authData.user.id,
                                     username = pendingUsername.ifBlank { email.substringBefore("@") },
                                     email = email,
-                                    mlbbId = pendingInGameId.ifBlank { "" }
+                                    gameId = pendingInGameId.ifBlank { "" }
                                 ))
                             } catch (_: Exception) { }
                         }
@@ -300,7 +300,7 @@ class SupabaseAuthRepository(
         emit(AuthResult.Loading)
         try {
             // Check if MLBB ID is already taken or banned
-            val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+            val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                 val profile = checkResponse.body()!!.first()
                 if (profile.isBanned) {
@@ -314,7 +314,7 @@ class SupabaseAuthRepository(
             val response = authApi.signUp(SignUpRequest(
                 email = email,
                 password = password,
-                data = mapOf("username" to username, "mlbb_id" to inGameId)
+                data = mapOf("username" to username, "game_id" to inGameId)
             ))
 
             if (response.isSuccessful) {
@@ -333,7 +333,7 @@ class SupabaseAuthRepository(
                             api.updateProfile(PostgrestFilter.eq(userId), mapOf(
                                 "username" to username,
                                 "email" to email,
-                                "mlbb_id" to inGameId
+                                "game_id" to inGameId
                             ))
                         } catch (_: Exception) {
                         }
@@ -534,7 +534,7 @@ class SupabaseAuthRepository(
         try {
             getUserId()?.let { userId ->
                 // Check if MLBB ID is already taken by someone else
-                val checkResponse = api.getProfileByMlbbId(PostgrestFilter.eq(inGameId))
+                val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
                 if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                     val existing = checkResponse.body()!!.first()
                     if (existing.id != userId) {
@@ -545,7 +545,7 @@ class SupabaseAuthRepository(
 
                 val updateMap = mutableMapOf<String, Any>(
                     "username" to username,
-                    "mlbb_id" to inGameId
+                    "game_id" to inGameId
                 )
                 if (role != null) updateMap["role"] = role
                 if (bio != null) updateMap["bio"] = bio

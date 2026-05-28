@@ -1269,6 +1269,14 @@ private fun InProgressSection(
                         gradient = BlueGradient,
                         height = 48.dp
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.image_content_warning),
+                        color = TextTertiary,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             } else if (myScreenshotUploaded) {
                 Card(
