@@ -8,6 +8,44 @@
 
 ---
 
+## 2026-05-28 22:05 [Session: Trademark Neutralization] — Removed all remaining trademarked strings, URLs, and references from APK
+
+### Commits
+- `53d6a2c` — fix(trademark): neutralize all remaining trademarked strings and URLs
+
+### Changed
+- **File:** `app/src/main/res/values/strings.xml` + all `values-*/strings.xml` (10 locales)
+  - `welcome_back`: "Welcome back, **warrior**" → "Welcome back, **champion**" (warrior = MLBB's lowest rank)
+  - `climb_ranks_desc`: removed exact MLBB progression "7 tiers from Bronze to Grandmaster" → "rise through the ranks"
+  - `rank_example`: "e.g. **Mythic 52 stars**" → "e.g. Diamond 3" (Mythic + star count = MLBB-specific)
+  - `hero_examples`: "**Fanny, Gusion, Lancelot**" → "Phoenix, Shadow, Blade" (actual MLBB hero names)
+  - `your_mlbb_game_id` resource key → `your_game_id` (key contained trademark)
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/PlayerFinderScreen.kt`
+  - Updated `R.string.your_mlbb_game_id` → `R.string.your_game_id`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/navigation/AuthNavigation.kt`
+  - Deep link scheme: `mlbbscrim://app/...` → `scrimslegends://app/...`
+  - Deep link host: `https://mlbbscrim.app/...` → `https://scrimslegends.app/...`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/ProfileScreen.kt`
+  - Admin panel URL: `admin-panel-**mlbb**.vercel.app` → `admin.scrimslegends.app`
+- **File:** `app/src/main/java/com/mlbb/scrim/data/repository/SupabaseAuthRepository.kt`
+  - Comments: "Check if **MLBB ID** is already taken" → "Check if **Game ID** is already taken" (3 occurrences)
+
+### Why
+After removing the news feature (commit `92e65aa`), a second audit found 10 remaining trademark references scattered across strings, URLs, and comments. These were all user-facing or APK-visible:
+1. Hero names (Fanny, Gusion, Lancelot) in string resources
+2. "Mythic 52 stars" example in player profile
+3. "warrior" welcome text (MLBB's Warrior rank)
+4. "7 tiers from Bronze to Grandmaster" progression (exact MLBB rank order)
+5. `your_mlbb_game_id` string key name
+6. `mlbbscrim.app` deep link URLs
+7. `admin-panel-mlbb.vercel.app` admin panel domain
+8. "MLBB ID" in code comments
+
+### Verdict
+- `[DO NOT UNDO]` — Any re-introduction of trademarked game names, hero names, rank names, or URLs into the APK would risk Google Play rejection.
+
+---
+
 ## 2026-05-28 21:50 [Session: Remove News Feature] — Completely deleted news feature to eliminate all trademarked content from APK
 
 ### Commits
