@@ -12,7 +12,7 @@
 
 ### Commits
 - `cfc3423` — docs: update changelogs.md with skill creation entry
-- (pending) — feat: enhance changelog-guardian with auto-enforcement + helper script
+- `1282e58` — feat: enhance changelog-guardian with auto-enforcement + helper script
 
 ### Changed
 - **File:** `.devin/skills/changelog-guardian/SKILL.md` — Added YAML frontmatter (`name`, `preamble-tier`, `description`, `triggers`), preamble bash script that checks changelog status on invoke, expanded invocation section with voice triggers
