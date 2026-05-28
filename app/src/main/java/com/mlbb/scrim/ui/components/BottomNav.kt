@@ -236,12 +236,6 @@ private fun DockItem(
         label = "dockLabelColor"
     )
 
-    val indicatorAlpha by animateFloatAsState(
-        targetValue   = if (isSelected) 1f else 0f,
-        animationSpec = tween(180, easing = AppEaseOutCubic),
-        label = "indicatorAlpha"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxHeight()
@@ -253,39 +247,46 @@ private fun DockItem(
         contentAlignment = Alignment.Center
     ) {
         // Active background pill — gold-tinted per MLBB design
-        // Always render so alpha animation gives smooth fade-in AND fade-out
-        Box(
-            modifier = Modifier
-                .size(
-                    width  = if (responsive.isCompact) 42.dp else 48.dp,
-                    height = if (responsive.isCompact) 36.dp else 40.dp
-                )
-                .alpha(indicatorAlpha)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            GoldPrimary.copy(alpha = 0.18f),
-                            GoldPrimary.copy(alpha = 0.08f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .drawBehind {
-                    // Gold top border highlight
-                    drawLine(
-                        brush = Brush.horizontalGradient(
+        // Uses AnimatedVisibility for smooth scale+fade instead of raw alpha
+        AnimatedVisibility(
+            visible = isSelected,
+            enter   = scaleIn(animationSpec = tween(150, easing = AppEaseOutCubic), initialScale = 0.85f) +
+                      fadeIn(animationSpec = tween(150, easing = AppEaseOutCubic)),
+            exit    = scaleOut(animationSpec = tween(120, easing = FastOutLinearInEasing), targetScale = 0.85f) +
+                      fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(
+                        width  = if (responsive.isCompact) 42.dp else 48.dp,
+                        height = if (responsive.isCompact) 36.dp else 40.dp
+                    )
+                    .background(
+                        brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.Transparent,
-                                GoldPrimary.copy(alpha = 0.6f),
-                                Color.Transparent
+                                GoldPrimary.copy(alpha = 0.12f),
+                                GoldPrimary.copy(alpha = 0.04f)
                             )
                         ),
-                        start = Offset(0f, 0.5f),
-                        end = Offset(size.width, 0.5f),
-                        strokeWidth = 1.5f
+                        shape = RoundedCornerShape(12.dp)
                     )
-                }
-        )
+                    .drawBehind {
+                        // Gold top border highlight
+                        drawLine(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    GoldPrimary.copy(alpha = 0.5f),
+                                    Color.Transparent
+                                )
+                            ),
+                            start = Offset(0f, 0.5f),
+                            end = Offset(size.width, 0.5f),
+                            strokeWidth = 1.5f
+                        )
+                    }
+            )
+        }
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -336,7 +337,6 @@ private fun DockItem(
                 Box(
                     modifier = Modifier
                         .size(4.dp)
-                        .alpha(indicatorAlpha)
                         .background(GoldPrimary, CircleShape)
                 )
             }
