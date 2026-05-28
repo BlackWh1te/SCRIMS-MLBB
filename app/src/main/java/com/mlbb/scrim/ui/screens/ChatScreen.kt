@@ -40,8 +40,10 @@ import androidx.compose.ui.res.stringResource
 import coil.compose.SubcomposeAsyncImage
 import com.mlbb.scrim.R
 import com.mlbb.scrim.data.model.Conversation
+import com.mlbb.scrim.data.model.DeliveryStatus
 import com.mlbb.scrim.data.model.Message
 import com.mlbb.scrim.data.model.MessageType
+import com.mlbb.scrim.data.model.MessageWithDelivery
 import com.mlbb.scrim.data.model.Team
 import com.mlbb.scrim.ui.components.ErrorSnackbar
 import com.mlbb.scrim.ui.components.GlassBackButton
@@ -68,15 +70,22 @@ fun ChatScreen(
     onDismissError  : () -> Unit = {},
     teamInfo        : Team? = null,
     isRefreshing    : Boolean = false,
-    onRefresh       : () -> Unit = {}
+    onRefresh       : () -> Unit = {},
+    messagesWithDelivery: List<MessageWithDelivery> = emptyList(),
+    onRetryMessage  : (String) -> Unit = {},
+    onCancelMessage : (String) -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
     val listState   = rememberLazyListState()
     val scope       = rememberCoroutineScope()
+    val displayedMessages = remember(conversation.messages, messagesWithDelivery) {
+        if (messagesWithDelivery.isNotEmpty()) messagesWithDelivery
+        else conversation.messages.map { MessageWithDelivery(message = it) }
+    }
 
-    LaunchedEffect(conversation.messages.size) {
-        if (conversation.messages.isNotEmpty()) {
-            listState.animateScrollToItem(conversation.messages.size - 1)
+    LaunchedEffect(displayedMessages.size) {
+        if (displayedMessages.isNotEmpty()) {
+            listState.animateScrollToItem(displayedMessages.size - 1)
         }
     }
 
@@ -248,7 +257,7 @@ fun ChatScreen(
                     onRefresh = onRefresh,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (conversation.messages.isEmpty()) {
+                    if (displayedMessages.isEmpty()) {
                         EmptyChatState(otherTeamName = otherTeam)
                     } else {
                         LazyColumn(
@@ -257,11 +266,12 @@ fun ChatScreen(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            itemsIndexed(conversation.messages, key = { _, msg -> msg.id }) { index, message ->
+                            itemsIndexed(displayedMessages, key = { _, item -> item.clientMessageId ?: item.message.id }) { index, item ->
+                                val message = item.message
                                 val isFromMe = message.senderId == currentUserId
 
-                                val prevMessage = if (index > 0) conversation.messages[index - 1] else null
-                                val nextMessage = if (index < conversation.messages.size - 1) conversation.messages[index + 1] else null
+                                val prevMessage = if (index > 0) displayedMessages[index - 1].message else null
+                                val nextMessage = if (index < displayedMessages.size - 1) displayedMessages[index + 1].message else null
 
                                 val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
                                 val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
@@ -274,6 +284,10 @@ fun ChatScreen(
                                     isFromMe       = isFromMe,
                                     isFirstInGroup = isFirstInGroup,
                                     isLastInGroup  = isLastInGroup,
+                                    deliveryStatus = item.status,
+                                    clientMessageId = item.clientMessageId,
+                                    onRetryMessage = onRetryMessage,
+                                    onCancelMessage = onCancelMessage,
                                     onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
                                 )
                             }
@@ -292,7 +306,7 @@ fun ChatScreen(
                         .padding(bottom = 12.dp, end = 16.dp)
                 ) {
                     SmallFloatingActionButton(
-                        onClick        = { scope.launch { listState.animateScrollToItem(conversation.messages.size - 1) } },
+                        onClick        = { scope.launch { listState.animateScrollToItem(displayedMessages.size - 1) } },
                         containerColor = GoldPrimary,
                         contentColor   = DarkBlue,
                         shape          = CircleShape,
@@ -450,6 +464,10 @@ private fun MessageBubble(
     isFromMe      : Boolean,
     isFirstInGroup: Boolean,
     isLastInGroup : Boolean,
+    deliveryStatus: DeliveryStatus = DeliveryStatus.SENT,
+    clientMessageId: String? = null,
+    onRetryMessage: (String) -> Unit = {},
+    onCancelMessage: (String) -> Unit = {},
     onViewTeamInfo: () -> Unit
 ) {
     val topStartR = if (isFromMe || !isFirstInGroup) 18.dp else 4.dp
@@ -461,8 +479,9 @@ private fun MessageBubble(
         bottomEnd   = 18.dp
     )
 
+    // Sent: blue→navy gradient with subtle gold shimmer at top
     val myBubbleBrush = Brush.linearGradient(
-        colors = BlueGradient,
+        colors = listOf(Color(0xFF1E6FD9), Color(0xFF1250A0), Color(0xFF0D3B7A)),
         start  = Offset(0f, 0f),
         end    = Offset(0f, Float.POSITIVE_INFINITY)
     )
@@ -470,21 +489,21 @@ private fun MessageBubble(
     Box(
         modifier         = Modifier
             .fillMaxWidth()
-            .padding(top = if (isFirstInGroup) 8.dp else 1.dp),
+            .padding(top = if (isFirstInGroup) 10.dp else 2.dp),
         contentAlignment = if (isFromMe) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Column(
             horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start,
-            modifier            = Modifier.widthIn(max = 300.dp)
+            modifier            = Modifier.widthIn(max = 310.dp)
         ) {
-            // Sender name for group messages
+            // Sender name for received messages in first position
             if (!isFromMe && isFirstInGroup) {
                 Text(
-                    text     = message.senderName,
-                    fontSize = 11.sp,
+                    text       = message.senderName,
+                    fontSize   = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color    = BluePrimary,
-                    modifier = Modifier.padding(start = 12.dp, bottom = 4.dp)
+                    color      = BluePrimary,
+                    modifier   = Modifier.padding(start = 14.dp, bottom = 3.dp)
                 )
             }
 
@@ -494,13 +513,21 @@ private fun MessageBubble(
                     .clip(bubbleShape)
                     .background(
                         if (isFromMe) myBubbleBrush
-                        else Brush.linearGradient(listOf(SurfaceCard, SurfaceCard))
+                        else Brush.linearGradient(
+                            listOf(
+                                SurfaceElevated,
+                                SurfaceCard
+                            )
+                        )
                     )
                     .then(
-                        if (!isFromMe) Modifier.border(1.dp, GlassBorder, bubbleShape)
-                        else Modifier
+                        if (!isFromMe) Modifier.border(
+                            0.5.dp,
+                            GlassBorder,
+                            bubbleShape
+                        ) else Modifier
                     )
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(horizontal = 13.dp, vertical = 9.dp)
             ) {
                 when (message.type) {
                     MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
@@ -533,12 +560,51 @@ private fun MessageBubble(
                     if (isFromMe) {
                         Spacer(Modifier.width(4.dp))
                         Icon(
-                            imageVector        = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Done,
+                            imageVector        = when {
+                                deliveryStatus == DeliveryStatus.FAILED  -> Icons.Default.Error
+                                deliveryStatus == DeliveryStatus.SENDING ||
+                                deliveryStatus == DeliveryStatus.PENDING -> Icons.Default.Schedule
+                                message.isRead                           -> Icons.Default.DoneAll
+                                else                                     -> Icons.Default.Done
+                            },
                             contentDescription = null,
-                            tint               = if (message.isRead) AndroidTeal else TextTertiary,
+                            tint               = when {
+                                deliveryStatus == DeliveryStatus.FAILED  -> ErrorRed
+                                deliveryStatus == DeliveryStatus.SENDING ||
+                                deliveryStatus == DeliveryStatus.PENDING -> WarningOrange.copy(alpha = 0.8f)
+                                message.isRead                           -> GoldPrimary.copy(alpha = 0.85f)
+                                else                                     -> TextTertiary.copy(alpha = 0.7f)
+                            },
                             modifier           = Modifier.size(12.dp)
                         )
                     }
+                }
+            }
+
+            if (isFromMe && deliveryStatus == DeliveryStatus.FAILED && clientMessageId != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(end = 8.dp, bottom = 4.dp)
+                ) {
+                    Text(
+                        text = "Failed",
+                        fontSize = 10.sp,
+                        color = ErrorRed
+                    )
+                    Text(
+                        text = "Retry",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GoldPrimary,
+                        modifier = Modifier.clickable { onRetryMessage(clientMessageId) }
+                    )
+                    Text(
+                        text = "Cancel",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                        modifier = Modifier.clickable { onCancelMessage(clientMessageId) }
+                    )
                 }
             }
         }
