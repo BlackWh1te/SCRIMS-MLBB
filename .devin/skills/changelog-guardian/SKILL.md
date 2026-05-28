@@ -1,3 +1,22 @@
+---
+name: changelog-guardian
+preamble-tier: 1
+description: |
+  Prevent AI sessions from overwriting each other's work. Enforces reading
+  changelogs.md before code changes and updating it after every commit.
+  Stops infinite fix loops where one AI's correct fix is undone by the next.
+triggers:
+  - changelog
+  - read changelog
+  - guardian
+  - check changelog
+  - did we already fix this
+  - who changed this
+  - why was this changed
+  - dont undo
+  - do not undo
+---
+
 # Changelog Guardian — AI Session Coordination
 
 Prevent AI sessions from overwriting each other's work. Every commit is recorded in `changelogs.md`. Every new session MUST read `changelogs.md` before touching code.
@@ -123,6 +142,41 @@ Gradle changes affect the entire build. Mark these as `[DO NOT UNDO]` unless the
 3. Add to changelogs.md: `[CORRECTION] Reverted accidental undo of <previous change>. Restored original fix.`
 4. Explain what you learned so future AIs don't make the same mistake
 
+## Preamble (runs when skill is invoked)
+
+```bash
+# Check if changelogs.md exists and show its status
+if [ -f "changelogs.md" ]; then
+    echo "=== CHANGELOG STATUS ==="
+    echo "File: changelogs.md"
+    echo "Last modified: $(git log -1 --format=%cd --date=iso -- changelogs.md 2>/dev/null || echo 'Not tracked by git')"
+    echo ""
+    echo "Latest entry heading:"
+    grep "^## " changelogs.md | head -1 || echo "No entries found"
+    echo ""
+    echo "DO NOT UNDO count: $(grep -c '\[DO NOT UNDO\]' changelogs.md 2>/dev/null || echo 0)"
+    echo "INTENTIONAL FIX count: $(grep -c '\[INTENTIONAL FIX\]' changelogs.md 2>/dev/null || echo 0)"
+    echo ""
+    echo "Latest commits not yet in changelog (if any):"
+    # Check if latest commit is mentioned in changelogs.md
+    LATEST_COMMIT=$(git log -1 --format=%h 2>/dev/null)
+    if [ -n "$LATEST_COMMIT" ]; then
+        if grep -q "$LATEST_COMMIT" changelogs.md 2>/dev/null; then
+            echo "✅ Latest commit ($LATEST_COMMIT) is recorded in changelog"
+        else
+            echo "⚠️  Latest commit ($LATEST_COMMIT) is NOT in changelog — update required!"
+        fi
+    fi
+    echo "========================"
+else
+    echo "❌ changelogs.md NOT FOUND — this should exist! Create it immediately."
+fi
+```
+
 ## Invocation
 
-This skill is automatically active for all sessions on this repo. You do not need to invoke it. But if you want to force a re-read of changelogs.md, say: **"Guardian, read the changelog."**
+**To invoke this skill directly:** say `/changelog-guardian`
+
+**Voice triggers:** "changelog", "read changelog", "guardian", "check changelog", "did we already fix this", "who changed this", "why was this changed", "don't undo", "do not undo"
+
+**This skill is also enforced via `CLAUDE.md`** — every AI session on this repo automatically reads the changelog rules from `CLAUDE.md` at session start.

@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-05-28 16:55 [Session: Skill Enhancement] — Improved changelog-guardian skill + CLAUDE.md integration
+
+### Commits
+- `cfc3423` — docs: update changelogs.md with skill creation entry
+- (pending) — feat: enhance changelog-guardian with auto-enforcement + helper script
+
+### Changed
+- **File:** `.devin/skills/changelog-guardian/SKILL.md` — Added YAML frontmatter (`name`, `preamble-tier`, `description`, `triggers`), preamble bash script that checks changelog status on invoke, expanded invocation section with voice triggers
+- **File:** `CLAUDE.md` — Added **Changelog Guardian — CRITICAL RULES FOR ALL AI SESSIONS** section with 3 mandatory rules, known intentional trade-offs list, and explanation of the infinite loop problem
+- **File:** `tools/changelog-check.sh` — New verification script. Run `bash tools/changelog-check.sh` to check if latest commit is recorded in changelogs.md and get a summary of `[DO NOT UNDO]` / `[INTENTIONAL FIX]` counts
+
+### Why
+The original skill was documentation-only — AIs had to manually choose to follow it. Now it is enforced through two channels:
+1. **CLAUDE.md** is automatically loaded at the start of EVERY AI session on this repo
+2. **Skill preamble** runs bash checks when the skill is explicitly invoked via `/changelog-guardian`
+
+This dual enforcement means future AIs cannot miss the changelog rules even if they don't know about the skill.
+
+### Verdict
+- `[DO NOT UNDO]` — The CLAUDE.md changelog rules. Do not remove or modify without user approval.
+- `[DO NOT UNDO]` — The `tools/changelog-check.sh` script. Keep it for manual/CI verification.
+
+---
+
 ## 2026-05-28 16:45 [Session: Skill Creation] — Created changelog-guardian skill
 
 ### Commits
