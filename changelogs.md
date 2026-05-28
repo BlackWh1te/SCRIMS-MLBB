@@ -8,6 +8,23 @@
 
 ---
 
+## 2026-05-28 16:45 [Session: Skill Creation] — Created changelog-guardian skill
+
+### Commits
+- `fcec366` — feat: add changelog-guardian skill and initial changelogs.md
+
+### Changed
+- **File:** `.devin/skills/changelog-guardian/SKILL.md` — New skill created to coordinate AI sessions
+- **File:** `changelogs.md` — Initial changelog with today's session history
+
+### Why
+User experienced infinite loop where one AI fixes something correctly, another AI audits and reverts it, then another re-fixes it. This skill prevents that by enforcing: (1) read changelog before work, (2) write changelog after commit, (3) never undo [DO NOT UNDO] changes without explicit user approval.
+
+### Verdict
+- `[DO NOT UNDO]` — This skill itself. Do not remove or modify without user approval.
+
+---
+
 ## 2026-05-28 16:31 [Session: Health Check + Quick Wins + Deep Audit] — Comprehensive codebase audit and quick wins
 
 ### Commits
