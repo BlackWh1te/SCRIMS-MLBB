@@ -43,8 +43,8 @@ data class MatchResult(
 
     val pendingReporterTeamId: String?
         get() = when {
-            teamAReport == null -> teamAId
-            teamBReport == null -> teamBId
+            teamAReport == null -> teamAId.takeIf { it.isNotBlank() }
+            teamBReport == null -> teamBId.takeIf { it.isNotBlank() }
             else -> null
         }
 }

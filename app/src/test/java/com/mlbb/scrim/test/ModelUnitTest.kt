@@ -187,8 +187,8 @@ class ModelUnitTest {
     @Test
     fun `Scrim chat timing calculations are correct`() {
         val now = System.currentTimeMillis()
-        val futureScrim = Scrim(scheduledTime = now + 3600000)
-        assertEquals(now + 3600000 - 7200000, futureScrim.chatOpensAt)
+        val futureScrim = Scrim(scheduledTime = now + 10800000)
+        assertEquals(now + 10800000 - 7200000, futureScrim.chatOpensAt)
         assertFalse(futureScrim.isChatOpen)
 
         val pastScrim = Scrim(scheduledTime = now - 3600000)

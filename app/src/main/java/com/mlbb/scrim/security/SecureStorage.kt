@@ -3,9 +3,9 @@ package com.mlbb.scrim.security
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import android.util.Base64
 import java.security.KeyStore
 import java.security.SecureRandom
+import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -53,13 +53,13 @@ class SecureStorage(context: Context) {
 
         val existingKey = sharedPreferences.getString(keyAlias, null)
         if (existingKey != null) {
-            val keyBytes = Base64.decode(existingKey, Base64.DEFAULT)
+            val keyBytes = Base64.getMimeDecoder().decode(existingKey)
             return SecretKeySpec(keyBytes, "AES")
         }
         val keyGenerator = KeyGenerator.getInstance("AES")
         keyGenerator.init(256)
         val key = keyGenerator.generateKey()
-        val encodedKey = Base64.encodeToString(key.encoded, Base64.DEFAULT)
+        val encodedKey = Base64.getEncoder().encodeToString(key.encoded)
         sharedPreferences.edit().putString(keyAlias, encodedKey).apply()
         return key
     }
@@ -70,12 +70,12 @@ class SecureStorage(context: Context) {
         val iv = cipher.iv
         val encryptedData = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
         val combined = iv + encryptedData
-        return Base64.encodeToString(combined, Base64.DEFAULT)
+        return Base64.getEncoder().encodeToString(combined)
     }
 
     fun decrypt(encryptedData: String): String {
         try {
-            val combined = Base64.decode(encryptedData, Base64.DEFAULT)
+            val combined = Base64.getMimeDecoder().decode(encryptedData)
             val iv = combined.copyOfRange(0, 12)
             val data = combined.copyOfRange(12, combined.size)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -105,12 +105,13 @@ class SecureStorage(context: Context) {
         val random = SecureRandom()
         val bytes = ByteArray(length)
         random.nextBytes(bytes)
-        return Base64.encodeToString(bytes, Base64.URL_SAFE).trimEnd('=')
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 
     companion object {
         @Volatile
         private var instance: SecureStorage? = null
+        @JvmStatic
         fun getInstance(context: Context): SecureStorage {
             return instance ?: synchronized(this) {
                 instance ?: SecureStorage(context.applicationContext).also { instance = it }

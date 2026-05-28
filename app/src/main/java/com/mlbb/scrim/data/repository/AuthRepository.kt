@@ -22,11 +22,13 @@ class AuthRepository : AuthRepositoryInterface {
 
     private var currentUser: String? = null
     private var userProfile: UserProfile? = null
+    private var storedPassword: String? = null
 
     init {
         // Reset to logged out state on initialization
         currentUser = null
         userProfile = null
+        storedPassword = null
     }
 
     /**
@@ -59,6 +61,7 @@ class AuthRepository : AuthRepositoryInterface {
         if (isVerificationExpired()) {
             currentUser = null
             userProfile = null
+            storedPassword = null
             return true
         }
         return false
@@ -92,6 +95,7 @@ class AuthRepository : AuthRepositoryInterface {
         kotlinx.coroutines.delay(1000)
         if (token.length == 8 && token.all { it.isDigit() }) {
             userProfile = userProfile?.copy(emailVerified = true)
+            storedPassword = password
             emit(AuthResult.Success)
         } else {
             emit(AuthResult.Error("Invalid code. Please enter the 8-digit code from your email."))
@@ -127,6 +131,7 @@ class AuthRepository : AuthRepositoryInterface {
         // Mock validation
         if (email.contains("@") && password.length >= 6 && username.isNotBlank()) {
             currentUser = email
+            storedPassword = password
             userProfile = UserProfile(
                 id = java.util.UUID.randomUUID().toString(),
                 username = username,
@@ -212,6 +217,7 @@ class AuthRepository : AuthRepositoryInterface {
         kotlinx.coroutines.delay(500) // Simulate network delay
         currentUser = null
         userProfile = null
+        storedPassword = null
         emit(AuthResult.Success)
     }
 
@@ -220,6 +226,7 @@ class AuthRepository : AuthRepositoryInterface {
         kotlinx.coroutines.delay(800) // Simulate network delay
         currentUser = null
         userProfile = null
+        storedPassword = null
         emit(AuthResult.Success)
     }
     
@@ -265,7 +272,7 @@ class AuthRepository : AuthRepositoryInterface {
         }
 
         // Mock validation: require password verification
-        if (currentPassword.length < 6) {
+        if (currentPassword.length < 6 || storedPassword?.let { currentPassword != it } == true) {
             emit(AuthResult.Error("Current password is incorrect."))
             return@flow
         }
@@ -291,7 +298,7 @@ class AuthRepository : AuthRepositoryInterface {
         }
 
         // Mock validation
-        if (currentPassword.length < 6) {
+        if (currentPassword.length < 6 || storedPassword?.let { currentPassword != it } == true) {
             emit(AuthResult.Error("Current password is incorrect."))
             return@flow
         }
@@ -311,6 +318,7 @@ class AuthRepository : AuthRepositoryInterface {
             return@flow
         }
 
+        storedPassword = newPassword
         emit(AuthResult.Success)
     }
 

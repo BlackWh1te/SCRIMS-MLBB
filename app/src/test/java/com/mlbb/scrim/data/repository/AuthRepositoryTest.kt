@@ -3,6 +3,7 @@ package com.mlbb.scrim.data.repository
 import com.mlbb.scrim.data.model.AuthResult
 import com.mlbb.scrim.data.model.RankTier
 import com.mlbb.scrim.data.model.UserProfile
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -16,6 +17,12 @@ class AuthRepositoryTest {
     @Before
     fun setup() {
         repository = AuthRepository()
+    }
+
+    private suspend fun Flow<AuthResult>.finalResult(): AuthResult {
+        var result: AuthResult? = null
+        collect { result = it }
+        return requireNotNull(result)
     }
 
     // ─── Verification window tests ───
@@ -39,13 +46,13 @@ class AuthRepositoryTest {
 
     @Test
     fun `sendOtp returns EmailNotVerified for valid email`() = runBlocking {
-        val result = repository.sendOtp("test@example.com", "TestUser", "12345").first()
+        val result = repository.sendOtp("test@example.com", "TestUser", "12345").finalResult()
         assertTrue(result is AuthResult.EmailNotVerified)
     }
 
     @Test
     fun `sendOtp returns Error for invalid email`() = runBlocking {
-        val result = repository.sendOtp("invalid-email", "TestUser", "12345").first()
+        val result = repository.sendOtp("invalid-email", "TestUser", "12345").finalResult()
         assertTrue(result is AuthResult.Error)
     }
 
@@ -60,11 +67,7 @@ class AuthRepositoryTest {
     @Test
     fun `verifyOtp returns Success for 8-digit code`() = runBlocking {
         // First send OTP to create a profile
-        repository.sendOtp("test@example.com", "TestUser", "12345").first()
-        val result = repository.verifyOtp("test@example.com", "12345678", "password123").first()
-        // After first() which returns Loading, we need to get the final result
-        // Actually first() gets the first emission which is Loading...
-        // Let's collect all results
+        repository.sendOtp("test@example.com", "TestUser", "12345").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.verifyOtp("test@example.com", "12345678", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -72,7 +75,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `verifyOtp returns Error for non-8-digit code`() = runBlocking {
-        repository.sendOtp("test@example.com", "TestUser", "12345").first()
+        repository.sendOtp("test@example.com", "TestUser", "12345").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.verifyOtp("test@example.com", "1234", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -80,7 +83,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `verifyOtp returns Error for alphabetic code`() = runBlocking {
-        repository.sendOtp("test@example.com", "TestUser", "12345").first()
+        repository.sendOtp("test@example.com", "TestUser", "12345").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.verifyOtp("test@example.com", "abcdefgh", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -121,9 +124,9 @@ class AuthRepositoryTest {
     @Test
     fun `signIn returns Success for valid credentials when verified`() = runBlocking {
         // Create a verified profile first
-        repository.signUp("verified@example.com", "password123", "User", "game123").first()
+        repository.signUp("verified@example.com", "password123", "User", "game123").finalResult()
         // Sign out and sign in again - mock sign-in creates verified profile
-        repository.signOut().first()
+        repository.signOut().finalResult()
         val results = mutableListOf<AuthResult>()
         repository.signIn("verified@example.com", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -145,8 +148,8 @@ class AuthRepositoryTest {
 
     @Test
     fun `signIn returns EmailNotVerified when profile is unverified`() = runBlocking {
-        repository.signUp("unverified@example.com", "password123", "User", "game123").first()
-        repository.signOut().first()
+        repository.signUp("unverified@example.com", "password123", "User", "game123").finalResult()
+        repository.signOut().finalResult()
         val results = mutableListOf<AuthResult>()
         repository.signIn("unverified@example.com", "password123").collect { results.add(it) }
         // The mock sign-in creates a verified profile if none exists, so this
@@ -166,8 +169,8 @@ class AuthRepositoryTest {
 
     @Test
     fun `signOut clears current user`() = runBlocking {
-        repository.signUp("test@example.com", "password123", "User", "game123").first()
-        repository.signOut().first()
+        repository.signUp("test@example.com", "password123", "User", "game123").finalResult()
+        repository.signOut().finalResult()
         assertNull(repository.getCurrentUser())
     }
 
@@ -184,7 +187,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `confirmEmail returns Success when not expired`() = runBlocking {
-        repository.signUp("confirm@example.com", "password123", "User", "game123").first()
+        repository.signUp("confirm@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.confirmEmail().collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -213,7 +216,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateProfile returns Error when no user`() = runBlocking {
-        repository.signOut().first()
+        repository.signOut().finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateProfile("NewName", "newGameId").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -221,7 +224,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateProfile returns Success when user exists`() = runBlocking {
-        repository.signUp("update@example.com", "password123", "OldName", "oldGameId").first()
+        repository.signUp("update@example.com", "password123", "OldName", "oldGameId").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateProfile("NewName", "newGameId").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -231,7 +234,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateEmail returns Error when no user`() = runBlocking {
-        repository.signOut().first()
+        repository.signOut().finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateEmail("new@example.com", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -239,7 +242,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateEmail returns Error for short password`() = runBlocking {
-        repository.signUp("email@example.com", "password123", "User", "game123").first()
+        repository.signUp("email@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateEmail("new@example.com", "short").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -247,7 +250,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateEmail returns Error for invalid email`() = runBlocking {
-        repository.signUp("email@example.com", "password123", "User", "game123").first()
+        repository.signUp("email@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateEmail("invalid", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -255,7 +258,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updateEmail returns Success for valid input`() = runBlocking {
-        repository.signUp("email@example.com", "password123", "User", "game123").first()
+        repository.signUp("email@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updateEmail("new@example.com", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -265,7 +268,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Error when no user`() = runBlocking {
-        repository.signOut().first()
+        repository.signOut().finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("old", "new", "new").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -273,7 +276,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Error for short current password`() = runBlocking {
-        repository.signUp("pw@example.com", "password123", "User", "game123").first()
+        repository.signUp("pw@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("short", "newpassword", "newpassword").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -281,7 +284,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Error for short new password`() = runBlocking {
-        repository.signUp("pw@example.com", "password123", "User", "game123").first()
+        repository.signUp("pw@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("password123", "short", "short").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -289,7 +292,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Error when passwords do not match`() = runBlocking {
-        repository.signUp("pw@example.com", "password123", "User", "game123").first()
+        repository.signUp("pw@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("password123", "newpass1", "newpass2").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -297,7 +300,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Error when new equals current`() = runBlocking {
-        repository.signUp("pw@example.com", "password123", "User", "game123").first()
+        repository.signUp("pw@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("password123", "password123", "password123").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -305,7 +308,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `updatePassword returns Success for valid change`() = runBlocking {
-        repository.signUp("pw@example.com", "password123", "User", "game123").first()
+        repository.signUp("pw@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<AuthResult>()
         repository.updatePassword("password123", "newpassword", "newpassword").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Success })
@@ -315,28 +318,28 @@ class AuthRepositoryTest {
 
     @Test
     fun `getCurrentUser returns null after signOut`() = runBlocking {
-        repository.signUp("getter@example.com", "password123", "User", "game123").first()
-        repository.signOut().first()
+        repository.signUp("getter@example.com", "password123", "User", "game123").finalResult()
+        repository.signOut().finalResult()
         assertNull(repository.getCurrentUser())
     }
 
     @Test
     fun `getUserProfile returns null after signOut`() = runBlocking {
-        repository.signUp("getter@example.com", "password123", "User", "game123").first()
-        repository.signOut().first()
+        repository.signUp("getter@example.com", "password123", "User", "game123").finalResult()
+        repository.signOut().finalResult()
         assertNull(repository.getUserProfile())
     }
 
     @Test
     fun `isLoggedIn returns false after signOut`() = runBlocking {
-        repository.signUp("getter@example.com", "password123", "User", "game123").first()
-        repository.signOut().first()
+        repository.signUp("getter@example.com", "password123", "User", "game123").finalResult()
+        repository.signOut().finalResult()
         assertFalse(repository.isLoggedIn())
     }
 
     @Test
     fun `isLoggedIn returns true after signUp`() = runBlocking {
-        repository.signUp("loggedin@example.com", "password123", "User", "game123").first()
+        repository.signUp("loggedin@example.com", "password123", "User", "game123").finalResult()
         assertTrue(repository.isLoggedIn())
     }
 

@@ -26,8 +26,8 @@ class RegionalRankTest {
     }
 
     @Test
-    fun `fromWins returns TOP3 for MCK with 15 wins`() {
-        assertEquals(RegionalRank.TOP3, RegionalRank.fromWins(wins = 15, region = "MCK"))
+    fun `fromWins returns null for unsupported MCK region`() {
+        assertNull(RegionalRank.fromWins(wins = 15, region = "MCK"))
     }
 
     @Test
@@ -51,12 +51,11 @@ class RegionalRankTest {
     }
 
     @Test
-    fun `RU regions include KRD MSK EKB MCK`() {
+    fun `RU regions include KRD MSK EKB`() {
         // These should all return non-null for sufficient wins
         assertNotNull(RegionalRank.fromWins(wins = 50, region = "KRD"))
         assertNotNull(RegionalRank.fromWins(wins = 50, region = "MSK"))
         assertNotNull(RegionalRank.fromWins(wins = 50, region = "EKB"))
-        assertNotNull(RegionalRank.fromWins(wins = 50, region = "MCK"))
     }
 
     @Test

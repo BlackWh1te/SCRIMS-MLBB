@@ -7,7 +7,9 @@ import com.mlbb.scrim.data.model.Team
 import com.mlbb.scrim.data.model.TeamApplication
 import com.mlbb.scrim.data.model.TeamApplicationStatus
 import com.mlbb.scrim.data.model.TeamInvite
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -21,6 +23,11 @@ class TeamRepository : TeamRepositoryInterface {
     private val teams = mutableListOf<Team>()
     private val invites = mutableListOf<TeamInvite>()
     private var currentTeamId: String? = null
+
+    private suspend fun <T> FlowCollector<Result<T>>.emitFailureUnlessCancelled(e: Exception) {
+        if (e is CancellationException) throw e
+        emit(Result.failure(e))
+    }
     
     override suspend fun createTeam(name: String, leaderId: String, description: String, isOpenForApplications: Boolean): Flow<Result<Team>> = flow {
         kotlinx.coroutines.delay(500) // Simulate network delay
@@ -44,7 +51,7 @@ class TeamRepository : TeamRepositoryInterface {
             currentTeamId = team.id
             emit(Result.success(team))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
     
@@ -96,7 +103,7 @@ class TeamRepository : TeamRepositoryInterface {
             teams[teamIndex] = updatedTeam
             emit(Result.success(updatedTeam))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
     
@@ -125,7 +132,7 @@ class TeamRepository : TeamRepositoryInterface {
             teams[teamIndex] = updatedTeam
             emit(Result.success(updatedTeam))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
     
@@ -170,7 +177,7 @@ class TeamRepository : TeamRepositoryInterface {
             }
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
     
@@ -236,7 +243,7 @@ class TeamRepository : TeamRepositoryInterface {
             invites.add(invite)
             emit(Result.success(invite))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -283,7 +290,7 @@ class TeamRepository : TeamRepositoryInterface {
             teams[teamIndex] = updatedTeam
             emit(Result.success(updatedTeam))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -307,7 +314,7 @@ class TeamRepository : TeamRepositoryInterface {
             )
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -323,7 +330,7 @@ class TeamRepository : TeamRepositoryInterface {
             invites[inviteIndex] = invites[inviteIndex].copy(status = InviteStatus.CANCELLED)
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 

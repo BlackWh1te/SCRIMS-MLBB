@@ -5,13 +5,20 @@ import com.mlbb.scrim.data.model.TeamReport
 import com.mlbb.scrim.data.model.VerificationStatus
 import com.mlbb.scrim.data.model.RosterPlayerInfo
 import com.mlbb.scrim.data.service.PostgrestFilter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 
 class MatchResultRepository : MatchResultRepositoryInterface {
 
     // Mock data storage for fallback when API is unavailable
     private val matchResults = mutableListOf<MatchResult>()
+
+    private suspend fun <T> FlowCollector<Result<T>>.emitFailureUnlessCancelled(e: Exception) {
+        if (e is CancellationException) throw e
+        emit(Result.failure(e))
+    }
 
     init {
         // Initialize with sample data for testing
@@ -101,6 +108,16 @@ class MatchResultRepository : MatchResultRepositoryInterface {
                     RosterPlayerInfo("p21", "Player21", "Marksman", true, true, 25),
                     RosterPlayerInfo("p22", "Player22", "Support", true, true, 25)
                 )
+            ),
+            MatchResult(
+                id = "match3",
+                scrimId = "scrim3",
+                teamAId = "team5",
+                teamAName = "Nova Core",
+                teamBId = "team6",
+                teamBName = "Atlas Five",
+                verificationStatus = VerificationStatus.PENDING,
+                createdAt = System.currentTimeMillis() - 3600000
             )
         )
     }
@@ -111,7 +128,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
             kotlinx.coroutines.delay(300)
             emit(Result.success(matchResults.toList().sortedByDescending { it.createdAt }))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -120,7 +137,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
             kotlinx.coroutines.delay(300)
             emit(Result.success(matchResults.find { it.id == id }))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -129,7 +146,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
             kotlinx.coroutines.delay(300)
             emit(Result.success(matchResults.find { it.scrimId == scrimId }))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 
@@ -141,7 +158,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
             }.sortedByDescending { it.createdAt }
             emit(Result.success(results))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emitFailureUnlessCancelled(e)
         }
     }
 

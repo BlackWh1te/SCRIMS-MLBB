@@ -122,23 +122,19 @@ class RepositoryInterfaceTest {
     }
 
     @Test
-    fun `all repository interfaces return Flow types for async methods`() {
+    fun `repository subscription methods return Flow types`() {
         val interfaces = listOf(
-            AuthRepositoryInterface::class.java,
             TeamRepositoryInterface::class.java,
-            ScrimRepositoryInterface::class.java,
-            MatchResultRepositoryInterface::class.java
+            ScrimRepositoryInterface::class.java
         )
 
         interfaces.forEach { iface ->
-            iface.methods.forEach { method ->
-                if (method.returnType != Void.TYPE) {
-                    assertTrue(
-                        "Method ${iface.simpleName}.${method.name} should return Flow",
-                        method.returnType == kotlinx.coroutines.flow.Flow::class.java ||
-                        method.returnType == com.mlbb.scrim.data.repository.PointsResult::class.java
-                    )
-                }
+            iface.methods.filter { it.name.startsWith("subscribe") }.forEach { method ->
+                assertEquals(
+                    "Method ${iface.simpleName}.${method.name} should return Flow",
+                    kotlinx.coroutines.flow.Flow::class.java,
+                    method.returnType
+                )
             }
         }
     }

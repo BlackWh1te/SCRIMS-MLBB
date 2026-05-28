@@ -5,6 +5,7 @@ import com.mlbb.scrim.data.repository.AuthRepository
 import com.mlbb.scrim.data.repository.TeamRepository
 import com.mlbb.scrim.data.repository.ScrimRepository
 import com.mlbb.scrim.data.repository.MatchResultRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -15,12 +16,18 @@ import org.junit.Test
  */
 class SecurityAuditTest {
 
+    private suspend fun Flow<AuthResult>.finalResult(): AuthResult {
+        var result: AuthResult? = null
+        collect { result = it }
+        return requireNotNull(result)
+    }
+
     // ─── Authentication security ───
 
     @Test
     fun `auth repository does not store plaintext password`() = runBlocking {
         val repo = AuthRepository()
-        repo.signUp("user@example.com", "mysecretpassword", "User", "game123").first()
+        repo.signUp("user@example.com", "mysecretpassword", "User", "game123").finalResult()
         // getCurrentUser returns email, not password
         assertEquals("user@example.com", repo.getCurrentUser())
         // Profile does not contain password
@@ -40,7 +47,7 @@ class SecurityAuditTest {
     @Test
     fun `password update requires current password`() = runBlocking {
         val repo = AuthRepository()
-        repo.signUp("user@example.com", "oldpassword", "User", "game123").first()
+        repo.signUp("user@example.com", "oldpassword", "User", "game123").finalResult()
         val results = mutableListOf<com.mlbb.scrim.data.model.AuthResult>()
         repo.updatePassword("wrongpassword", "newpassword", "newpassword").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })
@@ -49,7 +56,7 @@ class SecurityAuditTest {
     @Test
     fun `email update requires current password`() = runBlocking {
         val repo = AuthRepository()
-        repo.signUp("user@example.com", "password123", "User", "game123").first()
+        repo.signUp("user@example.com", "password123", "User", "game123").finalResult()
         val results = mutableListOf<com.mlbb.scrim.data.model.AuthResult>()
         repo.updateEmail("new@example.com", "wrongpassword").collect { results.add(it) }
         assertTrue(results.any { it is AuthResult.Error })

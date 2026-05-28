@@ -6,6 +6,7 @@ import android.os.Build
 import android.provider.Settings
 import timber.log.Timber
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * Security utilities for detecting root, debug, and tampering attempts
@@ -16,7 +17,7 @@ object SecurityUtils {
     /**
      * HARDENED: Expected SHA-256 hash of the release signing certificate.
      * Generate with: keytool -list -v -keystore release-keystore.jks | grep "SHA256"
-     * Then convert to colon-separated hex, or paste the raw base64 of the cert.
+     * Paste the colon-separated SHA-256 hex digest.
      *
      * IMPORTANT: Replace this placeholder with your actual release certificate hash
      * before shipping to production. If left as empty string, tamper detection
@@ -163,14 +164,21 @@ object SecurityUtils {
      * Check for emulator
      */
     fun isEmulator(): Boolean {
-        return (Build.FINGERPRINT.startsWith("generic") ||
-                Build.FINGERPRINT.startsWith("unknown") ||
-                Build.MODEL.contains("google_sdk") ||
-                Build.MODEL.contains("Emulator") ||
-                Build.MODEL.contains("Android SDK built for x86") ||
-                Build.MANUFACTURER.contains("Genymotion") ||
-                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
-                "google_sdk" == Build.PRODUCT)
+        val fingerprint = Build.FINGERPRINT.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val brand = Build.BRAND.orEmpty()
+        val device = Build.DEVICE.orEmpty()
+        val product = Build.PRODUCT.orEmpty()
+
+        return (fingerprint.startsWith("generic") ||
+                fingerprint.startsWith("unknown") ||
+                model.contains("google_sdk") ||
+                model.contains("Emulator") ||
+                model.contains("Android SDK built for x86") ||
+                manufacturer.contains("Genymotion") ||
+                (brand.startsWith("generic") && device.startsWith("generic")) ||
+                "google_sdk" == product)
     }
 
     /**
@@ -262,17 +270,34 @@ object SecurityUtils {
     }
 
     /**
-     * Get app signature for tamper detection
+     * Get the SHA-256 digest of the app signing certificate for tamper detection.
      */
     private fun getAppSignature(context: Context): String? {
         return try {
-            @Suppress("DEPRECATION")
-            val packageInfo = context.packageManager.getPackageInfo(
-                context.packageName,
-                PackageManager.GET_SIGNATURES
-            )
-            @Suppress("DEPRECATION")
-            packageInfo.signatures?.firstOrNull()?.toCharsString()
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val packageInfo = context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                )
+                packageInfo.signingInfo.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                val packageInfo = context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.GET_SIGNATURES
+                )
+                @Suppress("DEPRECATION")
+                packageInfo.signatures
+            }
+
+            signatures
+                ?.firstOrNull()
+                ?.toByteArray()
+                ?.let { cert ->
+                    MessageDigest.getInstance("SHA-256")
+                        .digest(cert)
+                        .joinToString(":") { "%02x".format(it.toInt() and 0xff) }
+                }
         } catch (e: Exception) {
             null
         }

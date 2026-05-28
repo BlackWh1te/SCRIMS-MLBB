@@ -29,15 +29,12 @@ val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
 val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY")
     ?: throw GradleException("SUPABASE_ANON_KEY not found. Create local.properties with SUPABASE_ANON_KEY=...")
 
-val newsApiKey = localProperties.getProperty("NEWSAPI_KEY") ?: "\"\""
-val xBearerToken = localProperties.getProperty("X_BEARER_TOKEN") ?: "\"\""
-val newsServiceApiKey = localProperties.getProperty("NEWS_SERVICE_API_KEY") ?: "\"\""
-
 // Release signing config (reads from local.properties or environment variables)
 val keystorePath = localProperties.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")
 val keystorePassword = localProperties.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
 val keyAlias = localProperties.getProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS")
 val keyPassword = localProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
+val hasReleaseSigning = keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null
 
 android {
     namespace = "com.mlbb.scrim"
@@ -46,9 +43,9 @@ android {
     defaultConfig {
         applicationId = "com.mlbb.scrim"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        targetSdk = 35
+        versionCode = 3
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,9 +54,9 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", supabaseUrl)
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseKey)
-        buildConfigField("String", "NEWSAPI_KEY", newsApiKey)
-        buildConfigField("String", "X_BEARER_TOKEN", xBearerToken)
-        buildConfigField("String", "NEWS_SERVICE_API_KEY", newsServiceApiKey)
+        buildConfigField("String", "NEWSAPI_KEY", "\"\"")
+        buildConfigField("String", "X_BEARER_TOKEN", "\"\"")
+        buildConfigField("String", "NEWS_SERVICE_API_KEY", "\"\"")
     }
 
     compileOptions {
@@ -72,9 +69,13 @@ android {
         jvmTarget = "21"
     }
 
+    lint {
+        disable += "MissingTranslation"
+    }
+
     signingConfigs {
-        create("release") {
-            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
+        if (hasReleaseSigning) {
+            create("release") {
                 storeFile = file(keystorePath)
                 storePassword = keystorePassword
                 this.keyAlias = keyAlias
@@ -88,7 +89,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
-            signingConfig = signingConfigs.findByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

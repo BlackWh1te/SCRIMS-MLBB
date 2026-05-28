@@ -92,8 +92,8 @@ enum class RankTier(
 
         fun xpProgressInTier(xp: Int): Float {
             val current = fromXp(xp)
-            val range = current.maxXp - current.minXp + 1
-            val progress = xp - current.minXp
+            val range = current.maxXp.toLong() - current.minXp.toLong() + 1L
+            val progress = xp.toLong() - current.minXp.toLong()
             return (progress.toFloat() / range).coerceIn(0f, 1f)
         }
     }

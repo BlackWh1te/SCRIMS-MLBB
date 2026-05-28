@@ -101,7 +101,7 @@ class ScrimTest {
 
     @Test
     fun `timeUntilChatOpens returns positive when chat not yet open`() {
-        val future = System.currentTimeMillis() + 7200000
+        val future = System.currentTimeMillis() + 10800000
         val scrim = Scrim(scheduledTime = future)
         assertTrue(scrim.timeUntilChatOpens > 0)
     }

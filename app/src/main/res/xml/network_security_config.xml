@@ -19,14 +19,8 @@
             <!-- Add your Supabase certificate pinning here for additional security -->
             <!-- <certificates src="@raw/supabase_certificate" /> -->
         </trust-anchors>
-        <!-- Certificate pinning for Supabase -->
-        <!-- Verified against efhbyrhxtsadbqjsfogc.supabase.co on 2026-05-27 -->
-        <!-- Primary pin = current leaf/intermediate/root key (Google Trust Services) -->
-        <!-- Backup pin = GTS Root R1 (different key for rotation survival) -->
-        <pin-set expiration="2027-01-01">
-            <pin digest="SHA-256">47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=</pin>
-            <pin digest="SHA-256">Vfd95YlR3Z6Zrxean8p4zlnD+gEF+Yx3FgiTNZ1nZoo=</pin>
-        </pin-set>
+        <!-- Certificate pinning intentionally disabled until real primary and backup
+             SPKI pins are generated from the production Supabase certificate chain. -->
     </domain-config>
 
     <!-- Local development backend on the Android emulator -->

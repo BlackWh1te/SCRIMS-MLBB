@@ -53,7 +53,6 @@ import com.mlbb.scrim.ui.screens.MatchHistoryScreen
 import com.mlbb.scrim.ui.screens.MatchResultDetailScreen
 import com.mlbb.scrim.ui.screens.MatchResultListScreen
 import com.mlbb.scrim.ui.screens.MessageListScreen
-import com.mlbb.scrim.ui.screens.NewsScreen
 import com.mlbb.scrim.ui.screens.NotificationScreen
 import com.mlbb.scrim.ui.screens.OnboardingScreen
 import com.mlbb.scrim.ui.screens.ScheduleScreen
@@ -88,7 +87,6 @@ import com.mlbb.scrim.viewmodel.AuthViewModel
 import com.mlbb.scrim.viewmodel.LeaderboardViewModel
 import com.mlbb.scrim.viewmodel.MatchResultViewModel
 import com.mlbb.scrim.viewmodel.MessageViewModel
-import com.mlbb.scrim.viewmodel.NewsViewModel
 import com.mlbb.scrim.viewmodel.NotificationViewModel
 import com.mlbb.scrim.viewmodel.ScrimViewModel
 import com.mlbb.scrim.viewmodel.SettingsViewModel
@@ -130,7 +128,6 @@ sealed class Screen(val route: String) {
     object Notifications : Screen("notifications")
     object Onboarding : Screen("onboarding")
     object Schedule : Screen("schedule")
-    object News : Screen("news")
     object Verification : Screen("verification/{email}") {
         fun createRoute(email: String) = "verification/${Uri.encode(email)}"
     }
@@ -164,7 +161,6 @@ fun AuthNavigation(
     leaderboardViewModel: LeaderboardViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     notificationViewModel: NotificationViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     settingsViewModel: SettingsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    newsViewModel: NewsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     lfgViewModel: com.mlbb.scrim.viewmodel.LfgViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     tournamentViewModel: com.mlbb.scrim.viewmodel.TournamentViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     navController: NavHostController = rememberNavController(),
@@ -219,8 +215,6 @@ fun AuthNavigation(
     val teamError by teamViewModel.errorMessage.collectAsState()
     val teamStats by teamViewModel.teamStats.collectAsState()
     val teamRatings by teamViewModel.teamRatings.collectAsState()
-    val newsIsRefreshing by newsViewModel.isRefreshing.collectAsState()
-
     // ── Tournament state ──
     val tournaments by tournamentViewModel.tournaments.collectAsState()
     val selectedTournament by tournamentViewModel.selectedTournament.collectAsState()
@@ -556,6 +550,10 @@ fun AuthNavigation(
                         onDisqualifyTeam = { tid, teamId, reason -> tournamentViewModel.disqualifyTeam(tid, teamId, reason) },
                         onLoadRoomSecret = { mid -> tournamentViewModel.loadRoomSecret(mid) },
                         onResolveDispute = { mid, winId, isDraw, resolution -> tournamentViewModel.resolveDispute(mid, winId, isDraw, resolution) },
+                        onScheduleMatch = { mid, ts -> tournamentViewModel.scheduleMatch(mid, ts) },
+                        onCheckNoShows = { tid -> tournamentViewModel.checkNoShows(tid) },
+                        onUpdateScores = { tid -> tournamentViewModel.updateTournamentScores(tid) },
+                        onRecalculateTiebreakers = { tid -> tournamentViewModel.recalculateTiebreakers(tid) },
                         matchRoster = matchRoster,
                         onLoadMatchRoster = { mid, tid, gn -> tournamentViewModel.loadMatchRoster(mid, tid, gn) },
                         onSetMatchRoster = { mid, tid, gn, pids -> tournamentViewModel.setMatchRoster(mid, tid, gn, pids) },
@@ -802,9 +800,6 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.Home.route) {
-                    LaunchedEffect(languageCode) {
-                        newsViewModel.loadNews(languageCode, forceRefresh = false)
-                    }
                     // Realtime: subscribe to scrim updates while on home
                     androidx.compose.runtime.DisposableEffect(Unit) {
                         scrimViewModel.subscribeToAllScrimUpdates()
@@ -851,7 +846,6 @@ fun AuthNavigation(
                         isTournamentHost = isTournamentHost,
                         onRefresh = {
                             scrimViewModel.loadScrims(isRefresh = true)
-                            newsViewModel.refresh(languageCode)
                             teamViewModel.loadTeams(isRefresh = true)
                         }
                     )
@@ -1633,15 +1627,6 @@ fun AuthNavigation(
                         onScrimClick = { scrimId ->
                             navController.navigate(Screen.ScrimDetail.createRoute(scrimId))
                         }
-                    )
-                }
-
-                composable(Screen.News.route) {
-                    NewsScreen(
-                        viewModel = newsViewModel,
-                        languageCode = languageCode,
-                        isRefreshing = newsIsRefreshing,
-                        onRefresh = { newsViewModel.refresh(languageCode) }
                     )
                 }
 

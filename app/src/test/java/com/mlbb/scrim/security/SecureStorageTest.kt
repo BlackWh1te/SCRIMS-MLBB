@@ -78,12 +78,12 @@ class SecureStorageTest {
         val random1 = java.security.SecureRandom()
         val bytes1 = ByteArray(32)
         random1.nextBytes(bytes1)
-        val token1 = android.util.Base64.encodeToString(bytes1, android.util.Base64.URL_SAFE).trimEnd('=')
+        val token1 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes1)
 
         val random2 = java.security.SecureRandom()
         val bytes2 = ByteArray(32)
         random2.nextBytes(bytes2)
-        val token2 = android.util.Base64.encodeToString(bytes2, android.util.Base64.URL_SAFE).trimEnd('=')
+        val token2 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes2)
 
         assertNotEquals(token1, token2)
     }
@@ -93,7 +93,7 @@ class SecureStorageTest {
         val random = java.security.SecureRandom()
         val bytes = ByteArray(32)
         random.nextBytes(bytes)
-        val token = android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE).trimEnd('=')
+        val token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         assertFalse(token.endsWith("="))
     }
 
@@ -102,7 +102,7 @@ class SecureStorageTest {
         val random = java.security.SecureRandom()
         val bytes = ByteArray(32)
         random.nextBytes(bytes)
-        val token = android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE).trimEnd('=')
+        val token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         // 32 bytes Base64 ~ 43 chars without padding, but URL_SAFE may add newline
         assertTrue("Token should be reasonably long, was ${token.length}", token.length >= 30)
     }

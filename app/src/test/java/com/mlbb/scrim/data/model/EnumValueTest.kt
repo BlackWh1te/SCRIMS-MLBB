@@ -77,8 +77,8 @@ class EnumValueTest {
     }
 
     @Test
-    fun `NotificationType has exactly 7 values`() {
-        assertEquals(7, NotificationType.values().size)
+    fun `NotificationType has exactly 26 values`() {
+        assertEquals(26, NotificationType.values().size)
     }
 
     @Test

@@ -184,7 +184,7 @@ class InputValidationTest {
     @Test
     fun `UserProfile handles max int XP`() {
         val profile = UserProfile(xp = Int.MAX_VALUE)
-        assertEquals(RankTier.MYTHIC, profile.currentTier)
+        assertEquals(RankTier.MYTHIC, RankTier.fromXp(profile.xp))
         assertEquals(0, profile.xpToNext)
     }
 

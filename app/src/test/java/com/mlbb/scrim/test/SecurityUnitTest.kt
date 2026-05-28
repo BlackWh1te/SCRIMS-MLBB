@@ -343,7 +343,9 @@ class SecurityUnitTest {
     // Helper Methods
     // ═══════════════════════════════════════════════════════════════
 
-    private fun String.isValidEmail() = this.contains("@") && this.isNotBlank()
+    private fun String.isValidEmail(): Boolean {
+        return this.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"))
+    }
     private fun String.isValidPassword() = this.length >= 6
     private fun String.isValidUsername() = this.isNotBlank() && this.trim().isNotEmpty()
     private fun String.isValidInGameId() = this.isNotBlank() && this.trim().isNotEmpty()
@@ -351,7 +353,7 @@ class SecurityUnitTest {
     private fun String.isValidJwtPattern() = this.isNotBlank() && this.length > 10
     private fun String.isValidApiKeyPattern() = this.isNotBlank() && this != "\"\""
     private fun String.containsSqlInjection(): Boolean {
-        val sqlPatterns = listOf("'--", ";--", ";", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter", "begin", "cast", "create", "cursor", "declare", "delete", "drop", "end", "exec", "execute", "fetch", "insert", "kill", "open", "select", "sys", "sysobjects", "syscolumns", "table", "update")
+        val sqlPatterns = listOf("'--", ";--", ";", " or ", " or'", "'or ", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter", "begin", "cast", "create", "cursor", "declare", "delete", "drop", "end", "exec", "execute", "fetch", "insert", "kill", "open", "select", "sys", "sysobjects", "syscolumns", "table", "update")
         val lower = this.lowercase()
         return sqlPatterns.any { lower.contains(it) }
     }

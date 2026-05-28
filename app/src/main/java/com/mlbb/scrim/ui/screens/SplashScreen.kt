@@ -21,7 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.mlbb.scrim.R
 import androidx.compose.ui.res.stringResource
 import com.mlbb.scrim.ui.theme.*
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun SplashScreen(
@@ -34,7 +36,9 @@ fun SplashScreen(
         delay(200)
         startAnimation = true
         delay(delayMillis)
-        onFinish()
+        if (currentCoroutineContext().isActive) {
+            onFinish()
+        }
     }
 
     Box(
