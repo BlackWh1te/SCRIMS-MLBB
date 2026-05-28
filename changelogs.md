@@ -8,6 +8,27 @@
 
 ---
 
+## 2026-05-28 17:00 [Session: UI Bug Fix] — Fixed navbar rounded corners + gold click glitch
+
+### Commits
+- `eb63675` — fix(ui): smooth navbar corners and gold pill fade animation
+
+### Changed
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/components/BottomNav.kt`
+  - Glow layer (lines 142-158): Added `.clip(RoundedCornerShape(responsive.bottomNavCornerRadius))` so the outer blur glow matches the dock's rounded corners. Previously the rectangular glow bled out at corners.
+  - Active pill (lines 255-288): Removed `if (isSelected)` guard. Pill now always renders with `alpha = indicatorAlpha` so it fades in AND out smoothly. Previously the pill vanished instantly when deselected, causing a jarring gold flash.
+  - Animation duration: Reduced `indicatorAlpha` tween from 300ms to 180ms for snappier tab switching.
+
+### Why
+User reported two issues with the bottom navigation bar:
+1. Edges not rounded — the outer glow layer was a rectangle behind a rounded dock
+2. Yellow/gold glitch when clicking — the selected pill disappeared instantly when switching tabs while the new pill faded in
+
+### Verdict
+- `[REVERTABLE]` — UI tweak. Can be adjusted further if needed (different corner radius, animation speed, etc.)
+
+---
+
 ## 2026-05-28 16:55 [Session: Skill Enhancement] — Improved changelog-guardian skill + CLAUDE.md integration
 
 ### Commits
