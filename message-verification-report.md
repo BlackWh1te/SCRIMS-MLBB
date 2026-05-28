@@ -336,7 +336,7 @@ DROP FUNCTION IF EXISTS is_conversation_member(UUID, UUID);
 ## # Authenticated End-to-End Verification (Completed 2026-05-27)
 
 ### Method
-Automated Node.js script (`auth-verify.js`) executed against live Supabase project:
+Automated Node.js script (`tools/auth-verify.js`) executed against live Supabase project:
 1. Created test user via `/auth/v1/admin/users` (service role)
 2. Logged in via `/auth/v1/token?grant_type=password` to obtain JWT
 3. Created conversation via service role (user as `participant_a_id`)
@@ -373,7 +373,7 @@ Automated Node.js script (`auth-verify.js`) executed against live Supabase proje
 ## # Realtime WebSocket Verification (Partial)
 
 ### Method
-Automated Node.js script (`realtime-verify.js`) with `ws` library:
+Automated Node.js script (`tools/realtime-verify.js`) with `ws` library:
 1. Connected to `wss://.../realtime/v1/websocket`
 2. Authenticated socket with `access_token` event
 3. Joined `realtime:public:messages` channel with `postgres_changes` filter

@@ -1,7 +1,7 @@
 # MLBB Scrim Host
 
 <p align="center">
-  <img src="teirs.png" width="800" alt="MLBB Scrim Rank Tiers">
+  <img src="assets/teirs.png" width="800" alt="MLBB Scrim Rank Tiers">
 </p>
 
 An Android app for hosting and managing scrims (practice matches) for Mobile Legends: Bang Bang (MLBB). Built with Kotlin, Jetpack Compose, and Supabase.
@@ -11,7 +11,7 @@ An Android app for hosting and managing scrims (practice matches) for Mobile Leg
 The app features a professional, gamified "Trophy Room" with live progress tracking and custom-designed badges.
 
 <p align="center">
-  <img src="achivments.png" width="800" alt="MLBB Scrim Achievements">
+  <img src="assets/achivments-jukebox-bg-removed.png" width="800" alt="MLBB Scrim Achievements">
 </p>
 
 - **Live Progress Tracking**: Real-time progress bars for all milestones.
