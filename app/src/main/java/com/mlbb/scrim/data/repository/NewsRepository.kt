@@ -37,75 +37,7 @@ class NewsRepository(
         // Anti-spam: minimum time between explicit pull-to-refresh (30 minutes)
         private const val MIN_EXPLICIT_REFRESH_MS = 30 * 60 * 1000 // 30 minutes
 
-        // Demo news articles about MLBB
-        private val demoNews = listOf(
-            NewsArticle(
-                id = "demo_1",
-                title = "Mobile Legends MPL Season 14 Finals Set for Epic Showdown",
-                description = "The top 4 teams will battle for the championship title and a prize pool of $300,000 in the upcoming MPL finals.",
-                content = "The Mobile Legends Professional League (MPL) Season 14 has reached its climax with the top 4 teams qualifying for the grand finals. This season has seen record-breaking viewership numbers and intense competition across all regions. The finals will feature defending champions Blacklist International against rising contenders Echo, RSG, and ONIC.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800",
-                source = "ONE Esports",
-                publishedAt = System.currentTimeMillis() - 3600000 * 2,
-                originalLanguage = "en"
-            ),
-            NewsArticle(
-                id = "demo_2",
-                title = "Moonton Announces New Hero: The Shadow Assassin",
-                description = "A new marksman/assassin hybrid hero is coming to the Land of Dawn with unique stealth mechanics.",
-                content = "Moonton has teased their latest hero addition to Mobile Legends: Bang Bang. The Shadow Assassin brings a fresh take on the marksman role with stealth-based abilities that allow repositioning during team fights. Early test server footage shows impressive mobility and burst damage potential.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800",
-                source = "Moonton Official",
-                publishedAt = System.currentTimeMillis() - 3600000 * 6,
-                originalLanguage = "en"
-            ),
-            NewsArticle(
-                id = "demo_3",
-                title = "M5 World Championship: Southeast Asia Dominates Group Stage",
-                description = "Teams from Philippines and Indonesia show strong performance in the M5 World Championship group stage.",
-                content = "The M5 World Championship group stage has concluded with Southeast Asian teams showing their dominance. Filipino teams Blacklist International and AP.Bren secured top seeds, while Indonesian representatives ONIC Esports and RRQ also advanced to the knockout stage with strong showings.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1542751110-97427bbecf20?w=800",
-                source = "Esports Insider",
-                publishedAt = System.currentTimeMillis() - 3600000 * 12,
-                originalLanguage = "en"
-            ),
-            NewsArticle(
-                id = "demo_4",
-                title = "Patch Notes 1.8.92: Major Balance Changes for Meta Heroes",
-                description = "Fanny, Lancelot, and Brody receive significant adjustments in the latest patch update.",
-                content = "The latest Mobile Legends patch brings substantial balance changes. Fanny's energy costs have been increased to reduce her early game dominance. Lancelot's ultimate damage scaling has been adjusted, while Brody receives a slight buff to his base attack speed. Several item changes are also included in this update.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=800",
-                source = "Patch Notes",
-                publishedAt = System.currentTimeMillis() - 3600000 * 24,
-                originalLanguage = "en"
-            ),
-            NewsArticle(
-                id = "demo_5",
-                title = "New Skins Incoming: Starlight and Collector Events",
-                description = "This month's skin lineup features stunning new designs for popular heroes.",
-                content = "Moonton has revealed the upcoming skin releases for this month. The Starlight Pass will feature a mystical themed skin for mage hero Lunox, while the Collector event brings an exclusive legendary skin for fighter hero Chou. Limited-time events will also offer chances to obtain previous collector skins at discounted rates.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800",
-                source = "MLBB News",
-                publishedAt = System.currentTimeMillis() - 3600000 * 36,
-                originalLanguage = "en"
-            ),
-            NewsArticle(
-                id = "demo_6",
-                title = "Ranked Season Reset: New Rewards and Rank Protection",
-                description = "The new ranked season brings updated rewards and improved rank protection for players.",
-                content = "A new ranked season has begun in Mobile Legends with refreshed rewards and an updated rank protection system. Players will now receive bonus protection points after consecutive losses, helping to reduce the frustration of deranking. New seasonal skins and exclusive avatar borders are also available as ranked rewards.",
-                url = "https://www.oneesports.gg/mobile-legends/",
-                imageUrl = "https://images.unsplash.com/photo-1519669556878-63bd25466644?w=800",
-                source = "Game Guides",
-                publishedAt = System.currentTimeMillis() - 3600000 * 48,
-                originalLanguage = "en"
-            )
-        )
+        // No demo articles — all news must come from real sources.
     }
 
     private var cachedArticles: List<NewsArticle> = emptyList()
@@ -172,13 +104,8 @@ class NewsRepository(
             )))
         } catch (e: Exception) {
             Timber.e(TAG, "Error fetching news", e)
-            val fallback = if (targetLanguage != "en") {
-                translateArticles(demoNews, targetLanguage)
-            } else {
-                demoNews
-            }
             emit(Result.success(RefreshResult(
-                articles = fallback,
+                articles = emptyList(),
                 wasThrottled = false,
                 minutesUntilRefresh = 0
             )))
@@ -238,13 +165,11 @@ class NewsRepository(
                 return redditArticles
             }
 
-            // Final fallback: demo articles
-            localCache.saveCache(demoNews, source = "demo")
-            demoNews
+            // No fallback — return empty if all sources fail
+            emptyList()
         } catch (e: Exception) {
-            Timber.w(TAG, "Fetch failed, using demo data", e)
-            localCache.saveCache(demoNews, source = "demo")
-            demoNews
+            Timber.w(TAG, "Fetch failed, returning empty", e)
+            emptyList()
         }
     }
 

@@ -75,7 +75,7 @@ interface RedditApiService {
     @GET("r/mobilelegends/new.json")
     suspend fun getMobileLegendsPosts(
         @Query("limit") limit: Int = 25,
-        @Header("User-Agent") userAgent: String = "MLBBScrimHost/1.0"
+        @Header("User-Agent") userAgent: String = "ScrimsLegends/1.0"
     ): Response<RedditListing>
 }
 

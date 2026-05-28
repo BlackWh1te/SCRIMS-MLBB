@@ -9,7 +9,7 @@
     <string name="nav_profile">الملف</string>
     <string name="nav_match_history">التاريخ</string>
     <string name="nav_create_team">فريق جديد</string>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
     <string name="login">تسجيل الدخول</string>
     <string name="signup">إنشاء حساب</string>
     <string name="register">تسجيل</string>
@@ -117,13 +117,13 @@
     <string name="get_started">ابدأ</string>
     <string name="next">التالي</string>
     <string name="back">رجوع</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">تنافس. تصاعد. اهيم.</string>
 
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">أحدث أخبار MLBB وMoonton</string>
+    <string name="news_subtitle">آخر أخبار الألعاب</string>
     <string name="news_detail">تفاصيل الخبر</string>
     <string name="no_news">لا توجد أخبار متاحة</string>
     <string name="no_news_subtitle">اسحب للأسفل للتحديث أو تحقق من اتصالك</string>

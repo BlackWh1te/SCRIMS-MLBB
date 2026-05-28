@@ -22,7 +22,7 @@ class SecurePreferences(context: Context) {
 
     val prefs: SharedPreferences = EncryptedSharedPreferences.create(
         context,
-        "mlbb_scrim_encrypted_prefs",
+        "scrims_legends_encrypted_prefs",
         masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM

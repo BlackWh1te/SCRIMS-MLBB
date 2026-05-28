@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
@@ -149,12 +149,12 @@
     <string name="get_started">Get Started</string>
     <string name="next">Next</string>
     <string name="back">Back</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">Compete. Rank. Dominate.</string>
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">Latest from MLBB &amp; Moonton</string>
+    <string name="news_subtitle">Latest Gaming News</string>
     <string name="news_detail">News Detail</string>
     <string name="no_news">No news available</string>
     <string name="no_news_subtitle">Pull down to refresh or check your connection</string>
@@ -415,7 +415,7 @@
     <string name="invite_action">Invite</string>
     <string name="create_player_post">Create Player Post</string>
     <string name="show_off_stats">Show off your stats and get recruited</string>
-    <string name="your_mlbb_game_id">Your MLBB Game ID</string>
+    <string name="your_mlbb_game_id">Your Game ID</string>
     <string name="total_games">Total Games</string>
     <string name="win_rate_percent">Win Rate %</string>
     <string name="win_rate_example">e.g. 62%</string>

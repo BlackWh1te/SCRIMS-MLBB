@@ -41,9 +41,9 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mlbb.scrim"
+        applicationId = "com.scrimslegends.app"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 3
         versionName = "1.1.1"
 

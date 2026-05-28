@@ -9,7 +9,7 @@
     <string name="nav_profile">我的</string>
     <string name="nav_match_history">历史</string>
     <string name="nav_create_team">新建战队</string>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
     <string name="login">登录</string>
     <string name="signup">注册</string>
     <string name="register">注册</string>
@@ -117,13 +117,13 @@
     <string name="get_started">开始</string>
     <string name="next">下一步</string>
     <string name="back">返回</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">竞技。攀升。称霸。</string>
 
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">MLBB 和 Moonton 的最新资讯</string>
+    <string name="news_subtitle">最新游戏资讯</string>
     <string name="news_detail">新闻详情</string>
     <string name="no_news">暂无可用新闻</string>
     <string name="no_news_subtitle">下拉刷新或检查您的网络连接</string>

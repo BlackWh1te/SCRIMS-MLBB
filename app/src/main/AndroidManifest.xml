@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".MLBBScrimApplication"
+        android:name=".ScrimsLegendsApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -17,40 +17,39 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MLBBScrimHost"
+        android:theme="@style/Theme.ScrimsLegends"
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.MLBBScrimHost">
+            android:theme="@style/Theme.ScrimsLegends">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- Deep link for email confirmation (Supabase auth callback).
-                 Host must match the redirect URL configured in your Supabase project under
-                 Authentication → URL Configuration → Redirect URLs.
-                 The old host (form.jotform.com) was a third-party form service unrelated
-                 to Supabase and was a potential phishing/tapjacking vector. -->
-            <intent-filter android:autoVerify="true">
+                 Host must match the redirect URL configured in your Supabase project.
+                 Register scrimslegends.app and add /.well-known/assetlinks.json before
+                 re-enabling autoVerify. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="mlbbscrim.app"
+                    android:host="scrimslegends.app"
                     android:pathPrefix="/auth/callback" />
             </intent-filter>
-            <!-- Deep link for match results (https://mlbbscrim.app/match_result/...) -->
-            <intent-filter android:autoVerify="true">
+            <!-- Deep link for match results -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="mlbbscrim.app"
+                    android:host="scrimslegends.app"
                     android:pathPrefix="/match_result/" />
             </intent-filter>
             <!-- App deep links for match history and scrims -->
@@ -59,7 +58,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="mlbbscrim"
+                    android:scheme="scrimslegends"
                     android:host="app" />
             </intent-filter>
         </activity>

@@ -23,7 +23,7 @@ import com.mlbb.scrim.data.model.NotificationType
  * Background push (when app is NOT running) requires FCM and is not yet
  * implemented. This class handles the "app is open" use-case only.
  *
- * Call [createChannels] from [com.mlbb.scrim.MLBBScrimApplication.onCreate].
+ * Call [createChannels] from [com.mlbb.scrim.ScrimsLegendsApplication.onCreate].
  * Call [show] from [com.mlbb.scrim.viewmodel.NotificationViewModel] whenever a
  * new notification arrives via Realtime and is not suppressed by settings.
  */
@@ -32,10 +32,10 @@ object LocalNotificationHelper {
     // ── Channel definitions ───────────────────────────────────────────────────
 
     /** Channel for scrim, team, match, tournament and system alerts. */
-    const val CHANNEL_ALERTS  = "mlbb_scrim_alerts"
+    const val CHANNEL_ALERTS  = "scrims_legends_alerts"
 
     /** Channel for direct messages (separate so users can silence it alone). */
-    const val CHANNEL_MESSAGES = "mlbb_scrim_messages"
+    const val CHANNEL_MESSAGES = "scrims_legends_messages"
 
     // ── Channel bootstrap ─────────────────────────────────────────────────────
 

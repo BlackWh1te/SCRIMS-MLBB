@@ -186,7 +186,7 @@ class TeamRepository : TeamRepositoryInterface {
     fun generateInviteLink(teamId: String, teamName: String): String {
         // Mock invite link generation
         // In production, this would be a real deep link or web URL
-        return "https://mlbb-scrim.app/join?team=$teamId&name=${teamName.replace(" ", "%20")}"
+        return "https://scrimslegends.app/join?team=$teamId&name=${teamName.replace(" ", "%20")}"
     }
 
     // ═══════════════════════════════════════════════════════════════

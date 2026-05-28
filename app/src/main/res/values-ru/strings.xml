@@ -9,7 +9,7 @@
     <string name="nav_profile">Профиль</string>
     <string name="nav_match_history">История</string>
     <string name="nav_create_team">Новая Команда</string>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
     <string name="login">Вход</string>
     <string name="signup">Регистрация</string>
     <string name="register">Зарегистрироваться</string>
@@ -117,13 +117,13 @@
     <string name="get_started">Начать</string>
     <string name="next">Далее</string>
     <string name="back">Назад</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">Соревнуйся. Побеждай. Доминируй.</string>
 
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">Последние новости MLBB и Moonton</string>
+    <string name="news_subtitle">Последние игровые новости</string>
     <string name="news_detail">Детали новости</string>
     <string name="no_news">Нет доступных новостей</string>
     <string name="no_news_subtitle">Потяните вниз для обновления или проверьте подключение</string>

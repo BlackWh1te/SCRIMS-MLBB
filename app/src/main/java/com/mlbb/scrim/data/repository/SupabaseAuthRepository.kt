@@ -710,7 +710,7 @@ class SupabaseAuthRepository(
     override suspend fun getUserProfile(): UserProfile? {
         val userId = getUserId() ?: return null
 
-        val db = com.mlbb.scrim.data.local.MLBBScrimDatabase.getDatabase(context)
+        val db = com.mlbb.scrim.data.local.ScrimsLegendsDatabase.getDatabase(context)
         val profileDao = db.profileDao()
 
         return try {

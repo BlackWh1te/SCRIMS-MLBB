@@ -9,7 +9,7 @@
     <string name="nav_profile">프로필</string>
     <string name="nav_match_history">기록</string>
     <string name="nav_create_team">새 팀</string>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
     <string name="login">로그인</string>
     <string name="signup">회원가입</string>
     <string name="register">회원가입</string>
@@ -117,13 +117,13 @@
     <string name="get_started">시작하기</string>
     <string name="next">다음</string>
     <string name="back">뒤로</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">경篼. 올라가기. 지배.</string>
 
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">MLBB 및 Moonton 최신 소식</string>
+    <string name="news_subtitle">최신 게임 뉴스</string>
     <string name="news_detail">뉴스 상세 정보</string>
     <string name="no_news">사용 가능한 뉴스가 없습니다</string>
     <string name="no_news_subtitle">아래로 당겨서 새로고침하거나 연결을 확인하세요</string>

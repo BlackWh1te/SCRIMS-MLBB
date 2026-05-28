@@ -18,61 +18,61 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): MLBBScrimDatabase {
-        return MLBBScrimDatabase.getDatabase(context)
+    fun provideDatabase(@ApplicationContext context: Context): ScrimsLegendsDatabase {
+        return ScrimsLegendsDatabase.getDatabase(context)
     }
 
     // ─── Existing DAOs ───
 
     @Provides
-    fun provideProfileDao(database: MLBBScrimDatabase): ProfileDao {
+    fun provideProfileDao(database: ScrimsLegendsDatabase): ProfileDao {
         return database.profileDao()
     }
 
     @Provides
-    fun provideConversationDao(database: MLBBScrimDatabase): ConversationDao {
+    fun provideConversationDao(database: ScrimsLegendsDatabase): ConversationDao {
         return database.conversationDao()
     }
 
     @Provides
-    fun provideMessageDao(database: MLBBScrimDatabase): MessageDao {
+    fun provideMessageDao(database: ScrimsLegendsDatabase): MessageDao {
         return database.messageDao()
     }
 
     @Provides
-    fun providePendingMessageDao(database: MLBBScrimDatabase): PendingMessageDao {
+    fun providePendingMessageDao(database: ScrimsLegendsDatabase): PendingMessageDao {
         return database.pendingMessageDao()
     }
 
     // ─── Cache DAOs ───
 
     @Provides
-    fun provideCacheMetadataDao(database: MLBBScrimDatabase): CacheMetadataDao {
+    fun provideCacheMetadataDao(database: ScrimsLegendsDatabase): CacheMetadataDao {
         return database.cacheMetadataDao()
     }
 
     @Provides
-    fun provideTeamDao(database: MLBBScrimDatabase): TeamDao {
+    fun provideTeamDao(database: ScrimsLegendsDatabase): TeamDao {
         return database.teamDao()
     }
 
     @Provides
-    fun provideScrimDao(database: MLBBScrimDatabase): ScrimDao {
+    fun provideScrimDao(database: ScrimsLegendsDatabase): ScrimDao {
         return database.scrimDao()
     }
 
     @Provides
-    fun provideLeaderboardDao(database: MLBBScrimDatabase): LeaderboardDao {
+    fun provideLeaderboardDao(database: ScrimsLegendsDatabase): LeaderboardDao {
         return database.leaderboardDao()
     }
 
     @Provides
-    fun provideLfgPostDao(database: MLBBScrimDatabase): LfgPostDao {
+    fun provideLfgPostDao(database: ScrimsLegendsDatabase): LfgPostDao {
         return database.lfgPostDao()
     }
 
     @Provides
-    fun provideNotificationDao(database: MLBBScrimDatabase): NotificationDao {
+    fun provideNotificationDao(database: ScrimsLegendsDatabase): NotificationDao {
         return database.notificationDao()
     }
 

@@ -474,7 +474,6 @@ private fun TournamentCard(
     }
 
     val prizeTypeIcon = when (tournament.prizeType) {
-        PrizeType.REAL_MONEY -> Icons.Default.AttachMoney
         PrizeType.DIAMONDS -> Icons.Default.Diamond
         PrizeType.SKIN -> Icons.Default.Style
         PrizeType.STAR_PASS -> Icons.Default.Star
@@ -624,62 +623,88 @@ private fun TournamentCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ── Title ──
-                Text(
-                    text = tournament.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = White,
-                        fontSize = 19.sp,
-                        letterSpacing = 0.3.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // ── Hosted by + Trust Score ──
+                // ── Logo + Title row ──
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.tournament_hosted_by, tournament.hostUsername),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                    if (!tournament.logoUrl.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = tournament.logoUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceElevated),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
-                    )
-                    if (tournament.hostTrustScore > 0) {
-                        val trustColor = when {
-                            tournament.hostTrustScore >= 8.0 -> SuccessGreen
-                            tournament.hostTrustScore >= 5.0 -> WarningOrange
-                            else -> ErrorRed
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = trustColor.copy(alpha = 0.12f),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, trustColor.copy(alpha = 0.4f))
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(GoldPrimary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = trustColor,
-                                    modifier = Modifier.size(10.dp)
+                            Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = tournament.title,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = White,
+                                fontSize = 19.sp,
+                                letterSpacing = 0.3.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tournament_hosted_by, tournament.hostUsername),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
                                 )
-                                Text(
-                                    text = "%.1f".format(tournament.hostTrustScore),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = trustColor,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
+                            )
+                            if (tournament.hostTrustScore > 0) {
+                                val trustColor = when {
+                                    tournament.hostTrustScore >= 8.0 -> SuccessGreen
+                                    tournament.hostTrustScore >= 5.0 -> WarningOrange
+                                    else -> ErrorRed
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = trustColor.copy(alpha = 0.12f),
+                                    border = androidx.compose.foundation.BorderStroke(0.5.dp, trustColor.copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = trustColor,
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                        Text(
+                                            text = "%.1f".format(tournament.hostTrustScore),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = trustColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.mlbb.scrim.ui.theme.*
 
 /**
- * Custom 7-Tier Rank System for MLBB Scrim Host
+ * Custom 7-Tier Rank System for Scrims Legends
  * Bronze → Solver → Gold → Grandmaster → Epic → Legend → Mythic
  */
 enum class RankTier(

@@ -226,7 +226,7 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.contact_support_sub),
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:support@mlbbscrim.app")
+                                data = Uri.parse("mailto:support@scrimslegends.app")
                                 putExtra(Intent.EXTRA_SUBJECT, "Support Request")
                             }
                             context.startActivity(intent)
@@ -261,8 +261,43 @@ fun SettingsScreen(
                     )
                 }
 
+                Spacer(Modifier.height(32.dp))
+
+                // ── About ─────────────────────────────────────────
+                PremiumFadeIn(delayMillis = 725) {
+                    SettingsSectionTitle(stringResource(R.string.about))
+                }
+                Spacer(Modifier.height(12.dp))
+                PremiumFadeIn(delayMillis = 775) {
+                    SettingsActionCard(
+                        icon = Icons.Default.PrivacyTip,
+                        title = stringResource(R.string.privacy_policy),
+                        subtitle = "Read how we protect your data",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("https://scrimslegends.app/privacy")
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                PremiumFadeIn(delayMillis = 825) {
+                    SettingsActionCard(
+                        icon = Icons.Default.Policy,
+                        title = stringResource(R.string.terms_of_service),
+                        subtitle = "Rules and guidelines for using the app",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("https://scrimslegends.app/terms")
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+
                 Spacer(Modifier.height(60.dp))
-                
+
                 Text(
                     text = stringResource(R.string.version_label, appVersion),
                     style = iOSFootnote.copy(color = TextTertiary),

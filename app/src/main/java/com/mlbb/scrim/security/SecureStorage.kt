@@ -17,7 +17,7 @@ class SecureStorage(context: Context) {
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("secure_storage", Context.MODE_PRIVATE)
 
-    private val keyAlias = "mlbb_scrim_secure_key"
+    private val keyAlias = "scrims_legends_secure_key"
     private val encryptionKey: SecretKey by lazy {
         getOrCreateEncryptionKey()
     }

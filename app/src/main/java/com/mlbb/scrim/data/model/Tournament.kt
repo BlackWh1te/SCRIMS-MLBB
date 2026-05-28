@@ -18,7 +18,6 @@ enum class TournamentStatus(val value: String) {
 }
 
 enum class PrizeType(val value: String) {
-    REAL_MONEY("real_money"),
     DIAMONDS("diamonds"),
     SKIN("skin"),
     STAR_PASS("star_pass"),

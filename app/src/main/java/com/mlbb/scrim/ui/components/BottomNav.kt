@@ -41,7 +41,7 @@ import com.mlbb.scrim.R
 import com.mlbb.scrim.ui.theme.*
 
 // ============================================
-// MLBB Scrim Host — Premium Bottom Navigation
+// Scrims Legends — Premium Bottom Navigation
 // Glass-dock design with gold spotlight
 // ============================================
 
@@ -246,7 +246,7 @@ private fun DockItem(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Active background pill — gold-tinted per MLBB design
+        // Active background pill — gold-tinted accent
         // Uses AnimatedVisibility for smooth scale+fade instead of raw alpha
         AnimatedVisibility(
             visible = isSelected,

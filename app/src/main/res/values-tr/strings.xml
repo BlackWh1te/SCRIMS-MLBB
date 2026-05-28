@@ -9,7 +9,7 @@
     <string name="nav_profile">Profil</string>
     <string name="nav_match_history">Geçmiş</string>
     <string name="nav_create_team">Yeni Takım</string>
-    <string name="app_name">MLBB Scrim Host</string>
+    <string name="app_name">Scrims Legends</string>
     <string name="login">Giriş</string>
     <string name="signup">Kayıt Ol</string>
     <string name="register">Kayıt Ol</string>
@@ -117,13 +117,13 @@
     <string name="get_started">Başla</string>
     <string name="next">İleri</string>
     <string name="back">Geri</string>
-    <string name="app_title">MLBB Scrim Host</string>
+    <string name="app_title">Scrims Legends</string>
     <string name="tagline">Yarış. Yüksel. Hakim ol.</string>
 
 
     <!-- News -->
     <string name="news">News</string>
-    <string name="news_subtitle">MLBB ve Moonton\'dan son haberler</string>
+    <string name="news_subtitle">Son oyun haberleri</string>
     <string name="news_detail">Haber Detayı</string>
     <string name="no_news">Mevcut haber bulunmuyor</string>
     <string name="no_news_subtitle">Yenilemek için aşağı çekin veya bağlantınızı kontrol edin</string>

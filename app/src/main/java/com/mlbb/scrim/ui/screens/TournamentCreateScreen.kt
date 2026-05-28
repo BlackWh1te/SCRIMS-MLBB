@@ -136,7 +136,7 @@ fun TournamentCreateScreen(
                     StyledInput(
                         value = title,
                         onValueChange = { title = it },
-                        placeholder = "MLBB Swiss Championship"
+                        placeholder = "Swiss Championship"
                     )
                 }
 

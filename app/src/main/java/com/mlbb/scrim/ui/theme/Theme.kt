@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 // ============================================
-// MLBB Scrim Host — Android Premium Design System
+// Scrims Legends — Android Premium Design System
 // Optimized for vertical phone screens
 // ============================================
 
@@ -274,7 +274,7 @@ val iOSInputShape   = androidx.compose.foundation.shape.RoundedCornerShape(12.dp
 // ============================================
 
 @Composable
-fun MLBBScrimHostTheme(
+fun ScrimsLegendsTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {

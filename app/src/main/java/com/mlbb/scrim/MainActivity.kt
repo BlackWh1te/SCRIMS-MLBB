@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import com.mlbb.scrim.data.localization.LocaleManager
 import com.mlbb.scrim.data.preferences.AppSettings
 import com.mlbb.scrim.ui.navigation.AuthNavigation
-import com.mlbb.scrim.ui.theme.MLBBScrimHostTheme
+import com.mlbb.scrim.ui.theme.ScrimsLegendsTheme
 import com.mlbb.scrim.viewmodel.AuthViewModel
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
             val appSettings = remember { AppSettings(this@MainActivity) }
             val darkMode by appSettings.darkMode.collectAsState(initial = true)
 
-            MLBBScrimHostTheme(darkTheme = darkMode) {
+            ScrimsLegendsTheme(darkTheme = darkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
