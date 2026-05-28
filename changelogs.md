@@ -8,6 +8,52 @@
 
 ---
 
+## 2026-05-28 21:35 [Session: UGC Moderation + ToS + game_id rename] — Added content moderation, signup compliance, and API field migration
+
+### Commits
+- `2e3eefc` — fix(compliance): UGC moderation, ToS checkbox, and game_id rename
+
+### Changed
+- **File:** `app/src/main/java/com/mlbb/scrim/util/ContentModerationUtils.kt` (new)
+  - `validateChatMessage()` with profanity filter (English + common bypasses), 500-char max length, and repetitive character detection
+  - Returns `ValidationResult.Valid` or `ValidationResult.Blocked(reason)`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/ChatScreen.kt`
+  - On keyboard-send and send-button tap: runs `ContentModerationUtils.validateChatMessage()` before calling `onSendMessage()`
+  - Blocked messages show an animated red error banner (`AnimatedVisibility` with `fadeIn` + `expandVertically`)
+  - Banner auto-dismisses when user starts typing again
+  - Fixed compilation: used fully-qualified `androidx.compose.animation.AnimatedVisibility` to resolve `ColumnScope` ambiguity
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/SignupScreen.kt`
+  - Added mandatory Terms of Service / Privacy Policy checkbox with clickable gold text links
+  - Validation prevents account creation until checkbox is checked
+  - Error state shows red border + helper text
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/ScrimDetailScreen.kt`
+  - Added `image_content_warning` text below screenshot upload area
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/PlayerFinderScreen.kt`
+  - Added `image_content_warning` text below screenshot upload area
+- **File:** `app/src/main/java/com/mlbb/scrim/data/repository/SupabaseAuthRepository.kt`
+  - Renamed `mlbb_id` → `game_id` in `updateProfile()`, `getProfileByUserId()`, and related methods
+- **File:** `app/src/main/java/com/mlbb/scrim/data/service/SupabaseApiService.kt`
+  - Endpoint renamed: `getProfileByMlbbId` → `getProfileByGameId`
+  - DTO field renamed: `mlbb_id` → `game_id`
+- **File:** `app/src/main/res/values/strings.xml` + all `values-*/strings.xml` (10 locales)
+  - Added: `terms_checkbox_label`, `terms_of_service_link`, `privacy_policy_link`, `and`, `terms_required`, `message_inappropriate`, `image_content_warning`, `report_image`, `image_reported`
+- **File:** `supabase/migrations/20260528220001_rename_mlbb_id_to_game_id.sql` (new)
+  - Idempotent migration: adds `game_id`, migrates data, drops `mlbb_id`, updates RPC and index
+
+### Why
+Follow-up to the rebrand session. Google Play policy audit flagged UGC moderation gaps:
+1. Chat messages had no profanity/content filter
+2. Signup did not require explicit ToS/PP agreement
+3. Image uploads lacked moderation warnings
+4. `mlbb_id` field name was a lingering trademark reference
+
+### Verdict
+- `[DO NOT UNDO]` — ContentModerationUtils profanity filter. Removing it would violate Google Play UGC moderation requirements.
+- `[DO NOT UNDO]` — SignupScreen ToS checkbox. Removing it violates Google Play Families/UGC policies.
+- `[DO NOT UNDO]` — `mlbb_id` → `game_id` rename. Reverting would restore the trademark reference.
+
+---
+
 ## 2026-05-28 21:18 [Session: Rebrand + Google Play Policy Fix] — Renamed app to Scrims Legends, fixed 7 critical audit issues
 
 ### Commits
