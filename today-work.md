@@ -458,4 +458,241 @@ if (hasGoogleServicesJson) {
 
 ---
 
-*Updated 2026-05-28 after deep source-code audit. Build: `./gradlew :app:compileDebugKotlin` SUCCESS. Tests: `./gradlew test` — 80/675 FAILED.*
+---
+
+## 🔴 ADDITIONAL ISSUES Found in Second Deep Dive
+
+These were discovered by reading more source files beyond the initial audit.
+
+---
+
+### Critical 8: Runtime Permission Requests — COMPLETELY MISSING
+
+**Permissions declared in `AndroidManifest.xml`:**
+- `android.permission.POST_NOTIFICATIONS` (Android 13+ requires runtime request)
+- `android.permission.READ_MEDIA_IMAGES` (Android 13+ requires runtime request)
+- `android.permission.READ_EXTERNAL_STORAGE` (pre-Android 13, maxSdkVersion=32)
+
+**Searched entire codebase for:**
+- `requestPermissions`
+- `ActivityResultLauncher`
+- `registerForActivityResult`
+- `shouldShowRequestPermissionRationale`
+
+**Result:** ZERO matches. **The app never asks users for permissions at runtime.**
+
+**Impact:**
+- On Android 13+ (API 33+), notifications will **silently fail** to post — the OS blocks them without a dialog
+- On Android 13+, image picker/screenshot upload may fail when reading from gallery
+- Google Play may reject the app for requesting permissions the app doesn't actually use
+
+**Fix:** Add a permission helper that checks `ContextCompat.checkSelfPermission()` and requests at first use.
+
+---
+
+### Critical 9: Hardcoded API Keys Compiled into APK via BuildConfig
+
+**File:** `app/build.gradle.kts` lines 58-62
+
+```kotlin
+buildConfigField("String", "SUPABASE_URL", supabaseUrl)
+buildConfigField("String", "SUPABASE_ANON_KEY", supabaseKey)
+buildConfigField("String", "NEWSAPI_KEY", newsApiKey)
+buildConfigField("String", "X_BEARER_TOKEN", xBearerToken)
+buildConfigField("String", "NEWS_SERVICE_API_KEY", newsServiceApiKey)
+```
+
+**Problem:** These are compiled as `String` constants in the APK. `BuildConfig` fields are trivially extractable from any Android APK via `strings` command or decompiler. An attacker can:
+- Extract your Supabase anon key
+- Extract your NewsAPI key
+- Extract your Twitter/X bearer token
+- Make API calls on your quota
+
+**The Supabase anon key is PUBLIC by design** — this is acceptable. But `NEWSAPI_KEY` and `X_BEARER_TOKEN` are private API keys.
+
+**Mitigation in code:** `SafeHttpLogger` redacts these from logcat. Good. But they still exist in the binary.
+
+**Fix:** Move sensitive API keys to a server-side proxy (which you already have `NewsApiClient` / `ProxyApiClient` for). The app should call YOUR backend, not NewsAPI/X directly.
+
+---
+
+### Critical 10: SplashScreen `LaunchedEffect` Has No Cancellation Guard
+
+**File:** `app/src/main/java/com/mlbb/scrim/ui/screens/SplashScreen.kt` lines 33-38
+
+```kotlin
+LaunchedEffect(Unit) {
+    delay(200)
+    startAnimation = true
+    delay(delayMillis)  // 2800ms
+    onFinish()          // Navigates away
+}
+```
+
+**Problem:** If the user presses the system back button or the app goes to background during the 2.8s splash delay, the coroutine keeps running. When it finally calls `onFinish()`, the composition may already be disposed, causing:
+- `IllegalStateException: Already disposed`
+- Navigation to a screen that no longer exists
+- Crash on rapid app restarts
+
+**Fix:** Check `isActive` before calling `onFinish()`, or use `DisposableEffect`:
+```kotlin
+LaunchedEffect(Unit) {
+    delay(200)
+    startAnimation = true
+    delay(delayMillis)
+    if (isActive) onFinish()
+}
+```
+
+---
+
+### Critical 11: Deep Link Domain Not Verified + App Link Auto-Verify Risk
+
+**File:** `AndroidManifest.xml` lines 48-66
+
+```xml
+<intent-filter android:autoVerify="true">
+    <data android:scheme="https" android:host="mlbbscrim.app" ... />
+</intent-filter>
+```
+
+**Problem:** `android:autoVerify="true"` tells Android to verify domain ownership via a `/.well-known/assetlinks.json` file on `mlbbscrim.app`. If that file doesn't exist or is misconfigured:
+- Deep links won't open directly in the app (user sees "Open with" chooser)
+- Google Play Console may flag it as a broken App Link
+- The domain `mlbbscrim.app` may not even be registered/purchased
+
+**Impact:** Medium — deep links work as fallback (user picks app), but lose the seamless "verified app" experience.
+
+**Fix:** Verify the domain is registered and has the correct `assetlinks.json`.
+
+---
+
+### Critical 12: NewsRepository Contains Hardcoded Demo Articles
+
+**File:** `app/src/main/java/com/mlbb/scrim/data/repository/NewsRepository.kt` lines 41-80
+
+The app ships with 4 hardcoded "demo" news articles that use placeholder Unsplash images and fictional content:
+
+```kotlin
+private val demoNews = listOf(
+    NewsArticle(id = "demo_1", title = "Mobile Legends MPL Season 14 Finals...", ...),
+    NewsArticle(id = "demo_2", title = "Moonton Announces New Hero...", ...),
+    ...
+)
+```
+
+**Problem:** These are shown to real users when the news API fails or is rate-limited. The content is:
+- Fictional ("Shadow Assassin" hero doesn't exist)
+- Uses Unsplash stock photos, not real game imagery
+- May violate Moonton's IP if presented as official content
+
+**Impact:** Low-Medium. Users see fake news when offline. Not a crash, but a credibility issue.
+
+**Fix:** Replace demo articles with generic "Check back later" placeholder, or fetch real content from a cached RSS feed.
+
+---
+
+### 🟡 Non-Critical Findings (Code Quality)
+
+#### 🟡 `ChatScreen.kt` - `snapshotFlow` collects forever without cleanup
+
+```kotlin
+LaunchedEffect(Unit) {
+    snapshotFlow { messageText }
+        .collect { text -> ... }  // Runs forever while screen is active
+}
+```
+
+**Impact:** The typing debounce coroutine runs the entire time the chat screen is open. On low-end devices with long chat sessions, this wastes a tiny amount of CPU. Not a memory leak (canceled on dispose), but inefficient.
+
+**Fix:** Use `collectLatest` with a `debounce` operator instead of manual `delay(3000)`.
+
+---
+
+#### 🟡 Hardcoded Dimensions in Screens (Not Using Design System Spacing)
+
+Found ~30+ hardcoded `.dp` and `.sp` values in `TournamentDetailScreen.kt` alone:
+- `Modifier.size(44.dp)`
+- `fontSize = 12.sp`
+- `RoundedCornerShape(12.dp)`
+- `Arrangement.spacedBy(16.dp)`
+
+Other screens have similar patterns. The `DESIGN.md` defines a spacing system:
+- XS: 4dp, S: 8dp, M: 16dp, L: 24dp, XL: 32dp
+
+**Impact:** Inconsistent spacing across screens. Not a bug, but design debt.
+
+---
+
+#### 🟡 `NewsRepository.kt` - Demo Articles Use Unsplash URLs (External Dependency)
+
+The demo news articles load images from `images.unsplash.com`. If Unsplash is blocked, slow, or changes their URL structure, the images fail to load.
+
+**Fix:** Use local drawable placeholders or your own CDN.
+
+---
+
+## ✅ What the Code Gets RIGHT (Confirmed in Deep Dive)
+
+| Area | Finding | Verdict |
+|------|---------|---------|
+| **Coroutine scopes** | Uses `viewModelScope`, `repositoryScope`, `lifecycleScope` correctly. No `GlobalScope`. | ✅ Correct |
+| **Job cleanup** | `MessageViewModel.onCleared()` cancels all jobs + unsubscribes from realtime. | ✅ Correct |
+| **SQL injection** | No raw SQL concatenation. Uses Supabase REST API (parameterized). | ✅ Safe |
+| **HTTP logging** | `HttpLoggingInterceptor` set to `Level.NONE` in release builds. | ✅ Safe |
+| **WorkManager** | `MessageSyncWorker` properly configured with Hilt injection + retry. | ✅ Correct |
+| **Image loading** | Uses Coil (`SubcomposeAsyncImage`) with proper loading/error states. | ✅ Correct |
+| **Locale handling** | `LocaleManager` + `AppSettings` properly handles language switching. | ✅ Correct |
+| **Theme switching** | `AppSettings.darkMode` + `MLBBScrimHostTheme` supports dark/light. | ✅ Correct |
+| **Auth token refresh** | `SupabaseAuthenticator` handles 401 with refresh token. | ✅ Correct |
+| **Deep links** | `AuthNavigation` registers `mlbbscrim://app` + `https://mlbbscrim.app` deep links. | ✅ Configured |
+| **Offline queue** | `PendingMessageEntity` + `MessageSyncWorker` handle offline message sending. | ✅ Correct |
+| **Rate limiting** | `RetryInterceptor` with exponential backoff on network failures. | ✅ Correct |
+
+---
+
+## Updated Summary: Blocker Count
+
+### Original Assessment: 4 blockers
+### First Deep Dive: +7 blockers (11 total)
+### Second Deep Dive: +4 blockers, +3 non-critical (15 total)
+
+| # | Blocker | Severity | Time to Fix |
+|---|---------|----------|-------------|
+| 1 | 259 lint errors (MissingTranslation) | 🔴 High | 10 min (suppress) |
+| 2 | Supabase free tier | 🔴 High | $25/mo |
+| 3 | 80 stale unit tests | 🔴 High | 2-4h (delete or rewrite) |
+| 4 | Certificate pinning = empty string hash | 🔴 Critical | 15 min |
+| 5 | ProGuard rules defeat obfuscation | 🔴 High | 30 min |
+| 6 | SecurityUtils tamper detection disabled | 🔴 Medium | 10 min |
+| 7 | No instrumentation tests | 🔴 Medium | 4-8h (new) |
+| 8 | Firebase Crashlytics inactive | 🔴 Medium | 15 min |
+| 9 | **Runtime permission requests missing** | 🔴 High | 1h |
+| 10 | **Hardcoded API keys in BuildConfig** | 🔴 Medium | 2h (move to proxy) |
+| 11 | **SplashScreen LaunchedEffect no cancellation** | 🟡 Medium | 5 min |
+| 12 | **Deep link domain not verified** | 🟡 Low | 30 min |
+| 13 | **NewsRepository demo articles** | 🟡 Low | 30 min |
+
+---
+
+## What I Missed (Cumulative)
+
+1. Test suite is stale (not just "unknown" — actively wrong)
+2. Certificate pinning is security theater
+3. ProGuard rules are contradictory
+4. Tamper detection placeholder not filled
+5. No instrumentation tests
+6. Firebase inactive
+7. **Runtime permission requests completely missing**
+8. **API keys compiled into APK binary**
+9. **SplashScreen coroutine not cancellation-safe**
+10. **Deep link verification likely broken**
+11. **Demo news articles ship with app**
+
+---
+
+*Final update 2026-05-28 after exhaustive source-code audit (~200 files read).*
+*Build: `./gradlew :app:compileDebugKotlin` SUCCESS.*
+*Tests: `./gradlew test` — 80/675 FAILED (all stale, not app bugs).*
+*Lint: `./gradlew lint` — 259 errors (all MissingTranslation).*
+*Security: Certificate pinning disabled, tamper detection disabled, API keys in binary.*
