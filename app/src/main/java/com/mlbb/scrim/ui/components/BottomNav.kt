@@ -143,6 +143,7 @@ private fun DockContainer(
         modifier = Modifier
             .fillMaxWidth()
             .height(responsive.bottomNavGlowHeight)
+            .clip(RoundedCornerShape(responsive.bottomNavCornerRadius))
             .blur(24.dp)
             .alpha(0.6f)
             .background(
@@ -237,7 +238,7 @@ private fun DockItem(
 
     val indicatorAlpha by animateFloatAsState(
         targetValue   = if (isSelected) 1f else 0f,
-        animationSpec = tween(300, easing = AppEaseOutCubic),
+        animationSpec = tween(180, easing = AppEaseOutCubic),
         label = "indicatorAlpha"
     )
 
@@ -252,40 +253,39 @@ private fun DockItem(
         contentAlignment = Alignment.Center
     ) {
         // Active background pill — gold-tinted per MLBB design
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .size(
-                        width  = if (responsive.isCompact) 42.dp else 48.dp,
-                        height = if (responsive.isCompact) 36.dp else 40.dp
-                    )
-                    .alpha(indicatorAlpha)
-                    .background(
-                        brush = Brush.verticalGradient(
+        // Always render so alpha animation gives smooth fade-in AND fade-out
+        Box(
+            modifier = Modifier
+                .size(
+                    width  = if (responsive.isCompact) 42.dp else 48.dp,
+                    height = if (responsive.isCompact) 36.dp else 40.dp
+                )
+                .alpha(indicatorAlpha)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            GoldPrimary.copy(alpha = 0.18f),
+                            GoldPrimary.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .drawBehind {
+                    // Gold top border highlight
+                    drawLine(
+                        brush = Brush.horizontalGradient(
                             colors = listOf(
-                                GoldPrimary.copy(alpha = 0.18f),
-                                GoldPrimary.copy(alpha = 0.08f)
+                                Color.Transparent,
+                                GoldPrimary.copy(alpha = 0.6f),
+                                Color.Transparent
                             )
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        start = Offset(0f, 0.5f),
+                        end = Offset(size.width, 0.5f),
+                        strokeWidth = 1.5f
                     )
-                    .drawBehind {
-                        // Gold top border highlight
-                        drawLine(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    GoldPrimary.copy(alpha = 0.6f),
-                                    Color.Transparent
-                                )
-                            ),
-                            start = Offset(0f, 0.5f),
-                            end = Offset(size.width, 0.5f),
-                            strokeWidth = 1.5f
-                        )
-                    }
-            )
-        }
+                }
+        )
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
