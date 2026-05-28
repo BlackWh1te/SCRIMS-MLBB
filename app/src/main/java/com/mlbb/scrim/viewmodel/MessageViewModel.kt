@@ -106,7 +106,7 @@ class MessageViewModel @Inject constructor(
                 messageRepository.getConversationsForUser(userId).collect { result ->
                     result.onSuccess { _conversations.value = it }
                 }
-                delay(30_000)
+                delay(10_000)
             }
         }
     }
@@ -143,7 +143,7 @@ class MessageViewModel @Inject constructor(
 
         chatPollingJob = viewModelScope.launch {
             while (isActive) {
-                delay(5_000)
+                delay(3_000)
                 messageRepository.getConversationById(conversationId).collect { result ->
                     result.onSuccess { conv ->
                         val polled = conv?.messages.orEmpty()
