@@ -3,6 +3,9 @@
 -- the conversations query, so the Android client can display real avatars
 -- without a separate profile fetch per conversation.
 
+-- Drop first because return type changes (adds avatar_url columns)
+DROP FUNCTION IF EXISTS get_conversations_for_user(UUID);
+
 CREATE OR REPLACE FUNCTION get_conversations_for_user(p_user_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -70,7 +73,7 @@ BEGIN
             c.is_team_chat = TRUE
             AND c.team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = p_user_id AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = p_user_id
             )
         )
     ORDER BY c.is_pinned DESC, c.last_message_time DESC;

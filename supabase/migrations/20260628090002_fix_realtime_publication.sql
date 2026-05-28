@@ -28,12 +28,15 @@ BEGIN
 END $$;
 
 -- ═══════════════════════════════════════════════════════════════
--- 2. ENSURE PUBLICATION FLAGS ARE CORRECT
+-- 2. PUBLICATION FLAGS NOTE
 -- ═══════════════════════════════════════════════════════════════
-ALTER PUBLICATION supabase_realtime SET (publish_insert = true);
-ALTER PUBLICATION supabase_realtime SET (publish_update = true);
-ALTER PUBLICATION supabase_realtime SET (publish_delete = true);
-ALTER PUBLICATION supabase_realtime SET (publish_truncate = true);
+-- On hosted Supabase, the supabase_realtime publication flags
+-- (pubinsert, pubupdate, pubdelete, pubtruncate) are managed by
+-- the platform and typically already enabled. If you need to
+-- verify them, run: SELECT * FROM pg_publication WHERE pubname = 'supabase_realtime';
+-- Changing these via ALTER PUBLICATION SET is not supported on
+-- all Postgres versions, so we skip it here and rely on the
+-- diagnostic function (section 5) for verification.
 
 -- ═══════════════════════════════════════════════════════════════
 -- 3. ENSURE MESSAGING TABLES HAVE REPLICA IDENTITY FULL

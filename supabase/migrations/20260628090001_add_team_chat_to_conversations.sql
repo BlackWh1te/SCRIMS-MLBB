@@ -33,6 +33,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_team_chat ON conversations(team_id)
     WHERE is_team_chat = TRUE;
 
 -- ── 3. RPC: get or create team conversation ───────────────────────────────────
+-- Drop first because return type may conflict with an older version
+DROP FUNCTION IF EXISTS get_or_create_team_conversation(UUID, TEXT, UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION get_or_create_team_conversation(
     p_team_id UUID,
     p_team_name TEXT,
@@ -134,6 +137,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ── 4. Update get_conversations_for_user to include team chats ───────────────
+-- Drop first because return type changes (adds team_id, is_team_chat, is_pinned, group_name)
+DROP FUNCTION IF EXISTS get_conversations_for_user(UUID);
+
 CREATE OR REPLACE FUNCTION get_conversations_for_user(p_user_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -195,7 +201,7 @@ BEGIN
             c.is_team_chat = TRUE
             AND c.team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = p_user_id AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = p_user_id
             )
         )
     ORDER BY c.is_pinned DESC, c.last_message_time DESC;
@@ -212,7 +218,7 @@ CREATE POLICY "Conversation participants can view" ON conversations
             is_team_chat = TRUE
             AND team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = auth.uid()
             )
         )
     );
@@ -226,7 +232,7 @@ CREATE POLICY "Conversation participants can update" ON conversations
             is_team_chat = TRUE
             AND team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = auth.uid()
             )
         )
     );
@@ -246,7 +252,7 @@ CREATE POLICY "Conversation members can view messages" ON messages
                     c.is_team_chat = TRUE
                     AND c.team_id IN (
                         SELECT tm.team_id FROM team_members tm
-                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                        WHERE tm.user_id = auth.uid()
                     )
                 )
             )
@@ -267,7 +273,7 @@ CREATE POLICY "Conversation members can send messages" ON messages
                     c.is_team_chat = TRUE
                     AND c.team_id IN (
                         SELECT tm.team_id FROM team_members tm
-                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                        WHERE tm.user_id = auth.uid()
                     )
                 )
             )

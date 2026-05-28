@@ -845,8 +845,8 @@ interface SupabaseApiService {
     @POST("rpc/award_scrim_points")
     suspend fun awardScrimPoints(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
 
-    // P2-3: mark_conversation_as_read — implement in DB or remove; keeping for now as no-op safe
-    @POST("rpc/mark_conversation_as_read")
+    // mark_messages_as_read RPC — updates is_read for all unread messages from other sender
+    @POST("rpc/mark_messages_as_read")
     suspend fun markConversationAsRead(@Body params: Map<String, String>): Response<Unit>
 
     // ─── Conversations RPC ───
@@ -976,6 +976,12 @@ interface SupabaseApiService {
         @Query("tournament_id") tournamentId: String? = null,
         @Query("select") select: String? = null,
         @Query("order") order: String = "round_number.asc,match_number.asc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    @PATCH("tournament_swiss_matches")
+    suspend fun updateTournamentSwissMatch(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
     ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
 
     // ─── Tournament Match Rosters ───

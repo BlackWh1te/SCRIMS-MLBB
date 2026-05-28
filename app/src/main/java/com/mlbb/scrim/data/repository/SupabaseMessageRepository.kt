@@ -663,7 +663,7 @@ class SupabaseMessageRepository(
     // ── Read receipts ──
     override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {
         try {
-            api.markConversationAsRead(mapOf("p_conversation_id" to conversationId, "p_user_id" to userId))
+            api.markConversationAsRead(mapOf("p_conversation_id" to conversationId, "p_reader_id" to userId))
             try {
                 messageDao.markMessagesAsRead(conversationId, userId, System.currentTimeMillis())
             } catch (e: Exception) { Timber.w(TAG, "Failed to mark messages as read in Room", e) }
