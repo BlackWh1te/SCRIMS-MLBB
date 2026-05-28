@@ -66,7 +66,7 @@ class SupabaseTournamentRepository(
         withRetry {
             val statusFilter = status?.let { "eq.$it" } ?: "neq.draft"
             val response = api.getTournaments(
-                select = "*,profiles:host_user_id(username),tournament_teams(count)",
+                select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)",
                 status = statusFilter,
                 region = region?.let { "eq.$it" },
                 skillLevel = skillLevel?.let { "eq.$it" },
@@ -91,7 +91,7 @@ class SupabaseTournamentRepository(
         withRetry {
             val response = api.getTournamentById(
                 id = PostgrestFilter.eq(tournamentId),
-                select = "*,profiles:host_user_id(username),tournament_teams(count)"
+                select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)"
             )
             if (response.isSuccessful) {
                 val dto = response.body()?.firstOrNull() ?: throw Exception("Tournament not found")
@@ -505,8 +505,13 @@ class SupabaseTournamentRepository(
         Result.failure(e)
     }
 
-    override suspend fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean): Result<Map<String, Any>> = try {
-        val params = mutableMapOf<String, Any>("p_match_id" to matchId, "p_is_draw" to isDraw)
+    override suspend fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean, gameAScore: Int, gameBScore: Int): Result<Map<String, Any>> = try {
+        val params = mutableMapOf<String, Any>(
+            "p_match_id" to matchId,
+            "p_is_draw" to isDraw,
+            "p_game_a_score" to gameAScore,
+            "p_game_b_score" to gameBScore
+        )
         winnerTeamId?.let { params["p_winner_team_id"] = it }
         val response = api.rpcSubmitTournamentMatchResult(params)
         if (response.isSuccessful) {
@@ -703,6 +708,20 @@ class SupabaseTournamentRepository(
         Result.failure(e)
     }
 
+    override suspend fun getTournamentPlayerStats(tournamentId: String): Result<List<TournamentPlayerStats>> = try {
+        val response = api.getTournamentPlayerStats(
+            tournamentId = PostgrestFilter.eq(tournamentId)
+        )
+        if (response.isSuccessful) {
+            val stats = response.body()?.map { mapDtoToPlayerStats(it) } ?: emptyList()
+            Result.success(stats)
+        } else {
+            Result.failure(Exception("Failed to fetch player stats"))
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     // ── DTO mappers ─────────────────────────────────────────────
 
     @Suppress("UNCHECKED_CAST")
@@ -738,6 +757,7 @@ class SupabaseTournamentRepository(
             createdAt = parseTimestamp(dto["created_at"]),
             updatedAt = parseTimestamp(dto["updated_at"]),
             teamCount = teamCountEmbedded,
+            hostTrustScore = (profiles?.get("host_trust_score") as? Number)?.toDouble() ?: 0.0,
         )
     }
 
@@ -863,6 +883,21 @@ class SupabaseTournamentRepository(
             hostUserId = (dto["host_user_id"] as? String) ?: "",
             authUserId = dto["auth_user_id"] as? String,
             email = (dto["email"] as? String) ?: "",
+        )
+    }
+
+    private fun mapDtoToPlayerStats(dto: Map<String, Any?>): TournamentPlayerStats {
+        return TournamentPlayerStats(
+            id = (dto["id"] as? String) ?: "",
+            tournamentId = (dto["tournament_id"] as? String) ?: "",
+            userId = (dto["user_id"] as? String) ?: "",
+            teamId = (dto["team_id"] as? String) ?: "",
+            placement = (dto["placement"] as? Number)?.toInt(),
+            matchesWon = (dto["matches_won"] as? Number)?.toInt() ?: 0,
+            matchesLost = (dto["matches_lost"] as? Number)?.toInt() ?: 0,
+            matchesDrawn = (dto["matches_drawn"] as? Number)?.toInt() ?: 0,
+            pointsEarned = (dto["points_earned"] as? Number)?.toInt() ?: 0,
+            createdAt = parseTimestamp(dto["created_at"]),
         )
     }
 

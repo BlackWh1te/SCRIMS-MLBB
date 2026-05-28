@@ -66,10 +66,12 @@ interface TournamentRepositoryInterface {
 
     suspend fun createHostAccount(tournamentId: String, hostUserId: String): Result<Map<String, Any>>
 
+    suspend fun getTournamentPlayerStats(tournamentId: String): Result<List<TournamentPlayerStats>>
+
     // ── Swiss pairing & tournament management ────────────────────
     suspend fun generateSwissPairings(tournamentId: String): Result<Map<String, Any>>
 
-    suspend fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean): Result<Map<String, Any>>
+    suspend fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean, gameAScore: Int = 0, gameBScore: Int = 0): Result<Map<String, Any>>
 
     suspend fun awardMatchPoints(matchId: String): Result<Map<String, Any>>
 

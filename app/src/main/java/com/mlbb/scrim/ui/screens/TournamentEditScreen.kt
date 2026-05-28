@@ -58,6 +58,26 @@ fun TournamentEditScreen(
     var newReqUrl by remember { mutableStateOf("") }
     var requirementsDirty by remember { mutableStateOf(false) }
 
+    // Date/time picker states — registration
+    val regDatePickerState = rememberDatePickerState(initialSelectedDateMillis = tournament.registrationDeadline)
+    val regTimePickerState = rememberTimePickerState(
+        initialHour = java.util.Calendar.getInstance().apply { timeInMillis = tournament.registrationDeadline }.get(java.util.Calendar.HOUR_OF_DAY),
+        initialMinute = java.util.Calendar.getInstance().apply { timeInMillis = tournament.registrationDeadline }.get(java.util.Calendar.MINUTE)
+    )
+    var pendingRegDateMillis by remember { mutableLongStateOf(0L) }
+    var showRegDatePicker by remember { mutableStateOf(false) }
+    var showRegTimePicker by remember { mutableStateOf(false) }
+
+    // Date/time picker states — check-in
+    val checkInDatePickerState = rememberDatePickerState(initialSelectedDateMillis = tournament.checkInDeadline)
+    val checkInTimePickerState = rememberTimePickerState(
+        initialHour = java.util.Calendar.getInstance().apply { timeInMillis = tournament.checkInDeadline }.get(java.util.Calendar.HOUR_OF_DAY),
+        initialMinute = java.util.Calendar.getInstance().apply { timeInMillis = tournament.checkInDeadline }.get(java.util.Calendar.MINUTE)
+    )
+    var pendingCheckInDateMillis by remember { mutableLongStateOf(0L) }
+    var showCheckInDatePicker by remember { mutableStateOf(false) }
+    var showCheckInTimePicker by remember { mutableStateOf(false) }
+
     LaunchedEffect(existingRequirements) {
         if (!requirementsDirty) pendingRequirements = existingRequirements
     }
@@ -342,14 +362,18 @@ fun TournamentEditScreen(
                             ) {
                                 OutlinedTextField(
                                     value = registrationDeadline,
-                                    onValueChange = { registrationDeadline = it; deadlineError = null },
+                                    onValueChange = {},
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("yyyy-MM-dd HH:mm", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
+                                    readOnly = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = inputColors(),
                                     textStyle = TextStyle(color = White, fontSize = 13.sp),
                                     isError = deadlineError != null,
-                                    leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) }
+                                    leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) },
+                                    trailingIcon = {
+                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(18.dp).clickable { showRegDatePicker = true })
+                                    }
                                 )
                             }
                         }
@@ -363,14 +387,18 @@ fun TournamentEditScreen(
                             ) {
                                 OutlinedTextField(
                                     value = checkInDeadline,
-                                    onValueChange = { checkInDeadline = it; deadlineError = null },
+                                    onValueChange = {},
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("yyyy-MM-dd HH:mm", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
+                                    readOnly = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = inputColors(),
                                     textStyle = TextStyle(color = White, fontSize = 13.sp),
                                     isError = deadlineError != null,
-                                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) }
+                                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) },
+                                    trailingIcon = {
+                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(18.dp).clickable { showCheckInDatePicker = true })
+                                    }
                                 )
                             }
                             deadlineError?.let {
@@ -606,6 +634,136 @@ fun TournamentEditScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
             }
+        }
+
+        // Registration Date Picker Dialog
+        if (showRegDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showRegDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        regDatePickerState.selectedDateMillis?.let { dateMillis ->
+                            showRegDatePicker = false
+                            showRegTimePicker = true
+                            pendingRegDateMillis = dateMillis
+                        }
+                    }) { Text("Next", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRegDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                }
+            ) {
+                DatePicker(state = regDatePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = DarkNavy,
+                        titleContentColor = White,
+                        headlineContentColor = White,
+                        navigationContentColor = GoldPrimary,
+                        yearContentColor = LightGray,
+                        currentYearContentColor = GoldPrimary,
+                        selectedDayContentColor = DarkNavy,
+                        selectedDayContainerColor = GoldPrimary,
+                        dayContentColor = White,
+                        weekdayContentColor = TextSecondary
+                    )
+                )
+            }
+        }
+
+        // Registration Time Picker Dialog
+        if (showRegTimePicker) {
+            AlertDialog(
+                onDismissRequest = { showRegTimePicker = false },
+                containerColor = DarkNavy,
+                confirmButton = {
+                    TextButton(onClick = {
+                        val cal = java.util.Calendar.getInstance().apply {
+                            timeInMillis = pendingRegDateMillis ?: System.currentTimeMillis()
+                            set(java.util.Calendar.HOUR_OF_DAY, regTimePickerState.hour)
+                            set(java.util.Calendar.MINUTE, regTimePickerState.minute)
+                            set(java.util.Calendar.SECOND, 0)
+                        }
+                        registrationDeadline = formatTimestamp(cal.timeInMillis)
+                        deadlineError = null
+                        showRegTimePicker = false
+                    }) { Text("OK", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRegTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Select Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TimePicker(state = regTimePickerState)
+                    }
+                }
+            )
+        }
+
+        // Check-In Date Picker Dialog
+        if (showCheckInDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showCheckInDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        checkInDatePickerState.selectedDateMillis?.let { dateMillis ->
+                            showCheckInDatePicker = false
+                            showCheckInTimePicker = true
+                            pendingCheckInDateMillis = dateMillis
+                        }
+                    }) { Text("Next", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                }
+            ) {
+                DatePicker(state = checkInDatePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = DarkNavy,
+                        titleContentColor = White,
+                        headlineContentColor = White,
+                        navigationContentColor = GoldPrimary,
+                        yearContentColor = LightGray,
+                        currentYearContentColor = GoldPrimary,
+                        selectedDayContentColor = DarkNavy,
+                        selectedDayContainerColor = GoldPrimary,
+                        dayContentColor = White,
+                        weekdayContentColor = TextSecondary
+                    )
+                )
+            }
+        }
+
+        // Check-In Time Picker Dialog
+        if (showCheckInTimePicker) {
+            AlertDialog(
+                onDismissRequest = { showCheckInTimePicker = false },
+                containerColor = DarkNavy,
+                confirmButton = {
+                    TextButton(onClick = {
+                        val cal = java.util.Calendar.getInstance().apply {
+                            timeInMillis = pendingCheckInDateMillis ?: System.currentTimeMillis()
+                            set(java.util.Calendar.HOUR_OF_DAY, checkInTimePickerState.hour)
+                            set(java.util.Calendar.MINUTE, checkInTimePickerState.minute)
+                            set(java.util.Calendar.SECOND, 0)
+                        }
+                        checkInDeadline = formatTimestamp(cal.timeInMillis)
+                        deadlineError = null
+                        showCheckInTimePicker = false
+                    }) { Text("OK", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Select Check-In Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TimePicker(state = checkInTimePickerState)
+                    }
+                }
+            )
         }
 
         // Loading overlay

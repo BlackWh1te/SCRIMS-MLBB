@@ -233,6 +233,8 @@ fun AuthNavigation(
     val hostedTournaments by tournamentViewModel.hostedTournaments.collectAsState()
     val myApplications by tournamentViewModel.myApplications.collectAsState()
     val myHostRequest by tournamentViewModel.myHostRequest.collectAsState()
+    val matchRoster by tournamentViewModel.matchRoster.collectAsState()
+    val playerStats by tournamentViewModel.playerStats.collectAsState()
     val isTournamentHost = userProfile?.isTournamentHost == true
 
     val unreadCount = conversations.sumOf { it.unreadCount }
@@ -548,12 +550,16 @@ fun AuthNavigation(
                         },
                         onGeneratePairings = { tid -> tournamentViewModel.generateSwissPairings(tid) },
                         onReviewApplication = { appId, approved, reason -> tournamentViewModel.reviewApplication(appId, approved, reason) },
-                        onSubmitMatchResult = { mid, winnerId, isDraw -> tournamentViewModel.submitMatchResult(mid, winnerId, isDraw) },
+                        onSubmitMatchResult = { mid, winnerId, isDraw, gameAScore, gameBScore -> tournamentViewModel.submitMatchResult(mid, winnerId, isDraw, gameAScore, gameBScore) },
                         onCancelTournament = { tid, reason -> tournamentViewModel.cancelTournament(tid, reason) },
                         onCompleteTournament = { tid -> tournamentViewModel.completeTournament(tid) },
                         onDisqualifyTeam = { tid, teamId, reason -> tournamentViewModel.disqualifyTeam(tid, teamId, reason) },
                         onLoadRoomSecret = { mid -> tournamentViewModel.loadRoomSecret(mid) },
-                        onResolveDispute = { mid, winId, isDraw, resolution -> tournamentViewModel.resolveDispute(mid, winId, isDraw, resolution) }
+                        onResolveDispute = { mid, winId, isDraw, resolution -> tournamentViewModel.resolveDispute(mid, winId, isDraw, resolution) },
+                        matchRoster = matchRoster,
+                        onLoadMatchRoster = { mid, tid, gn -> tournamentViewModel.loadMatchRoster(mid, tid, gn) },
+                        onSetMatchRoster = { mid, tid, gn, pids -> tournamentViewModel.setMatchRoster(mid, tid, gn, pids) },
+                        playerStats = playerStats
                     )
                 }
 
@@ -1593,9 +1599,11 @@ fun AuthNavigation(
                                 NotificationType.TOURNAMENT_MATCH_RESULT,
                                 NotificationType.TOURNAMENT_MATCH_SCHEDULED,
                                 NotificationType.TOURNAMENT_HOST_REQUEST_STATUS,
-                                NotificationType.TOURNAMENT_HOST_APPROVED,
+                                NotificationType.TOURNAMENT_HOST_APPROVED -> {
+                                    navController.navigate(Screen.TournamentHostManagement.route)
+                                }
                                 NotificationType.TOURNAMENT_HOST_REJECTED -> {
-                                    if (id.isNotBlank()) navController.navigate(Screen.TournamentDetail.createRoute(id))
+                                    navController.navigate(Screen.TournamentHostRequest.route)
                                 }
                                 // ── Match result notifications ──
                                 NotificationType.MATCH_RESULT -> {

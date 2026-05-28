@@ -57,6 +57,10 @@ class TournamentViewModel @Inject constructor(
     private val _matchRoster = MutableStateFlow<List<TournamentMatchRoster>>(emptyList())
     val matchRoster: StateFlow<List<TournamentMatchRoster>> = _matchRoster.asStateFlow()
 
+    // ── Tournament player stats ──
+    private val _playerStats = MutableStateFlow<List<TournamentPlayerStats>>(emptyList())
+    val playerStats: StateFlow<List<TournamentPlayerStats>> = _playerStats.asStateFlow()
+
     // ── Room secret ──
     private val _roomSecret = MutableStateFlow<TournamentMatchRoomSecret?>(null)
     val roomSecret: StateFlow<TournamentMatchRoomSecret?> = _roomSecret.asStateFlow()
@@ -180,11 +184,12 @@ class TournamentViewModel @Inject constructor(
                 .onSuccess { tournament ->
                     _selectedTournament.value = tournament
                     _isLoading.value = false
-                    // Also load requirements, teams, matches, and applications
+                    // Also load requirements, teams, matches, applications, and player stats
                     loadRequirements(tournamentId)
                     loadTournamentTeams(tournamentId)
                     loadTournamentMatches(tournamentId)
                     loadMyApplications()
+                    loadTournamentPlayerStats(tournamentId)
                 }.onFailure { e ->
                     _error.value = e.message
                     _isLoading.value = false
@@ -388,6 +393,14 @@ class TournamentViewModel @Inject constructor(
         }
     }
 
+    fun loadTournamentPlayerStats(tournamentId: String) {
+        viewModelScope.launch {
+            tournamentRepository.getTournamentPlayerStats(tournamentId)
+                .onSuccess { _playerStats.value = it }
+                .onFailure { _error.value = it.message }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // MATCH ROSTER
     // ═══════════════════════════════════════════════════════════════
@@ -534,11 +547,11 @@ class TournamentViewModel @Inject constructor(
         }
     }
 
-    fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean) {
+    fun submitMatchResult(matchId: String, winnerTeamId: String?, isDraw: Boolean, gameAScore: Int = 0, gameBScore: Int = 0) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            tournamentRepository.submitMatchResult(matchId, winnerTeamId, isDraw)
+            tournamentRepository.submitMatchResult(matchId, winnerTeamId, isDraw, gameAScore, gameBScore)
                 .onSuccess {
                     _isLoading.value = false
                     // Refresh the current tournament data

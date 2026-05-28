@@ -637,15 +637,53 @@ private fun TournamentCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // ── Hosted by ──
-                Text(
-                    text = stringResource(R.string.tournament_hosted_by, tournament.hostUsername),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    ),
+                // ── Hosted by + Trust Score ──
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(top = 2.dp)
-                )
+                ) {
+                    Text(
+                        text = stringResource(R.string.tournament_hosted_by, tournament.hostUsername),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    )
+                    if (tournament.hostTrustScore > 0) {
+                        val trustColor = when {
+                            tournament.hostTrustScore >= 8.0 -> SuccessGreen
+                            tournament.hostTrustScore >= 5.0 -> WarningOrange
+                            else -> ErrorRed
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = trustColor.copy(alpha = 0.12f),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, trustColor.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = trustColor,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Text(
+                                    text = "%.1f".format(tournament.hostTrustScore),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = trustColor,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 

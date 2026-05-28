@@ -58,12 +58,18 @@ fun TournamentDetailScreen(
     // Host actions
     onGeneratePairings: (String) -> Unit = {},
     onReviewApplication: (String, Boolean, String?) -> Unit = { _, _, _ -> },
-    onSubmitMatchResult: (String, String?, Boolean) -> Unit = { _, _, _ -> },
+    onSubmitMatchResult: (String, String?, Boolean, Int, Int) -> Unit = { _, _, _, _, _ -> },
     onCancelTournament: (String, String?) -> Unit = { _, _ -> },
     onCompleteTournament: (String) -> Unit = {},
     onDisqualifyTeam: (String, String, String) -> Unit = { _, _, _ -> },
     onLoadRoomSecret: (String) -> Unit = {},
-    onResolveDispute: (matchId: String, winnerTeamId: String?, isDraw: Boolean, resolution: String) -> Unit = { _, _, _, _ -> }
+    onResolveDispute: (matchId: String, winnerTeamId: String?, isDraw: Boolean, resolution: String) -> Unit = { _, _, _, _ -> },
+    // Roster
+    matchRoster: List<TournamentMatchRoster> = emptyList(),
+    onLoadMatchRoster: (String, String, Int) -> Unit = { _, _, _ -> },
+    onSetMatchRoster: (String, String, Int, List<String>) -> Unit = { _, _, _, _ -> },
+    // Player stats
+    playerStats: List<TournamentPlayerStats> = emptyList()
 ) {
     val t = tournament ?: return
 
@@ -81,6 +87,11 @@ fun TournamentDetailScreen(
     var disputeIsDraw by remember { mutableStateOf(false) }
     // selectedMatchTeams is used to display team names in the resolve dialog
     var disputeMatch by remember { mutableStateOf<TournamentSwissMatch?>(null) }
+    // Roster dialog state
+    var showRosterDialog by remember { mutableStateOf(false) }
+    var rosterMatchId by remember { mutableStateOf<String?>(null) }
+    var rosterTeamId by remember { mutableStateOf<String?>(null) }
+    var rosterGameNumber by remember { mutableIntStateOf(1) }
 
     // Check if user already applied
     val myApp = myApplications.find { it.tournamentId == t.id }
@@ -194,8 +205,25 @@ fun TournamentDetailScreen(
                                     disputeIsDraw = false
                                     disputeResolution = ""
                                     showDisputeDialog = true
+                                },
+                                onEditRoster = { mid, tid, gameNum ->
+                                    rosterMatchId = mid
+                                    rosterTeamId = tid
+                                    rosterGameNumber = gameNum
+                                    onLoadMatchRoster(mid, tid, gameNum)
+                                    showRosterDialog = true
                                 }
                             )
+                        }
+                    }
+
+                    // ── Player Stats ──
+                    if (playerStats.isNotEmpty()) {
+                        item {
+                            SectionHeader(title = "Player Stats", icon = Icons.Default.EmojiEvents)
+                        }
+                        item {
+                            PlayerStatsTable(stats = playerStats, teams = teams)
                         }
                     }
 
@@ -616,6 +644,9 @@ fun TournamentDetailScreen(
             val match = matches.find { it.id == selectedMatchId }
             if (match != null) {
                 var selectedWinner by remember { mutableStateOf<String?>(null) }
+                var gameAScore by remember { mutableStateOf("1") }
+                var gameBScore by remember { mutableStateOf("0") }
+                val isBO2 = t.bestOf >= 2
                 AlertDialog(
                     onDismissRequest = { showResultDialog = false; selectedMatchId = null },
                     title = { Text("Submit Result", color = White) },
@@ -651,27 +682,75 @@ fun TournamentDetailScreen(
                                 }
                             }
                             // Draw option (BO2 only)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selectedWinner == "draw") PurplePrimary.copy(alpha = 0.2f) else SurfaceElevated)
-                                    .clickable { selectedWinner = "draw" }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = selectedWinner == "draw", onClick = { selectedWinner = "draw" }, colors = RadioButtonDefaults.colors(selectedColor = PurplePrimary))
-                                Text("Draw", style = MaterialTheme.typography.bodyMedium.copy(color = White))
+                            if (isBO2) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (selectedWinner == "draw") PurplePrimary.copy(alpha = 0.2f) else SurfaceElevated)
+                                        .clickable { selectedWinner = "draw" }
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(selected = selectedWinner == "draw", onClick = { selectedWinner = "draw" }, colors = RadioButtonDefaults.colors(selectedColor = PurplePrimary))
+                                    Text("Draw", style = MaterialTheme.typography.bodyMedium.copy(color = White))
+                                }
+                            }
+                            // Game scores (BO2 only)
+                            if (isBO2 && selectedWinner != null && selectedWinner != "draw") {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Game Scores", style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontWeight = FontWeight.SemiBold))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = gameAScore,
+                                        onValueChange = { gameAScore = it.filter { c -> c.isDigit() } },
+                                        modifier = Modifier.weight(1f),
+                                        label = { Text(match.teamAName, fontSize = 11.sp) },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = GoldPrimary,
+                                            unfocusedBorderColor = Separator,
+                                            focusedContainerColor = SurfaceElevated,
+                                            unfocusedContainerColor = SurfaceElevated,
+                                            focusedTextColor = White,
+                                            unfocusedTextColor = White
+                                        )
+                                    )
+                                    Text(":", style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary))
+                                    OutlinedTextField(
+                                        value = gameBScore,
+                                        onValueChange = { gameBScore = it.filter { c -> c.isDigit() } },
+                                        modifier = Modifier.weight(1f),
+                                        label = { Text(match.teamBName ?: "Team B", fontSize = 11.sp) },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = GoldPrimary,
+                                            unfocusedBorderColor = Separator,
+                                            focusedContainerColor = SurfaceElevated,
+                                            unfocusedContainerColor = SurfaceElevated,
+                                            focusedTextColor = White,
+                                            unfocusedTextColor = White
+                                        )
+                                    )
+                                }
                             }
                         }
                     },
                     confirmButton = {
                         TextButton(
                             onClick = {
+                                val aScore = gameAScore.toIntOrNull() ?: 0
+                                val bScore = gameBScore.toIntOrNull() ?: 0
                                 if (selectedWinner == "draw") {
-                                    onSubmitMatchResult(match.id, null, true)
+                                    onSubmitMatchResult(match.id, null, true, aScore, bScore)
                                 } else {
-                                    onSubmitMatchResult(match.id, selectedWinner, false)
+                                    onSubmitMatchResult(match.id, selectedWinner, false, aScore, bScore)
                                 }
                                 showResultDialog = false
                                 selectedMatchId = null
@@ -839,6 +918,96 @@ fun TournamentDetailScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showDisputeDialog = false }) { Text("Cancel", color = TextSecondary) }
+                }
+            )
+        }
+
+        // ── Roster Picker Dialog ──
+        if (showRosterDialog && rosterMatchId != null && rosterTeamId != null) {
+            val team = myTeams.find { it.id == rosterTeamId }
+            val players = team?.players ?: emptyList()
+            val rosterSet = matchRoster.filter { it.matchId == rosterMatchId && it.teamId == rosterTeamId && it.gameNumber == rosterGameNumber }.map { it.userId }.toSet()
+            var selectedPlayerIds by remember(rosterMatchId, rosterTeamId, rosterGameNumber, matchRoster) {
+                mutableStateOf(rosterSet.toMutableSet())
+            }
+            AlertDialog(
+                onDismissRequest = { showRosterDialog = false },
+                containerColor = DarkNavy,
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Groups, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                        Column {
+                            Text("Select Lineup", color = White, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Game $rosterGameNumber · ${team?.name ?: ""}",
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary)
+                            )
+                        }
+                    }
+                },
+                text = {
+                    if (players.isEmpty()) {
+                        Text("No team members found.", style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary))
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            players.forEach { player ->
+                                val isSelected = player.id in selectedPlayerIds
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) GoldPrimary.copy(alpha = 0.12f) else SurfaceElevated)
+                                        .clickable {
+                                            selectedPlayerIds = if (isSelected) {
+                                                selectedPlayerIds.apply { remove(player.id) }.toMutableSet()
+                                            } else {
+                                                selectedPlayerIds.apply { add(player.id) }.toMutableSet()
+                                            }
+                                        }
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = { checked ->
+                                            selectedPlayerIds = if (checked) {
+                                                selectedPlayerIds.apply { add(player.id) }.toMutableSet()
+                                            } else {
+                                                selectedPlayerIds.apply { remove(player.id) }.toMutableSet()
+                                            }
+                                        },
+                                        colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
+                                    )
+                                    Column {
+                                        Text(
+                                            player.name,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = if (isSelected) GoldPrimary else White,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        )
+                                        Text(
+                                            player.role.name.replace("_", " "),
+                                            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 10.sp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onSetMatchRoster(rosterMatchId!!, rosterTeamId!!, rosterGameNumber, selectedPlayerIds.toList())
+                            showRosterDialog = false
+                        },
+                        enabled = players.isNotEmpty()
+                    ) { Text("Confirm Lineup", color = GoldPrimary, fontWeight = FontWeight.Bold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRosterDialog = false }) { Text("Cancel", color = TextSecondary) }
                 }
             )
         }
@@ -1094,7 +1263,8 @@ private fun RoundFilteredMatches(
     onNavigateToChat: (String) -> Unit,
     onSubmitResult: (String) -> Unit,
     onViewRoomSecret: (String) -> Unit,
-    onResolveDispute: (TournamentSwissMatch) -> Unit = {}
+    onResolveDispute: (TournamentSwissMatch) -> Unit = {},
+    onEditRoster: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
     val rounds = matches.map { it.roundNumber }.distinct().sorted()
     var selectedRound by remember { mutableStateOf(rounds.firstOrNull() ?: 1) }
@@ -1156,7 +1326,8 @@ private fun RoundFilteredMatches(
                 onNavigateToChat = onNavigateToChat,
                 onSubmitResult = onSubmitResult,
                 onViewRoomSecret = onViewRoomSecret,
-                onResolveDispute = onResolveDispute
+                onResolveDispute = onResolveDispute,
+                onEditRoster = onEditRoster
             )
         }
     }
@@ -1171,12 +1342,12 @@ private fun MatchVsCard(
     onNavigateToChat: (String) -> Unit,
     onSubmitResult: (String) -> Unit,
     onViewRoomSecret: (String) -> Unit,
-    onResolveDispute: (TournamentSwissMatch) -> Unit = {}
+    onResolveDispute: (TournamentSwissMatch) -> Unit = {},
+    onEditRoster: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
     val uriHandler = LocalUriHandler.current
     // Per-match roster game-number toggle (only relevant for BO2 and user's own matches)
     var selectedGameNumber by remember(match.id) { mutableIntStateOf(1) }
-    var showRosterInfo by remember(match.id) { mutableStateOf(false) }
     val matchStatusColor = when (match.status) {
         MatchStatus.SCHEDULED -> BluePrimary
         MatchStatus.IN_PROGRESS -> ErrorRed
@@ -1400,35 +1571,41 @@ private fun MatchVsCard(
                             Text("Room", color = PurplePrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
-                    // BO2 game toggle — visible to participants in active BO2 matches
-                    if (myTeamId != null && bestOf >= 2 &&
+                    // Roster editor — visible to participants in active matches
+                    if (myTeamId != null &&
                         match.status in listOf(MatchStatus.SCHEDULED, MatchStatus.IN_PROGRESS)
                     ) {
-                        // Game 1 / Game 2 selector chip
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf(1, 2).forEach { g ->
-                                FilterChip(
-                                    selected = selectedGameNumber == g,
-                                    onClick  = { selectedGameNumber = g },
-                                    label    = { Text("Game $g", fontSize = 11.sp) },
-                                    modifier = Modifier.height(30.dp),
-                                    colors   = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                        selectedLabelColor = GoldPrimary,
-                                        containerColor = SurfaceElevated,
-                                        labelColor = LightGray
+                            if (bestOf >= 2) {
+                                listOf(1, 2).forEach { g ->
+                                    FilterChip(
+                                        selected = selectedGameNumber == g,
+                                        onClick  = { selectedGameNumber = g },
+                                        label    = { Text("Game $g", fontSize = 11.sp) },
+                                        modifier = Modifier.height(30.dp),
+                                        colors   = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
+                                            selectedLabelColor = GoldPrimary,
+                                            containerColor = SurfaceElevated,
+                                            labelColor = LightGray
+                                        )
                                     )
-                                )
+                                }
                             }
-                            // Label showing which game lineup is active
-                            Text(
-                                "lineup",
-                                modifier = Modifier.align(Alignment.CenterVertically),
-                                style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary)
-                            )
+                            // Edit roster button
+                            TextButton(
+                                onClick = { myTeamId?.let { onEditRoster(match.id, it, selectedGameNumber) } },
+                                modifier = Modifier.height(30.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, null, tint = GoldPrimary, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("Edit Roster", color = GoldPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                     // Watch Live button — visible to everyone when stream URL is set
@@ -1460,6 +1637,92 @@ private fun MatchVsCard(
                             Text("Resolve Dispute", color = WarningOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerStatsTable(stats: List<TournamentPlayerStats>, teams: List<TournamentTeam>) {
+    val teamNameMap = teams.associate { it.teamId to it.teamName }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceElevated)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("#", modifier = Modifier.width(28.dp), style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontWeight = FontWeight.Bold))
+                Text("PLAYER", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontWeight = FontWeight.Bold))
+                Text("W", modifier = Modifier.width(24.dp), style = MaterialTheme.typography.labelSmall.copy(color = SuccessGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                Text("L", modifier = Modifier.width(24.dp), style = MaterialTheme.typography.labelSmall.copy(color = ErrorRed, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                Text("D", modifier = Modifier.width(24.dp), style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                Text("PTS", modifier = Modifier.width(36.dp), style = MaterialTheme.typography.labelSmall.copy(color = GoldPrimary, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+            }
+            HorizontalDivider(thickness = 0.5.dp, color = Separator)
+
+            stats.take(20).forEachIndexed { index, stat ->
+                val rank = index + 1
+                val rankColor = when (rank) {
+                    1 -> Color(0xFFFFD700)
+                    2 -> Color(0xFFC0C0C0)
+                    3 -> Color(0xFFCD7F32)
+                    else -> TextTertiary
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$rank",
+                        modifier = Modifier.width(28.dp),
+                        style = MaterialTheme.typography.labelMedium.copy(color = rankColor, fontWeight = FontWeight.Bold)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = teamNameMap[stat.teamId] ?: "Team",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = White, fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${stat.matchesWon + stat.matchesLost + stat.matchesDrawn} matches",
+                            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 10.sp)
+                        )
+                    }
+                    Text(
+                        text = "${stat.matchesWon}",
+                        modifier = Modifier.width(24.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = SuccessGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    )
+                    Text(
+                        text = "${stat.matchesLost}",
+                        modifier = Modifier.width(24.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = ErrorRed.copy(alpha = 0.8f), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    )
+                    Text(
+                        text = "${stat.matchesDrawn}",
+                        modifier = Modifier.width(24.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextTertiary, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    )
+                    Text(
+                        text = "${stat.pointsEarned}",
+                        modifier = Modifier.width(36.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = GoldPrimary, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                    )
+                }
+                if (index < stats.size - 1 && index < 19) {
+                    HorizontalDivider(thickness = 0.5.dp, color = Separator.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
                 }
             }
         }

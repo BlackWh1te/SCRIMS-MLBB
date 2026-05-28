@@ -996,6 +996,15 @@ interface SupabaseApiService {
         @Query("limit") limit: String? = null
     ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
 
+    // ─── Tournament Player Stats ───
+
+    @GET("tournament_player_stats")
+    suspend fun getTournamentPlayerStats(
+        @Query("tournament_id") tournamentId: String? = null,
+        @Query("select") select: String = "*",
+        @Query("order") order: String = "points_earned.desc"
+    ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
     // ─── Tournament Host Accounts ───
 
     @GET("tournament_host_accounts")

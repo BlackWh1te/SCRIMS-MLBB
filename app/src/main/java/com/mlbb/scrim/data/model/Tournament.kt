@@ -91,6 +91,7 @@ data class Tournament(
     // Joined data
     val requirements: List<TournamentRequirement> = emptyList(),
     val teamCount: Int = 0,
+    val hostTrustScore: Double = 0.0,
 ) {
     val isOpen: Boolean get() = status == TournamentStatus.REGISTRATION
     val isLive: Boolean get() = status == TournamentStatus.IN_PROGRESS
@@ -221,6 +222,24 @@ data class TournamentMatchRoomSecret(
     val droppedBy: String = "",
     val droppedAt: Long = System.currentTimeMillis()
 )
+
+// ── Tournament Player Stats ───────────────────────────────────
+
+data class TournamentPlayerStats(
+    val id: String = "",
+    val tournamentId: String = "",
+    val userId: String = "",
+    val teamId: String = "",
+    val placement: Int? = null,
+    val matchesWon: Int = 0,
+    val matchesLost: Int = 0,
+    val matchesDrawn: Int = 0,
+    val pointsEarned: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    val totalMatches: Int get() = matchesWon + matchesLost + matchesDrawn
+    val winRate: Float get() = if (totalMatches > 0) (matchesWon * 100f / totalMatches) else 0f
+}
 
 // ── Host Account ────────────────────────────────────────────────
 

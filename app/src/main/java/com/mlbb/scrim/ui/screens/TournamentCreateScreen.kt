@@ -62,7 +62,7 @@ fun TournamentCreateScreen(
     var newReqLabel by remember { mutableStateOf("") }
     var newReqUrl by remember { mutableStateOf("") }
 
-    // Date/time picker states
+    // Date/time picker states — registration
     val regDatePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis() + 24 * 60 * 60 * 1000
     )
@@ -72,6 +72,18 @@ fun TournamentCreateScreen(
     )
     var showRegDatePicker by remember { mutableStateOf(false) }
     var showRegTimePicker by remember { mutableStateOf(false) }
+
+    // Date/time picker states — check-in
+    val checkInDatePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis() + 24 * 60 * 60 * 1000
+    )
+    val checkInTimePickerState = rememberTimePickerState(
+        initialHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY),
+        initialMinute = 0
+    )
+    var pendingCheckInDateMillis by remember { mutableLongStateOf(0L) }
+    var showCheckInDatePicker by remember { mutableStateOf(false) }
+    var showCheckInTimePicker by remember { mutableStateOf(false) }
 
     val prizeTypes = PrizeType.entries
     val regions = listOf("EU", "NA", "SA", "ASIA", "MSK", "EKB", "KRD", "ALL")
@@ -388,23 +400,14 @@ fun TournamentCreateScreen(
                             value = checkInDeadline,
                             onValueChange = {},
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("30min before reg closes (default)", color = TextTertiary, fontSize = 12.sp) },
+                            placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
                             readOnly = true,
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarToday,
                                     contentDescription = null,
                                     tint = BluePrimary,
-                                    modifier = Modifier.size(18.dp).clickable {
-                                        // Calculate check-in deadline from registration deadline
-                                        val regTs = if (registrationDeadline.isNotEmpty()) {
-                                            try {
-                                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-                                                sdf.parse(registrationDeadline)?.time ?: (System.currentTimeMillis() + 24 * 60 * 60 * 1000)
-                                            } catch (_: Exception) { System.currentTimeMillis() + 24 * 60 * 60 * 1000 }
-                                        } else System.currentTimeMillis() + 24 * 60 * 60 * 1000
-                                        checkInDeadline = formatTimestamp(regTs - 30 * 60 * 1000)
-                                    }
+                                    modifier = Modifier.size(18.dp).clickable { showCheckInDatePicker = true }
                                 )
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -697,6 +700,70 @@ fun TournamentCreateScreen(
                         Text("Select Time", color = White, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
                         TimePicker(state = regTimePickerState)
+                    }
+                }
+            )
+        }
+
+        // Check-In Date Picker Dialog
+        if (showCheckInDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showCheckInDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        checkInDatePickerState.selectedDateMillis?.let { dateMillis ->
+                            showCheckInDatePicker = false
+                            showCheckInTimePicker = true
+                            pendingCheckInDateMillis = dateMillis
+                        }
+                    }) { Text("Next", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                }
+            ) {
+                DatePicker(state = checkInDatePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = DarkNavy,
+                        titleContentColor = White,
+                        headlineContentColor = White,
+                        navigationContentColor = GoldPrimary,
+                        yearContentColor = LightGray,
+                        currentYearContentColor = GoldPrimary,
+                        selectedDayContentColor = DarkNavy,
+                        selectedDayContainerColor = GoldPrimary,
+                        dayContentColor = White,
+                        weekdayContentColor = TextSecondary
+                    )
+                )
+            }
+        }
+
+        // Check-In Time Picker Dialog
+        if (showCheckInTimePicker) {
+            AlertDialog(
+                onDismissRequest = { showCheckInTimePicker = false },
+                containerColor = DarkNavy,
+                confirmButton = {
+                    TextButton(onClick = {
+                        val cal = java.util.Calendar.getInstance().apply {
+                            timeInMillis = pendingCheckInDateMillis ?: System.currentTimeMillis()
+                            set(java.util.Calendar.HOUR_OF_DAY, checkInTimePickerState.hour)
+                            set(java.util.Calendar.MINUTE, checkInTimePickerState.minute)
+                            set(java.util.Calendar.SECOND, 0)
+                        }
+                        checkInDeadline = formatTimestamp(cal.timeInMillis)
+                        showCheckInTimePicker = false
+                    }) { Text("OK", color = GoldPrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Select Check-In Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TimePicker(state = checkInTimePickerState)
                     }
                 }
             )
