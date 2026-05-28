@@ -53,7 +53,7 @@ object OtpApiClient {
     private val apiKeyInterceptor by lazy {
         Interceptor { chain ->
             val request = chain.request().newBuilder()
-                .addHeader("X-API-Key", com.mlbb.scrim.BuildConfig.NEWS_SERVICE_API_KEY)
+                .addHeader("X-API-Key", com.mlbb.scrim.BuildConfig.BACKEND_API_KEY)
                 .build()
             chain.proceed(request)
         }

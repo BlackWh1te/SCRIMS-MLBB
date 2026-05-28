@@ -5,9 +5,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_teams">Teams</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">Messages</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">Messages</string>
     <string name="nav_profile">Profile</string>
     <string name="nav_match_history">History</string>
     <string name="nav_player_finder">Find Players</string>
@@ -72,9 +70,7 @@
     <string name="my_teams">My Teams</string>
     <string name="find_scrims_title">Find Scrims</string>
     <string name="see_all">See all</string>
-    <string name="quick_actions">Quick Actions</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">Rank Progress</string>
+    <string name="quick_actions">Quick Actions</string>    <string name="rank_progress">Rank Progress</string>
     <string name="to_next_tier">to %s</string>
     <string name="view_all">View all</string>
     <string name="post_scrim">Post a Scrim</string>
@@ -161,13 +157,7 @@
     <string name="app_title">Scrims Legends</string>
     <string name="tagline">Compete. Rank. Dominate.</string>
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">Latest Gaming News</string>
-    <string name="news_detail">News Detail</string>
-    <string name="no_news">No news available</string>
-    <string name="no_news_subtitle">Pull down to refresh or check your connection</string>
-    <string name="refresh">Refresh</string>
+    <!-- News -->    <string name="refresh">Refresh</string>
     <string name="try_again">Try Again</string>
     <string name="read_full_article">Read Full Article</string>
     <string name="open_in_browser">Open in Browser</string>

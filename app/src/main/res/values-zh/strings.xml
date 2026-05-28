@@ -3,9 +3,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">首页</string>
     <string name="nav_teams">战队</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">消息</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">消息</string>
     <string name="nav_profile">我的</string>
     <string name="nav_match_history">历史</string>
     <string name="nav_create_team">新建战队</string>
@@ -121,13 +119,7 @@
     <string name="tagline">竞技。攀升。称霸。</string>
 
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">最新游戏资讯</string>
-    <string name="news_detail">新闻详情</string>
-    <string name="no_news">暂无可用新闻</string>
-    <string name="no_news_subtitle">下拉刷新或检查您的网络连接</string>
-    <string name="refresh">刷新</string>
+    <!-- News -->    <string name="refresh">刷新</string>
     <string name="try_again">重试</string>
     <string name="read_full_article">阅读完整文章</string>
     <string name="open_in_browser">在浏览器中打开</string>
@@ -203,9 +195,7 @@
     <string name="submit_report">提交举报</string>
     <string name="unlocked_date">已解锁 %s</string>
     <string name="my_teams">我的战队</string>
-    <string name="find_scrims_title">Find Scrims</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">段位进度</string>
+    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">段位进度</string>
     <string name="to_next_tier">距 %s</string>
     <string name="view_all">查看全部</string>
     <string name="scrim_details">Scrim Details</string>

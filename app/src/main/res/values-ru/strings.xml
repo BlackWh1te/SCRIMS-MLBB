@@ -3,9 +3,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Главная</string>
     <string name="nav_teams">Команды</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">Сообщения</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">Сообщения</string>
     <string name="nav_profile">Профиль</string>
     <string name="nav_match_history">История</string>
     <string name="nav_create_team">Новая Команда</string>
@@ -121,13 +119,7 @@
     <string name="tagline">Соревнуйся. Побеждай. Доминируй.</string>
 
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">Последние игровые новости</string>
-    <string name="news_detail">Детали новости</string>
-    <string name="no_news">Нет доступных новостей</string>
-    <string name="no_news_subtitle">Потяните вниз для обновления или проверьте подключение</string>
-    <string name="refresh">Обновить</string>
+    <!-- News -->    <string name="refresh">Обновить</string>
     <string name="try_again">Попробовать снова</string>
     <string name="read_full_article">Читать полную статью</string>
     <string name="open_in_browser">Открыть в браузере</string>
@@ -202,9 +194,7 @@
     <string name="submit_report">Отправить жалобу</string>
     <string name="unlocked_date">Открыто %s</string>
     <string name="my_teams">Мои Команды</string>
-    <string name="find_scrims_title">Find Scrims</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">Прогресс Ранга</string>
+    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">Прогресс Ранга</string>
     <string name="to_next_tier">до %s</string>
     <string name="view_all">Смотреть все</string>
     <string name="scrim_details">Scrim Details</string>

@@ -3,9 +3,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">홈</string>
     <string name="nav_teams">팀</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">메시지</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">메시지</string>
     <string name="nav_profile">프로필</string>
     <string name="nav_match_history">기록</string>
     <string name="nav_create_team">새 팀</string>
@@ -121,13 +119,7 @@
     <string name="tagline">경篼. 올라가기. 지배.</string>
 
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">최신 게임 뉴스</string>
-    <string name="news_detail">뉴스 상세 정보</string>
-    <string name="no_news">사용 가능한 뉴스가 없습니다</string>
-    <string name="no_news_subtitle">아래로 당겨서 새로고침하거나 연결을 확인하세요</string>
-    <string name="refresh">새로고침</string>
+    <!-- News -->    <string name="refresh">새로고침</string>
     <string name="try_again">다시 시도</string>
     <string name="read_full_article">전체 기사 읽기</string>
     <string name="open_in_browser">브라우저에서 열기</string>
@@ -203,9 +195,7 @@
     <string name="submit_report">신고 제출</string>
     <string name="unlocked_date">해제됨 %s</string>
     <string name="my_teams">내 팀</string>
-    <string name="find_scrims_title">Find Scrims</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">랭크 진행</string>
+    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">랭크 진행</string>
     <string name="to_next_tier">다음 %s까지</string>
     <string name="view_all">모두 보기</string>
     <string name="scrim_details">Scrim Details</string>

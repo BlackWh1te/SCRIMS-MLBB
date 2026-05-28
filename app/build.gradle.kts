@@ -54,9 +54,7 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", supabaseUrl)
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseKey)
-        buildConfigField("String", "NEWSAPI_KEY", "\"\"")
-        buildConfigField("String", "X_BEARER_TOKEN", "\"\"")
-        buildConfigField("String", "NEWS_SERVICE_API_KEY", "\"\"")
+        buildConfigField("String", "BACKEND_API_KEY", "\"\"")
     }
 
     compileOptions {

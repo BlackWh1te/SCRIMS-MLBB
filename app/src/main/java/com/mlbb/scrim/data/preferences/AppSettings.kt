@@ -27,17 +27,6 @@ class AppSettings(private val context: Context) {
         val LANGUAGE_CODE = stringPreferencesKey("language_code")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
 
-        // X API v2 Quota Tracking (100 requests/month free tier)
-        val X_API_REQUESTS_USED = intPreferencesKey("x_api_requests_used")
-        val X_API_MONTH_START = longPreferencesKey("x_api_month_start")
-        val X_API_LAST_FETCH = longPreferencesKey("x_api_last_fetch")
-        val X_API_LAST_EXPLICIT_REFRESH = longPreferencesKey("x_api_last_explicit_refresh")
-
-        // Drip-feed tracking (+1 article every 2 hours)
-        val NEWS_DRIP_INDEX = intPreferencesKey("news_drip_index")
-        val NEWS_DRIP_LAST_UPDATE = longPreferencesKey("news_drip_last_update")
-        val NEWS_DRIP_COUNT_TOTAL = intPreferencesKey("news_drip_count_total")
-
         // LFG post views tracking (one view per user per post)
         val VIEWED_POSTS = stringPreferencesKey("viewed_posts")
         val PRIVACY_CONSENT_ACCEPTED = booleanPreferencesKey("privacy_consent_accepted")
@@ -95,85 +84,6 @@ class AppSettings(private val context: Context) {
 
     fun setLanguageCodeSync(code: String) {
         securePrefs.putString(Keys.LANGUAGE_CODE.name, code)
-    }
-
-    // X API v2 Quota Tracking
-    val xApiRequestsUsed: Flow<Int> = context.settingsDataStore.data.map { it[Keys.X_API_REQUESTS_USED] ?: 0 }
-    val xApiMonthStart: Flow<Long> = context.settingsDataStore.data.map { it[Keys.X_API_MONTH_START] ?: 0L }
-    val xApiLastFetch: Flow<Long> = context.settingsDataStore.data.map { it[Keys.X_API_LAST_FETCH] ?: 0L }
-
-    suspend fun incrementXApiRequest() {
-        context.settingsDataStore.edit { prefs ->
-            val current = prefs[Keys.X_API_REQUESTS_USED] ?: 0
-            prefs[Keys.X_API_REQUESTS_USED] = current + 1
-        }
-    }
-
-    suspend fun resetXApiQuota(monthStartTimestamp: Long) {
-        context.settingsDataStore.edit { prefs ->
-            prefs[Keys.X_API_REQUESTS_USED] = 0
-            prefs[Keys.X_API_MONTH_START] = monthStartTimestamp
-        }
-    }
-
-    suspend fun setXApiLastFetch(timestamp: Long) {
-        context.settingsDataStore.edit { it[Keys.X_API_LAST_FETCH] = timestamp }
-    }
-
-    val xApiLastExplicitRefresh: Flow<Long> = context.settingsDataStore.data.map { it[Keys.X_API_LAST_EXPLICIT_REFRESH] ?: 0L }
-
-    suspend fun setXApiLastExplicitRefresh(timestamp: Long) {
-        context.settingsDataStore.edit { it[Keys.X_API_LAST_EXPLICIT_REFRESH] = timestamp }
-    }
-
-    // ── Drip-feed Tracking ──────────────────────────────────────────
-
-    /** Current drip offset — how many articles the user has unlocked */
-    val newsDripIndex: Flow<Int> = context.settingsDataStore.data.map { it[Keys.NEWS_DRIP_INDEX] ?: 0 }
-
-    /** When the drip index was last incremented */
-    val newsDripLastUpdate: Flow<Long> = context.settingsDataStore.data.map { it[Keys.NEWS_DRIP_LAST_UPDATE] ?: 0L }
-
-    /** Total articles in backend archive (for progress bar) */
-    val newsDripCountTotal: Flow<Int> = context.settingsDataStore.data.map { it[Keys.NEWS_DRIP_COUNT_TOTAL] ?: 0 }
-
-    suspend fun setNewsDripIndex(index: Int) {
-        context.settingsDataStore.edit { it[Keys.NEWS_DRIP_INDEX] = index }
-    }
-
-    suspend fun setNewsDripLastUpdate(timestamp: Long) {
-        context.settingsDataStore.edit { it[Keys.NEWS_DRIP_LAST_UPDATE] = timestamp }
-    }
-
-    suspend fun setNewsDripCountTotal(total: Int) {
-        context.settingsDataStore.edit { it[Keys.NEWS_DRIP_COUNT_TOTAL] = total }
-    }
-
-    /**
-     * Auto-increment drip index based on 2-hour intervals.
-     * Call this before every news fetch. Returns how many new articles unlocked.
-     */
-    suspend fun tickNewsDrip(): Int {
-        val now: Long = System.currentTimeMillis()
-        val lastUpdate: Long = newsDripLastUpdate.first()
-        val currentIndex: Int = newsDripIndex.first()
-        val totalAvailable: Int = newsDripCountTotal.first()
-
-        val diff: Long = now - lastUpdate
-        val elapsedMs: Double = diff.toDouble()
-        val elapsedHours: Double = elapsedMs / (1000.0 * 60.0 * 60.0)
-        val ticks: Int = (elapsedHours / 2.0).toInt() // +1 every 2 hours
-
-        val newIndex: Int = (currentIndex + ticks).coerceAtMost(totalAvailable)
-        val newlyUnlocked: Int = newIndex - currentIndex
-
-        if (newlyUnlocked > 0) {
-            context.settingsDataStore.edit { prefs ->
-                prefs[Keys.NEWS_DRIP_INDEX] = newIndex
-                prefs[Keys.NEWS_DRIP_LAST_UPDATE] = now
-            }
-        }
-        return newlyUnlocked
     }
 
     // ── LFG Post View Tracking (one view per user per post) ─────────────────

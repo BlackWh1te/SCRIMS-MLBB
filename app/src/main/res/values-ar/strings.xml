@@ -3,9 +3,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">الرئيسية</string>
     <string name="nav_teams">الفرق</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">الرسائل</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">الرسائل</string>
     <string name="nav_profile">الملف</string>
     <string name="nav_match_history">التاريخ</string>
     <string name="nav_create_team">فريق جديد</string>
@@ -121,13 +119,7 @@
     <string name="tagline">تنافس. تصاعد. اهيم.</string>
 
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">آخر أخبار الألعاب</string>
-    <string name="news_detail">تفاصيل الخبر</string>
-    <string name="no_news">لا توجد أخبار متاحة</string>
-    <string name="no_news_subtitle">اسحب للأسفل للتحديث أو تحقق من اتصالك</string>
-    <string name="refresh">تحديث</string>
+    <!-- News -->    <string name="refresh">تحديث</string>
     <string name="try_again">حاول مرة أخرى</string>
     <string name="read_full_article">اقرأ المقال الكامل</string>
     <string name="open_in_browser">فتح في المتصفح</string>
@@ -203,9 +195,7 @@
     <string name="submit_report">إرسال بلاغ</string>
     <string name="unlocked_date">تم فتحه %s</string>
     <string name="my_teams">فرقي</string>
-    <string name="find_scrims_title">Find Scrims</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">تقدم التصنيف</string>
+    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">تقدم التصنيف</string>
     <string name="to_next_tier">إلى %s</string>
     <string name="view_all">عرض الكل</string>
     <string name="scrim_details">Scrim Details</string>

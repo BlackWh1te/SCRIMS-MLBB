@@ -3,9 +3,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Inicio</string>
     <string name="nav_teams">Equipos</string>
-    <string name="nav_scrims">Scrims</string>
-    <string name="nav_news">News</string>
-    <string name="nav_messages">Mensajes</string>
+    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">Mensajes</string>
     <string name="nav_profile">Perfil</string>
     <string name="nav_match_history">Historial</string>
     <string name="nav_create_team">Nuevo Equipo</string>
@@ -121,13 +119,7 @@
     <string name="tagline">Compite. Sube. Domina.</string>
 
 
-    <!-- News -->
-    <string name="news">News</string>
-    <string name="news_subtitle">Últimas noticias de juegos</string>
-    <string name="news_detail">Detalle de la noticia</string>
-    <string name="no_news">No hay noticias disponibles</string>
-    <string name="no_news_subtitle">Desliza hacia abajo para actualizar o verifica tu conexión</string>
-    <string name="refresh">Actualizar</string>
+    <!-- News -->    <string name="refresh">Actualizar</string>
     <string name="try_again">Intentar de nuevo</string>
     <string name="read_full_article">Leer artículo completo</string>
     <string name="open_in_browser">Abrir en navegador</string>
@@ -203,9 +195,7 @@
     <string name="submit_report">Enviar reporte</string>
     <string name="unlocked_date">Desbloqueado %s</string>
     <string name="my_teams">Mis Equipos</string>
-    <string name="find_scrims_title">Buscar Scrims</string>
-    <string name="latest_news">Latest News</string>
-    <string name="rank_progress">Progreso de Rango</string>
+    <string name="find_scrims_title">Buscar Scrims</string>    <string name="rank_progress">Progreso de Rango</string>
     <string name="to_next_tier">hasta %s</string>
     <string name="view_all">Ver todos</string>
     <string name="scrim_details">Detalles del Scrim</string>
