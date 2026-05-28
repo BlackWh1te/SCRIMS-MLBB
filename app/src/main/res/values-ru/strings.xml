@@ -21,7 +21,7 @@
     <string name="already_have_account">Уже есть аккаунт?</string>
     <string name="dont_have_account">Нет аккаунта?</string>
     <string name="sign_in">Войти</string>
-    <string name="welcome_back">С возвращением, воин</string>
+    <string name="welcome_back">С возвращением, чемпион</string>
     <string name="join_community">Присоединяйся к сообществу</string>
     <string name="fill_all_fields">Заполните все поля</string>
     <string name="passwords_not_match">Пароли не совпадают</string>
@@ -109,7 +109,7 @@
     <string name="build_team">Соберите команду</string>
     <string name="build_team_desc">Создайте отряд, приглашайте теаммейтов. 3–7 игроков.</string>
     <string name="climb_ranks">Взбирайтесь на ранги</string>
-    <string name="climb_ranks_desc">Зарабатывайте ОП, побеждайте и поднимайтесь от Бронзы до Грандмастера.</string>
+    <string name="climb_ranks_desc">Зарабатывайте ОП, побеждайте и поднимайтесь в рангах.</string>
     <string name="connect_compete">Общайтесь и соревнуйтесь</string>
     <string name="connect_compete_desc">Общайтесь с лидерами, подавайте заявки и подтверждайте результаты.</string>
     <string name="get_started">Начать</string>

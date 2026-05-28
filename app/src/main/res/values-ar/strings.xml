@@ -21,7 +21,7 @@
     <string name="already_have_account">لديك حساب؟</string>
     <string name="dont_have_account">لا يوجد حساب؟</string>
     <string name="sign_in">تسجيل الدخول</string>
-    <string name="welcome_back">مرحباً بعودتك، يا محارب</string>
+    <string name="welcome_back">مرحباً بعودتك، بطل</string>
     <string name="join_community">انضم إلى المجتمع</string>
     <string name="fill_all_fields">املأ جميع الحقول</string>
     <string name="passwords_not_match">كلمتا المرور غير متطابقتين</string>
@@ -109,7 +109,7 @@
     <string name="build_team">ابنِ فريقك</string>
     <string name="build_team_desc">أنشئ فريقك، وادعُ الزملاء. 3–7 لاعبين.</string>
     <string name="climb_ranks">تصاعد الرتب</string>
-    <string name="climb_ranks_desc">اجمع الخبرة، افزز في المباريات واصعد من البرونز إلى الجراند ماستر.</string>
+    <string name="climb_ranks_desc">اجمع الخبرة، افزز في المباريات واصعد في الرتب.</string>
     <string name="connect_compete">تواصل وتنافس</string>
     <string name="connect_compete_desc">دردش مع القادة، قدّم طلبات وحقّق نتائج المباريات.</string>
     <string name="get_started">ابدأ</string>

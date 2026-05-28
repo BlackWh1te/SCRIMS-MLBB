@@ -21,7 +21,7 @@
     <string name="already_have_account">Bereits ein Konto?</string>
     <string name="dont_have_account">Kein Konto?</string>
     <string name="sign_in">Anmelden</string>
-    <string name="welcome_back">Willkommen zurück, Krieger</string>
+    <string name="welcome_back">Willkommen zurück, Champion</string>
     <string name="join_community">Community beitreten</string>
     <string name="fill_all_fields">Alle Felder ausfüllen</string>
     <string name="passwords_not_match">Passwörter stimmen nicht</string>
@@ -109,7 +109,7 @@
     <string name="build_team">Team aufbauen</string>
     <string name="build_team_desc">Gründe dein Team, lade Mitspieler ein. 3–7 Spieler.</string>
     <string name="climb_ranks">Aufsteigen</string>
-    <string name="climb_ranks_desc">Verdiene EP, gewinne Matches und steige von Bronze bis Großmeister auf.</string>
+    <string name="climb_ranks_desc">Verdiene EP, gewinne Matches und steige in den Rängen auf.</string>
     <string name="connect_compete">Vernetzen &amp; kämpfen</string>
     <string name="connect_compete_desc">Chatte mit Leadern, bewirb dich bei Scrims und verifiziere Ergebnisse.</string>
     <string name="get_started">Loslegen</string>

@@ -1210,8 +1210,8 @@ fun AuthNavigation(
                         androidx.navigation.navArgument("matchResultId") { type = androidx.navigation.NavType.StringType }
                     ),
                     deepLinks = listOf(
-                        navDeepLink { uriPattern = "mlbbscrim://app/match_result/{matchResultId}" },
-                        navDeepLink { uriPattern = "https://mlbbscrim.app/match_result/{matchResultId}" }
+                        navDeepLink { uriPattern = "scrimslegends://app/match_result/{matchResultId}" },
+                        navDeepLink { uriPattern = "https://scrimslegends.app/match_result/{matchResultId}" }
                     )
                 ) { backStackEntry ->
                     val matchResultId = backStackEntry.arguments?.getString("matchResultId") ?: ""

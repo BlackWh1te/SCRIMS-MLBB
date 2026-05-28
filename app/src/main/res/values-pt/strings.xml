@@ -21,7 +21,7 @@
     <string name="already_have_account">Já tem conta?</string>
     <string name="dont_have_account">Não tem conta?</string>
     <string name="sign_in">Entrar</string>
-    <string name="welcome_back">Bem-vindo de volta, guerreiro</string>
+    <string name="welcome_back">Bem-vindo de volta, campeão</string>
     <string name="join_community">Junte-se à comunidade</string>
     <string name="fill_all_fields">Preencha todos os campos</string>
     <string name="passwords_not_match">Senhas não coincidem</string>
@@ -109,7 +109,7 @@
     <string name="build_team">Monte seu time</string>
     <string name="build_team_desc">Crie seu esquadrão, convide colegas. Times de 3–7 jogadores.</string>
     <string name="climb_ranks">Suba de rank</string>
-    <string name="climb_ranks_desc">Ganhe XP, vença partidas e suba de Bronze a Grão-Mestre.</string>
+    <string name="climb_ranks_desc">Ganhe XP, vença partidas e suba de rank.</string>
     <string name="connect_compete">Conecte e compita</string>
     <string name="connect_compete_desc">Converse com líderes, inscreva-se em scrims e verifique resultados.</string>
     <string name="get_started">Começar</string>

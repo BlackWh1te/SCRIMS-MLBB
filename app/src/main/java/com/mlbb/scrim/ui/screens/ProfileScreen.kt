@@ -508,7 +508,7 @@ fun ProfileScreen(
                                 GradientButton(
                                     text = stringResource(R.string.open_dashboard),
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://admin-panel-mlbb.vercel.app/host/login"))
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://admin.scrimslegends.app/host/login"))
                                         context.startActivity(intent)
                                     },
                                     modifier = Modifier.fillMaxWidth()

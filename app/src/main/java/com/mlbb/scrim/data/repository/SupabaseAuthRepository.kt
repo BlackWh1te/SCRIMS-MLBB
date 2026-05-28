@@ -129,7 +129,7 @@ class SupabaseAuthRepository(
     override suspend fun sendOtp(email: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            // Check if MLBB ID is already taken or banned
+            // Check if Game ID is already taken or banned
             val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                 val profile = checkResponse.body()!!.first()
@@ -299,7 +299,7 @@ class SupabaseAuthRepository(
     override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            // Check if MLBB ID is already taken or banned
+            // Check if Game ID is already taken or banned
             val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                 val profile = checkResponse.body()!!.first()
@@ -533,7 +533,7 @@ class SupabaseAuthRepository(
         emit(AuthResult.Loading)
         try {
             getUserId()?.let { userId ->
-                // Check if MLBB ID is already taken by someone else
+                // Check if Game ID is already taken by someone else
                 val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
                 if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
                     val existing = checkResponse.body()!!.first()

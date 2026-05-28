@@ -997,7 +997,7 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = inGameId,
                 onValueChange = { inGameId = it },
-                placeholder = { Text(stringResource(R.string.your_mlbb_game_id), color = DimGray) },
+                placeholder = { Text(stringResource(R.string.your_game_id), color = DimGray) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),

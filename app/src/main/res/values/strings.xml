@@ -45,7 +45,7 @@
     <string name="already_have_account">Already have an account?</string>
     <string name="dont_have_account">Don\'t have an account?</string>
     <string name="sign_in">Sign In</string>
-    <string name="welcome_back">Welcome back, warrior</string>
+    <string name="welcome_back">Welcome back, champion</string>
     <string name="join_community">Join the scrim community</string>
     <string name="fill_all_fields">Please fill in all fields</string>
     <string name="passwords_not_match">Passwords do not match</string>
@@ -148,7 +148,7 @@
     <string name="build_team">Build Your Team</string>
     <string name="build_team_desc">Create your squad, invite teammates, and manage roles. Teams of 3-7 players can compete together.</string>
     <string name="climb_ranks">Climb the Ranks</string>
-    <string name="climb_ranks_desc">Earn XP, win matches, and rise through 7 tiers from Bronze to Grandmaster. Track your progress on the leaderboard.</string>
+    <string name="climb_ranks_desc">Earn XP, win matches, and rise through the ranks. Track your progress on the leaderboard.</string>
     <string name="connect_compete">Connect &amp; Compete</string>
     <string name="connect_compete_desc">Chat with team leaders, apply to scrims, and verify match results with screenshots.</string>
     <string name="get_started">Get Started</string>
@@ -414,14 +414,14 @@
     <string name="invite_action">Invite</string>
     <string name="create_player_post">Create Player Post</string>
     <string name="show_off_stats">Show off your stats and get recruited</string>
-    <string name="your_mlbb_game_id">Your Game ID</string>
+    <string name="your_game_id">Your Game ID</string>
     <string name="total_games">Total Games</string>
     <string name="win_rate_percent">Win Rate %</string>
     <string name="win_rate_example">e.g. 62%</string>
     <string name="ranked_win_rate_percent">Ranked Win Rate %</string>
     <string name="ranked_win_rate_example">e.g. 58%</string>
-    <string name="rank_example">e.g. Mythic 52 stars</string>
-    <string name="hero_examples">Fanny, Gusion, Lancelot</string>
+    <string name="rank_example">e.g. Diamond 3</string>
+    <string name="hero_examples">Phoenix, Shadow, Blade</string>
     <string name="use_microphone">Use Microphone?</string>
     <string name="tell_about_yourself">Tell team leaders about yourself…</string>
     <string name="post_profile">Post Profile</string>

@@ -21,7 +21,7 @@
     <string name="already_have_account">이미 계정이 있으세요?</string>
     <string name="dont_have_account">계정이 없으세요?</string>
     <string name="sign_in">로그인</string>
-    <string name="welcome_back">다시 오셨네요, 용사</string>
+    <string name="welcome_back">다시 오셨네요, 챔피언</string>
     <string name="join_community">커뮤니티에 참여하세요</string>
     <string name="fill_all_fields">모든 항목을 입력하세요</string>
     <string name="passwords_not_match">비밀번호가 일치하지 않습니다</string>
@@ -109,7 +109,7 @@
     <string name="build_team">팀 구성</string>
     <string name="build_team_desc">나만의 팀을 만들고 팀원을 초대하세요. 3–7명의 플레이어가 함께 경기할 수 있습니다.</string>
     <string name="climb_ranks">량크 올라가기</string>
-    <string name="climb_ranks_desc">XP를 획득하고 경기에서 승리하여 브론즈부터 그랜드맄스터까지 올라가세요. 량킹에서 진행을 확인하세요.</string>
+    <string name="climb_ranks_desc">XP를 획득하고 경기에서 승리하여 랭크를 올리세요. 량킹에서 진행을 확인하세요.</string>
     <string name="connect_compete">연결하고 경篼</string>
     <string name="connect_compete_desc">팀 대장과 채팅하고 스크림에 지원하며 스크린샷으로 경기 결과를 확인하세요.</string>
     <string name="get_started">시작하기</string>

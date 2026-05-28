@@ -21,7 +21,7 @@
     <string name="already_have_account">已有账户？</string>
     <string name="dont_have_account">没有账户？</string>
     <string name="sign_in">登录</string>
-    <string name="welcome_back">欢迎回来，勇士</string>
+    <string name="welcome_back">欢迎回来，冠军</string>
     <string name="join_community">加入社区</string>
     <string name="fill_all_fields">请填写所有字段</string>
     <string name="passwords_not_match">密码不匹配</string>
@@ -109,7 +109,7 @@
     <string name="build_team">组建团队</string>
     <string name="build_team_desc">创建你的小队，邀请队友。3–7人团队可以一起竞技。</string>
     <string name="climb_ranks">攀升排名</string>
-    <string name="climb_ranks_desc">获取经验，赢得比赛，从青铜攀升至伟大宗师。在排行榜上追踪你的进度。</string>
+    <string name="climb_ranks_desc">获取经验，赢得比赛，提升排名。在排行榜上追踪你的进度。</string>
     <string name="connect_compete">交流与竞技</string>
     <string name="connect_compete_desc">与队长聊天，申请训练赛，并使用截图验证比赛结果。</string>
     <string name="get_started">开始</string>

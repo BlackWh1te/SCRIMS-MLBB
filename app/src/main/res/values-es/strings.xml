@@ -21,7 +21,7 @@
     <string name="already_have_account">¿Ya tienes cuenta?</string>
     <string name="dont_have_account">¿No tienes cuenta?</string>
     <string name="sign_in">Iniciar sesión</string>
-    <string name="welcome_back">Bienvenido de nuevo, guerrero</string>
+    <string name="welcome_back">Bienvenido de nuevo, campeón</string>
     <string name="join_community">Únete a la comunidad</string>
     <string name="fill_all_fields">Completa todos los campos</string>
     <string name="passwords_not_match">Las contraseñas no coinciden</string>
@@ -109,7 +109,7 @@
     <string name="build_team">Construye tu equipo</string>
     <string name="build_team_desc">Crea tu escuadra, invita compañeros. Equipos de 3–7 jugadores.</string>
     <string name="climb_ranks">Sube de rango</string>
-    <string name="climb_ranks_desc">Gana XP, gana partidas y sube desde Bronce a Gran Maestro.</string>
+    <string name="climb_ranks_desc">Gana XP, gana partidas y sube de rango.</string>
     <string name="connect_compete">Conecta y compite</string>
     <string name="connect_compete_desc">Chatea con líderes, aplica a scrims y verifica resultados.</string>
     <string name="get_started">Comenzar</string>
