@@ -8,11 +8,30 @@
 
 ---
 
-## 2026-05-28 17:00 [Session: UI Bug Fix] — Fixed navbar rounded corners + gold click glitch
+## 2026-05-28 17:15 [Session: UI Bug Fix v2] — Fixed navbar gold pill click glitch with AnimatedVisibility
+
+### Commits
+- `b180347` — fix(ui): use AnimatedVisibility for navbar gold pill to eliminate click glitch
+
+### Changed
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/components/BottomNav.kt`
+  - Active pill (lines 251-289): Replaced raw `alpha` animation with `AnimatedVisibility` using `scaleIn` + `fadeIn` for enter and `scaleOut` + `fadeOut` for exit. This gives the pill a natural "pop" feel when selected and avoids the jarring flash.
+  - Enter animation: scale from 0.85x to 1x + fade in over 150ms (ease-out)
+  - Exit animation: scale from 1x to 0.85x + fade out over 120ms (fast-out)
+  - Reduced gold intensity: background alpha 0.18→0.12 and 0.08→0.04, border alpha 0.6→0.5 for subtler appearance.
+
+### Why
+User reported the gold pill still looked glitchy when clicking between nav tabs. The raw alpha-only fade animation felt flat and sometimes showed visual artifacts. Using `AnimatedVisibility` with scale+fade is the Compose-recommended way for show/hide transitions and feels much smoother.
+
+### Verdict
+- `[REVERTABLE]` — UI polish. Can be further tuned (timing, scale amount, gold intensity).
+
+---
+
+## 2026-05-28 17:00 [Session: UI Bug Fix] — Fixed navbar rounded corners + gold click glitch (attempt 1)
 
 ### Commits
 - `eb63675` — fix(ui): smooth navbar corners and gold pill fade animation
-- (changelog updates)
 
 ### Changed
 - **File:** `app/src/main/java/com/mlbb/scrim/ui/components/BottomNav.kt`
@@ -25,8 +44,11 @@ User reported two issues with the bottom navigation bar:
 1. Edges not rounded — the outer glow layer was a rectangle behind a rounded dock
 2. Yellow/gold glitch when clicking — the selected pill disappeared instantly when switching tabs while the new pill faded in
 
+### Note
+The rounded corners fix was successful. The gold pill alpha animation improved but user still perceived glitchiness, so attempt 2 (`b180347`) replaced it with `AnimatedVisibility` + scale+fade.
+
 ### Verdict
-- `[REVERTABLE]` — UI tweak. Can be adjusted further if needed (different corner radius, animation speed, etc.)
+- `[REVERTABLE]` — Superseded by `b180347`. Kept for history.
 
 ---
 
