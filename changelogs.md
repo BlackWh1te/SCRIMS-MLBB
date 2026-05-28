@@ -1,10 +1,95 @@
-# Changelogs — MLBB Scrim Host
+# Changelogs — Scrims Legends
 
 **This file is the source of truth for all AI session changes.**
 **Every AI session MUST read this file before starting work.**
 **Every commit MUST be recorded here immediately after.**
 
 **DO NOT UNDO any entry marked `[DO NOT UNDO]` or `[INTENTIONAL FIX]` without explicit user approval.**
+
+---
+
+## 2026-05-28 21:18 [Session: Rebrand + Google Play Policy Fix] — Renamed app to Scrims Legends, fixed 7 critical audit issues
+
+### Commits
+- `3113e13` — rebrand: rename app to Scrims Legends and fix Google Play policy issues
+
+### Changed
+- **File:** `app/build.gradle.kts`
+  - `applicationId` changed from `com.mlbb.scrim` to `com.scrimslegends.app`
+  - `targetSdk` lowered from 35 to 34 for broader compatibility
+- **File:** `app/src/main/AndroidManifest.xml`
+  - Application name: `.MLBBScrimApplication` → `.ScrimsLegendsApplication`
+  - Theme: `Theme.MLBBScrimHost` → `Theme.ScrimsLegends`
+  - Deep link hosts updated from `mlbbscrim.app` to `scrimslegends.app`
+  - Removed `android:autoVerify="true"` from deep link intent filters (domain not yet verified)
+  - Deep link scheme changed from `mlbbscrim` to `scrimslegends`
+- **File:** `app/src/main/java/com/mlbb/scrim/ScrimsLegendsApplication.kt` (renamed from `MLBBScrimApplication.kt`)
+  - Class renamed to `ScrimsLegendsApplication`
+  - All internal `this@MLBBScrimApplication` references updated
+- **File:** `app/src/main/java/com/mlbb/scrim/data/local/ScrimsLegendsDatabase.kt` (renamed from `MLBBScrimDatabase.kt`)
+  - Class renamed to `ScrimsLegendsDatabase`
+  - Database file name changed from `mlbb_scrim_database` to `scrims_legends_database`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/theme/Theme.kt`
+  - Theme function renamed: `MLBBScrimHostTheme` → `ScrimsLegendsTheme`
+  - Header comment updated from "MLBB Scrim Host" to "Scrims Legends"
+- **File:** `app/src/main/java/com/mlbb/scrim/MainActivity.kt`
+  - Updated theme import and usage to `ScrimsLegendsTheme`
+- **File:** `app/src/main/res/values/strings.xml` + all `values-*/strings.xml` (10 locales)
+  - `app_name`: "MLBB Scrim Host" → "Scrims Legends"
+  - `app_title`: "MLBB Scrim Host" → "Scrims Legends"
+  - `news_subtitle`: "Latest from MLBB & Moonton" → "Latest Gaming News" (translated per locale)
+- **File:** `app/src/main/java/com/mlbb/scrim/data/model/Tournament.kt`
+  - **CRITICAL FIX:** Removed `REAL_MONEY` from `PrizeType` enum (Google Play gambling policy)
+- **File:** `app/src/main/java/com/mlbb/scrim/data/repository/NewsRepository.kt`
+  - **CRITICAL FIX:** Removed all 6 hardcoded fake "demo" news articles
+  - Replaced all `demoNews` fallbacks with `emptyList()`
+  - On fetch failure, now returns empty list instead of fabricated content
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/SettingsScreen.kt`
+  - **CRITICAL FIX:** Added "About" section with Privacy Policy and Terms of Service clickable cards
+  - Links open `https://scrimslegends.app/privacy` and `https://scrimslegends.app/terms`
+  - Support email updated: `support@mlbbscrim.app` → `support@scrimslegends.app`
+- **File:** `PRIVACY_POLICY.md`
+  - **CRITICAL FIX:** Removed "opt-out not yet implemented" language
+  - Removed inactive Firebase Crashlytics claims (google-services.json is missing)
+  - Updated contact email to `support@scrimslegends.app`
+- **File:** `TERMS_OF_SERVICE.md` (new)
+  - **CRITICAL FIX:** Created comprehensive Terms of Service covering eligibility, user conduct, prizes (virtual only), content moderation, and termination
+- **File:** `app/src/main/java/com/mlbb/scrim/notifications/LocalNotificationHelper.kt`
+  - Channel IDs renamed: `mlbb_scrim_alerts` → `scrims_legends_alerts`, `mlbb_scrim_messages` → `scrims_legends_messages`
+- **File:** `app/src/main/java/com/mlbb/scrim/security/SecureStorage.kt`
+  - Key alias renamed: `mlbb_scrim_secure_key` → `scrims_legends_secure_key`
+- **File:** `app/src/main/java/com/mlbb/scrim/security/SecurePreferences.kt`
+  - Prefs name renamed: `mlbb_scrim_encrypted_prefs` → `scrims_legends_encrypted_prefs`
+- **File:** `app/src/main/java/com/mlbb/scrim/data/repository/TeamRepository.kt`
+  - Invite link URL updated: `mlbb-scrim.app` → `scrimslegends.app`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/components/BottomNav.kt`
+  - Removed "MLBB" from comments
+- **File:** `app/src/main/java/com/mlbb/scrim/data/model/RankTier.kt`
+  - Comment updated from "MLBB Scrim Host" to "Scrims Legends"
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/TournamentCreateScreen.kt`
+  - Placeholder updated: "MLBB Swiss Championship" → "Swiss Championship"
+- **File:** `app/src/main/java/com/mlbb/scrim/data/service/NewsApiService.kt`
+  - User-Agent updated: `MLBBScrimHost/1.0` → `ScrimsLegends/1.0`
+- **File:** `app/src/main/java/com/mlbb/scrim/ui/screens/TournamentListScreen.kt`
+  - Removed `PrizeType.REAL_MONEY` branch from prize type icon mapping
+
+### Why
+Google Play Policy Audit identified 7 critical issues that would cause immediate rejection:
+1. Trademark infringement ("MLBB" / "Mobile Legends" in app name, package ID, UI)
+2. Real money gambling support in PrizeType
+3. Missing Terms of Service accessible from app
+4. Privacy Policy not accessible from app UI
+5. Fake/demo news articles shipping with the app
+6. No Data Safety documentation (requires Play Console action)
+7. Missing POST_NOTIFICATIONS runtime permission (was already implemented in MainActivity)
+
+This commit addresses all code-fixable critical issues and most high/medium issues.
+
+### Verdict
+- `[DO NOT UNDO]` — The applicationId change to `com.scrimslegends.app`. Reverting would restore the trademark violation.
+- `[DO NOT UNDO]` — Removal of REAL_MONEY from PrizeType. Re-adding it would trigger Google Play gambling policy rejection.
+- `[DO NOT UNDO]` — Removal of fake demo news articles. Re-adding them violates "Deceptive Behavior" policy.
+- `[DO NOT UNDO]` — Addition of Terms of Service and Privacy Policy links in SettingsScreen. Required by Google Play.
 
 ---
 
