@@ -8,6 +8,54 @@
 
 ---
 
+## 2026-05-29 00:55 [Session: Play Readiness + Namespace Neutralization] — Target API 35, removed internal MLBB namespace, and guarded unsigned releases
+
+### Commits
+- Not committed yet.
+
+### Changed
+- **File:** `app/build.gradle.kts`
+  - `compileSdk` updated from `34` to `35`.
+  - `targetSdk` updated from `34` to `35`.
+  - Android App Bundle language split disabled with `bundle.language.enableSplit = false` so in-app locale switching keeps packaged translations.
+  - Android namespace changed from `com.mlbb.scrim` to `com.scrimslegends.app`.
+  - Release signing now supports both `KEYSTORE_*` and legacy `RELEASE_*` local/environment variable names.
+  - Release artifact tasks now fail loudly when signing is missing instead of producing an unsigned Play bundle.
+- **Files moved:** `app/src/main/java/com/mlbb/scrim/**` → `app/src/main/java/com/scrimslegends/app/**`
+- **Files moved:** `app/src/test/java/com/mlbb/scrim/**` → `app/src/test/java/com/scrimslegends/app/**`
+  - Package declarations and imports changed from `com.mlbb.scrim` to `com.scrimslegends.app`.
+- **File:** `app/proguard-rules.pro`
+  - Rebranded header and keep rules from `com.mlbb.scrim` to `com.scrimslegends.app`.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/TeamDetailScreen.kt`
+  - Invite-code prefix changed from `MLBB-` to `SL-`.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/theme/Type.kt`
+  - Removed stale `MLBB Scrim Host` comment.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/NotificationRepository.kt`
+  - Mock welcome notification title changed to `Welcome to Scrims Legends`.
+- **File:** `app/src/test/java/com/scrimslegends/app/test/ModelUnitTest.kt`
+  - Removed stale `NewsArticle` assertions because the News feature/model were intentionally deleted.
+- **File:** `app/src/test/java/com/scrimslegends/app/test/SecurityUnitTest.kt`
+  - Removed stale trademark-like test sample text.
+- **File:** `app/src/main/java/com/scrimslegends/app/security/SecurityUtils.kt`
+  - Fixed Android 15/API 35 nullability change for `PackageInfo.signingInfo`.
+
+### Verification
+- `rg` scan over `app/src/main`, `app/src/test`, `app/build.gradle.kts`, and `app/proguard-rules.pro` found no `MLBB`, `Mobile Legends`, `Moonton`, `MPL`, `mlbbscrim`, `mlbb-scrim`, or `com.mlbb.scrim` content.
+- `./gradlew.bat :app:compileReleaseKotlin` passes.
+- `./gradlew.bat :app:testReleaseUnitTest` passes.
+- `./gradlew.bat :app:lintRelease` passes with `0 errors`.
+- `./gradlew.bat :app:bundleRelease` intentionally fails until release signing keys are configured.
+
+### Why
+Google Play/trademark readiness requires avoiding MLBB/Mobile Legends references not only in UI strings, but also in compiled package names, keep rules, and mock data that can ship in the APK/AAB. Play release builds must also target API 35+ and must not silently generate unsigned artifacts.
+
+### Verdict
+- `[DO NOT UNDO]` — Do not restore `com.mlbb.scrim`, `MLBB-`, MLBB/Mobile Legends/Moonton/MPL strings, or old package paths.
+- `[DO NOT UNDO]` — Do not remove the unsigned-release guard; release bundles must be signed before Play upload.
+- `[INTENTIONAL FIX]` — `bundle.language.enableSplit = false` is required because the app changes locale dynamically in-app.
+
+---
+
 ## 2026-05-28 22:05 [Session: Trademark Neutralization] — Removed all remaining trademarked strings, URLs, and references from APK
 
 ### Commits

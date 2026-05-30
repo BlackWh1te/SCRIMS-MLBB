@@ -1,5 +1,5 @@
 # ============================================
-# MLBB Scrim Host - Enhanced Security ProGuard Rules
+# Scrims Legends - Enhanced Security ProGuard Rules
 # ============================================
 
 # --- OBFUSCATION SETTINGS ---
@@ -129,7 +129,7 @@
 # --- SECURITY CLASS PROTECTION ---
 
 # Obfuscate security class but keep essential methods
--keep class com.mlbb.scrim.security.** {
+-keep class com.scrimslegends.app.security.** {
     public static boolean isRooted();
     public static boolean isDebuggerAttached();
     public static boolean isFridaDetected();
@@ -137,7 +137,7 @@
 }
 
 # But obfuscate the implementation details
--keepclassmembers class com.mlbb.scrim.security.** {
+-keepclassmembers class com.scrimslegends.app.security.** {
     private *;
 }
 
@@ -150,22 +150,22 @@
 
 # --- DATA MODELS & RETROFIT DTOs ---
 # Keep all data models used for UI and DB
--keep class com.mlbb.scrim.data.model.** {
+-keep class com.scrimslegends.app.data.model.** {
     <fields>;
     <init>(...);
 }
 
 # Keep all request/response data classes used by Retrofit/Gson/Supabase
--keep class com.mlbb.scrim.data.service.** {
+-keep class com.scrimslegends.app.data.service.** {
     <fields>;
     <init>(...);
 }
 
 # Ensure SerializedName is respected if present, but keep all fields anyway
--keepclassmembers class com.mlbb.scrim.data.model.** {
+-keepclassmembers class com.scrimslegends.app.data.model.** {
     @com.google.gson.annotations.SerializedName <fields>;
 }
--keepclassmembers class com.mlbb.scrim.data.service.** {
+-keepclassmembers class com.scrimslegends.app.data.service.** {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 

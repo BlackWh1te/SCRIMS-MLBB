@@ -30,20 +30,39 @@ val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY")
     ?: throw GradleException("SUPABASE_ANON_KEY not found. Create local.properties with SUPABASE_ANON_KEY=...")
 
 // Release signing config (reads from local.properties or environment variables)
-val keystorePath = localProperties.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")
-val keystorePassword = localProperties.getProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
-val keyAlias = localProperties.getProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS")
-val keyPassword = localProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
-val hasReleaseSigning = keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null
+val keystorePath = localProperties.getProperty("KEYSTORE_PATH")
+    ?: localProperties.getProperty("RELEASE_STORE_FILE")
+    ?: System.getenv("KEYSTORE_PATH")
+    ?: System.getenv("RELEASE_STORE_FILE")
+val keystorePassword = localProperties.getProperty("KEYSTORE_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_STORE_PASSWORD")
+    ?: System.getenv("KEYSTORE_PASSWORD")
+    ?: System.getenv("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = localProperties.getProperty("KEY_ALIAS")
+    ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
+    ?: System.getenv("KEY_ALIAS")
+    ?: System.getenv("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = localProperties.getProperty("KEY_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
+    ?: System.getenv("KEY_PASSWORD")
+    ?: System.getenv("RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = keystorePath != null && keystorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null
+val keystoreType = localProperties.getProperty("KEYSTORE_TYPE")
+    ?: localProperties.getProperty("RELEASE_STORE_TYPE")
+    ?: System.getenv("KEYSTORE_TYPE")
+    ?: System.getenv("RELEASE_STORE_TYPE")
+    ?: keystorePath?.substringAfterLast('.', missingDelimiterValue = "")
+        ?.lowercase()
+        ?.let { if (it == "p12" || it == "pfx") "PKCS12" else null }
 
 android {
-    namespace = "com.mlbb.scrim"
-    compileSdk = 34
+    namespace = "com.scrimslegends.app"
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.scrimslegends.app"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 3
         versionName = "1.1.1"
 
@@ -76,8 +95,9 @@ android {
             create("release") {
                 storeFile = file(keystorePath)
                 storePassword = keystorePassword
-                this.keyAlias = keyAlias
-                this.keyPassword = keyPassword
+                storeType = keystoreType
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -117,6 +137,25 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val releaseArtifactTaskRequested = allTasks.any { task ->
+        task.path in setOf(":app:assembleRelease", ":app:bundleRelease", ":app:packageRelease", ":app:signReleaseBundle")
+    }
+    if (releaseArtifactTaskRequested && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is not configured. Set KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD " +
+                "(or RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD) " +
+                "in local.properties or environment variables before building a Play release."
+        )
     }
 }
 

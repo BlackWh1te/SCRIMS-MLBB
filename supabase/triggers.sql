@@ -1,7 +1,7 @@
 -- MLBB Scrim Host - Database Triggers
 -- PostgreSQL with Supabase
 
--- Trigger to create profile when user is created
+-- Trigger to create profile and player_stats when user is created
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -11,6 +11,10 @@ BEGIN
     SPLIT_PART(NEW.email, '@', 1),
     NEW.email
   );
+  -- Auto-create player_stats so new users appear on the leaderboard (Bronze tier, 0 pts)
+  INSERT INTO public.player_stats (user_id, pts, wins, losses, matches_play)
+  VALUES (NEW.id, 0, 0, 0, 0)
+  ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
