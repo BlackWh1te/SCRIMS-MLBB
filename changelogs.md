@@ -8,6 +8,48 @@
 
 ---
 
+## 2026-05-31 23:18 [Session: Scrim dispute resolution + admin panel overhaul]
+
+### Commits
+- `6769257` — feat(scrim): both-team winner confirmation + admin dispute resolution
+
+### Changed
+- **File:** `supabase/migrations/20260631120001_scrim_game_result_dispute_tracking.sql`
+  - Added dispute tracking columns: `team_a_selected_winner_id`, `team_b_selected_winner_id`, `admin_override_winner_id`, `is_disputed`
+  - Updated `valid_game_result_status` constraint to include `'Disputed'`
+  - Rewrote `select_game_winner` RPC:
+    - First selection → records choice, status = `Winner Selected`
+    - Second selection → compares with first: same = `Confirmed`, different = `Disputed`
+    - Prevents same team from selecting twice
+  - Updated `complete_scrim` RPC: blocks completion if any game is disputed
+  - Added `admin_resolve_game_winner` RPC for admin panel dispute override
+  - Added RLS policy allowing admins to resolve disputed game results
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - `ScrimGameResult`: added `teamASelectedWinnerId`, `teamBSelectedWinnerId`, `adminOverrideWinnerId`, `isDisputed`
+  - Added `isAwaitingAdmin` computed property
+  - `ScrimGameStatus` enum: added `DISPUTED` value
+  - `canCompleteScrim`: now checks no active disputes, uses `adminOverrideWinnerId`
+  - `seriesWinnerTeamId`: uses `adminOverrideWinnerId` as effective winner
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `ScrimGameResultDto`: added new fields with `@SerializedName` annotations
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Updated `mapDtoToScrimGameResult` and `mapScrimGameResultToDto` to handle new fields
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Game card status colors and text now show: Disputed, Awaiting confirmation, Admin confirmed
+  - Winner selection chips hidden if current team already selected or game is disputed
+  - Shows "Your team selected: X (awaiting opponent)" badge
+  - Shows "Opponent selected: X" hint when opponent picked first
+  - Shows red dispute banner when teams disagree
+  - Winner badge shows "(admin)" tag for admin-overridden winners
+
+### Impact
+- Both team leaders must now independently confirm the same winner per game
+- If they disagree, the game is flagged for admin review — no winner is set
+- Admin can view per-game screenshots and override the winner for disputed games
+- Scrim cannot be completed until all disputes are resolved
+
+---
+
 ## 2026-05-31 21:15 [Session: Remaining scrim atomic fixes — apply/reject/cancel/auto-cancel/upload]
 
 ### Commits
