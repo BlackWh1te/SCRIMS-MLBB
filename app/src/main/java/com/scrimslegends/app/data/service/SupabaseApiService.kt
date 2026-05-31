@@ -817,7 +817,8 @@ interface SupabaseApiService {
         @Query("order") order: String = "created_at.asc",
         @Query("created_at") createdAfter: String? = null,
         @Query("id") idFilter: String? = null,
-        @Query("client_message_id") clientMessageId: String? = null
+        @Query("client_message_id") clientMessageId: String? = null,
+        @Header("Range") range: String = "0-199"
     ): Response<List<MessageDto>>
 
     @POST("messages")

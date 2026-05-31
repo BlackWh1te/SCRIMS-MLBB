@@ -76,6 +76,7 @@ class MessageViewModel @Inject constructor(
             _isLoading.value = true
             messageRepository.getConversationsForUser(userId, forceRefresh = true).collect { result ->
                 result.onSuccess { _conversations.value = it }
+                    .onFailure { _error.value = it.message ?: "Failed to load conversations" }
                 _isLoading.value = false
                 _isRefreshing.value = false
             }
@@ -87,6 +88,7 @@ class MessageViewModel @Inject constructor(
             _isLoading.value = true
             messageRepository.getConversationById(conversationId).collect { result ->
                 result.onSuccess { _selectedConversation.value = it }
+                    .onFailure { _error.value = it.message ?: "Failed to load conversation" }
                 _isLoading.value = false
             }
         }
@@ -143,12 +145,15 @@ class MessageViewModel @Inject constructor(
 
         chatPollingJob = viewModelScope.launch {
             while (isActive) {
-                delay(3_000)
-                messageRepository.getConversationById(conversationId).collect { result ->
-                    result.onSuccess { conv ->
-                        val polled = conv?.messages.orEmpty()
-                        if (polled.isNotEmpty()) {
-                            mergeServerMessages(polled)
+                delay(5_000)
+                // Only poll when realtime is not connected (fallback)
+                if (_connectionState.value != ChatConnectionState.CONNECTED) {
+                    messageRepository.getConversationById(conversationId).collect { result ->
+                        result.onSuccess { conv ->
+                            val polled = conv?.messages.orEmpty()
+                            if (polled.isNotEmpty()) {
+                                mergeServerMessages(polled)
+                            }
                         }
                     }
                 }
@@ -242,9 +247,31 @@ class MessageViewModel @Inject constructor(
     }
 
     fun sendImageMessage(conversationId: String, senderId: String, senderName: String, imageBytes: ByteArray) {
+        val clientMessageId = "cm_${UUID.randomUUID()}"
+        val tempMessage = Message(
+            id = clientMessageId,
+            conversationId = conversationId,
+            senderId = senderId,
+            senderName = senderName,
+            content = "[Image]",
+            timestamp = System.currentTimeMillis(),
+            isRead = true,
+            type = MessageType.IMAGE
+        )
+
+        // Optimistic UI: show as SENDING
+        val current = _messagesWithDelivery.value.toMutableList()
+        current.add(
+            MessageWithDelivery(
+                message = tempMessage,
+                status = DeliveryStatus.SENDING,
+                clientMessageId = clientMessageId
+            )
+        )
+        setMessagesWithDelivery(current)
+
         viewModelScope.launch {
             _isLoading.value = true
-            val clientMessageId = "cm_${UUID.randomUUID()}"
             val path = "chat/$conversationId/${System.currentTimeMillis()}.png"
             val uploadResult = SupabaseStorageUpload.uploadFile("chat-media", path, imageBytes, "image/png")
 
@@ -257,11 +284,22 @@ class MessageViewModel @Inject constructor(
                     type = MessageType.IMAGE,
                     clientMessageId = clientMessageId,
                     imageUrl = url
-                ).collect { _isLoading.value = false }
+                ).collect { delivery ->
+                    updateDeliveryState(clientMessageId, delivery)
+                    if (delivery.status == DeliveryStatus.FAILED) {
+                        _error.value = delivery.errorReason ?: "Failed to send image"
+                    }
+                }
             }.onFailure {
                 _error.value = "Image upload failed: ${it.message}"
-                _isLoading.value = false
+                updateDeliveryState(clientMessageId, MessageWithDelivery(
+                    message = tempMessage,
+                    status = DeliveryStatus.FAILED,
+                    clientMessageId = clientMessageId,
+                    errorReason = "Image upload failed: ${it.message}"
+                ))
             }
+            _isLoading.value = false
         }
     }
 
@@ -372,7 +410,9 @@ class MessageViewModel @Inject constructor(
         val current = _messagesWithDelivery.value.toMutableList()
         val existingIndex = current.indexOfFirst { it.message.id == newMessage.id }
         val pendingIndex = current.indexOfFirst {
-            it.clientMessageId != null && it.message.content == newMessage.content && it.message.senderId == newMessage.senderId
+            it.status == DeliveryStatus.SENDING && it.message.senderId == newMessage.senderId &&
+                it.message.content == newMessage.content &&
+                Math.abs(it.message.timestamp - newMessage.timestamp) < 30_000
         }
         when {
             existingIndex != -1 -> {
@@ -412,9 +452,9 @@ class MessageViewModel @Inject constructor(
         messages.forEach { serverMessage ->
             val existingIndex = current.indexOfFirst { it.message.id == serverMessage.id }
             val pendingIndex = current.indexOfFirst {
-                it.clientMessageId != null &&
+                it.status == DeliveryStatus.SENDING && it.message.senderId == serverMessage.senderId &&
                     it.message.content == serverMessage.content &&
-                    it.message.senderId == serverMessage.senderId
+                    Math.abs(it.message.timestamp - serverMessage.timestamp) < 30_000
             }
             when {
                 existingIndex != -1 -> current[existingIndex] = current[existingIndex].copy(message = serverMessage)

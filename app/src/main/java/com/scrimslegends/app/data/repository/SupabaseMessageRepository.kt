@@ -682,22 +682,19 @@ class SupabaseMessageRepository(
     ): Flow<Result<Unit>> = flow {
         try {
             val cachedConv = getCachedConversation(conversationId)
-            if (cachedConv != null) {
-                val field = if (userId == cachedConv.participantAId) "participant_a_typing" else "participant_b_typing"
+            val conv = cachedConv ?: run {
+                val response = api.getConversations(idFilter = "eq.$conversationId")
+                if (response.isSuccessful) {
+                    response.body()?.firstOrNull()?.let { mapDtoToConversation(it) }
+                        ?.also { cacheConversation(it) }
+                } else null
+            }
+            if (conv != null) {
+                val field = if (userId == conv.participantAId) "participant_a_typing" else "participant_b_typing"
                 api.updateConversation(conversationId, mapOf(field to isTyping))
                 emit(Result.success(Unit))
             } else {
-                val response = api.getConversations(idFilter = "eq.$conversationId")
-                if (response.isSuccessful) {
-                    val conv = response.body()?.firstOrNull()
-                    if (conv != null) {
-                        val domainConv = mapDtoToConversation(conv)
-                        cacheConversation(domainConv)
-                        val field = if (userId == domainConv.participantAId) "participant_a_typing" else "participant_b_typing"
-                        api.updateConversation(conversationId, mapOf(field to isTyping))
-                        emit(Result.success(Unit))
-                    }
-                }
+                emit(Result.failure(Exception("Conversation not found for typing status")))
             }
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -878,7 +875,8 @@ class SupabaseMessageRepository(
                 "participant_b_id" to recipientId,
                 "participant_b_name" to recipientName,
                 "last_message" to "Conversation started",
-                "last_message_time" to DateUtils.formatIsoUtc(System.currentTimeMillis())
+                "last_message_time" to DateUtils.formatIsoUtc(System.currentTimeMillis()),
+                "chat_opens_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())
             )
             val createResponse = api.createConversation(newConvBody)
             if (createResponse.isSuccessful) {
@@ -935,6 +933,7 @@ class SupabaseMessageRepository(
     // ═══════════════════════════════════════════════════════════════════════
 
     private fun mapDtoToMessage(dto: MessageDto): Message {
+        val messageType = try { MessageType.valueOf(dto.type.uppercase()) } catch (_: Exception) { MessageType.TEXT }
         return Message(
             id = dto.id ?: "",
             conversationId = dto.conversationId,
@@ -946,7 +945,7 @@ class SupabaseMessageRepository(
             timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
             readAt = dto.readAt?.let { DateUtils.parseIsoToMillis(it) },
-            type = MessageType.valueOf(dto.type.uppercase()),
+            type = messageType,
             imageUrl = dto.imageUrl,
             voiceUrl = dto.voice_url,
             voiceDuration = dto.voiceDuration
