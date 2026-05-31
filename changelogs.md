@@ -8,6 +8,51 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Per-game screenshot flow + HostActions compilation fix] — Partial implementation of multi-game result tracking
+
+### Commits
+- `c873ff1` — feat(scrim): per-game screenshot upload, winner selection, and HostActions fix
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - Added `ScrimGameStatus` enum (`PENDING`, `AWAITING_OPPONENT`, `BOTH_UPLOADED`, `WINNER_SELECTED`, `CONFIRMED`).
+  - Added `ScrimGameResult` data class with per-game screenshot URLs, winner, status, timestamps.
+  - Added `gameResults: List<ScrimGameResult>` to `Scrim` domain model.
+  - Re-added `BO2(2, "Best of 2")` to `BestOf` enum (paired with new DB migration).
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/ScrimRepositoryInterface.kt`
+  - Added `uploadGameScreenshot(scrimId, teamId, gameNumber, screenshotUrl)`.
+  - Added `selectGameWinner(scrimId, gameNumber, winnerTeamId)`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/ScrimRepository.kt`
+  - Added no-op implementations of new interface methods.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Implemented `uploadGameScreenshot()` and `selectGameWinner()`.
+  - Updated `mapDtoToScrim()` to populate `gameResults`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added `ScrimGameResultDto` and `ScrimGameResultResponse`.
+  - Added `getScrimGameResults(scrimId)`, `upsertScrimGameResult()`, `updateScrimGameResult()`.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - Added `uploadGameScreenshot()` and `selectGameWinner()` methods.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Wired new `onUploadGameScreenshot` and `onSelectGameWinner` callbacks into `ScrimDetailScreen` route.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Redesigned `InProgressSection` with `GameResultCard`, `SeriesProgressBar`, per-game screenshot slots, and winner selection chips.
+  - Fixed compilation error: added `onUploadGameScreenshot` and `onSelectGameWinner` parameters to `HostActions()` and passed them through to `InProgressSection()`.
+- **File:** `supabase/migrations/20260631050001_add_screenshot_per_game_and_bo2.sql`
+  - New migration: creates `scrim_game_results` table, enables RLS, adds policies/indexes/triggers.
+  - Alters `valid_best_of` constraint to allow `(1, 2, 3, 5)`.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Known Issues / Next Steps
+- The per-game screenshot flow is UI-ready but may need further backend wiring for the `scrim_game_results` table.
+- `BO2` was re-added to the enum; the migration to allow it in the DB is present but may need to be applied to the live Supabase instance.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `HostActions` parameter fix is required to pass new callbacks from `ScrimDetailScreen` to `InProgressSection`. Do not remove the parameters.
+
+---
+
 ## 2026-05-31 04:18 [Session: Deep audit scrims creation + DB constraint alignment] — Fixed best_of 23514 error and all status schema drift
 
 ### Commits
