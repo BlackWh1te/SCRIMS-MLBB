@@ -38,7 +38,9 @@ data class Scrim(
     val teamAScreenshotUploadedAt: Long? = null,
     val teamBScreenshotUploadedAt: Long? = null,
     // ── Winner ──
-    val winnerTeamId: String? = null
+    val winnerTeamId: String? = null,
+    // ── Per-game results (screenshots + winner per game) ──
+    val gameResults: List<ScrimGameResult> = emptyList()
 ) {
     /** Ready buttons appear at match start time */
     val isReadyPhase: Boolean
@@ -49,9 +51,36 @@ data class Scrim(
     val bothReady: Boolean
         get() = teamAReady && teamBReady
 
-    /** Can complete scrim only after screenshot uploaded */
+    /** Number of games in this series (derived from bestOf) */
+    val totalGames: Int
+        get() = bestOf.games
+
+    /** How many games have both screenshots uploaded */
+    val gamesWithBothScreenshots: Int
+        get() = gameResults.count { it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null }
+
+    /** How many games have a winner selected */
+    val gamesWithWinner: Int
+        get() = gameResults.count { it.winnerTeamId != null }
+
+    /** Can complete scrim only after all games have screenshots from both teams and winners selected */
     val canCompleteScrim: Boolean
-        get() = bothReady && (teamAScreenshotUrl != null || teamBScreenshotUrl != null)
+        get() = bothReady && gameResults.size == totalGames &&
+                gameResults.all { it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null && it.winnerTeamId != null }
+
+    /** Series winner: team that won majority of games */
+    val seriesWinnerTeamId: String?
+        get() {
+            if (gameResults.isEmpty()) return null
+            val aWins = gameResults.count { it.winnerTeamId == teamId }
+            val bWins = gameResults.count { it.winnerTeamId == opponentTeamId }
+            val needed = (totalGames / 2) + 1
+            return when {
+                aWins >= needed -> teamId
+                bWins >= needed -> opponentTeamId
+                else -> null // Not decided yet (e.g., BO2 can be 1-1)
+            }
+        }
 
     /** Chat opens 2 hours before scheduled time */
     val chatOpensAt: Long
@@ -102,8 +131,38 @@ data class ScrimRosterEntry(
     val isActive: Boolean = false  // true = playing (pts affected), false = substitute (no pts)
 )
 
+/** Per-game result within a scrim — each game has its own screenshots and winner */
+data class ScrimGameResult(
+    val id: String = "",
+    val scrimId: String = "",
+    val gameNumber: Int = 1,
+    val teamAScreenshotUrl: String? = null,
+    val teamBScreenshotUrl: String? = null,
+    val teamAScreenshotUploadedAt: Long? = null,
+    val teamBScreenshotUploadedAt: Long? = null,
+    val winnerTeamId: String? = null,
+    val status: ScrimGameStatus = ScrimGameStatus.PENDING
+) {
+    /** True when both teams have uploaded a screenshot for this game */
+    val bothScreenshotsUploaded: Boolean
+        get() = teamAScreenshotUrl != null && teamBScreenshotUrl != null
+
+    /** True when this game has a winner selected */
+    val hasWinner: Boolean
+        get() = winnerTeamId != null
+}
+
+enum class ScrimGameStatus {
+    PENDING,            // No screenshots uploaded yet
+    AWAITING_OPPONENT, // One team uploaded, waiting for other team
+    BOTH_UPLOADED,     // Both teams uploaded screenshots
+    WINNER_SELECTED,   // Winner of this game selected
+    CONFIRMED          // Both teams agree / admin confirmed
+}
+
 enum class BestOf(val games: Int, val displayName: String) {
     BO1(1, "Best of 1"),
+    BO2(2, "Best of 2"),
     BO3(3, "Best of 3"),
     BO5(5, "Best of 5");
 

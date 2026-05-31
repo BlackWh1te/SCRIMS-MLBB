@@ -1148,6 +1148,12 @@ fun AuthNavigation(
                             onUploadScreenshot = { sid, tid, url ->
                                 scrimViewModel.uploadScreenshot(sid, tid, url)
                             },
+                            onUploadGameScreenshot = { sid, tid, gameNum, url ->
+                                scrimViewModel.uploadGameScreenshot(sid, tid, gameNum, url)
+                            },
+                            onSelectGameWinner = { sid, gameNum, winnerId ->
+                                scrimViewModel.selectGameWinner(sid, gameNum, winnerId)
+                            },
                             onCompleteScrim = { sid, winnerId ->
                                 scrimViewModel.completeScrim(sid, winnerId)
                             }

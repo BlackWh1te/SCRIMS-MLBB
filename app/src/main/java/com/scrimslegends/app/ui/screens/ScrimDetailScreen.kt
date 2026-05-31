@@ -7,6 +7,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,8 @@ import com.scrimslegends.app.data.model.ApplicationStatus
 import com.scrimslegends.app.data.model.BestOf
 import com.scrimslegends.app.data.model.Scrim
 import com.scrimslegends.app.data.model.ScrimApplication
+import com.scrimslegends.app.data.model.ScrimGameResult
+import com.scrimslegends.app.data.model.ScrimGameStatus
 import com.scrimslegends.app.data.model.ScrimRosterEntry
 import com.scrimslegends.app.data.model.ScrimStatus
 import com.scrimslegends.app.data.service.SupabaseConfig
@@ -68,6 +71,8 @@ fun ScrimDetailScreen(
     onNavigateToRoster: ((String, String) -> Unit)? = null,  // scrimId, teamId
     onMarkReady: ((String, String) -> Unit)? = null,        // scrimId, teamId
     onUploadScreenshot: ((String, String, String) -> Unit)? = null, // scrimId, teamId, screenshotUrl
+    onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null, // scrimId, teamId, gameNumber, screenshotUrl
+    onSelectGameWinner: ((String, Int, String) -> Unit)? = null, // scrimId, gameNumber, winnerTeamId
     onCompleteScrim: ((String, String) -> Unit)? = null      // scrimId, winnerTeamId
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -404,6 +409,8 @@ fun ScrimDetailScreen(
                                 onNavigateToRoster = onNavigateToRoster,
                                 onMarkReady = onMarkReady,
                                 onUploadScreenshot = onUploadScreenshot,
+                                onUploadGameScreenshot = onUploadGameScreenshot,
+                                onSelectGameWinner = onSelectGameWinner,
                                 onCompleteScrim = onCompleteScrim
                             )
 
@@ -587,6 +594,8 @@ private fun HostActions(
     onNavigateToRoster: ((String, String) -> Unit)?,
     onMarkReady: ((String, String) -> Unit)?,
     onUploadScreenshot: ((String, String, String) -> Unit)?,
+    onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
+    onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
     onCompleteScrim: ((String, String) -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -700,6 +709,8 @@ private fun HostActions(
                     scrim = scrim,
                     currentTeamId = currentTeamId,
                     onUploadScreenshot = onUploadScreenshot,
+                    onUploadGameScreenshot = onUploadGameScreenshot,
+                    onSelectGameWinner = onSelectGameWinner,
                     onCompleteScrim = onCompleteScrim,
                     onNavigateToChat = onNavigateToChat
                 )
@@ -1153,7 +1164,7 @@ private fun ReadyIndicator(
 }
 
 // ═════════════════════════════════════════════════════════════════
-// IN PROGRESS SECTION — Screenshot upload + Complete scrim
+// IN PROGRESS SECTION — Per-game screenshot upload + series result
 // ═════════════════════════════════════════════════════════════════
 
 @Composable
@@ -1161,21 +1172,35 @@ private fun InProgressSection(
     scrim: Scrim,
     currentTeamId: String?,
     onUploadScreenshot: ((String, String, String) -> Unit)?,
+    onUploadGameScreenshot: ((String, String, Int, String) -> Unit)?,
+    onSelectGameWinner: ((String, Int, String) -> Unit)?,
     onCompleteScrim: ((String, String) -> Unit)?,
     onNavigateToChat: ((String) -> Unit)?
 ) {
     val isTeamA = currentTeamId == scrim.teamId
-    val myScreenshotUploaded = if (isTeamA) scrim.teamAScreenshotUrl != null else scrim.teamBScreenshotUrl != null
-    var showWinnerDialog by remember { mutableStateOf(false) }
-    var isUploading by remember { mutableStateOf(false) }
-    var uploadError by remember { mutableStateOf<String?>(null) }
+    val totalGames = scrim.bestOf.games
+    val gamesReady = scrim.gameResults.size
+    val gamesWithBothScreenshots = scrim.gamesWithBothScreenshots
+    val gamesWithWinner = scrim.gamesWithWinner
+    val canCompleteSeries = scrim.canCompleteScrim
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Track which game is being uploaded
+    var activeUploadGame by remember { mutableStateOf<Int?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+    var uploadError by remember { mutableStateOf<String?>(null) }
+    var showSeriesWinnerDialog by remember { mutableStateOf(false) }
+
+    // Create game result rows if they don't exist yet (BO1 legacy or newly-filled scrims)
+    // In a real app this is handled by the backend on scrim creation/fill.
+    // Here we just show the UI based on what the backend provides.
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null && currentTeamId != null) {
+        val gameNum = activeUploadGame
+        if (uri != null && currentTeamId != null && gameNum != null) {
             isUploading = true
             uploadError = null
             coroutineScope.launch {
@@ -1184,19 +1209,16 @@ private fun InProgressSection(
                     val bytes = inputStream?.readBytes()
                     inputStream?.close()
                     if (bytes != null) {
-                        // Compress image to save bandwidth and storage
                         val compressedBytes = com.scrimslegends.app.util.ImageUtils.compressImage(bytes)
-                        val path = "screenshots/${scrim.id}_${currentTeamId}_${System.currentTimeMillis()}.jpg"
-                        val contentType = "image/jpeg"
-                        
+                        val path = "screenshots/${scrim.id}_${currentTeamId}_game${gameNum}_${System.currentTimeMillis()}.jpg"
                         val result = SupabaseStorageUpload.uploadFile(
                             bucket = SupabaseConfig.BUCKET_SCREENSHOTS,
                             path = path,
                             fileBytes = compressedBytes,
-                            contentType = contentType
+                            contentType = "image/jpeg"
                         )
                         result.onSuccess { url ->
-                            onUploadScreenshot?.invoke(scrim.id, currentTeamId, url)
+                            onUploadGameScreenshot?.invoke(scrim.id, currentTeamId, gameNum, url)
                         }.onFailure { error ->
                             uploadError = error.message
                         }
@@ -1207,6 +1229,7 @@ private fun InProgressSection(
                     uploadError = e.message
                 } finally {
                     isUploading = false
+                    activeUploadGame = null
                 }
             }
         }
@@ -1222,10 +1245,9 @@ private fun InProgressSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp)
         ) {
-            // In progress indicator
+            // Header: Match in progress + series progress
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -1241,59 +1263,46 @@ private fun InProgressSection(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Step 1: Attach Screenshot
-            Text(
-                text = stringResource(R.string.step_1_attach_screenshot),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = White
-            )
+            // Series progress bar
+            if (totalGames > 1) {
+                SeriesProgressBar(
+                    totalGames = totalGames,
+                    gamesWithBothScreenshots = gamesWithBothScreenshots,
+                    gamesWithWinner = gamesWithWinner
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (!myScreenshotUploaded && currentTeamId != null && onUploadScreenshot != null) {
-                if (isUploading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = BluePrimary,
-                        strokeWidth = 2.dp
+            // Per-game cards
+            if (scrim.gameResults.isNotEmpty()) {
+                scrim.gameResults.sortedBy { it.gameNumber }.forEach { gameResult ->
+                    GameResultCard(
+                        gameResult = gameResult,
+                        scrim = scrim,
+                        isTeamA = isTeamA,
+                        currentTeamId = currentTeamId,
+                        isUploading = isUploading && activeUploadGame == gameResult.gameNumber,
+                        onUploadClick = { gameNum ->
+                            activeUploadGame = gameNum
+                            imagePickerLauncher.launch("image/*")
+                        },
+                        onSelectWinner = { gameNum, winnerId ->
+                            onSelectGameWinner?.invoke(scrim.id, gameNum, winnerId)
+                        }
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(stringResource(R.string.uploading), color = LightGray, fontSize = 13.sp)
-                } else {
-                    GradientButton(
-                        text = stringResource(R.string.attach_screenshot),
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        gradient = BlueGradient,
-                        height = 48.dp
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = stringResource(R.string.image_content_warning),
-                        color = TextTertiary,
-                        fontSize = 11.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-            } else if (myScreenshotUploaded) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = SuccessGreen.copy(alpha = 0.1f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.screenshot_uploaded_label), color = SuccessGreen, fontWeight = FontWeight.Medium)
-                    }
-                }
+            } else {
+                // Legacy fallback: single screenshot upload for old scrims without game results
+                LegacyScreenshotUpload(
+                    scrim = scrim,
+                    isTeamA = isTeamA,
+                    currentTeamId = currentTeamId,
+                    isUploading = isUploading,
+                    onUploadScreenshot = onUploadScreenshot
+                )
             }
 
             uploadError?.let {
@@ -1306,25 +1315,38 @@ private fun InProgressSection(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Step 2: Complete Scrim (only after screenshot)
-            Text(
-                text = stringResource(R.string.step_2_complete_scrim),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (myScreenshotUploaded) White else MidGray
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Complete Series button
+            val seriesWinner = scrim.seriesWinnerTeamId
             GradientButton(
-                text = if (myScreenshotUploaded) stringResource(R.string.complete_scrim) else stringResource(R.string.upload_screenshot_first),
-                onClick = { if (myScreenshotUploaded) showWinnerDialog = true },
-                enabled = myScreenshotUploaded,
-                gradient = if (myScreenshotUploaded) GoldGradient else listOf(Color.Gray, Color.DarkGray),
+                text = when {
+                    !canCompleteSeries -> "Complete all games first"
+                    seriesWinner == null -> "Select all game winners"
+                    else -> "Complete Series"
+                },
+                onClick = {
+                    if (canCompleteSeries && seriesWinner != null) {
+                        showSeriesWinnerDialog = true
+                    }
+                },
+                enabled = canCompleteSeries && seriesWinner != null,
+                gradient = if (canCompleteSeries && seriesWinner != null) GoldGradient else listOf(Color.Gray, Color.DarkGray),
                 height = 48.dp
             )
+
+            if (canCompleteSeries && seriesWinner != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val winnerName = if (seriesWinner == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")
+                Text(
+                    text = "$winnerName wins the series",
+                    color = SuccessGreen,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -1340,41 +1362,387 @@ private fun InProgressSection(
         }
     }
 
-    // Winner selection dialog
-    if (showWinnerDialog) {
+    // Series completion confirmation dialog
+    if (showSeriesWinnerDialog) {
+        val finalWinner = scrim.seriesWinnerTeamId
         AlertDialog(
-            onDismissRequest = { showWinnerDialog = false },
+            onDismissRequest = { showSeriesWinnerDialog = false },
             containerColor = DarkNavy,
             title = {
-                Text(stringResource(R.string.select_winner), color = White, fontWeight = FontWeight.Bold)
+                Text("Complete Series?", color = White, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
-                    Text(stringResource(R.string.who_won_scrim), color = LightGray, fontSize = 14.sp)
+                    Text(
+                        "All ${scrim.bestOf.games} games have results. The series winner is ${if (finalWinner == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}.",
+                        color = LightGray,
+                        fontSize = 14.sp
+                    )
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = {
-                        onCompleteScrim?.invoke(scrim.id, scrim.teamId)
-                        showWinnerDialog = false
-                    }) {
-                        Text(scrim.teamName, color = SuccessGreen, fontWeight = FontWeight.Bold)
-                    }
-                    TextButton(onClick = {
-                        onCompleteScrim?.invoke(scrim.id, scrim.opponentTeamId ?: "")
-                        showWinnerDialog = false
-                    }) {
-                        Text(scrim.opponentTeamName ?: stringResource(R.string.opponent_label), color = ErrorRed, fontWeight = FontWeight.Bold)
-                    }
+                TextButton(onClick = {
+                    finalWinner?.let { onCompleteScrim?.invoke(scrim.id, it) }
+                    showSeriesWinnerDialog = false
+                }) {
+                    Text("Confirm", color = SuccessGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showWinnerDialog = false }) {
-                    Text(stringResource(R.string.cancel_btn), color = MidGray)
+                TextButton(onClick = { showSeriesWinnerDialog = false }) {
+                    Text("Cancel", color = MidGray)
                 }
             }
         )
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// SERIES PROGRESS BAR
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun SeriesProgressBar(
+    totalGames: Int,
+    gamesWithBothScreenshots: Int,
+    gamesWithWinner: Int
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Series Progress",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = White
+            )
+            Text(
+                text = "$gamesWithWinner/$totalGames decided",
+                fontSize = 12.sp,
+                color = if (gamesWithWinner == totalGames) SuccessGreen else LightGray
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(totalGames) { index ->
+                val gameNum = index + 1
+                val hasWinner = index < gamesWithWinner
+                val hasScreenshots = index < gamesWithBothScreenshots
+                val color = when {
+                    hasWinner -> SuccessGreen
+                    hasScreenshots -> BluePrimary
+                    else -> White.copy(alpha = 0.15f)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .background(color, RoundedCornerShape(3.dp))
+                )
+            }
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// GAME RESULT CARD — Per-game screenshot + winner
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun GameResultCard(
+    gameResult: ScrimGameResult,
+    scrim: Scrim,
+    isTeamA: Boolean,
+    currentTeamId: String?,
+    isUploading: Boolean,
+    onUploadClick: (Int) -> Unit,
+    onSelectWinner: (Int, String) -> Unit
+) {
+    val myScreenshot = if (isTeamA) gameResult.teamAScreenshotUrl else gameResult.teamBScreenshotUrl
+    val opponentScreenshot = if (isTeamA) gameResult.teamBScreenshotUrl else gameResult.teamAScreenshotUrl
+    var showWinnerPicker by remember { mutableStateOf(false) }
+
+    val statusColor = when {
+        gameResult.winnerTeamId != null -> SuccessGreen
+        gameResult.bothScreenshotsUploaded -> BluePrimary
+        myScreenshot != null -> WarningOrange
+        else -> MidGray
+    }
+
+    val statusText = when {
+        gameResult.winnerTeamId != null -> "Winner: ${if (gameResult.winnerTeamId == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}"
+        gameResult.bothScreenshotsUploaded -> "Both uploaded — select winner"
+        myScreenshot != null -> "Awaiting opponent screenshot"
+        else -> "Upload screenshot"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Game header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(statusColor.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${gameResult.gameNumber}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Game ${gameResult.gameNumber}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = White
+                    )
+                }
+                Text(
+                    text = statusText,
+                    fontSize = 11.sp,
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Screenshot row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // My team's screenshot slot
+                ScreenshotSlot(
+                    label = "Your team",
+                    screenshotUrl = myScreenshot,
+                    isUploading = isUploading,
+                    onUploadClick = { onUploadClick(gameResult.gameNumber) },
+                    canUpload = currentTeamId != null && myScreenshot == null,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Opponent screenshot slot
+                ScreenshotSlot(
+                    label = "Opponent",
+                    screenshotUrl = opponentScreenshot,
+                    isUploading = false,
+                    onUploadClick = {},
+                    canUpload = false,
+                    isReadOnly = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Winner selection (only when both screenshots uploaded and no winner yet)
+            if (gameResult.bothScreenshotsUploaded && gameResult.winnerTeamId == null && currentTeamId != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Winner:",
+                        fontSize = 13.sp,
+                        color = LightGray,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+                    WinnerChip(
+                        text = scrim.teamName,
+                        onClick = { onSelectWinner(gameResult.gameNumber, scrim.teamId) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (scrim.opponentTeamId != null) {
+                        WinnerChip(
+                            text = scrim.opponentTeamName ?: "Opponent",
+                            onClick = { onSelectWinner(gameResult.gameNumber, scrim.opponentTeamId!!) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // Show winner badge if selected
+            gameResult.winnerTeamId?.let { winnerId ->
+                Spacer(modifier = Modifier.height(8.dp))
+                val winnerName = if (winnerId == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "$winnerName won",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GoldPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// SCREENSHOT SLOT — Upload or preview
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun ScreenshotSlot(
+    label: String,
+    screenshotUrl: String?,
+    isUploading: Boolean,
+    onUploadClick: () -> Unit,
+    canUpload: Boolean,
+    isReadOnly: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(90.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (screenshotUrl != null) SuccessGreen.copy(alpha = 0.06f)
+            else White.copy(alpha = 0.04f)
+        ),
+        shape = RoundedCornerShape(10.dp),
+        onClick = { if (canUpload && !isUploading) onUploadClick() }
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isUploading -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BluePrimary, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Uploading…", fontSize = 11.sp, color = LightGray)
+                    }
+                }
+                screenshotUrl != null -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(label, fontSize = 11.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
+                        Text("Uploaded", fontSize = 10.sp, color = TextTertiary)
+                    }
+                }
+                canUpload -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.PhotoCamera, null, tint = BluePrimary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(label, fontSize = 11.sp, color = LightGray)
+                        Text("Tap to upload", fontSize = 10.sp, color = TextTertiary)
+                    }
+                }
+                isReadOnly -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.HourglassEmpty, null, tint = MidGray, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(label, fontSize = 11.sp, color = MidGray)
+                        Text("Waiting…", fontSize = 10.sp, color = TextTertiary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// LEGACY SCREENSHOT UPLOAD — For old scrims without game results
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun LegacyScreenshotUpload(
+    scrim: Scrim,
+    isTeamA: Boolean,
+    currentTeamId: String?,
+    isUploading: Boolean,
+    onUploadScreenshot: ((String, String, String) -> Unit)?
+) {
+    val myScreenshotUploaded = if (isTeamA) scrim.teamAScreenshotUrl != null else scrim.teamBScreenshotUrl != null
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var localUploading by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null && currentTeamId != null) {
+            localUploading = true
+            coroutineScope.launch {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+                    if (bytes != null) {
+                        val compressedBytes = com.scrimslegends.app.util.ImageUtils.compressImage(bytes)
+                        val path = "screenshots/${scrim.id}_${currentTeamId}_${System.currentTimeMillis()}.jpg"
+                        val result = SupabaseStorageUpload.uploadFile(
+                            bucket = SupabaseConfig.BUCKET_SCREENSHOTS,
+                            path = path,
+                            fileBytes = compressedBytes,
+                            contentType = "image/jpeg"
+                        )
+                        result.onSuccess { url ->
+                            onUploadScreenshot?.invoke(scrim.id, currentTeamId, url)
+                        }
+                    }
+                } catch (_: Exception) { }
+                localUploading = false
+            }
+        }
+    }
+
+    if (!myScreenshotUploaded && currentTeamId != null && onUploadScreenshot != null) {
+        if (localUploading) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BluePrimary, strokeWidth = 2.dp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Uploading…", color = LightGray, fontSize = 13.sp)
+        } else {
+            GradientButton(
+                text = "Attach Screenshot",
+                onClick = { imagePickerLauncher.launch("image/*") },
+                gradient = BlueGradient,
+                height = 48.dp
+            )
+        }
+    } else if (myScreenshotUploaded) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.1f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Screenshot uploaded", color = SuccessGreen, fontWeight = FontWeight.Medium)
+            }
+        }
     }
 }
 
@@ -1459,5 +1827,33 @@ private fun RosterDisplayCard(
                 }
             }
         }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// WINNER CHIP — Small selectable team name chip
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun WinnerChip(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(SuccessGreen.copy(alpha = 0.15f))
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = SuccessGreen,
+            maxLines = 1
+        )
     }
 }

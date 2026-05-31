@@ -366,6 +366,34 @@ class ScrimRepository : ScrimRepositoryInterface {
         emit(Result.success(updatedScrim))
     }
 
+    override suspend fun uploadGameScreenshot(scrimId: String, teamId: String, gameNumber: Int, screenshotUrl: String): Flow<Result<Scrim>> = flow {
+        delay(500)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+        val scrim = scrims[index]
+        val isTeamA = scrim.teamId == teamId
+        val updatedGames = scrim.gameResults.map { game ->
+            if (game.gameNumber == gameNumber) {
+                if (isTeamA) game.copy(teamAScreenshotUrl = screenshotUrl, teamAScreenshotUploadedAt = System.currentTimeMillis())
+                else game.copy(teamBScreenshotUrl = screenshotUrl, teamBScreenshotUploadedAt = System.currentTimeMillis())
+            } else game
+        }
+        scrims[index] = scrim.copy(gameResults = updatedGames)
+        emit(Result.success(scrims[index]))
+    }
+
+    override suspend fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+        delay(300)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+        val scrim = scrims[index]
+        val updatedGames = scrim.gameResults.map { game ->
+            if (game.gameNumber == gameNumber) game.copy(winnerTeamId = winnerTeamId) else game
+        }
+        scrims[index] = scrim.copy(gameResults = updatedGames)
+        emit(Result.success(scrims[index]))
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // COMPLETE SCRIM — Select winner, award/deduct points
     // ═══════════════════════════════════════════════════════════════

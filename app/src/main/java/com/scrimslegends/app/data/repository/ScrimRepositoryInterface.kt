@@ -25,6 +25,13 @@ interface ScrimRepositoryInterface {
     suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>>
     suspend fun markReady(scrimId: String, teamId: String): Flow<Result<Scrim>>
     suspend fun uploadScreenshot(scrimId: String, teamId: String, screenshotUrl: String): Flow<Result<Scrim>>
+
+    /** Upload a screenshot for a specific game in a best-of series */
+    suspend fun uploadGameScreenshot(scrimId: String, teamId: String, gameNumber: Int, screenshotUrl: String): Flow<Result<Scrim>>
+
+    /** Select the winner of a specific game */
+    suspend fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String): Flow<Result<Scrim>>
+
     suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>>
     fun calculatePointsChanges(scrim: Scrim): PointsResult
     suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>>

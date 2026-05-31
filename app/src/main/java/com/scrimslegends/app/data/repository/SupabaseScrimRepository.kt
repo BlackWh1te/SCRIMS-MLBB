@@ -150,7 +150,10 @@ class SupabaseScrimRepository(
             val r = api.getScrimById(PostgrestFilter.eq(id))
             if (r.isSuccessful) {
                 val s = r.body()?.firstOrNull()
-                emit(Result.success(s?.let { mapDtoToScrim(it) }))
+                if (s != null) {
+                    val gameResults = fetchGameResultsForScrim(s.id)
+                    emit(Result.success(mapDtoToScrim(s, gameResults)))
+                } else emit(Result.success(null))
             } else emit(Result.failure(Exception("Failed to fetch scrim")))
         } catch (e: Exception) {
             val c = scrimDao.getById(id)
@@ -184,7 +187,22 @@ class SupabaseScrimRepository(
             val r = api.createScrim(dto)
             if (r.isSuccessful) {
                 val created = r.body()?.firstOrNull()
-                if (created != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(created))) }
+                if (created != null) {
+                    // Create empty game result rows for each game in the series
+                    val gameCount = scrim.bestOf.games
+                    for (gameNum in 1..gameCount) {
+                        try {
+                            api.createScrimGameResult(
+                                ScrimGameResultDto(
+                                    scrimId = created.id,
+                                    gameNumber = gameNum
+                                )
+                            )
+                        } catch (_: Exception) { /* Best effort */ }
+                    }
+                    invalidateScrimCaches()
+                    emit(Result.success(mapDtoToScrim(created)))
+                }
                 else emit(Result.failure(Exception("Scrim creation failed")))
             } else emit(Result.failure(Exception("Error: ${r.errorBody()?.string()}")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -259,7 +277,20 @@ class SupabaseScrimRepository(
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
             if (r.isSuccessful) {
                 val u = r.body()?.firstOrNull()
-                if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) }
+                if (u != null) {
+                    // Ensure game results exist (fallback for old scrims created before migration)
+                    val existingGames = fetchGameResultsForScrim(scrimId)
+                    if (existingGames.isEmpty()) {
+                        val gameCount = BestOf.fromGames(scrim.bestOf).games
+                        for (gameNum in 1..gameCount) {
+                            try {
+                                api.createScrimGameResult(ScrimGameResultDto(scrimId = scrimId, gameNumber = gameNum))
+                            } catch (_: Exception) { }
+                        }
+                    }
+                    invalidateScrimCaches()
+                    emit(Result.success(mapDtoToScrim(u)))
+                }
                 else emit(Result.failure(Exception("Approve failed")))
             } else emit(Result.failure(Exception("Error approving application")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -568,7 +599,7 @@ class SupabaseScrimRepository(
         )
     }
 
-    private fun mapDtoToScrim(dto: ScrimDto): Scrim {
+    private fun mapDtoToScrim(dto: ScrimDto, gameResults: List<ScrimGameResult> = emptyList()): Scrim {
         val scheduledTime = DateUtils.parseIsoToMillis("${dto.scheduledDate}T${dto.scheduledTime}")
         val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
         return Scrim(
@@ -595,7 +626,8 @@ class SupabaseScrimRepository(
             teamAScreenshotUrl = dto.teamAScreenshotUrl,
             teamBScreenshotUrl = dto.teamBScreenshotUrl,
             teamAScreenshotUploadedAt = parseTs(dto.teamAScreenshotUploadedAt),
-            teamBScreenshotUploadedAt = parseTs(dto.teamBScreenshotUploadedAt)
+            teamBScreenshotUploadedAt = parseTs(dto.teamBScreenshotUploadedAt),
+            gameResults = gameResults
         )
     }
 
@@ -638,5 +670,116 @@ class SupabaseScrimRepository(
             teamAReadyAt = parseTs(e.teamAReadyAt), teamBReadyAt = parseTs(e.teamBReadyAt),
             teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl
         )
+    }
+
+    // ─── ScrimGameResult mapping ───
+
+    private fun mapDtoToScrimGameResult(dto: ScrimGameResultDto): ScrimGameResult {
+        return ScrimGameResult(
+            id = dto.id,
+            scrimId = dto.scrimId,
+            gameNumber = dto.gameNumber,
+            teamAScreenshotUrl = dto.teamAScreenshotUrl,
+            teamBScreenshotUrl = dto.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = dto.teamAScreenshotUploadedAt?.let { DateUtils.parseIsoToMillis(it) },
+            teamBScreenshotUploadedAt = dto.teamBScreenshotUploadedAt?.let { DateUtils.parseIsoToMillis(it) },
+            winnerTeamId = dto.winnerTeamId,
+            status = try { ScrimGameStatus.valueOf(dto.status) } catch (_: Exception) { ScrimGameStatus.PENDING }
+        )
+    }
+
+    private fun mapScrimGameResultToDto(result: ScrimGameResult): ScrimGameResultDto {
+        return ScrimGameResultDto(
+            id = result.id,
+            scrimId = result.scrimId,
+            gameNumber = result.gameNumber,
+            teamAScreenshotUrl = result.teamAScreenshotUrl,
+            teamBScreenshotUrl = result.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = result.teamAScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
+            teamBScreenshotUploadedAt = result.teamBScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
+            winnerTeamId = result.winnerTeamId,
+            status = result.status.name
+        )
+    }
+
+    // ─── Fetch game results for a scrim ───
+
+    private suspend fun fetchGameResultsForScrim(scrimId: String): List<ScrimGameResult> {
+        return try {
+            val r = api.getScrimGameResults(scrimId = PostgrestFilter.eq(scrimId))
+            if (r.isSuccessful) {
+                r.body()?.map { mapDtoToScrimGameResult(it) } ?: emptyList()
+            } else emptyList()
+        } catch (_: Exception) { emptyList() }
+    }
+
+    // ─── Per-game screenshot upload ───
+
+    override suspend fun uploadGameScreenshot(scrimId: String, teamId: String, gameNumber: Int, screenshotUrl: String): Flow<Result<Scrim>> = flow {
+        try {
+            // 1. Find the game result row
+            val gameResults = fetchGameResultsForScrim(scrimId)
+            val gameResult = gameResults.find { it.gameNumber == gameNumber }
+            if (gameResult == null) { emit(Result.failure(Exception("Game $gameNumber not found"))); return@flow }
+
+            // 2. Determine which team is uploading
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrimDto = scrimResponse.body()?.firstOrNull()
+            if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+
+            val isTeamA = scrimDto.teamId == teamId
+            val updates = mutableMapOf<String, Any>()
+            if (isTeamA) {
+                updates["team_a_screenshot_url"] = screenshotUrl
+                updates["team_a_screenshot_uploaded_at"] = DateUtils.formatIsoNow()
+            } else {
+                updates["team_b_screenshot_url"] = screenshotUrl
+                updates["team_b_screenshot_uploaded_at"] = DateUtils.formatIsoNow()
+            }
+
+            // 3. Update status if both screenshots are now present
+            val otherScreenshot = if (isTeamA) gameResult.teamBScreenshotUrl else gameResult.teamAScreenshotUrl
+            if (otherScreenshot != null) {
+                updates["status"] = "BOTH_UPLOADED"
+            } else {
+                updates["status"] = "AWAITING_OPPONENT"
+            }
+
+            val r = api.updateScrimGameResult(PostgrestFilter.eq(gameResult.id), updates)
+            if (r.isSuccessful) {
+                invalidateScrimCaches()
+                getScrimById(scrimId).collect { result ->
+                    result.getOrNull()?.let { emit(Result.success(it)) }
+                        ?: emit(Result.failure(Exception("Scrim not found after update")))
+                }
+            } else {
+                emit(Result.failure(Exception("Failed to upload game screenshot")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
+    // ─── Per-game winner selection ───
+
+    override suspend fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+        try {
+            val gameResults = fetchGameResultsForScrim(scrimId)
+            val gameResult = gameResults.find { it.gameNumber == gameNumber }
+            if (gameResult == null) { emit(Result.failure(Exception("Game $gameNumber not found"))); return@flow }
+
+            val updates = mutableMapOf<String, Any>(
+                "winner_team_id" to winnerTeamId,
+                "status" to "WINNER_SELECTED"
+            )
+            val r = api.updateScrimGameResult(PostgrestFilter.eq(gameResult.id), updates)
+            if (r.isSuccessful) {
+                invalidateScrimCaches()
+                getScrimById(scrimId).collect { result ->
+                    result.getOrNull()?.let { emit(Result.success(it)) }
+                        ?: emit(Result.failure(Exception("Scrim not found after update")))
+                }
+            } else {
+                emit(Result.failure(Exception("Failed to select game winner")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
     }
 }

@@ -439,6 +439,44 @@ class ScrimViewModel @Inject constructor(
         }
     }
 
+    /** Upload a screenshot for a specific game in a best-of series */
+    fun uploadGameScreenshot(scrimId: String, teamId: String, gameNumber: Int, screenshotUrl: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            scrimRepository.uploadGameScreenshot(scrimId, teamId, gameNumber, screenshotUrl).collect { result ->
+                result.onSuccess { scrim ->
+                    _selectedScrim.value = scrim
+                    loadScrims()
+                    _isLoading.value = false
+                }.onFailure { exception ->
+                    _error.value = exception.message
+                    _isLoading.value = false
+                }
+            }
+        }
+    }
+
+    /** Select the winner of a specific game */
+    fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            scrimRepository.selectGameWinner(scrimId, gameNumber, winnerTeamId).collect { result ->
+                result.onSuccess { scrim ->
+                    _selectedScrim.value = scrim
+                    loadScrims()
+                    _isLoading.value = false
+                }.onFailure { exception ->
+                    _error.value = exception.message
+                    _isLoading.value = false
+                }
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // COMPLETE SCRIM — Select winner, calculate points
     // ═══════════════════════════════════════════════════════════════

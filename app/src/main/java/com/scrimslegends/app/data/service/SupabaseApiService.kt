@@ -220,6 +220,20 @@ data class ScrimRosterDto(
     @SerializedName("assigned_at") val assignedAt: String = ""
 )
 
+// ─── Scrim Game Result DTO ───
+
+data class ScrimGameResultDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("scrim_id") val scrimId: String = "",
+    @SerializedName("game_number") val gameNumber: Int = 1,
+    @SerializedName("team_a_screenshot_url") val teamAScreenshotUrl: String? = null,
+    @SerializedName("team_b_screenshot_url") val teamBScreenshotUrl: String? = null,
+    @SerializedName("team_a_screenshot_uploaded_at") val teamAScreenshotUploadedAt: String? = null,
+    @SerializedName("team_b_screenshot_uploaded_at") val teamBScreenshotUploadedAt: String? = null,
+    @SerializedName("winner_team_id") val winnerTeamId: String? = null,
+    @SerializedName("status") val status: String = "PENDING"
+)
+
 // ─── Match DTO ───
 
 data class MatchDto(
@@ -716,6 +730,30 @@ interface SupabaseApiService {
         @Query("team_id") teamId: String,
         @Query("user_id") userId: String
     ): Response<Unit>
+
+    // ─── Scrim Game Result Endpoints ───
+
+    @GET("scrim_game_results")
+    suspend fun getScrimGameResults(
+        @Query("scrim_id") scrimId: String? = null,
+        @Query("order") order: String = "game_number.asc"
+    ): Response<List<ScrimGameResultDto>>
+
+    @POST("scrim_game_results")
+    suspend fun createScrimGameResult(@Body result: ScrimGameResultDto): Response<List<ScrimGameResultDto>>
+
+    @PATCH("scrim_game_results")
+    suspend fun updateScrimGameResult(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<ScrimGameResultDto>>
+
+    @PATCH("scrim_game_results")
+    suspend fun updateScrimGameResultsByScrim(
+        @Query("scrim_id") scrimId: String,
+        @Query("game_number") gameNumber: String? = null,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<ScrimGameResultDto>>
 
     // ─── LFG Endpoints ───
 
