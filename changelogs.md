@@ -8,6 +8,51 @@
 
 ---
 
+## 2026-05-31 05:00 [Session: Scrim player selection] — maxPlayers 10→5, player selection dialog
+
+### Commits
+- `e7306f8` — fix(scrim): maxPlayers 10→5 (MLBB 5v5), add player selection dialog on create
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - `maxPlayers` default changed from 10 to 5. MLBB is 5v5 — each team fields 5 active players per game, not 10 total.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/CreateScrimScreen.kt`
+  - Added `selectedPlayerIds` parameter to `onCreateScrim` callback.
+  - Added `selectedPlayerIds` state (pre-selects all team members by default).
+  - Added "Select Roster" card with mini avatars of selected players.
+  - Added Player Selection Dialog with checkboxes, Select All/Deselect All, role badges (CPT/CO).
+  - Warning when >5 selected: "Only 5 play per game. Extra players will be substitutes."
+  - Player count badge now shows `activePlayerCount/5` (selected players) not `currentPlayerCount/5` (total team members).
+  - Post button enabled only when `activePlayerCount >= 5`.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - `createScrim` now accepts `selectedPlayerIds: List<String>`.
+  - After creating scrim, auto-calls `setScrimRoster` with first 5 players as active, rest as substitutes.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Updated `onCreateScrim` lambda to pass `selectedPlayerIds`.
+- **File:** `supabase/schema.sql`, `supabase/migrations/*.sql`
+  - `max_players` DEFAULT changed from 10 to 5.
+
+### Root Causes
+1. **6/10 display**: `maxPlayers` was 10 (incorrect — treated as total across both teams). MLBB is 5v5, so each team has 5 active players.
+2. **No player selection**: `currentPlayers` was set to total team member count with no way to choose which players participate.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+- `./gradlew.bat assembleDebug` passes — APK built successfully.
+
+### Verdict
+- `[INTENTIONAL FIX]` — `maxPlayers` must be 5 (not 10). MLBB is 5v5 per team. Do NOT revert to 10.
+- `[INTENTIONAL FIX]` — `currentPlayers` should reflect selected active players, not total team size.
+
+### Important Note for User
+If existing scrims still show 6/10, run this on your Supabase DB:
+```sql
+ALTER TABLE scrims ALTER COLUMN max_players SET DEFAULT 5;
+UPDATE scrims SET max_players = 5 WHERE max_players = 10;
+```
+
+---
+
 ## 2026-05-31 04:30 [Session: Team chat UI improvement] — Team chat header, member count, group avatar, team badge
 
 ### Commits
