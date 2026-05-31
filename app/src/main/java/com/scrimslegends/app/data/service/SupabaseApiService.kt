@@ -232,6 +232,10 @@ data class ScrimGameResultDto(
     @SerializedName("team_a_screenshot_uploaded_at") val teamAScreenshotUploadedAt: String? = null,
     @SerializedName("team_b_screenshot_uploaded_at") val teamBScreenshotUploadedAt: String? = null,
     @SerializedName("winner_team_id") val winnerTeamId: String? = null,
+    @SerializedName("team_a_selected_winner_id") val teamASelectedWinnerId: String? = null,
+    @SerializedName("team_b_selected_winner_id") val teamBSelectedWinnerId: String? = null,
+    @SerializedName("admin_override_winner_id") val adminOverrideWinnerId: String? = null,
+    @SerializedName("is_disputed") val isDisputed: Boolean = false,
     @SerializedName("status") val status: String = "PENDING"
 )
 

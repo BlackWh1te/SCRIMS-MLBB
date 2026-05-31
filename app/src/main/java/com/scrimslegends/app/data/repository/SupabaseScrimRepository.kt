@@ -867,6 +867,10 @@ class SupabaseScrimRepository(
             teamAScreenshotUploadedAt = dto.teamAScreenshotUploadedAt?.let { DateUtils.parseIsoToMillis(it) },
             teamBScreenshotUploadedAt = dto.teamBScreenshotUploadedAt?.let { DateUtils.parseIsoToMillis(it) },
             winnerTeamId = dto.winnerTeamId,
+            teamASelectedWinnerId = dto.teamASelectedWinnerId,
+            teamBSelectedWinnerId = dto.teamBSelectedWinnerId,
+            adminOverrideWinnerId = dto.adminOverrideWinnerId,
+            isDisputed = dto.isDisputed,
             status = try { ScrimGameStatus.valueOf(dto.status) } catch (_: Exception) { ScrimGameStatus.PENDING }
         )
     }
@@ -881,6 +885,10 @@ class SupabaseScrimRepository(
             teamAScreenshotUploadedAt = result.teamAScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
             teamBScreenshotUploadedAt = result.teamBScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
             winnerTeamId = result.winnerTeamId,
+            teamASelectedWinnerId = result.teamASelectedWinnerId,
+            teamBSelectedWinnerId = result.teamBSelectedWinnerId,
+            adminOverrideWinnerId = result.adminOverrideWinnerId,
+            isDisputed = result.isDisputed,
             status = result.status.name
         )
     }

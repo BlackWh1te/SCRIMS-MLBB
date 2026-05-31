@@ -1951,14 +1951,19 @@ private fun GameResultCard(
     var showWinnerPicker by remember { mutableStateOf(false) }
 
     val statusColor = when {
-        gameResult.winnerTeamId != null -> SuccessGreen
+        gameResult.isDisputed -> ErrorRed
+        gameResult.winnerTeamId != null || gameResult.adminOverrideWinnerId != null -> SuccessGreen
+        gameResult.status == ScrimGameStatus.WINNER_SELECTED -> WarningOrange
         gameResult.bothScreenshotsUploaded -> BluePrimary
         myScreenshot != null -> WarningOrange
         else -> MidGray
     }
 
     val statusText = when {
+        gameResult.isDisputed -> "Disputed — admin review required"
+        gameResult.adminOverrideWinnerId != null -> "Winner confirmed by admin"
         gameResult.winnerTeamId != null -> "Winner: ${if (gameResult.winnerTeamId == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}"
+        gameResult.status == ScrimGameStatus.WINNER_SELECTED -> "Awaiting opponent confirmation"
         gameResult.bothScreenshotsUploaded -> "Both uploaded — select winner"
         myScreenshot != null -> "Awaiting opponent screenshot"
         else -> "Upload screenshot"
@@ -2037,8 +2042,17 @@ private fun GameResultCard(
                 )
             }
 
-            // Winner selection (only when both screenshots uploaded and no winner yet)
-            if (gameResult.bothScreenshotsUploaded && gameResult.winnerTeamId == null && currentTeamId != null) {
+            // Winner selection — only show if both uploaded, not disputed, and current team hasn't picked yet
+            val mySelection = if (isTeamA) gameResult.teamASelectedWinnerId else gameResult.teamBSelectedWinnerId
+            val opponentSelection = if (isTeamA) gameResult.teamBSelectedWinnerId else gameResult.teamASelectedWinnerId
+            val canSelectWinner = gameResult.bothScreenshotsUploaded
+                    && !gameResult.isDisputed
+                    && gameResult.winnerTeamId == null
+                    && gameResult.adminOverrideWinnerId == null
+                    && currentTeamId != null
+                    && mySelection == null
+
+            if (canSelectWinner) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2065,8 +2079,71 @@ private fun GameResultCard(
                 }
             }
 
-            // Show winner badge if selected
-            gameResult.winnerTeamId?.let { winnerId ->
+            // Show what the current team selected (waiting for opponent)
+            if (mySelection != null && gameResult.winnerTeamId == null && gameResult.adminOverrideWinnerId == null && !gameResult.isDisputed) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val myPickName = if (mySelection == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, tint = WarningOrange, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Your team selected: $myPickName (awaiting opponent)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = WarningOrange
+                    )
+                }
+            }
+
+            // Show opponent's selection if they picked and current team hasn't
+            if (opponentSelection != null && mySelection == null && !gameResult.isDisputed) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val opponentPickName = if (opponentSelection == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Info, null, tint = InfoBlue, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Opponent selected: $opponentPickName",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = InfoBlue
+                    )
+                }
+            }
+
+            // Dispute banner
+            if (gameResult.isDisputed) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(ErrorRed.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Warning, null, tint = ErrorRed, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Winner dispute — under admin review",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ErrorRed
+                    )
+                }
+            }
+
+            // Show confirmed winner badge (from agreement or admin override)
+            val confirmedWinnerId = gameResult.adminOverrideWinnerId ?: gameResult.winnerTeamId
+            confirmedWinnerId?.let { winnerId ->
                 Spacer(modifier = Modifier.height(8.dp))
                 val winnerName = if (winnerId == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")
                 Row(
@@ -2077,7 +2154,7 @@ private fun GameResultCard(
                     Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "$winnerName won",
+                        text = "$winnerName won${if (gameResult.adminOverrideWinnerId != null) " (admin)" else ""}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = GoldPrimary

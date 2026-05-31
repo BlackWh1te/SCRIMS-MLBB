@@ -59,21 +59,30 @@ data class Scrim(
     val gamesWithBothScreenshots: Int
         get() = gameResults.count { it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null }
 
-    /** How many games have a winner selected */
+    /** How many games have a confirmed or admin-overridden winner */
     val gamesWithWinner: Int
-        get() = gameResults.count { it.winnerTeamId != null }
+        get() = gameResults.count { it.winnerTeamId != null || it.adminOverrideWinnerId != null }
 
-    /** Can complete scrim only after all games have screenshots from both teams and winners selected */
+    /** How many games are disputed and awaiting admin resolution */
+    val disputedGamesCount: Int
+        get() = gameResults.count { it.isDisputed && it.adminOverrideWinnerId == null }
+
+    /** Can complete scrim only after all games have both screenshots and confirmed winners (no active disputes) */
     val canCompleteScrim: Boolean
         get() = bothReady && gameResults.size == totalGames &&
-                gameResults.all { it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null && it.winnerTeamId != null }
+                gameResults.all {
+                    it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null &&
+                    (it.winnerTeamId != null || it.adminOverrideWinnerId != null) &&
+                    !it.isAwaitingAdmin
+                }
 
-    /** Series winner: team that won majority of games */
+    /** Series winner: team that won majority of games (uses admin override if present) */
     val seriesWinnerTeamId: String?
         get() {
             if (gameResults.isEmpty()) return null
-            val aWins = gameResults.count { it.winnerTeamId == teamId }
-            val bWins = gameResults.count { it.winnerTeamId == opponentTeamId }
+            val effectiveWinner = { gr: ScrimGameResult -> gr.adminOverrideWinnerId ?: gr.winnerTeamId }
+            val aWins = gameResults.count { effectiveWinner(it) == teamId }
+            val bWins = gameResults.count { effectiveWinner(it) == opponentTeamId }
             val needed = (totalGames / 2) + 1
             return when {
                 aWins >= needed -> teamId
@@ -141,23 +150,32 @@ data class ScrimGameResult(
     val teamAScreenshotUploadedAt: Long? = null,
     val teamBScreenshotUploadedAt: Long? = null,
     val winnerTeamId: String? = null,
+    val teamASelectedWinnerId: String? = null,
+    val teamBSelectedWinnerId: String? = null,
+    val adminOverrideWinnerId: String? = null,
+    val isDisputed: Boolean = false,
     val status: ScrimGameStatus = ScrimGameStatus.PENDING
 ) {
     /** True when both teams have uploaded a screenshot for this game */
     val bothScreenshotsUploaded: Boolean
         get() = teamAScreenshotUrl != null && teamBScreenshotUrl != null
 
-    /** True when this game has a winner selected */
+    /** True when this game has a confirmed or admin-overridden winner */
     val hasWinner: Boolean
-        get() = winnerTeamId != null
+        get() = winnerTeamId != null || adminOverrideWinnerId != null
+
+    /** True when this game is disputed and needs admin resolution */
+    val isAwaitingAdmin: Boolean
+        get() = isDisputed && adminOverrideWinnerId == null
 }
 
 enum class ScrimGameStatus {
     PENDING,            // No screenshots uploaded yet
-    AWAITING_OPPONENT, // One team uploaded, waiting for other team
-    BOTH_UPLOADED,     // Both teams uploaded screenshots
-    WINNER_SELECTED,   // Winner of this game selected
-    CONFIRMED          // Both teams agree / admin confirmed
+    AWAITING_OPPONENT,  // One team uploaded, waiting for other team
+    BOTH_UPLOADED,      // Both teams uploaded screenshots
+    WINNER_SELECTED,    // One team selected winner, awaiting opponent confirmation
+    DISPUTED,           // Both teams selected different winners — admin review required
+    CONFIRMED           // Both teams agree OR admin has resolved the dispute
 }
 
 enum class BestOf(val games: Int, val displayName: String) {
