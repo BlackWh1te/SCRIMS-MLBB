@@ -8,6 +8,39 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim state gate audit] — Added missing state validations, fixed updateScrim field mapping, and fixed auto-cancel double-update
+
+### Commits
+- `9b47ceb` — fix(scrim): add missing state gates, fix updateScrim field mapping, fix auto-cancel double-update
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Added `fromDbApplicationStatus()` companion mapping (read-side validation for application status strings).
+  - `applyToScrim`: added state gates — scrim must be OPEN, applicant cannot be the host team.
+  - `approveApplication`: added state gates — scrim must be OPEN, application must be PENDING.
+  - `rejectApplication`: added state gate — application must be PENDING.
+  - `cancelApplication`: added state gate — application must be PENDING.
+  - `transitionToReadyCheck`: added state gates — scrim must be FILLED and opponentTeamId must be set.
+  - `markReady`: added state gate — scrim must be READY_CHECK, and teamId must be a participant.
+  - `uploadScreenshot`, `completeScrim`, `submitResult`, `uploadGameScreenshot`, `selectGameWinner`: added state gate — scrim must be IN_PROGRESS.
+  - `updateScrim`: expanded the updates map to include ALL DTO fields (`team_name`, `conversation_id`, `result_submitted_at`, `cancellation_reason`, `cancelled_by`, `game_mode`, `region`, `skill_level`, `max_players`, `current_players`). Previously only a subset was mapped, causing silent data loss (e.g., `cancellationReason` was dropped when cancelling via `updateScrim`).
+  - `createAutoCancelledRecord`: updated cancellation reason message to be more accurate.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - `cancelScrim`: now accepts an optional `reason` parameter and sets `cancellationReason` + `cancelledBy` (via `AuthorizationUtils.currentUserId()`).
+  - `checkAndAutoCancelOverdueScrims`: fixed double-update bug — removed the redundant `updateScrim(status=CANCELLED)` call before `createAutoCancelledRecord()` (the repository method already updates status). Expanded auto-cancel eligibility to include `READY_CHECK` and `FILLED` statuses, not just `IN_PROGRESS`.
+
+### Root Cause
+Without state gates, any authenticated leader could call repository methods at any time regardless of the scrim's actual status. For example, `markReady` could be called on an OPEN scrim, or `uploadScreenshot` on a FILLED scrim. The generic `updateScrim` path silently dropped half the fields because only a hardcoded subset was included in the `updates` map.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors and 0 warnings from our changes.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The state gates are required for correct scrim lifecycle management. Do NOT remove them.
+- `[INTENTIONAL FIX]` — The `updateScrim` full-field mapping is required so that cancellation metadata (`cancellationReason`, `cancelledBy`) is persisted. Do NOT revert to the subset mapping.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim authorization audit] — Fixed all authorization checks comparing user IDs to team IDs
 
 ### Commits
