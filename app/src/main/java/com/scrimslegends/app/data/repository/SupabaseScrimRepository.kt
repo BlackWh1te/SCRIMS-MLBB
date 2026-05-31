@@ -912,7 +912,7 @@ class SupabaseScrimRepository(
 
     private fun mapDtoToScrimGameResult(dto: ScrimGameResultDto): ScrimGameResult {
         return ScrimGameResult(
-            id = dto.id,
+            id = dto.id ?: "",  // null on CREATE (not sent), present on READ from DB
             scrimId = dto.scrimId,
             gameNumber = dto.gameNumber,
             teamAScreenshotUrl = dto.teamAScreenshotUrl,
@@ -930,7 +930,7 @@ class SupabaseScrimRepository(
 
     private fun mapScrimGameResultToDto(result: ScrimGameResult): ScrimGameResultDto {
         return ScrimGameResultDto(
-            id = result.id,
+            id = result.id.takeIf { it.isNotBlank() },  // null on CREATE so DB DEFAULT is used
             scrimId = result.scrimId,
             gameNumber = result.gameNumber,
             teamAScreenshotUrl = result.teamAScreenshotUrl,

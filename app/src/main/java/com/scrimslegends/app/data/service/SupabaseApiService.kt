@@ -224,7 +224,9 @@ data class ScrimRosterDto(
 // ─── Scrim Game Result DTO ───
 
 data class ScrimGameResultDto(
-    @SerializedName("id") val id: String = "",
+    // id is null on CREATE so the DB DEFAULT gen_random_uuid() is used.
+    // Gson omits null fields by default, so PostgREST won't receive "id": "".
+    @SerializedName("id") val id: String? = null,
     @SerializedName("scrim_id") val scrimId: String = "",
     @SerializedName("game_number") val gameNumber: Int = 1,
     @SerializedName("team_a_screenshot_url") val teamAScreenshotUrl: String? = null,
