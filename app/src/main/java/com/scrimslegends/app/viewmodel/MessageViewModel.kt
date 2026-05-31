@@ -11,6 +11,7 @@ import com.scrimslegends.app.data.model.MessageWithDelivery
 import com.scrimslegends.app.data.repository.MessageRepositoryInterface
 import com.scrimslegends.app.data.service.ChatConnectionState
 import com.scrimslegends.app.data.service.SupabaseStorageUpload
+import com.scrimslegends.app.util.FreeTierConfig
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,15 +128,30 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Exponential backoff state (free-tier protection) ──
+    private var convPollFailures = 0
+    private var chatPollFailures = 0
+
     // ── Conversation list polling (REST fallback only) ──
     fun startConversationsPolling(userId: String) {
         convPollingJob?.cancel()
+        convPollFailures = 0
         convPollingJob = viewModelScope.launch {
             while (isActive) {
-                messageRepository.getConversationsForUser(userId, forceRefresh = true).collect { result ->
-                    result.onSuccess { _conversations.value = it }
+                val result = messageRepository.getConversationsForUser(userId, forceRefresh = true)
+                result.collect { res ->
+                    res.onSuccess {
+                        _conversations.value = it
+                        convPollFailures = 0 // Reset on success
+                    }.onFailure { err ->
+                        val code = extractHttpCode(err.message)
+                        if (code == 429 || code == 503) {
+                            convPollFailures = (convPollFailures + 1).coerceAtMost(FreeTierConfig.BACKOFF_MAX_FAILURES)
+                        }
+                    }
                 }
-                delay(10_000)
+                val backoff = calculateBackoff(convPollFailures)
+                delay(FreeTierConfig.CONVERSATION_POLL_INTERVAL_MS + backoff)
             }
         }
     }
@@ -178,16 +194,24 @@ class MessageViewModel @Inject constructor(
             }
         }
 
+        chatPollFailures = 0
         chatPollingJob = viewModelScope.launch {
             while (isActive) {
-                delay(5_000)
+                delay(FreeTierConfig.CHAT_FALLBACK_POLL_INTERVAL_MS)
                 // Only poll when realtime is not connected (fallback)
                 if (_connectionState.value != ChatConnectionState.CONNECTED) {
-                    messageRepository.getConversationById(conversationId).collect { result ->
-                        result.onSuccess { conv ->
+                    val result = messageRepository.getConversationById(conversationId)
+                    result.collect { res ->
+                        res.onSuccess { conv ->
                             val polled = conv?.messages.orEmpty()
                             if (polled.isNotEmpty()) {
                                 mergeServerMessages(polled)
+                            }
+                            chatPollFailures = 0
+                        }.onFailure { err ->
+                            val code = extractHttpCode(err.message)
+                            if (code == 429 || code == 503) {
+                                chatPollFailures = (chatPollFailures + 1).coerceAtMost(FreeTierConfig.BACKOFF_MAX_FAILURES)
                             }
                         }
                     }
@@ -354,7 +378,7 @@ class MessageViewModel @Inject constructor(
         typingDebounceJob = viewModelScope.launch {
             if (isTyping) {
                 messageRepository.setTypingStatus(conversationId, userId, true).collect {}
-                delay(3000)
+                delay(FreeTierConfig.TYPING_INDICATOR_DURATION_MS)
                 messageRepository.setTypingStatus(conversationId, userId, false).collect {}
             } else {
                 messageRepository.setTypingStatus(conversationId, userId, false).collect {}
@@ -605,6 +629,23 @@ class MessageViewModel @Inject constructor(
     fun setError(message: String) { _error.value = message }
     fun clearError() { _error.value = null }
     fun clearRefreshing() { _isRefreshing.value = false }
+
+    // ── Free-tier backoff helpers ──
+
+    /** Extract HTTP status code from exception message (e.g., "HTTP 429" -> 429) */
+    private fun extractHttpCode(message: String?): Int {
+        if (message == null) return 0
+        val regex = Regex("HTTP\\s*(\\d{3})")
+        return regex.find(message)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    }
+
+    /** Calculate exponential backoff delay based on consecutive failures. */
+    private fun calculateBackoff(failureCount: Int): Long {
+        if (failureCount <= 0) return 0L
+        var delay = FreeTierConfig.BACKOFF_INITIAL_MS.toDouble()
+        repeat(failureCount) { delay *= FreeTierConfig.BACKOFF_MULTIPLIER }
+        return delay.toLong().coerceAtMost(FreeTierConfig.BACKOFF_MAX_MS)
+    }
 
     override fun onCleared() {
         super.onCleared()

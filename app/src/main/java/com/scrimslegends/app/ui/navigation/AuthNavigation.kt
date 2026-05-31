@@ -803,11 +803,6 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.Home.route) {
-                    // Realtime: subscribe to scrim updates while on home
-                    androidx.compose.runtime.DisposableEffect(Unit) {
-                        scrimViewModel.subscribeToAllScrimUpdates()
-                        onDispose { scrimViewModel.stopRealtimeSubscriptions() }
-                    }
                     HomeScreen(
                         userProfile = userProfile,
                         onLogout = { viewModel.signOut() },
@@ -1033,6 +1028,12 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.ScrimList.route) {
+                    // Realtime: subscribe to scrim updates ONLY while on ScrimList
+                    // (free-tier: avoid burning quota on Home screen where user isn't looking at scrims)
+                    androidx.compose.runtime.DisposableEffect(Unit) {
+                        scrimViewModel.subscribeToAllScrimUpdates()
+                        onDispose { scrimViewModel.stopRealtimeSubscriptions() }
+                    }
                     ScrimListScreen(
                         scrims = scrims,
                         isLoading = scrimIsLoading,
