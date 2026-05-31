@@ -8,6 +8,28 @@
 
 ---
 
+## 2026-06-01 01:20 [Session: Fix game result creation — invalid UUID root cause]
+
+### Commits
+- `74ea270` — fix(scrim): make ScrimGameResultDto.id nullable to avoid invalid UUID on CREATE
+
+### Fixed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `ScrimGameResultDto.id`: changed `String = ""` → `String? = null`
+  - **Root cause of persistent "Failed to create game results (2/2 failures)":**
+    - Gson serialized `"id": ""` in the POST body because `id` was a non-null empty string
+    - PostgREST tried to insert `""` into a UUID `PRIMARY KEY DEFAULT gen_random_uuid()` column
+    - This caused a type error on EVERY game result insert
+    - The previous fix (status casing) was necessary but not sufficient — `id=""` was the real blocker
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `mapDtoToScrimGameResult`: uses `dto.id ?: ""` to handle nullable id from DB responses
+  - `mapScrimGameResultToDto`: uses `result.id.takeIf { it.isNotBlank() }` so blank id becomes null on CREATE (omitted from JSON)
+
+### Impact
+- Scrim creation now fully works: game result rows insert successfully with DB-generated UUIDs
+
+---
+
 ## 2026-06-01 01:00 [Session: Game result status casing + CreateScrimScreen time bug]
 
 ### Commits
