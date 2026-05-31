@@ -144,7 +144,10 @@ class MessageRepository : MessageRepositoryInterface {
         clientMessageId: String,
         imageUrl: String?,
         voiceUrl: String?,
-        voiceDuration: Int?
+        voiceDuration: Int?,
+        replyToId: String?,
+        replyToSnippet: String?,
+        replyToSenderName: String?
     ): Flow<MessageWithDelivery> = flow {
         kotlinx.coroutines.delay(300)
 
@@ -163,7 +166,10 @@ class MessageRepository : MessageRepositoryInterface {
             type = type,
             imageUrl = imageUrl,
             voiceUrl = voiceUrl,
-            voiceDuration = voiceDuration
+            voiceDuration = voiceDuration,
+            replyToId = replyToId,
+            replyToSnippet = replyToSnippet,
+            replyToSenderName = replyToSenderName
         )
 
         val conversation = conversations[index]
@@ -183,6 +189,11 @@ class MessageRepository : MessageRepositoryInterface {
     }
 
     override suspend fun cancelMessage(clientMessageId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun deleteMessage(messageId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int): Result<List<Message>> =
+        Result.success(emptyList())
 
     override suspend fun syncOutbox(): Result<Int> = Result.success(0)
     override fun unsubscribeFromMessages(conversationId: String) {}

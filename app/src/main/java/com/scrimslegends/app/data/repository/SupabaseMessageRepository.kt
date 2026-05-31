@@ -381,7 +381,10 @@ class SupabaseMessageRepository(
         clientMessageId: String,
         imageUrl: String?,
         voiceUrl: String?,
-        voiceDuration: Int?
+        voiceDuration: Int?,
+        replyToId: String?,
+        replyToSnippet: String?,
+        replyToSenderName: String?
     ): Flow<MessageWithDelivery> = flow {
         // 1. Persist to outbox immediately (survives process death)
         val pending = PendingMessageEntity(
@@ -400,11 +403,16 @@ class SupabaseMessageRepository(
         emit(pending.toDomainModel())
 
         // 2. Attempt network delivery
-        val result = sendMessageInternal(pending)
+        val result = sendMessageInternal(pending, replyToId, replyToSnippet, replyToSenderName)
         emit(result)
     }
 
-    private suspend fun sendMessageInternal(pending: PendingMessageEntity): MessageWithDelivery {
+    private suspend fun sendMessageInternal(
+        pending: PendingMessageEntity,
+        replyToId: String? = null,
+        replyToSnippet: String? = null,
+        replyToSenderName: String? = null
+    ): MessageWithDelivery {
         return sendMutex.withLock {
             // Idempotency: if already sent (e.g., previous attempt succeeded but client crashed),
             // return the existing success without re-sending.
@@ -450,7 +458,10 @@ class SupabaseMessageRepository(
                     voice_url = pending.voiceUrl,
                     voiceDuration = pending.voiceDuration,
                     clientMessageId = pending.clientMessageId,
-                    deliveryStatus = DeliveryStatus.PENDING.name.lowercase()
+                    deliveryStatus = DeliveryStatus.PENDING.name.lowercase(),
+                    replyToId = replyToId,
+                    replyToSnippet = replyToSnippet,
+                    replyToSenderName = replyToSenderName
                 )
                 val response = api.sendMessage(dto)
                 if (response.isSuccessful) {
@@ -589,6 +600,55 @@ class SupabaseMessageRepository(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteMessage(messageId: String): Result<Unit> {
+        return try {
+            val response = api.deleteMessage(
+                id = "eq.$messageId",
+                body = mapOf("is_deleted" to true, "content" to "")
+            )
+            if (response.isSuccessful) {
+                try { messageDao.softDeleteMessage(messageId) } catch (_: Exception) {}
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete message: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int): Result<List<Message>> {
+        return try {
+            val beforeIso = DateUtils.formatIsoUtc(beforeTimestamp)
+            val response = api.getMessages(
+                conversationId = PostgrestFilter.eq(conversationId),
+                createdAfter = "lt.$beforeIso",
+                order = "created_at.desc",
+                limit = limit
+            )
+            if (response.isSuccessful) {
+                val messages = response.body()?.map { mapDtoToMessage(it) }?.reversed() ?: emptyList()
+                if (messages.isNotEmpty()) {
+                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (_: Exception) {}
+                }
+                Result.success(messages)
+            } else {
+                Result.failure(Exception("Failed to load older messages: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            // Fallback to Room cache
+            try {
+                val roomMessages = messageDao.getMessagesPage(conversationId, limit, 0)
+                    .filter { it.timestamp < beforeTimestamp }
+                    .map { it.toDomainModel() }
+                if (roomMessages.isNotEmpty()) Result.success(roomMessages)
+                else Result.failure(e)
+            } catch (_: Exception) {
+                Result.failure(e)
+            }
         }
     }
 
@@ -951,7 +1011,11 @@ class SupabaseMessageRepository(
             type = messageType,
             imageUrl = dto.imageUrl,
             voiceUrl = dto.voice_url,
-            voiceDuration = dto.voiceDuration
+            voiceDuration = dto.voiceDuration,
+            replyToId = dto.replyToId,
+            replyToSnippet = dto.replyToSnippet,
+            replyToSenderName = dto.replyToSenderName,
+            isDeleted = dto.isDeleted
         )
     }
 
@@ -1003,7 +1067,11 @@ class SupabaseMessageRepository(
             voice_url = record.get("voice_url")?.asString,
             voiceDuration = record.get("voice_duration")?.asInt,
             clientMessageId = record.get("client_message_id")?.asString,
-            deliveryStatus = record.get("delivery_status")?.asString
+            deliveryStatus = record.get("delivery_status")?.asString,
+            replyToId = record.get("reply_to_id")?.takeIf { !it.isJsonNull }?.asString,
+            replyToSnippet = record.get("reply_to_snippet")?.takeIf { !it.isJsonNull }?.asString,
+            replyToSenderName = record.get("reply_to_sender_name")?.takeIf { !it.isJsonNull }?.asString,
+            isDeleted = record.get("is_deleted")?.asBoolean ?: false
         )
     }
 
@@ -1083,7 +1151,11 @@ class SupabaseMessageRepository(
             voiceUrl = msg.voiceUrl,
             voiceDuration = msg.voiceDuration,
             deliveryStatus = DeliveryStatus.SENT.name,
-            clientMessageId = null
+            clientMessageId = null,
+            replyToId = msg.replyToId,
+            replyToSnippet = msg.replyToSnippet,
+            replyToSenderName = msg.replyToSenderName,
+            isDeleted = msg.isDeleted
         )
     }
 }

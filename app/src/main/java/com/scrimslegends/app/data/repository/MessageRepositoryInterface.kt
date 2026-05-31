@@ -36,7 +36,10 @@ interface MessageRepositoryInterface {
         clientMessageId: String,
         imageUrl: String? = null,
         voiceUrl: String? = null,
-        voiceDuration: Int? = null
+        voiceDuration: Int? = null,
+        replyToId: String? = null,
+        replyToSnippet: String? = null,
+        replyToSenderName: String? = null
     ): Flow<com.scrimslegends.app.data.model.MessageWithDelivery>
 
     /**
@@ -48,6 +51,17 @@ interface MessageRepositoryInterface {
      * Cancel a pending message (removes from outbox).
      */
     suspend fun cancelMessage(clientMessageId: String): Result<Unit>
+
+    /**
+     * Soft-delete a message (sets is_deleted = true, clears content).
+     */
+    suspend fun deleteMessage(messageId: String): Result<Unit>
+
+    /**
+     * Load older messages for pagination (before the given timestamp).
+     * Returns messages older than `beforeTimestamp`, limited to `limit` count.
+     */
+    suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int = 50): Result<List<Message>>
 
     suspend fun sendApplyMessage(
         scrimId: String,

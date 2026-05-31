@@ -375,7 +375,13 @@ data class MessageDto(
     @SerializedName("voice_duration") val voiceDuration: Int? = null,
     @SerializedName("client_message_id") val clientMessageId: String? = null,
     @SerializedName("delivery_status") val deliveryStatus: String? = null,
-    @SerializedName("created_at") val createdAt: String? = null   // null = DB auto-generates timestamp
+    @SerializedName("created_at") val createdAt: String? = null,   // null = DB auto-generates timestamp
+    // ── Reply support ──
+    @SerializedName("reply_to_id") val replyToId: String? = null,
+    @SerializedName("reply_to_snippet") val replyToSnippet: String? = null,
+    @SerializedName("reply_to_sender_name") val replyToSenderName: String? = null,
+    // ── Soft delete ──
+    @SerializedName("is_deleted") val isDeleted: Boolean = false
 )
 
 data class ConversationDto(
@@ -818,6 +824,7 @@ interface SupabaseApiService {
         @Query("created_at") createdAfter: String? = null,
         @Query("id") idFilter: String? = null,
         @Query("client_message_id") clientMessageId: String? = null,
+        @Query("limit") limit: Int? = null,
         @Header("Range") range: String = "0-199"
     ): Response<List<MessageDto>>
 
@@ -887,6 +894,13 @@ interface SupabaseApiService {
     // mark_messages_as_read RPC — updates is_read for all unread messages from other sender
     @POST("rpc/mark_messages_as_read")
     suspend fun markConversationAsRead(@Body params: Map<String, String>): Response<Unit>
+
+    // ─── Message soft-delete ───
+    @PATCH("messages")
+    suspend fun deleteMessage(
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<List<MessageDto>>
 
     // ─── Conversations RPC ───
     @POST("rpc/get_conversations_for_user")

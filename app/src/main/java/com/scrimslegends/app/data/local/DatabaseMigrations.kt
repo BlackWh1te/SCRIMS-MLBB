@@ -134,3 +134,23 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         db.execSQL("ALTER TABLE conversations ADD COLUMN participantBAvatarUrl TEXT")
     }
 }
+
+/**
+ * Migration from version 13 to 14.
+ * Message feature redesign:
+ * - Reply-to support: replyToId, replyToSnippet, replyToSenderName
+ * - Soft delete: isDeleted flag
+ * - Performance: index on messages.conversationId
+ */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Reply support
+        db.execSQL("ALTER TABLE messages ADD COLUMN replyToId TEXT")
+        db.execSQL("ALTER TABLE messages ADD COLUMN replyToSnippet TEXT")
+        db.execSQL("ALTER TABLE messages ADD COLUMN replyToSenderName TEXT")
+        // Soft delete
+        db.execSQL("ALTER TABLE messages ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+        // Performance index
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversationId)")
+    }
+}

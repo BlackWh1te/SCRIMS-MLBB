@@ -1,5 +1,7 @@
 package com.scrimslegends.app.data.model
 
+import androidx.compose.runtime.Stable
+
 /**
  * Message delivery state machine.
  *
@@ -24,6 +26,7 @@ enum class DeliveryStatus {
  * Local-only message wrapper that tracks delivery state.
  * Used by the UI to render sent/pending/failed indicators.
  */
+@Stable
 data class MessageWithDelivery(
     val message: Message,
     val status: DeliveryStatus = DeliveryStatus.SENT,

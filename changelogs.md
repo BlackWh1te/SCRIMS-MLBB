@@ -8,6 +8,35 @@
 
 ---
 
+## 2026-05-31 05:30 [Session: Roster & admin panel] — Roster display in admin, dual eq filter API
+
+### Commits
+- `588787c1` (AdminPanel) — feat(admin): add roster display to scrim validation, support dual eq filters
+
+### Changed (AdminPanel)
+- **File:** `src/app/dashboard/scrims/page.tsx`
+  - Added roster section showing active/substitute players for both teams when validating scrims.
+  - Active players shown in green badge, substitutes in gray.
+  - Player names resolved from profiles table.
+  - Info badge: "Only active players earn/deduct PTS".
+  - Added `ScrimRoster` import and `Users` icon.
+- **File:** `src/lib/adminApi.ts`
+  - Added `eqColumn2`/`eqValue2` parameters to `fetchAdminData` for dual-filter queries.
+- **File:** `src/app/api/admin/data/route.ts`
+  - Added `eq_column2`/`eq_value2` query params and second `.eq()` filter.
+
+### Android App — Roster/Points Flow Verified
+- `createScrim` → `setScrimRoster` (first 5 active, rest substitutes) — WORKS
+- `award_scrim_points` DB function only awards to `is_active = TRUE` — WORKS
+- `calculatePointsChanges` uses `teamAActiveRoster`/`teamBActiveRoster` — WORKS
+- Substitutes get 0 points change — CORRECT
+
+### Verification
+- AdminPanel: `npx next build` passes.
+- Android: `./gradlew.bat assembleDebug` passes.
+
+---
+
 ## 2026-05-31 05:15 [Session: Scrim player count fix] — Pre-select 5 not all, cap activePlayerCount
 
 ### Commits

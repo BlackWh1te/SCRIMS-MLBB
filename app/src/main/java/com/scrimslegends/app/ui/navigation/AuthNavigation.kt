@@ -187,6 +187,8 @@ fun AuthNavigation(
     val messagesIsLoading by messageViewModel.isLoading.collectAsState()
     val messagesIsRefreshing by messageViewModel.isRefreshing.collectAsState()
     val messageError by messageViewModel.error.collectAsState()
+    val replyingToMessage by messageViewModel.replyingToMessage.collectAsState()
+    val isLoadingOlder by messageViewModel.isLoadingOlder.collectAsState()
     val leaderboard by leaderboardViewModel.leaderboard.collectAsState()
     val leaderboardIsLoading by leaderboardViewModel.isLoading.collectAsState()
     val leaderboardIsRefreshing by leaderboardViewModel.isRefreshing.collectAsState()
@@ -1381,6 +1383,7 @@ fun AuthNavigation(
 
                     // Start/stop real-time chat subscription while on this screen
                     androidx.compose.runtime.DisposableEffect(conversationId) {
+                        messageViewModel.resetPagination()
                         messageViewModel.startChatSubscription(conversationId, userId)
                         onDispose { messageViewModel.stopChatSubscription(conversationId) }
                     }
@@ -1425,7 +1428,15 @@ fun AuthNavigation(
                             onRefresh = { messageViewModel.loadConversation(conversationId) },
                             messagesWithDelivery = messagesWithDelivery,
                             onRetryMessage = { messageViewModel.retryMessage(it) },
-                            onCancelMessage = { messageViewModel.cancelMessage(it) }
+                            onCancelMessage = { messageViewModel.cancelMessage(it) },
+                            // ── New features ──
+                            replyingTo = replyingToMessage,
+                            onClearReply = { messageViewModel.clearReply() },
+                            onSetReplyTarget = { messageViewModel.setReplyTarget(it) },
+                            onDeleteMessage = { messageViewModel.deleteMessage(it) },
+                            isLoadingOlder = isLoadingOlder,
+                            hasMoreMessages = messageViewModel.hasMoreMessages,
+                            onLoadOlder = { messageViewModel.loadOlderMessages(conversationId) }
                         )
                     }
                 }

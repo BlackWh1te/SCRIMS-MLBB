@@ -5,6 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -20,7 +22,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,34 +76,47 @@ fun ChatScreen(
     onRefresh       : () -> Unit = {},
     messagesWithDelivery: List<MessageWithDelivery> = emptyList(),
     onRetryMessage  : (String) -> Unit = {},
-    onCancelMessage : (String) -> Unit = {}
+    onCancelMessage : (String) -> Unit = {},
+    // ── New features ──
+    replyingTo      : MessageWithDelivery? = null,
+    onClearReply    : () -> Unit = {},
+    onSetReplyTarget: (MessageWithDelivery) -> Unit = {},
+    onDeleteMessage : (String) -> Unit = {},
+    isLoadingOlder  : Boolean = false,
+    hasMoreMessages : Boolean = true,
+    onLoadOlder     : () -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
     var moderationError by remember { mutableStateOf<String?>(null) }
     val listState   = rememberLazyListState()
     val scope       = rememberCoroutineScope()
-    val displayedMessages = remember(conversation.messages, messagesWithDelivery) {
-        if (messagesWithDelivery.isNotEmpty()) messagesWithDelivery
-        else conversation.messages.map { MessageWithDelivery(message = it) }
-    }
 
+    // Use derivedStateOf for efficient recomposition
+    val displayedMessages by remember { derivedStateOf { messagesWithDelivery } }
+
+    // Auto-scroll: only scroll to bottom if user is already near the bottom
+    // (within last 3 visible items). Prevents jumping when reading old messages.
+    val shouldAutoScroll by remember { derivedStateOf {
+        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        val total = displayedMessages.size
+        total > 0 && lastVisible >= total - 4
+    }}
     LaunchedEffect(displayedMessages.size) {
-        if (displayedMessages.isNotEmpty()) {
+        if (displayedMessages.isNotEmpty() && shouldAutoScroll) {
             listState.animateScrollToItem(displayedMessages.size - 1)
         }
     }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { messageText }
-            .collect { text ->
-                if (text.isNotEmpty()) {
-                    onUpdateTyping(true)
-                    kotlinx.coroutines.delay(3000)
-                    onUpdateTyping(false)
-                } else {
-                    onUpdateTyping(false)
-                }
-            }
+    // Typing indicator: debounced via ViewModel, not here.
+    // Only notify when text actually changes (not on every keystroke loop).
+    val previousText = remember { mutableStateOf("") }
+    LaunchedEffect(messageText) {
+        val wasEmpty = previousText.value.isEmpty()
+        val isEmpty = messageText.isEmpty()
+        if (wasEmpty != isEmpty) {
+            onUpdateTyping(!isEmpty)
+        }
+        previousText.value = messageText
     }
 
     val isTeamChat      = conversation.isTeamChat
@@ -395,7 +410,38 @@ fun ChatScreen(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            itemsIndexed(displayedMessages, key = { _, item -> item.clientMessageId ?: item.message.id }) { index, item ->
+                            // ── Pagination trigger at top ──
+                            if (hasMoreMessages) {
+                                item(key = "load_older") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isLoadingOlder) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                color = GoldPrimary,
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            // Trigger load when this item becomes visible
+                                            val isVisible by remember {
+                                                derivedStateOf {
+                                                    listState.layoutInfo.visibleItemsInfo.any { it.key == "load_older" }
+                                                }
+                                            }
+                                            if (isVisible) {
+                                                LaunchedEffect(Unit) { onLoadOlder() }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            itemsIndexed(
+                                displayedMessages,
+                                key = { _, item -> item.clientMessageId ?: item.message.id }
+                            ) { index, item ->
                                 val message = item.message
                                 val isFromMe = message.senderId == currentUserId
 
@@ -406,7 +452,12 @@ fun ChatScreen(
                                 val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
                                 val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
 
+                                // New-messages separator: show after the last seen message
+                                val showNewMessagesSeparator = conversation.lastSeenMessageId != null &&
+                                    prevMessage?.id == conversation.lastSeenMessageId
+
                                 if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
+                                if (showNewMessagesSeparator) NewMessagesSeparator()
 
                                 MessageBubble(
                                     message        = message,
@@ -421,7 +472,10 @@ fun ChatScreen(
                                         val tid = if (isTeamChat) conversation.teamId else otherTeamId
                                         val tname = if (isTeamChat) headerName else otherTeam
                                         if (tid != null) onViewTeamInfo(tid, tname)
-                                    }
+                                    },
+                                    onSetReplyTarget = { onSetReplyTarget(item) },
+                                    onDeleteMessage = { onDeleteMessage(message.id) },
+                                    currentUserId = currentUserId
                                 )
                             }
                         }
@@ -452,7 +506,7 @@ fun ChatScreen(
 
             // ── Input Area ──────────────────────────────────────
             if (conversation.isChatOpenNow) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .drawBehind {
@@ -468,8 +522,60 @@ fun ChatScreen(
                         .imePadding()
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
+                    // Reply-to context bar
+                    AnimatedVisibility(
+                        visible = replyingTo != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        val reply = replyingTo
+                        if (reply != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(GoldPrimary.copy(alpha = 0.08f))
+                                    .border(1.dp, GoldPrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                @Suppress("DEPRECATION")
+                                Icon(
+                                    Icons.Default.Reply, null,
+                                    tint = GoldPrimary, modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Replying to ${reply.message.senderName}",
+                                        color = GoldPrimary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = reply.message.content.take(50),
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(
+                                    onClick = onClearReply,
+                                    modifier = Modifier.size(20.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close, null,
+                                        tint = TextTertiary, modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Moderation error
-                    androidx.compose.animation.AnimatedVisibility(
+                    AnimatedVisibility(
                         visible = moderationError != null,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
@@ -640,6 +746,7 @@ private fun TypingDots() {
 
 // ── Message Bubble ──────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(
     message       : Message,
@@ -650,7 +757,10 @@ private fun MessageBubble(
     clientMessageId: String? = null,
     onRetryMessage: (String) -> Unit = {},
     onCancelMessage: (String) -> Unit = {},
-    onViewTeamInfo: () -> Unit
+    onViewTeamInfo: () -> Unit,
+    onSetReplyTarget: () -> Unit = {},
+    onDeleteMessage: () -> Unit = {},
+    @Suppress("UNUSED_PARAMETER") currentUserId: String = ""
 ) {
     val topStartR = if (isFromMe || !isFirstInGroup) 18.dp else 4.dp
     val topEndR   = if (!isFromMe || !isFirstInGroup) 18.dp else 4.dp
@@ -668,6 +778,9 @@ private fun MessageBubble(
         end    = Offset(0f, Float.POSITIVE_INFINITY)
     )
 
+    // Context menu state
+    var showContextMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier         = Modifier
             .fillMaxWidth()
@@ -679,7 +792,7 @@ private fun MessageBubble(
             modifier            = Modifier.widthIn(max = 310.dp)
         ) {
             // Sender name for received messages in first position
-            if (!isFromMe && isFirstInGroup) {
+            if (!isFromMe && isFirstInGroup && !message.isDeleted) {
                 Text(
                     text       = message.senderName,
                     fontSize   = 11.sp,
@@ -689,47 +802,61 @@ private fun MessageBubble(
                 )
             }
 
-            // Bubble
+            // Bubble with long-press for context menu
             Box(
                 modifier = Modifier
                     .clip(bubbleShape)
                     .background(
-                        if (isFromMe) myBubbleBrush
-                        else Brush.linearGradient(
-                            listOf(
-                                SurfaceElevated,
-                                SurfaceCard
-                            )
-                        )
+                        brush = if (message.isDeleted) Brush.linearGradient(
+                            listOf(SurfaceOverlay.copy(alpha = 0.5f), SurfaceOverlay.copy(alpha = 0.5f))
+                        ) else if (isFromMe) myBubbleBrush
+                        else Brush.linearGradient(listOf(SurfaceElevated, SurfaceCard))
                     )
                     .then(
-                        if (!isFromMe) Modifier.border(
-                            0.5.dp,
-                            GlassBorder,
-                            bubbleShape
+                        if (!isFromMe && !message.isDeleted) Modifier.border(
+                            0.5.dp, GlassBorder, bubbleShape
                         ) else Modifier
+                    )
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = { if (!message.isDeleted) showContextMenu = true }
                     )
                     .padding(horizontal = 13.dp, vertical = 9.dp)
             ) {
-                when (message.type) {
-                    MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
-                    MessageType.VOICE -> Text(
-                        text = "🎤 Voice Note",
-                        color = if (isFromMe) White.copy(alpha = 0.7f) else TextSecondary,
-                        fontSize = 14.sp
+                if (message.isDeleted) {
+                    Text(
+                        text = "Message deleted",
+                        color = TextTertiary.copy(alpha = 0.6f),
+                        fontSize = 13.sp,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                     )
-                    MessageType.APPLY -> ApplyContent(message.content, onViewTeamInfo)
-                    else              -> Text(
-                        text       = message.content,
-                        color      = if (isFromMe) White else TextPrimary,
-                        fontSize   = 15.sp,
-                        lineHeight = 21.sp
-                    )
+                } else {
+                    Column {
+                        // Reply-to preview (if this message is a reply)
+                        if (message.replyToId != null) {
+                            ReplyContent(message.replyToSenderName, message.replyToSnippet)
+                        }
+                        when (message.type) {
+                            MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
+                            MessageType.VOICE -> Text(
+                                text = "🎤 Voice Note",
+                                color = if (isFromMe) White.copy(alpha = 0.7f) else TextSecondary,
+                                fontSize = 14.sp
+                            )
+                            MessageType.APPLY -> ApplyContent(message.content, onViewTeamInfo)
+                            else              -> Text(
+                                text       = message.content,
+                                color      = if (isFromMe) White else TextPrimary,
+                                fontSize   = 15.sp,
+                                lineHeight = 21.sp
+                            )
+                        }
+                    }
                 }
             }
 
             // Timestamp + read receipts
-            if (isLastInGroup) {
+            if (isLastInGroup && !message.isDeleted) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier          = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -763,32 +890,113 @@ private fun MessageBubble(
                 }
             }
 
+            // Failed retry/cancel actions
             if (isFromMe && deliveryStatus == DeliveryStatus.FAILED && clientMessageId != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(end = 8.dp, bottom = 4.dp)
                 ) {
+                    Text("Failed", fontSize = 10.sp, color = ErrorRed)
                     Text(
-                        text = "Failed",
-                        fontSize = 10.sp,
-                        color = ErrorRed
-                    )
-                    Text(
-                        text = "Retry",
+                        "Retry",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = GoldPrimary,
                         modifier = Modifier.clickable { onRetryMessage(clientMessageId) }
                     )
                     Text(
-                        text = "Cancel",
+                        "Cancel",
                         fontSize = 10.sp,
                         color = TextTertiary,
                         modifier = Modifier.clickable { onCancelMessage(clientMessageId) }
                     )
                 }
             }
+
+            // Context menu for reply/delete
+            if (showContextMenu) {
+                MessageContextMenu(
+                    onDismiss = { showContextMenu = false },
+                    onReply = {
+                        showContextMenu = false
+                        onSetReplyTarget()
+                    },
+                    onDelete = {
+                        showContextMenu = false
+                        onDeleteMessage()
+                    },
+                    canDelete = isFromMe && !message.isDeleted
+                )
+            }
+        }
+    }
+}
+
+// ── Reply Content (inside bubble) ──────────────────────────
+
+@Composable
+private fun ReplyContent(senderName: String?, snippet: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 6.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(White.copy(alpha = 0.08f))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = senderName ?: "",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = GoldPrimary.copy(alpha = 0.8f)
+        )
+        Text(
+            text = snippet?.take(60) ?: "",
+            fontSize = 11.sp,
+            color = White.copy(alpha = 0.6f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// ── Context Menu for Messages ──────────────────────────────
+
+@Composable
+private fun MessageContextMenu(
+    onDismiss: () -> Unit,
+    onReply: () -> Unit,
+    onDelete: () -> Unit,
+    canDelete: Boolean
+) {
+    androidx.compose.material3.DropdownMenu(
+        expanded = true,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.background(SurfaceCard, RoundedCornerShape(12.dp))
+    ) {
+        DropdownMenuItem(
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    @Suppress("DEPRECATION")
+                    Icon(Icons.Default.Reply, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Reply", color = TextPrimary, fontSize = 14.sp)
+                }
+            },
+            onClick = onReply
+        )
+        if (canDelete) {
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Delete, null, tint = ErrorRed, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete", color = ErrorRed, fontSize = 14.sp)
+                    }
+                },
+                onClick = onDelete
+            )
         }
     }
 }
@@ -843,6 +1051,39 @@ private fun ApplyContent(content: String, onView: () -> Unit) {
                 color      = White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize   = 13.sp
+            )
+        }
+    }
+}
+
+// ── New Messages Separator ─────────────────────────────────
+
+@Composable
+private fun NewMessagesSeparator() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .height(1.dp)
+                .background(GoldPrimary.copy(alpha = 0.35f))
+        )
+        Box(
+            modifier = Modifier
+                .background(SurfaceCard, RoundedCornerShape(8.dp))
+                .border(1.dp, GoldPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+        ) {
+            Text(
+                "New messages",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = GoldPrimary.copy(alpha = 0.85f),
+                letterSpacing = 0.8.sp
             )
         }
     }

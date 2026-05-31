@@ -1,5 +1,8 @@
 package com.scrimslegends.app.data.model
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class Message(
     val id: String = "",
     val conversationId: String = "",
@@ -15,9 +18,16 @@ data class Message(
     val type: MessageType = MessageType.TEXT,
     val imageUrl: String? = null,
     val voiceUrl: String? = null,
-    val voiceDuration: Int? = null
+    val voiceDuration: Int? = null,
+    // ── Reply support ──
+    val replyToId: String? = null,
+    val replyToSnippet: String? = null,   // first 80 chars of replied message
+    val replyToSenderName: String? = null,
+    // ── Soft delete ──
+    val isDeleted: Boolean = false
 )
 
+@Stable
 data class Conversation(
     val id: String = "",
     val scrimId: String = "",
@@ -51,7 +61,9 @@ data class Conversation(
     val teamId: String? = null,             // Set for team group chats
     val isTeamChat: Boolean = false,        // true = this is the team's group chat
     val isPinned: Boolean = false,          // pinned at top of message list
-    val groupName: String = ""              // display name for the group
+    val groupName: String = "",             // display name for the group
+    // ── New-messages tracking ──
+    val lastSeenMessageId: String? = null   // last message ID the user saw (for "new messages" separator)
 ) {
     val timeUntilChatOpens: Long
         get() = (chatOpensAt - System.currentTimeMillis()).coerceAtLeast(0)
