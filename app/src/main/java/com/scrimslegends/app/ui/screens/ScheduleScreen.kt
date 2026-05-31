@@ -34,13 +34,24 @@ import java.util.*
 @Composable
 fun ScheduleScreen(
     scrims: List<Scrim>,
+    teams: List<com.scrimslegends.app.data.model.Team> = emptyList(),
     onNavigateBack: () -> Unit,
     onScrimClick: (String) -> Unit
 ) {
     val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    val grouped = remember(scrims) {
-        scrims.filter { it.status != ScrimStatus.COMPLETED && it.status != ScrimStatus.CANCELLED }
+    // Only show scrims the user is actively involved in (same logic as HomeScreen)
+    val userTeamIds = teams.map { it.id }.toSet()
+    val grouped = remember(scrims, teams) {
+        scrims.filter { scrim ->
+            val isHost = scrim.teamId in userTeamIds
+            val isOpponent = scrim.opponentTeamId in userTeamIds
+            when {
+                isHost -> scrim.status != ScrimStatus.OPEN && scrim.status != ScrimStatus.CANCELLED
+                isOpponent -> true
+                else -> false
+            }
+        }
             .sortedBy { it.scheduledTime }
             .groupBy { getDayLabel(it.scheduledTime) }
             .toList()

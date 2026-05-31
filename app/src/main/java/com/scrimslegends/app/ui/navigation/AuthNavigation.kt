@@ -1671,6 +1671,7 @@ fun AuthNavigation(
                 composable(Screen.Schedule.route) {
                     ScheduleScreen(
                         scrims = scrims,
+                        teams = teams,
                         onNavigateBack = {
                             navController.popBackStack()
                         },

@@ -7,6 +7,8 @@ data class ScrimApplication(
     val applicantTeamName: String = "",
     val applicantTeamLeader: String = "",
     val applicantTeamLeaderName: String = "",
+    val applicantTeamAvatarUrl: String? = null,
+    val applicantTeamPlayers: List<Player> = emptyList(),
     val status: ApplicationStatus = ApplicationStatus.PENDING,
     val appliedAt: Long = System.currentTimeMillis(),
     val respondedAt: Long? = null,

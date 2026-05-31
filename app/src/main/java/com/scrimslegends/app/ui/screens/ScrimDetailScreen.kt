@@ -8,9 +8,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +48,8 @@ import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.GradientButton
 import com.scrimslegends.app.ui.components.EnhancedStatusBadge
+import coil.compose.SubcomposeAsyncImage
+import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -823,19 +827,59 @@ private fun ApplicationCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Team avatar
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(BlueGradient)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
-                        fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color      = White
+                if (!application.applicantTeamAvatarUrl.isNullOrBlank()) {
+                    SubcomposeAsyncImage(
+                        model = application.applicantTeamAvatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(SurfaceCard, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = BluePrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Brush.linearGradient(BlueGradient), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = White
+                                )
+                            }
+                        }
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.linearGradient(BlueGradient)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                            fontSize   = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = White
+                        )
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -847,6 +891,31 @@ private fun ApplicationCard(
                         stringResource(R.string.leader_name, application.applicantTeamLeaderName),
                         style = iOSCaption1.copy(color = TextSecondary)
                     )
+                    Text(
+                        stringResource(R.string.team_players_count, application.applicantTeamPlayers.size, application.applicantTeamPlayers.size.coerceAtLeast(5)),
+                        style = iOSCaption1.copy(color = TextSecondary)
+                    )
+                }
+            }
+
+            // Applicant roster preview
+            if (application.applicantTeamPlayers.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.applicant_roster),
+                    fontSize = 13.sp,
+                    color = LightGray,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    application.applicantTeamPlayers.take(7).forEach { player ->
+                        PlayerChip(name = player.name, avatarUrl = player.avatarUrl)
+                    }
                 }
             }
 
@@ -874,6 +943,55 @@ private fun ApplicationCard(
                 )
             }
         }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// PLAYER CHIP — Small avatar + name chip for roster preview
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PlayerChip(name: String, avatarUrl: String?) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(DarkSurface)
+            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (!avatarUrl.isNullOrBlank()) {
+            SubcomposeAsyncImage(
+                model = avatarUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(BluePrimary.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = White
+                )
+            }
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            color = LightGray,
+            maxLines = 1
+        )
     }
 }
 

@@ -863,7 +863,8 @@ interface SupabaseApiService {
 
     @PATCH("app_notifications")
     suspend fun markNotificationAsRead(
-        @Query("id") id: String
+        @Query("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any> = mapOf("is_read" to true)
     ): Response<List<NotificationDto>>
 
     @PATCH("app_notifications")

@@ -938,29 +938,78 @@ class SupabaseScrimRepository(
     private suspend fun fetchApplicationsForScrim(scrimId: String): List<ScrimApplication> {
         return try {
             val r = api.getScrimApplications(PostgrestFilter.eq(scrimId))
-            if (r.isSuccessful) {
-                r.body()?.map { mapDtoToScrimApplication(it) } ?: emptyList()
-            } else {
+            if (!r.isSuccessful) {
                 Timber.w("ScrimRepo", "Failed to fetch applications for scrim $scrimId")
-                emptyList()
+                return emptyList()
+            }
+            val dtos = r.body() ?: return emptyList()
+            if (dtos.isEmpty()) return emptyList()
+
+            // Batch fetch applicant teams
+            val teamIds = dtos.map { it.applicantTeamId }.distinct().filter { it.isNotBlank() }
+            val teamsById = if (teamIds.isNotEmpty()) {
+                try {
+                    val tr = api.getTeamsByIds(PostgrestFilter.inList(teamIds))
+                    if (tr.isSuccessful) {
+                        tr.body()?.associateBy { it.id } ?: emptyMap()
+                    } else emptyMap()
+                } catch (_: Exception) { emptyMap() }
+            } else emptyMap()
+
+            // Batch fetch team members for all applicant teams
+            val allUserIds = mutableListOf<String>()
+            val membersByTeamId = mutableMapOf<String, List<TeamMemberDto>>()
+            if (teamIds.isNotEmpty()) {
+                try {
+                    val mr = api.getTeamMembers(teamId = PostgrestFilter.inList(teamIds))
+                    if (mr.isSuccessful) {
+                        val members = mr.body() ?: emptyList()
+                        membersByTeamId.putAll(members.groupBy { it.teamId })
+                        allUserIds.addAll(members.map { it.userId }.distinct())
+                    }
+                } catch (_: Exception) { }
+            }
+
+            // Batch fetch profiles for player names
+            val profilesById = if (allUserIds.isNotEmpty()) {
+                try {
+                    val pr = api.getProfiles(idFilter = PostgrestFilter.inList(allUserIds))
+                    if (pr.isSuccessful) {
+                        pr.body()?.associateBy { it.id } ?: emptyMap()
+                    } else emptyMap()
+                } catch (_: Exception) { emptyMap() }
+            } else emptyMap()
+
+            return dtos.map { dto ->
+                val team = teamsById[dto.applicantTeamId]
+                val members = membersByTeamId[dto.applicantTeamId] ?: emptyList()
+                val players = members.map { m ->
+                    val profile = profilesById[m.userId]
+                    Player(
+                        id = m.userId,
+                        name = profile?.username ?: m.userId.take(8),
+                        role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER,
+                        email = profile?.email ?: "",
+                        avatarUrl = profile?.avatarUrl
+                    )
+                }
+                ScrimApplication(
+                    id = dto.id ?: "",
+                    scrimId = dto.scrimId,
+                    applicantTeamId = dto.applicantTeamId,
+                    applicantTeamName = team?.name ?: "",
+                    applicantTeamLeader = team?.leaderId ?: "",
+                    applicantTeamLeaderName = profilesById[team?.leaderId]?.username ?: "",
+                    applicantTeamAvatarUrl = team?.logoUrl,
+                    applicantTeamPlayers = players,
+                    status = fromDbApplicationStatus(dto.status),
+                    appliedAt = dto.appliedAt?.let { DateUtils.parseIsoToMillis(it) } ?: System.currentTimeMillis()
+                )
             }
         } catch (e: Exception) {
             Timber.w("ScrimRepo", "Exception fetching applications for scrim $scrimId", e)
             emptyList()
         }
-    }
-
-    private fun mapDtoToScrimApplication(dto: ScrimApplicationDto): ScrimApplication {
-        return ScrimApplication(
-            id = dto.id ?: "",
-            scrimId = dto.scrimId,
-            applicantTeamId = dto.applicantTeamId,
-            applicantTeamName = "", // Resolved by UI from team cache if needed
-            applicantTeamLeader = "",
-            applicantTeamLeaderName = "",
-            status = fromDbApplicationStatus(dto.status),
-            appliedAt = dto.appliedAt?.let { DateUtils.parseIsoToMillis(it) } ?: System.currentTimeMillis()
-        )
     }
 
     // ─── Fetch rosters for a scrim ───

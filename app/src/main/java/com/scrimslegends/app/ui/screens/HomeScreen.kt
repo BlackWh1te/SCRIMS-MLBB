@@ -249,9 +249,19 @@ fun HomeScreen(
             }
 
             // ── Upcoming Scrims ─────────────────────────────────
-            val upcomingScrims = scrims.filter {
-                it.status == com.scrimslegends.app.data.model.ScrimStatus.OPEN ||
-                it.status == com.scrimslegends.app.data.model.ScrimStatus.FILLED
+            // Only show scrims the user is actively involved in:
+            // - Host: scrim has an accepted opponent (status != OPEN)
+            // - Opponent: user's team was accepted (opponentTeamId matches)
+            val userTeamIds = teams.map { it.id }.toSet()
+            val upcomingScrims = scrims.filter { scrim ->
+                val isHost = scrim.teamId in userTeamIds
+                val isOpponent = scrim.opponentTeamId in userTeamIds
+                when {
+                    isHost -> scrim.status != com.scrimslegends.app.data.model.ScrimStatus.OPEN &&
+                              scrim.status != com.scrimslegends.app.data.model.ScrimStatus.CANCELLED
+                    isOpponent -> true
+                    else -> false
+                }
             }.sortedBy { it.scheduledTime }.take(5)
 
             if (upcomingScrims.isNotEmpty()) {
