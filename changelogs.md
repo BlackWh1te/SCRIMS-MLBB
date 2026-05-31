@@ -8,6 +8,48 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Team chat not showing] — Fixed missing team conversations and multi-team support
+
+### Commits
+- `be06812` — feat(team-chat): create missing team conversations and show multiple team chats
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added `@POST("rpc/get_or_create_team_conversation")` endpoint.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepositoryInterface.kt`
+  - Added `getOrCreateTeamConversation(teamId, teamName, leaderId, leaderName)`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepository.kt`
+  - Added mock implementation for `getOrCreateTeamConversation`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - Added real implementation calling the RPC, caching the result, and invalidating conversation caches.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Added `ensureTeamConversations(teams)` method that iterates all user's teams and calls `getOrCreateTeamConversation` for each (best-effort, catches exceptions).
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Added `LaunchedEffect(teams)` in `MessageList` composable that calls `messageViewModel.ensureTeamConversations(teams)`.
+  - This lazily creates team chats for ALL teams the user is in, including teams created before this feature existed.
+  - Changed `teamConversation = conversations.firstOrNull { it.isTeamChat }` to `teamConversations = conversations.filter { it.isTeamChat }`.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/MessageListScreen.kt`
+  - Changed parameter from `teamConversation: Conversation?` to `teamConversations: List<Conversation>`.
+  - Updated `totalUnread` and `hasAnyConversation` to sum over all team conversations.
+  - Replaced single `TeamChatCard` with `visibleTeamConversations.forEachIndexed` so ALL team chats are displayed at the top, each with its own team name.
+- **File:** `supabase/schema.sql`
+  - Removed all 5 references to `tm.status = 'ACTIVE'` from `get_conversations_for_user` RPC and RLS policies.
+  - The `team_members` table has no `status` column, so this condition would silently exclude ALL team chats from queries and RLS. This was a schema drift bug.
+
+### Why Team Chats Were Broken
+1. **Never created:** The app had a `get_or_create_team_conversation` RPC in the DB but ZERO code in the Android app that called it.
+2. **Schema drift:** `schema.sql` had `tm.status = 'ACTIVE'` in 5 places, but `team_members` has no `status` column. Even if team chats existed, they would be invisible due to this broken WHERE clause.
+3. **UI only showed one:** `MessageListScreen` used `firstOrNull { it.isTeamChat }`, so a user in 2+ teams would only ever see one team chat.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `ensureTeamConversations` lazy-creation approach is required for existing users who already have teams. Do NOT remove it.
+- `[INTENTIONAL FIX]` — Multiple team chat display (`teamConversations: List<Conversation>`) is required. Do NOT revert to single `teamConversation`.
+
+---
+
 ## 2026-05-31 04:18 [Session: Supabase CLI migration sync] — Pushed all pending migrations to remote DB
 
 ### Commits
