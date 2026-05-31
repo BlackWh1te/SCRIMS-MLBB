@@ -8,6 +8,48 @@
 
 ---
 
+## 2026-05-31 04:40 [Session: Scrim creation + team chat fix] — Scrim constraint violation, missing team chats, region enum mismatch
+
+### Commits
+- `b051be7` — fix(scrim+message): scrim creation constraint violation, missing team chats, region enum mismatch
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `createScrim` API method now accepts `Map<String, Any>` instead of `ScrimDto`. This allows omitting the `status` field so the DB DEFAULT is used.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `createScrim`: constructs a Map with only required fields (team_id, scheduled_date/time, best_of, game_mode, region, skill_level, max_players, current_players, team_name, description). The `status` field is intentionally omitted — the DB DEFAULT 'Open' is used instead, which avoids CHECK constraint violations if the live DB constraint uses different casing.
+  - `region` field now sends `scrim.region.name` (e.g. "EU") instead of `scrim.region.displayName` ("Europe") to match the DB column default.
+  - `searchScrims`: region filter uses `it.name` instead of `it.displayName`.
+  - `mapScrimToDto`: region uses `scrim.region.name` instead of `scrim.region.displayName`.
+  - `mapDtoToScrim`: region parsing tries `Region.valueOf()` first (enum name), falls back to `Region.fromDisplayName()` for backward compat with existing DB rows that store display names.
+  - `mapEntityToScrim`: same dual-parse for region.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - `parseRealtimeRecordToConversationDto`: added `team_id`, `is_team_chat`, `is_pinned`, `group_name` fields. Previously these were missing, so realtime updates for team chats would lose team chat metadata, causing them to appear as regular conversations.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - `ensureTeamConversations`: now logs failures via Timber instead of silently swallowing exceptions. Also passes the leader name from the team's player list instead of an empty string.
+
+### Root Cause (Scrim)
+When creating a scrim, the app sent `status: "Open"` in the POST body. If the live DB's `valid_scrim_status` CHECK constraint uses different casing (e.g., `'OPEN'` instead of `'Open'`), the INSERT fails with code 23514. By omitting the `status` field, the DB uses its DEFAULT value which is always consistent with the constraint.
+
+### Root Cause (Team Chats)
+1. `parseRealtimeRecordToConversationDto` was missing team chat fields, so realtime updates corrupted team chat metadata.
+2. `ensureTeamConversations` swallowed all errors silently, making it impossible to diagnose why team conversations weren't being created (e.g., if the `get_or_create_team_conversation` RPC doesn't exist on the live DB because the migration wasn't run).
+3. Region was sent as displayName ("Europe") instead of enum name ("EU"), causing a mismatch with the DB default and potentially breaking search/filter.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+- `./gradlew.bat assembleDebug` passes — APK built successfully.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `status` field is intentionally omitted from scrim creation. Do NOT add it back; the DB DEFAULT must be the source of truth for initial status.
+- `[INTENTIONAL FIX]` — Region now uses enum name (`name`) not display name (`displayName`) for DB storage. Do NOT revert to `displayName`.
+- `[INTENTIONAL FIX]` — `parseRealtimeRecordToConversationDto` must include team chat fields. Do NOT remove them.
+
+### Important Note for User
+If team chats still don't appear after this fix, the most likely cause is that the migration `20260628090001_add_team_chat_to_conversations.sql` has NOT been run on the live Supabase DB. This migration adds the `team_id`, `is_team_chat`, `is_pinned`, `group_name` columns to the `conversations` table, creates the `get_or_create_team_conversation` RPC, and updates `get_conversations_for_user` to include team chats. Without it, team chats cannot exist in the DB.
+
+---
+
 ## 2026-05-31 04:18 [Session: Chat switch performance fix] — Eliminated 4 duplicate API calls, instant chat open via preSelectConversation
 
 ### Commits
