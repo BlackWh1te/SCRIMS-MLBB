@@ -8,6 +8,51 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Chat switch performance fix] — Eliminated 4 duplicate API calls, instant chat open via preSelectConversation
+
+### Commits
+- `6e5b999` — perf(message): eliminate 4 duplicate API calls on chat switch, add preSelectConversation
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - MessageListScreen `onNavigateToChat`: replaced `loadConversation` + `markAsRead` with `preSelectConversation`. The old code made 2 API calls before navigation; the new code sets the conversation from list data instantly with zero network calls.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Added `preSelectConversation(conversation)`: sets `_selectedConversation` and `_messagesWithDelivery` from list data so ChatScreen renders instantly.
+  - `startChatSubscription`: now skips `getConversationById` when `_selectedConversation` already has messages for the target conversation. This eliminates 2 duplicate API calls (conversation + messages).
+  - `startChatSubscription`: `markConversationAsRead` is now fire-and-forget (launched in a separate coroutine). Previously it blocked the entire subscription pipeline — messages wouldn't start loading until the RPC completed.
+  - `startChatSubscription`: passes `skipBridgeFetch = true` to `subscribeToMessages` when messages were already loaded, eliminating 1 more duplicate API call.
+  - `setMessagesWithDelivery`: now skips updating `_selectedConversation` when the message list hasn't changed. Previously every delivery status update (SENDING → SENT) triggered a double recomposition (both `_messagesWithDelivery` and `_selectedConversation` changed).
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - `subscribeToMessages`: added `skipBridgeFetch` parameter. When true, skips Phase 2 (bridge fetch from API) since messages were already loaded via `getConversationById`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepositoryInterface.kt`
+  - Updated `subscribeToMessages` signature with `skipBridgeFetch: Boolean = false`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepository.kt`
+  - Updated mock implementation to match new interface signature.
+
+### Root Cause
+When a user tapped a conversation in MessageListScreen, the app made 7 sequential API calls before the chat was interactive — 4 of which were duplicates:
+1. `loadConversation` → API: conversation + messages (2 calls)
+2. `markAsRead` → API: RPC (1 call)
+3. `startChatSubscription` → `markConversationAsRead` (DUPLICATE of #2)
+4. `startChatSubscription` → `getConversationById` (DUPLICATE of #1)
+5. `subscribeToMessages` bridge fetch (DUPLICATE of #1 messages)
+
+After the fix, the common path makes only 2 API calls (mark-as-read fire-and-forget + realtime connect).
+
+### Performance Impact
+- Chat open: **7 API calls → 2 API calls** (71% reduction)
+- First render: **instant** (from list data) instead of waiting for 3+ sequential network calls
+- Recomposition: **~50% fewer** unnecessary recompositions on delivery status updates
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `preSelectConversation` flow is required for instant chat rendering. Do NOT revert to `loadConversation` + `markAsRead` before navigation.
+- `[INTENTIONAL FIX]` — The `skipBridgeFetch` parameter is required to avoid duplicate message fetches. Do NOT remove it.
+
+---
+
 ## 2026-05-31 04:18 [Session: Message feature full pipeline audit] — Crash-safe parsing, error surfacing, optimistic images, polling guard, dedup hardening
 
 ### Commits
