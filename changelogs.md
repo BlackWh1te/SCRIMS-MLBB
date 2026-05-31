@@ -8,6 +8,43 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Message feature full pipeline audit] — Crash-safe parsing, error surfacing, optimistic images, polling guard, dedup hardening
+
+### Commits
+- `8aed2f4` — fix(message): crash-safe type parsing, error surfacing, optimistic images, polling guard, dedup hardening
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - `mapDtoToMessage`: now catches `IllegalArgumentException` from `MessageType.valueOf` and falls back to `TEXT`. Previously any unrecognized DB type (e.g., future types, typos) would crash the entire message list with an unhandled exception.
+  - `setTypingStatus`: now emits `Result.failure` when the conversation is not found (previously silently did nothing if uncached and API returned null).
+  - `startDirectConversation`: now includes `chat_opens_at` in the create body so direct chats are immediately open (previously relied on DB default which was `NOW()` but this was fragile and inconsistent with scrim conversations).
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - `loadConversations`: now sets `_error` on failure so the UI can display error messages instead of hanging silently.
+  - `loadConversation`: now sets `_error` on failure (same pattern).
+  - `sendImageMessage`: now adds an optimistic SENDING placeholder to the message list (matching `sendMessage` behavior). Previously the image was invisible until the server confirmed it. Also marks the message as FAILED on upload failure instead of just setting `_error`.
+  - Chat polling (5s interval): now only runs when `_connectionState != CONNECTED`, preventing redundant API calls while WebSocket is active. Changed interval from 3s to 5s.
+  - `integrateMessage` and `mergeServerMessages`: dedup logic now matches pending messages by `SENDING status + senderId + content + timestamp proximity (<30s)` instead of just `content + senderId`. The old logic could match the wrong message when the same user sends identical text twice in a row.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `getMessages`: now defaults to `Range: 0-199` header to cap unbounded message fetches. Previously a conversation with thousands of messages would fetch all of them.
+
+### Root Cause
+- `MessageType.valueOf` throws on unknown strings — no defensive catch.
+- ViewModel methods only handled `onSuccess` for conversation loads, swallowing all network errors.
+- Image messages had no optimistic UI, making them appear delayed or lost.
+- Polling ran unconditionally alongside realtime, causing redundant API traffic.
+- Pending message dedup matched only by content+sender, which is ambiguous for repeated messages.
+- `setTypingStatus` had a code path that emitted nothing (silent no-op).
+- Direct conversations omitted `chat_opens_at`, relying on implicit DB defaults.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `MessageType.valueOf` fallback to `TEXT` is required for forward compatibility. Do NOT remove the try-catch.
+- `[INTENTIONAL FIX]` — The polling guard (`_connectionState != CONNECTED`) is required to prevent redundant API calls. Do NOT remove the condition.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim UI + validation + state cleanup audit] — Fixed isHost detection, BO2 validation, error surfacing, and stale data
 
 ### Commits
