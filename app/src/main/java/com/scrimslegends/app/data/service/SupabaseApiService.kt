@@ -900,6 +900,26 @@ interface SupabaseApiService {
     @POST("rpc/approve_scrim_application")
     suspend fun approveScrimApplication(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    // Atomic mark ready: handles race condition with row locking
+    @POST("rpc/mark_scrim_ready")
+    suspend fun markScrimReady(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic complete scrim: validates all games have screenshots + winners
+    @POST("rpc/complete_scrim")
+    suspend fun completeScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic upload game screenshot: handles race condition with row locking
+    @POST("rpc/upload_game_screenshot")
+    suspend fun uploadGameScreenshotRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic select game winner: validates screenshots exist first
+    @POST("rpc/select_game_winner")
+    suspend fun selectGameWinnerRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic transition to ready check: validates time + opponent
+    @POST("rpc/transition_to_ready_check")
+    suspend fun transitionToReadyCheckRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // ─── Message soft-delete ───
     @PATCH("messages")
     suspend fun deleteMessage(
