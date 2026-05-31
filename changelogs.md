@@ -8,6 +8,60 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Deep audit scrims conversation + teamName + status mapping] — Fixed broken leader-to-leader chat, wrong team names, and DB constraint violations
+
+### Commits
+- `1e45282` — fix(scrim): conversation creation, teamName mapping, markReady status, and DB SQL bugs
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Removed fake `java.util.UUID.randomUUID()` generation from `onApprove` lambda.
+  - Removed `onNavigateToChat?.invoke(convId)` from approval flow; chat navigation now uses the real conversation ID stored on the scrim.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Fixed `onApproveApplication` to use the REAL applicant data (`app.applicantTeamLeader`, `app.applicantTeamLeaderName`, etc.) instead of the current user (host) data.
+  - Replaced fire-and-forget fake-UUID flow with proper sequencing: `sendApplyMessage` creates the conversation first, then the `onConversationCreated` callback calls `scrimViewModel.approveApplication` with the REAL conversation ID.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Added `onConversationCreated: (Conversation) -> Unit = {}` callback parameter to `sendApplyMessage`.
+  - Callback is invoked after the conversation is successfully created and stored in `_selectedConversation`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Fixed `markReady`: changed raw `"IN_PROGRESS"` to `toDbStatus(ScrimStatus.IN_PROGRESS)` which returns `"In Progress"`. The old raw string would violate `valid_scrim_status` CHECK constraint.
+  - Fixed `mapDtoToScrim`: `teamName` now uses `dto.teamName ?: ""` instead of `dto.opponentTeamName ?: ""` (was showing opponent's name as the creator's team name).
+  - Fixed `mapEntityToScrim`: `teamName` now defaults to `""` instead of `e.opponentTeamName ?: ""`.
+  - Added `teamName` mapping to `mapScrimToDto` and `parseRealtimeRecordToScrimDto`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added `@SerializedName("team_name") val teamName: String? = null` to `ScrimDto`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMatchResultRepository.kt`
+  - Fixed `getAllMatchResults`: scrim filter `status = "COMPLETED"` changed to `"Completed"` (DB uses Title Case).
+  - Fixed `resolveOrCreateMatchId`: match creation `status = "IN_PROGRESS"` changed to `"In Progress"` (DB `valid_match_status` uses Title Case with space).
+- **File:** `supabase/migrations/20260631060001_add_team_name_to_scrims.sql`
+  - New migration: adds `team_name TEXT` column to `scrims` table.
+- **File:** `supabase/schema.sql`
+  - Fixed `get_team_stats` function: `s.status = 'COMPLETED'` changed to `s.status = 'Completed'` (3 occurrences).
+- **File:** `supabase/migrations/supabase_migration.sql`
+  - Fixed `get_team_stats` win/loss subqueries: `status = 'COMPLETED'` → `'Completed'` (2 occurrences).
+  - Fixed `get_available_scrims`: `status = 'OPEN'` → `'Open'`.
+- **File:** `supabase/migrations/20260531060001_scrim_notifications_and_lfg_avatar.sql`
+  - Fixed `valid_application_status` constraint: removed mixed-case duplicates (`'APPROVED'`, `'REJECTED'`, `'CANCELLED'`) and standardized to `('Pending', 'Accepted', 'Rejected')`.
+  - Fixed notification trigger: `NEW.status = 'REJECTED'` → `'Rejected'`.
+- **File:** `supabase/migrations/20260531060004_ultimate_messaging_fix.sql`
+  - Fixed notification trigger: `NEW.status = 'REJECTED'` → `'Rejected'`.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Known Issues / Next Steps
+- The `team_name` column migration must be applied to the live Supabase instance. Existing scrims will show empty creator team names until the column is added or scrims are re-created.
+- The DB notification trigger fixes in the migration files will only take effect if re-applied to the live database.
+- Chat gate timing has a known dual-system discrepancy (`Scrim.chatOpensAt` = scheduledTime - 2h vs `Conversation.chatOpensAt` = creation + 5min). This is a design decision that may need product input.
+- `ScrimEntity` (Room cache) intentionally does NOT store `teamName` to avoid a Room schema version bump. Offline cached scrims may show empty creator team names.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The conversation creation flow fix is required. Do NOT revert to generating random UUIDs locally.
+- `[INTENTIONAL FIX]` — The `teamName` mapping fix is required. Do NOT revert to using `opponentTeamName` for `teamName`.
+- `[INTENTIONAL FIX]` — The `markReady` `toDbStatus` fix is required for DB constraint compliance.
+
+---
+
 ## 2026-05-31 04:18 [Session: Per-game screenshot flow + HostActions compilation fix] — Partial implementation of multi-game result tracking
 
 ### Commits
