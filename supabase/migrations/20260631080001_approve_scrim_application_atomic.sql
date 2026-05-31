@@ -24,6 +24,9 @@ DECLARE
     v_scrim_status TEXT;
     v_app_status TEXT;
     v_host_leader_id UUID;
+    v_host_team_name TEXT;
+    v_rejected_leader_id UUID;
+    v_other_app RECORD;
     v_result JSON;
 BEGIN
     -- Fetch the application and its scrim
@@ -56,17 +59,42 @@ BEGIN
         RETURN json_build_object('success', false, 'error', 'Only the host team leader can approve applications');
     END IF;
 
+    -- Fetch host team name for notifications
+    SELECT name INTO v_host_team_name FROM teams WHERE id = v_scrim_team_id;
+
+    -- Notify + delete all other pending applications for this scrim
+    FOR v_other_app IN (
+        SELECT id, applicant_team_id
+        FROM scrim_applications
+        WHERE scrim_id = v_scrim_id
+          AND status = 'Pending'
+          AND id != p_application_id
+    ) LOOP
+        -- Notify the leader of the rejected team
+        SELECT leader_id INTO v_rejected_leader_id
+        FROM teams WHERE id = v_other_app.applicant_team_id;
+
+        IF v_rejected_leader_id IS NOT NULL THEN
+            INSERT INTO app_notifications (user_id, type, title, message, body, action_id, data)
+            VALUES (
+                v_rejected_leader_id,
+                'SCRIM_OPPONENT_FOUND',
+                'Opponent Found',
+                format('Team %s found an opponent for their scrim.', v_host_team_name),
+                format('Team %s found an opponent for their scrim.', v_host_team_name),
+                v_scrim_id::TEXT,
+                jsonb_build_object('scrim_id', v_scrim_id::TEXT)
+            );
+        END IF;
+
+        -- Delete the application completely
+        DELETE FROM scrim_applications WHERE id = v_other_app.id;
+    END LOOP;
+
     -- Approve the selected application
     UPDATE scrim_applications
     SET status = 'Accepted'
     WHERE id = p_application_id;
-
-    -- Cancel all other pending applications for this scrim
-    UPDATE scrim_applications
-    SET status = 'Cancelled'
-    WHERE scrim_id = v_scrim_id
-      AND status = 'Pending'
-      AND id != p_application_id;
 
     -- Lock the scrim: set to Filled with opponent and conversation
     UPDATE scrims

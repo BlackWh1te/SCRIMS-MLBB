@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,9 +26,11 @@ import com.scrimslegends.app.data.model.Scrim
 import com.scrimslegends.app.data.model.ScrimStatus
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
+import com.scrimslegends.app.ui.components.ScrimCountdown
 import com.scrimslegends.app.R
 import androidx.compose.ui.res.stringResource
 import com.scrimslegends.app.ui.theme.*
+import com.scrimslegends.app.util.CalendarIntentHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -256,6 +259,12 @@ private fun ScheduleCard(
                         color = White
                     )
                 )
+                Spacer(modifier = Modifier.height(2.dp))
+                ScrimCountdown(
+                    targetTime = scrim.scheduledTime,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    baseColor = MidGray
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -299,6 +308,20 @@ private fun ScheduleCard(
                         )
                     )
                 }
+            }
+
+            // Calendar add button
+            val context = LocalContext.current
+            IconButton(
+                onClick = { CalendarIntentHelper.addScrimToCalendar(context, scrim) },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = "Add to calendar",
+                    tint = BluePrimary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             Icon(

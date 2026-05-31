@@ -403,6 +403,12 @@
     <string name="players_count_short">%d players</string>
     <string name="bo_format">BO%d</string>
 
+    <!-- Time Validation -->
+    <string name="scrim_time_past">Scrim time must be in the future</string>
+    <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
+    <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
+    <string name="scrim_time_invalid">Please select a valid scrim time</string>
+
     <!-- Find Teams Screen -->
     <string name="players_fraction">%1$d/%2$d players</string>
     <string name="reputation_label">Reputation %s</string>

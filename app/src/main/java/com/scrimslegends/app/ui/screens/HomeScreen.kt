@@ -38,6 +38,7 @@ import com.scrimslegends.app.ui.components.PremiumGlassCard
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.components.RankBadge
 import com.scrimslegends.app.ui.components.RankBadgeSize
+import com.scrimslegends.app.ui.components.ScrimCountdown
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -896,7 +897,16 @@ private fun ScrimCarouselCard(
                 maxLines = 1
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
+
+            // Live countdown to scrim start
+            ScrimCountdown(
+                targetTime = scrim.scheduledTime,
+                style = iOSCaption1,
+                baseColor = TextSecondary
+            )
+
+            Spacer(Modifier.height(4.dp))
 
             Row(
                 modifier              = Modifier.fillMaxWidth(),

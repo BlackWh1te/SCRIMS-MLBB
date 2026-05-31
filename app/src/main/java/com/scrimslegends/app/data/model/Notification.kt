@@ -20,6 +20,7 @@ enum class NotificationType {
     SCRIM_APPLICATION_NEW,      // DB: host receives a new application to their scrim
     SCRIM_APPLICATION_APPROVED, // DB: applicant's application was approved
     SCRIM_APPLICATION_REJECTED, // DB: applicant's application was declined
+    SCRIM_OPPONENT_FOUND,       // DB: another team was chosen for the scrim you applied to
 
     // ── Match / result notifications ─────────────────────────
     MATCH_RESULT,               // App-generated: match result recorded
@@ -68,6 +69,7 @@ fun NotificationType.isMatchType(): Boolean = when (this) {
     NotificationType.SCRIM_APPLICATION_NEW,
     NotificationType.SCRIM_APPLICATION_APPROVED,
     NotificationType.SCRIM_APPLICATION_REJECTED,
+    NotificationType.SCRIM_OPPONENT_FOUND,
     NotificationType.MATCH_RESULT,
     NotificationType.XP_GAIN,
     NotificationType.TIER_UP,
@@ -113,6 +115,7 @@ data class Notification(
             NotificationType.SCRIM_APPLICATION_NEW      -> "sports_esports"
             NotificationType.SCRIM_APPLICATION_APPROVED -> "check_circle"
             NotificationType.SCRIM_APPLICATION_REJECTED -> "cancel"
+            NotificationType.SCRIM_OPPONENT_FOUND       -> "info"
             NotificationType.MATCH_RESULT               -> "emoji_events"
             NotificationType.TEAM_INVITE                -> "group"
             NotificationType.MESSAGE                    -> "chat"

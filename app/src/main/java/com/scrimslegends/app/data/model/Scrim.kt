@@ -185,15 +185,19 @@ enum class GameMode(val displayName: String) {
     }
 }
 
-enum class Region(val displayName: String, val utcOffset: String) {
-    UTC("UTC", "UTC+0"),
-    EU("Europe", "UTC+1"),
-    MSK("Moscow", "UTC+3"),
-    SA("South Asia", "UTC+5:30"),
-    ASIA("Southeast Asia", "UTC+8"),
-    KRD("Krasnodar", "UTC+3"),
-    NA("North America", "UTC-5"),
-    EKB("Ekaterinburg", "UTC+5");
+enum class Region(
+    val displayName: String,
+    val utcOffset: String,
+    val timeZoneId: String
+) {
+    UTC("UTC", "UTC+0", "UTC"),
+    EU("Europe", "UTC+1", "Europe/Berlin"),       // DST-aware
+    MSK("Moscow", "UTC+3", "Europe/Moscow"),        // No DST
+    SA("South Asia", "UTC+5:30", "Asia/Kolkata"),  // No DST
+    ASIA("Southeast Asia", "UTC+8", "Asia/Singapore"), // No DST
+    KRD("Krasnodar", "UTC+3", "Europe/Moscow"),   // Same zone as MSK
+    NA("North America", "UTC-5", "America/New_York"), // DST-aware
+    EKB("Ekaterinburg", "UTC+5", "Asia/Yekaterinburg"); // No DST
 
     companion object {
         fun fromDisplayName(name: String): Region = values().find { it.displayName == name } ?: UTC

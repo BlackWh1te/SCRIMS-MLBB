@@ -647,18 +647,34 @@ fun CreateScrimScreen(
                 }
 
                 // ── Post Button ──────────────────────────────────
+                // Compute scheduled time in the selected region's local timezone
+                val scheduledTime = remember(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute, selectedRegion) {
+                    val tz = java.util.TimeZone.getTimeZone(selectedRegion.timeZoneId)
+                    val cal = java.util.Calendar.getInstance(tz)
+                    cal.set(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute, 0)
+                    cal.set(java.util.Calendar.MILLISECOND, 0)
+                    cal.timeInMillis
+                }
+                val now = System.currentTimeMillis()
+                val timeErrorRes = when {
+                    scheduledTime <= now -> R.string.scrim_time_past
+                    scheduledTime < now + 30 * 60 * 1000L -> R.string.scrim_time_min_advance
+                    scheduledTime > now + 30L * 24 * 60 * 60 * 1000L -> R.string.scrim_time_max_advance
+                    else -> 0
+                }
+                val canPost = activePlayerCount >= 5 && timeErrorRes == 0
+                val timeErrorText = if (timeErrorRes != 0) stringResource(timeErrorRes) else ""
+
                 AnimatedEntrance(delayMillis = 280) {
-                    val canPost = activePlayerCount >= 5
                     GradientButton(
                         text = stringResource(R.string.post_scrim),
                         onClick = {
-                            if (!canPost) {
+                            if (activePlayerCount < 5) {
                                 showMinPlayerDialog = true
+                            } else if (timeErrorRes != 0) {
+                                errorMessage = timeErrorText
                             } else {
-                                val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-                                calendar.set(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute, 0)
-                                calendar.set(java.util.Calendar.MILLISECOND, 0)
-                                val scheduledTime = calendar.timeInMillis
+                                errorMessage = ""
                                 onCreateScrim(
                                     teamId, teamName, selectedGameMode, selectedRegion,
                                     selectedSkillLevel, selectedBestOf, scheduledTime, description,

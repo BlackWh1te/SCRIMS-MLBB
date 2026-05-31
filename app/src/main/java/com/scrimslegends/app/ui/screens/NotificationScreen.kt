@@ -234,6 +234,8 @@ private fun NotificationRow(
             Triple(Icons.Default.CheckCircle,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
         NotificationType.SCRIM_APPLICATION_REJECTED ->
             Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
+        NotificationType.SCRIM_OPPONENT_FOUND ->
+            Triple(Icons.Default.SportsEsports,  BluePrimary,   BluePrimary.copy(alpha = 0.12f))
         // ── Match ────────────────────────────────────────────────────────
         NotificationType.MATCH_RESULT ->
             Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))

@@ -38,6 +38,7 @@ import com.scrimslegends.app.data.model.ScrimGameResult
 import com.scrimslegends.app.data.model.ScrimGameStatus
 import com.scrimslegends.app.data.model.ScrimRosterEntry
 import com.scrimslegends.app.data.model.ScrimStatus
+import com.scrimslegends.app.util.CalendarIntentHelper
 import com.scrimslegends.app.data.model.Team
 import com.scrimslegends.app.data.service.SupabaseConfig
 import com.scrimslegends.app.data.service.SupabaseStorageUpload
@@ -743,9 +744,22 @@ private fun HostActions(
                                     Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(stringResource(R.string.opponent_label), fontSize = 13.sp, color = LightGray)
                                     Text(opponentName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                                }
+                                // Add to Calendar button
+                                val context = LocalContext.current
+                                IconButton(
+                                    onClick = { CalendarIntentHelper.addScrimToCalendar(context, scrim) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarMonth,
+                                        contentDescription = "Add to calendar",
+                                        tint = BluePrimary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
                             }
 
