@@ -299,32 +299,24 @@ class SupabaseScrimRepository(
 
     override suspend fun applyToScrim(scrimId: String, application: ScrimApplication): Flow<Result<Scrim>> = flow {
         try {
-            // State gate: scrim must be OPEN
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val scrim = scrimResponse.body()?.firstOrNull()
-            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
-            if (scrim.teamId == application.applicantTeamId) { emit(Result.failure(Exception("You cannot apply to your own scrim"))); return@flow }
-
-            // Duplicate guard: applicant must not already have a pending application for this scrim
-            val existingApps = api.getScrimApplications(PostgrestFilter.eq(scrimId))
-            if (existingApps.isSuccessful) {
-                val alreadyPending = existingApps.body()?.any { it.applicantTeamId == application.applicantTeamId && fromDbApplicationStatus(it.status) == ApplicationStatus.PENDING } ?: false
-                if (alreadyPending) { emit(Result.failure(Exception("Your team already has a pending application for this scrim"))); return@flow }
+            // Use atomic RPC: locks scrim row, verifies OPEN, prevents applying to filled scrims
+            val rpcResult = api.applyToScrimRpc(mapOf(
+                "p_scrim_id" to scrimId,
+                "p_applicant_team_id" to application.applicantTeamId
+            ))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to apply: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
             }
-
-            // Only the applicant team's leader may apply on behalf of their team
-            val applicantTeam = api.getTeamById(PostgrestFilter.eq(application.applicantTeamId)).body()?.firstOrNull()
-            if (applicantTeam == null) { emit(Result.failure(Exception("Applicant team not found"))); return@flow }
-            AuthorizationUtils.requireOwner(applicantTeam.leaderId, "apply to this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val dto = ScrimApplicationDto(scrimId = scrimId, applicantTeamId = application.applicantTeamId, status = "Pending")
-            val r = api.createScrimApplication(dto)
-            if (r.isSuccessful) {
-                invalidateScrimCaches()
-                getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after update") }) }
-            } else emit(Result.failure(Exception("Failed to apply: ${r.errorBody()?.string()}")))
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Apply failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after apply") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
@@ -372,46 +364,41 @@ class SupabaseScrimRepository(
 
     override suspend fun rejectApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         try {
-            // Ownership: only the scrim host team leader may reject applications
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val scrim = scrimResponse.body()?.firstOrNull()
-            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            val hostTeam = api.getTeamById(PostgrestFilter.eq(scrim.teamId)).body()?.firstOrNull()
-            if (hostTeam == null) { emit(Result.failure(Exception("Host team not found"))); return@flow }
-            AuthorizationUtils.requireOwner(hostTeam.leaderId, "reject applications for this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
-            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
-                emit(Result.failure(Exception("Application not found"))); return@flow
+            // Use atomic RPC: locks application row, verifies still pending, rejects atomically
+            val rpcResult = api.rejectScrimApplicationRpc(mapOf("p_application_id" to applicationId))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to reject: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
             }
-            val app = appResponse.body()!!.first()
-            if (fromDbApplicationStatus(app.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
-
-            val r = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.REJECTED)))
-            if (r.isSuccessful) { invalidateScrimCaches(); getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) } }
-            else emit(Result.failure(Exception("Failed to reject application")))
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Reject failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after reject") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
     override suspend fun cancelApplication(scrimId: String, applicationId: String): Flow<Result<Scrim>> = flow {
         try {
-            // Ownership: only the applicant team leader may cancel their application
-            val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
-            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
-                emit(Result.failure(Exception("Application not found")))
+            // Use atomic RPC: locks application row, verifies still pending + caller is applicant leader
+            val rpcResult = api.cancelScrimApplicationRpc(mapOf("p_application_id" to applicationId))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to cancel: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
                 return@flow
             }
-            val app = appResponse.body()!!.first()
-            if (fromDbApplicationStatus(app.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
-            val applicantTeam = api.getTeamById(PostgrestFilter.eq(app.applicantTeamId)).body()?.firstOrNull()
-            if (applicantTeam == null) { emit(Result.failure(Exception("Applicant team not found"))); return@flow }
-            AuthorizationUtils.requireOwner(applicantTeam.leaderId, "cancel this application")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val r = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.CANCELLED)))
-            if (r.isSuccessful) { invalidateScrimCaches(); getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) } }
-            else emit(Result.failure(Exception("Failed to cancel application")))
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Cancel failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after cancel") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
@@ -495,25 +482,25 @@ class SupabaseScrimRepository(
 
     override suspend fun uploadScreenshot(scrimId: String, teamId: String, screenshotUrl: String): Flow<Result<Scrim>> = flow {
         try {
-            val sr = api.getScrimById(PostgrestFilter.eq(scrimId))
-            if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim for upload"))); return@flow }
-            val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            if (fromDbStatus(existing.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
-            val hostTeam = api.getTeamById(PostgrestFilter.eq(existing.teamId)).body()?.firstOrNull()
-            val opponentTeam = existing.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
-            val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
-            AuthorizationUtils.requireTeamLeader(leaderIds, "upload screenshots for this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val participantIds = listOfNotNull(existing.teamId, existing.opponentTeamId)
-            if (teamId !in participantIds) { emit(Result.failure(Exception("Team is not a participant in this scrim"))); return@flow }
-            val isTeamA = existing.teamId == teamId
-            val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
-            val updates = mutableMapOf<String, Any>()
-            if (isTeamA) { updates["team_a_screenshot_url"] = screenshotUrl; updates["team_a_screenshot_uploaded_at"] = nowIso } else { updates["team_b_screenshot_url"] = screenshotUrl; updates["team_b_screenshot_uploaded_at"] = nowIso }
-            val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
-            if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Upload succeeded but no data returned"))) }
-            else emit(Result.failure(Exception("Error uploading screenshot: ${r.errorBody()?.string()}")))
+            // Use atomic RPC: locks scrim row, validates in-progress, participant, leader
+            val rpcResult = api.uploadScrimScreenshotRpc(mapOf(
+                "p_scrim_id" to scrimId,
+                "p_team_id" to teamId,
+                "p_screenshot_url" to screenshotUrl
+            ))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to upload screenshot: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
+            }
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Upload failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after upload") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
@@ -594,50 +581,41 @@ class SupabaseScrimRepository(
 
     override suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>> = flow {
         try {
-            // Ownership: only participating team leaders may submit results
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val existingScrim = scrimResponse.body()?.firstOrNull()
-            if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            if (fromDbStatus(existingScrim.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
-            val hostTeam = api.getTeamById(PostgrestFilter.eq(existingScrim.teamId)).body()?.firstOrNull()
-            val opponentTeam = existingScrim.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
-            val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
-            AuthorizationUtils.requireTeamLeader(leaderIds, "submit results for this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val participantIds = listOfNotNull(existingScrim.teamId, existingScrim.opponentTeamId)
-            if (winnerTeamId !in participantIds) { emit(Result.failure(Exception("Winner must be one of the participating teams"))); return@flow }
-
-            val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to toDbStatus(ScrimStatus.COMPLETED), "winner_team_id" to winnerTeamId))
-            if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Submit result failed"))) }
-            else emit(Result.failure(Exception("Error submitting result")))
+            // Use atomic complete_scrim RPC: validates all games have screenshots + winners
+            val rpcResult = api.completeScrimRpc(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to submit result: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
+            }
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Submit result failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after submit") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
     override suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
         try {
-            // Guard: do not overwrite an already-completed or already-cancelled scrim
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val existing = scrimResponse.body()?.firstOrNull()
-            if (existing == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            val currentStatus = fromDbStatus(existing.status)
-            if (currentStatus == ScrimStatus.COMPLETED || currentStatus == ScrimStatus.CANCELLED) {
-                emit(Result.success(Unit)) // Already in a terminal state, nothing to do
+            // Use atomic RPC: locks row, prevents double-cancel, cleans up pending applications
+            val rpcResult = api.autoCancelScrimRpc(mapOf("p_scrim_id" to scrimId))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to auto-cancel: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
                 return@flow
             }
-
-            // Mark scrim as auto-cancelled and notify participants
-            // Note: `cancelled_by` is intentionally left null for auto-cancel (DB allows NULL).
-            val r = api.updateScrim(
-                PostgrestFilter.eq(scrimId),
-                mapOf("status" to toDbStatus(ScrimStatus.CANCELLED), "cancellation_reason" to "Auto-cancelled: no result submitted within the 2-hour deadline")
-            )
-            if (r.isSuccessful) {
-                invalidateScrimCaches()
-                emit(Result.success(Unit))
-            } else {
-                emit(Result.failure(Exception("Failed to auto-cancel scrim")))
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Auto-cancel failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
             }
+            invalidateScrimCaches()
+            emit(Result.success(Unit))
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 

@@ -920,6 +920,26 @@ interface SupabaseApiService {
     @POST("rpc/transition_to_ready_check")
     suspend fun transitionToReadyCheckRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    // Atomic reject application: locks row, verifies still pending
+    @POST("rpc/reject_scrim_application")
+    suspend fun rejectScrimApplicationRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic cancel application: locks row, verifies still pending + caller is applicant leader
+    @POST("rpc/cancel_scrim_application")
+    suspend fun cancelScrimApplicationRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic apply to scrim: locks scrim row, verifies still open, creates app
+    @POST("rpc/apply_to_scrim")
+    suspend fun applyToScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic auto-cancel scrim: locks row, prevents double-cancel
+    @POST("rpc/auto_cancel_scrim")
+    suspend fun autoCancelScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    // Atomic per-scrim screenshot upload: locks row
+    @POST("rpc/upload_scrim_screenshot")
+    suspend fun uploadScrimScreenshotRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // ─── Message soft-delete ───
     @PATCH("messages")
     suspend fun deleteMessage(
