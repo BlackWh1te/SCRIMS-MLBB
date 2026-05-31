@@ -8,6 +8,28 @@
 
 ---
 
+## 2026-05-31 07:10 [Session: Team chat audit fixes] — Missing RPC, broken RLS policy, chat gate, participant_count
+
+### Commits
+- `96333fd` — fix(team-chat): audit fixes — missing RPC, broken RLS policy, chat gate, participant_count
+
+### Changed
+- **File:** `supabase/schema.sql`
+  - Added `get_or_create_team_conversation` RPC (was called by Android but didn't exist in DB → 404)
+  - Fixed messages INSERT RLS policy: the second declaration at lines 812-823 was MISSING the `is_team_chat = TRUE` OR clause, which OVERRIDED the working policy at lines 355-374. Result: team members could NOT send messages in team chats.
+  - Fixed `enforce_chat_gate` trigger: exempt `is_team_chat = TRUE` so team chats are never locked
+  - Added `participant_count` column to `conversations` table with idempotent migration
+  - Updated `get_conversations_for_user` to return `participant_count`
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Fixed `ensureTeamConversations`: added `userId` parameter + auto-refreshes conversation list when new team chats are created
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Updated `ensureTeamConversations` call site to pass `userId`
+
+### Known Issue [NOT FIXED — requires DB redesign]
+- `is_read` is per-message (not per-user-per-message). For team chats, when ONE member marks a message as read, it becomes read for ALL members. This breaks accurate unread counts for team chats. Fixing this requires a new `message_reads` junction table.
+
+---
+
 ## 2026-05-31 06:45 [Session: Scrims + Message feature audit fixes] — Deep-link, applications, rosters, O(1) realtime, status chips, chat lock
 
 ### Commits
