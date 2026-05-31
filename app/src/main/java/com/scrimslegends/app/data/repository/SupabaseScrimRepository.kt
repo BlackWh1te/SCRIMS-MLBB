@@ -74,6 +74,27 @@ class SupabaseScrimRepository(
             "Cancelled"  -> ApplicationStatus.CANCELLED
             else         -> ApplicationStatus.PENDING
         }
+
+        // ── ScrimGameStatus ↔ DB string mapping ──
+        // DB constraint: valid_game_result_status CHECK (status IN ('Pending','Awaiting Opponent','Both Uploaded','Winner Selected','Disputed','Confirmed'))
+        fun toDbGameStatus(status: ScrimGameStatus): String = when (status) {
+            ScrimGameStatus.PENDING           -> "Pending"
+            ScrimGameStatus.AWAITING_OPPONENT -> "Awaiting Opponent"
+            ScrimGameStatus.BOTH_UPLOADED     -> "Both Uploaded"
+            ScrimGameStatus.WINNER_SELECTED   -> "Winner Selected"
+            ScrimGameStatus.DISPUTED          -> "Disputed"
+            ScrimGameStatus.CONFIRMED         -> "Confirmed"
+        }
+
+        fun fromDbGameStatus(dbStatus: String): ScrimGameStatus = when (dbStatus) {
+            "Pending"           -> ScrimGameStatus.PENDING
+            "Awaiting Opponent" -> ScrimGameStatus.AWAITING_OPPONENT
+            "Both Uploaded"     -> ScrimGameStatus.BOTH_UPLOADED
+            "Winner Selected"   -> ScrimGameStatus.WINNER_SELECTED
+            "Disputed"          -> ScrimGameStatus.DISPUTED
+            "Confirmed"         -> ScrimGameStatus.CONFIRMED
+            else                -> ScrimGameStatus.PENDING
+        }
     }
 
     /**
@@ -903,7 +924,7 @@ class SupabaseScrimRepository(
             teamBSelectedWinnerId = dto.teamBSelectedWinnerId,
             adminOverrideWinnerId = dto.adminOverrideWinnerId,
             isDisputed = dto.isDisputed,
-            status = try { ScrimGameStatus.valueOf(dto.status) } catch (_: Exception) { ScrimGameStatus.PENDING }
+            status = fromDbGameStatus(dto.status)
         )
     }
 
@@ -921,7 +942,7 @@ class SupabaseScrimRepository(
             teamBSelectedWinnerId = result.teamBSelectedWinnerId,
             adminOverrideWinnerId = result.adminOverrideWinnerId,
             isDisputed = result.isDisputed,
-            status = result.status.name
+            status = toDbGameStatus(result.status)
         )
     }
 

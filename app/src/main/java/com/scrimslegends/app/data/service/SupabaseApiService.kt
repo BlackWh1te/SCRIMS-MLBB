@@ -236,7 +236,7 @@ data class ScrimGameResultDto(
     @SerializedName("team_b_selected_winner_id") val teamBSelectedWinnerId: String? = null,
     @SerializedName("admin_override_winner_id") val adminOverrideWinnerId: String? = null,
     @SerializedName("is_disputed") val isDisputed: Boolean = false,
-    @SerializedName("status") val status: String = "PENDING"
+    @SerializedName("status") val status: String = "Pending"
 )
 
 // ─── Match DTO ───

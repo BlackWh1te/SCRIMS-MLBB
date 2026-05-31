@@ -92,8 +92,23 @@ fun CreateScrimScreen(
     val selectedYear = availableYears.getOrElse(selectedYearIndex) { currentYear }
     var selectedMonth by remember { mutableIntStateOf(currentMonth) }
     var selectedDay by remember { mutableIntStateOf(currentDay) }
-    var selectedHour by remember { mutableIntStateOf(18) }
-    var selectedMinute by remember { mutableIntStateOf(0) }
+
+    // Helper: get current hour/minute in a given region's timezone
+    fun getRegionTime(region: Region): Pair<Int, Int> {
+        val tz = java.util.TimeZone.getTimeZone(region.timeZoneId)
+        val cal = java.util.Calendar.getInstance(tz)
+        return Pair(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
+    }
+
+    var selectedHour by remember { mutableIntStateOf(getRegionTime(Region.EU).first) }
+    var selectedMinute by remember { mutableIntStateOf(getRegionTime(Region.EU).second) }
+
+    // When region changes, update time to current time in that region
+    LaunchedEffect(selectedRegion) {
+        val (hour, minute) = getRegionTime(selectedRegion)
+        selectedHour = hour
+        selectedMinute = minute
+    }
 
     val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     val isLeapYear = (selectedYear % 4 == 0 && selectedYear % 100 != 0) || (selectedYear % 400 == 0)
