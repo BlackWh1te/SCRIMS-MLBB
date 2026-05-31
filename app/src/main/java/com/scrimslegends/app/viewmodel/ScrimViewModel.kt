@@ -13,6 +13,7 @@ import com.scrimslegends.app.data.model.ScrimStatus
 import com.scrimslegends.app.data.model.SkillLevel
 import com.scrimslegends.app.data.model.Player
 import com.scrimslegends.app.data.repository.PlayerPointsChange
+import com.scrimslegends.app.security.AuthorizationUtils
 import com.scrimslegends.app.data.repository.PointsResult
 import com.scrimslegends.app.data.repository.ScrimRepositoryInterface
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -215,14 +216,21 @@ class ScrimViewModel @Inject constructor(
         }
     }
     
-    fun cancelScrim(scrimId: String) {
+    fun cancelScrim(scrimId: String, reason: String = "Cancelled by user") {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             val scrim = _scrims.value.find { it.id == scrimId }
             if (scrim != null) {
-                scrimRepository.updateScrim(scrim.copy(status = ScrimStatus.CANCELLED)).collect { result ->
+                val cancelledBy = AuthorizationUtils.currentUserId()
+                scrimRepository.updateScrim(
+                    scrim.copy(
+                        status = ScrimStatus.CANCELLED,
+                        cancellationReason = reason,
+                        cancelledBy = cancelledBy
+                    )
+                ).collect { result ->
                     result.onSuccess { updated ->
                         _selectedScrim.value = updated
                         loadScrims()
@@ -533,27 +541,16 @@ class ScrimViewModel @Inject constructor(
     fun checkAndAutoCancelOverdueScrims() {
         viewModelScope.launch {
             val overdueScrims = _scrims.value.filter { scrim ->
-                scrim.status == ScrimStatus.IN_PROGRESS &&
-                        scrim.opponentTeamId != null &&
+                scrim.opponentTeamId != null &&
                         scrim.isAutoCancelOverdue &&
-                        scrim.resultSubmittedAt == null
+                        scrim.resultSubmittedAt == null &&
+                        scrim.status in setOf(ScrimStatus.IN_PROGRESS, ScrimStatus.READY_CHECK, ScrimStatus.FILLED)
             }
 
             overdueScrims.forEach { scrim ->
-                scrimRepository.updateScrim(
-                    scrim.copy(
-                        status = ScrimStatus.CANCELLED,
-                        cancellationReason = "No match result submitted within 2 hours of scheduled time"
-                    )
-                ).collect { result ->
+                scrimRepository.createAutoCancelledRecord(scrim.id).collect { result ->
                     result.onSuccess {
-                        scrimRepository.createAutoCancelledRecord(scrim.id).collect { createResult ->
-                            createResult.onSuccess {
-                                loadScrims()
-                            }.onFailure { exception ->
-                                _error.value = "Failed to create auto-cancelled record: ${exception.message}"
-                            }
-                        }
+                        loadScrims()
                     }.onFailure { exception ->
                         _error.value = "Failed to auto-cancel overdue scrim: ${exception.message}"
                     }

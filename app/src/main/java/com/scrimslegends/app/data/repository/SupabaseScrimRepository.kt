@@ -66,6 +66,13 @@ class SupabaseScrimRepository(
             ApplicationStatus.REJECTED  -> "Rejected"
             ApplicationStatus.CANCELLED -> "Rejected" // DB only has 3 values; cancelled maps to Rejected
         }
+
+        fun fromDbApplicationStatus(dbStatus: String): ApplicationStatus = when (dbStatus) {
+            "Pending"   -> ApplicationStatus.PENDING
+            "Accepted"  -> ApplicationStatus.APPROVED
+            "Rejected"  -> ApplicationStatus.REJECTED
+            else        -> ApplicationStatus.PENDING
+        }
     }
 
     /**
@@ -223,10 +230,20 @@ class SupabaseScrimRepository(
 
             val dto = mapScrimToDto(scrim)
             val updates = mutableMapOf<String, Any>("team_id" to dto.teamId, "scheduled_date" to dto.scheduledDate, "scheduled_time" to dto.scheduledTime, "best_of" to dto.bestOf, "status" to dto.status)
+            dto.teamName?.takeIf { it.isNotBlank() }?.let { updates["team_name"] = it }
             dto.description?.let { updates["description"] = it }
             dto.opponentTeamId?.let { updates["opponent_team_id"] = it }
             dto.opponentTeamName?.let { updates["opponent_team_name"] = it }
             dto.winnerTeamId?.let { updates["winner_team_id"] = it }
+            dto.conversationId?.let { updates["conversation_id"] = it }
+            dto.resultSubmittedAt?.let { updates["result_submitted_at"] = it }
+            dto.cancellationReason?.let { updates["cancellation_reason"] = it }
+            dto.cancelledBy?.let { updates["cancelled_by"] = it }
+            updates["game_mode"] = dto.gameMode
+            updates["region"] = dto.region
+            updates["skill_level"] = dto.skillLevel
+            updates["max_players"] = dto.maxPlayers
+            updates["current_players"] = dto.currentPlayers
             val r = api.updateScrim(PostgrestFilter.eq(scrim.id), updates)
             if (r.isSuccessful) {
                 val u = r.body()?.firstOrNull()
@@ -255,6 +272,13 @@ class SupabaseScrimRepository(
 
     override suspend fun applyToScrim(scrimId: String, application: ScrimApplication): Flow<Result<Scrim>> = flow {
         try {
+            // State gate: scrim must be OPEN
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val scrim = scrimResponse.body()?.firstOrNull()
+            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
+            if (scrim.teamId == application.applicantTeamId) { emit(Result.failure(Exception("You cannot apply to your own scrim"))); return@flow }
+
             // Only the applicant team's leader may apply on behalf of their team
             val applicantTeam = api.getTeamById(PostgrestFilter.eq(application.applicantTeamId)).body()?.firstOrNull()
             if (applicantTeam == null) { emit(Result.failure(Exception("Applicant team not found"))); return@flow }
@@ -284,6 +308,8 @@ class SupabaseScrimRepository(
             val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
             if (!appResponse.isSuccessful) { emit(Result.failure(Exception("Failed to fetch application"))); return@flow }
             val application = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
+            if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
+            if (fromDbApplicationStatus(application.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
             api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.APPROVED)))
             api.updateScrimApplicationsBulk(scrimId = PostgrestFilter.eq(scrimId), status = PostgrestFilter.eq(toDbApplicationStatus(ApplicationStatus.PENDING)), body = mapOf("status" to toDbApplicationStatus(ApplicationStatus.CANCELLED)))
             val updates = mutableMapOf<String, Any>("status" to toDbStatus(ScrimStatus.FILLED), "opponent_team_id" to application.applicantTeamId, "conversation_id" to conversationId)
@@ -321,6 +347,13 @@ class SupabaseScrimRepository(
             AuthorizationUtils.requireOwner(hostTeam.leaderId, "reject applications for this scrim")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
+            val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
+            if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
+                emit(Result.failure(Exception("Application not found"))); return@flow
+            }
+            val app = appResponse.body()!!.first()
+            if (fromDbApplicationStatus(app.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
+
             val r = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.REJECTED)))
             if (r.isSuccessful) { invalidateScrimCaches(); getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) } }
             else emit(Result.failure(Exception("Failed to reject application")))
@@ -336,6 +369,7 @@ class SupabaseScrimRepository(
                 return@flow
             }
             val app = appResponse.body()!!.first()
+            if (fromDbApplicationStatus(app.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
             val applicantTeam = api.getTeamById(PostgrestFilter.eq(app.applicantTeamId)).body()?.firstOrNull()
             if (applicantTeam == null) { emit(Result.failure(Exception("Applicant team not found"))); return@flow }
             AuthorizationUtils.requireOwner(applicantTeam.leaderId, "cancel this application")
@@ -378,6 +412,9 @@ class SupabaseScrimRepository(
             AuthorizationUtils.requireOwner(hostTeam.leaderId, "transition this scrim to ready check")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
+            if (fromDbStatus(scrim.status) != ScrimStatus.FILLED) { emit(Result.failure(Exception("Scrim must be filled before ready check"))); return@flow }
+            if (scrim.opponentTeamId.isNullOrBlank()) { emit(Result.failure(Exception("No opponent has been set for this scrim"))); return@flow }
+
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to toDbStatus(ScrimStatus.READY_CHECK)))
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Transition failed"))) }
             else emit(Result.failure(Exception("Error transitioning scrim")))
@@ -389,6 +426,9 @@ class SupabaseScrimRepository(
             val sr = api.getScrimById(PostgrestFilter.eq(scrimId))
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(existing.status) != ScrimStatus.READY_CHECK) { emit(Result.failure(Exception("Scrim is not in ready check phase"))); return@flow }
+            val participantIds = listOfNotNull(existing.teamId, existing.opponentTeamId)
+            if (teamId !in participantIds) { emit(Result.failure(Exception("Team is not a participant in this scrim"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(existing.teamId)).body()?.firstOrNull()
             val opponentTeam = existing.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -412,6 +452,7 @@ class SupabaseScrimRepository(
             val sr = api.getScrimById(PostgrestFilter.eq(scrimId))
             if (!sr.isSuccessful) { emit(Result.failure(Exception("Failed to fetch scrim for upload"))); return@flow }
             val existing = sr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(existing.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(existing.teamId)).body()?.firstOrNull()
             val opponentTeam = existing.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -434,6 +475,7 @@ class SupabaseScrimRepository(
             val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
             val existingScrim = scrimResponse.body()?.firstOrNull()
             if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(existingScrim.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(existingScrim.teamId)).body()?.firstOrNull()
             val opponentTeam = existingScrim.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -473,6 +515,7 @@ class SupabaseScrimRepository(
             val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
             val existingScrim = scrimResponse.body()?.firstOrNull()
             if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(existingScrim.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(existingScrim.teamId)).body()?.firstOrNull()
             val opponentTeam = existingScrim.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -491,7 +534,7 @@ class SupabaseScrimRepository(
             // Note: `cancelled_by` is intentionally left null for auto-cancel (DB allows NULL).
             val r = api.updateScrim(
                 PostgrestFilter.eq(scrimId),
-                mapOf("status" to toDbStatus(ScrimStatus.CANCELLED), "cancellation_reason" to "Auto-cancelled: opponent no-show")
+                mapOf("status" to toDbStatus(ScrimStatus.CANCELLED), "cancellation_reason" to "Auto-cancelled: no result submitted within the 2-hour deadline")
             )
             if (r.isSuccessful) {
                 invalidateScrimCaches()
@@ -760,6 +803,7 @@ class SupabaseScrimRepository(
             val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
             val scrimDto = scrimResponse.body()?.firstOrNull()
             if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(scrimDto.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(scrimDto.teamId)).body()?.firstOrNull()
             val opponentTeam = scrimDto.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -809,6 +853,7 @@ class SupabaseScrimRepository(
             val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
             val scrimDto = scrimResponse.body()?.firstOrNull()
             if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            if (fromDbStatus(scrimDto.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(scrimDto.teamId)).body()?.firstOrNull()
             val opponentTeam = scrimDto.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
