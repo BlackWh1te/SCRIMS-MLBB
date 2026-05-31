@@ -375,7 +375,8 @@ class SupabaseScrimRepository(
             val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
             if (isTeamA) { updates["team_a_ready"] = true; updates["team_a_ready_at"] = nowIso } else { updates["team_b_ready"] = true; updates["team_b_ready_at"] = nowIso }
-            if (if (isTeamA) true && existing.teamBReady else existing.teamAReady && true) updates["status"] = "IN_PROGRESS"
+            val bothReady = if (isTeamA) existing.teamBReady else existing.teamAReady
+            if (bothReady) updates["status"] = toDbStatus(ScrimStatus.IN_PROGRESS)
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Mark ready failed"))) }
             else emit(Result.failure(Exception("Error marking ready: ${r.errorBody()?.string()}")))
@@ -541,6 +542,7 @@ class SupabaseScrimRepository(
         return ScrimDto(
             id = record.get("id")?.asString ?: "",
             teamId = record.get("team_id")?.asString ?: "",
+            teamName = record.get("team_name")?.asString,
             scheduledDate = record.get("scheduled_date")?.asString ?: "",
             scheduledTime = record.get("scheduled_time")?.asString ?: "",
             bestOf = record.get("best_of")?.asInt ?: 1,
@@ -575,6 +577,7 @@ class SupabaseScrimRepository(
         return ScrimDto(
             id = scrim.id.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString(),
             teamId = scrim.teamId,
+            teamName = scrim.teamName.takeIf { it.isNotBlank() },
             scheduledDate = DateUtils.formatDate(scrim.scheduledTime),
             scheduledTime = DateUtils.formatTime(scrim.scheduledTime),
             bestOf = scrim.bestOf.games,
@@ -605,7 +608,7 @@ class SupabaseScrimRepository(
         return Scrim(
             id = dto.id,
             teamId = dto.teamId,
-            teamName = dto.opponentTeamName ?: "",
+            teamName = dto.teamName ?: "",
             teamLeader = "",
             gameMode = try { GameMode.valueOf(dto.gameMode) } catch (_: Exception) { GameMode.RANKED },
             region = try { Region.fromDisplayName(dto.region) } catch (_: Exception) { Region.EU },
@@ -655,7 +658,7 @@ class SupabaseScrimRepository(
         val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
         return Scrim(
             id = e.id, teamId = e.teamId,
-            teamName = e.opponentTeamName ?: "", teamLeader = "",
+            teamName = "", teamLeader = "",
             gameMode = try { GameMode.valueOf(e.gameMode) } catch (_: Exception) { GameMode.RANKED },
             region = try { Region.fromDisplayName(e.region) } catch (_: Exception) { Region.EU },
             skillLevel = try { SkillLevel.valueOf(e.skillLevel) } catch (_: Exception) { SkillLevel.ALL },

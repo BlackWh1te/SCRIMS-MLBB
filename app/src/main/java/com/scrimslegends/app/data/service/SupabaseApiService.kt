@@ -157,6 +157,7 @@ data class TeamInvitationDto(
 data class ScrimDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("team_id") val teamId: String = "",
+    @SerializedName("team_name") val teamName: String? = null,
     @SerializedName("scheduled_date") val scheduledDate: String = "",
     @SerializedName("scheduled_time") val scheduledTime: String = "",
     @SerializedName("best_of") val bestOf: Int = 1,

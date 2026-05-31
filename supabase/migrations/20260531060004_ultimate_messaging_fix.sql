@@ -72,7 +72,7 @@ BEGIN
                         jsonb_build_object('scrim_id', NEW.scrim_id::TEXT)
                     );
                 END IF;
-            ELSIF (NEW.status = 'REJECTED') THEN
+            ELSIF (NEW.status = 'Rejected') THEN
                 IF v_applicant_leader_id IS NOT NULL THEN
                     v_msg := format('Your application to %s''s scrim was declined.', v_host_team_name);
                     INSERT INTO app_notifications (user_id, type, title, message, body, action_id, data)

@@ -293,7 +293,8 @@ class MessageViewModel @Inject constructor(
         scrimCreatorTeamId: String,
         scrimCreatorTeamName: String,
         teamPlayerCount: Int,
-        teamMaxPlayers: Int
+        teamMaxPlayers: Int,
+        onConversationCreated: (Conversation) -> Unit = {}
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -302,7 +303,10 @@ class MessageViewModel @Inject constructor(
                 scrimCreatorId, scrimCreatorName, scrimCreatorTeamId, scrimCreatorTeamName,
                 teamPlayerCount, teamMaxPlayers
             ).collect { result ->
-                result.onSuccess { _selectedConversation.value = it }
+                result.onSuccess {
+                    _selectedConversation.value = it
+                    onConversationCreated(it)
+                }
                 _isLoading.value = false
             }
         }

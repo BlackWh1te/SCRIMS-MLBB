@@ -95,7 +95,7 @@ BEGIN
     LEFT JOIN (
         SELECT team_id, COUNT(*) AS wins
         FROM scrims
-        WHERE winner_team_id = team_id AND status = 'COMPLETED'
+        WHERE winner_team_id = team_id AND status = 'Completed'
         GROUP BY team_id
     ) win_stats ON win_stats.team_id = t.id
     LEFT JOIN (
@@ -104,7 +104,7 @@ BEGIN
         WHERE (team_id = p_team_id OR opponent_team_id = p_team_id)
           AND winner_team_id != p_team_id
           AND winner_team_id IS NOT NULL
-          AND status = 'COMPLETED'
+          AND status = 'Completed'
         GROUP BY team_id
     ) loss_stats ON loss_stats.team_id = t.id
     WHERE t.id = p_team_id;
@@ -130,7 +130,7 @@ BEGIN
     RETURN QUERY
     SELECT *
     FROM scrims
-    WHERE status = 'OPEN'
+    WHERE status = 'Open'
       AND (p_game_mode   IS NULL OR game_mode   = p_game_mode)
       AND (p_region      IS NULL OR region      = p_region)
       AND (p_skill_level IS NULL OR skill_level = p_skill_level)

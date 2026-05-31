@@ -7,7 +7,7 @@ ALTER TABLE lfg_posts ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 -- 2. Update valid_application_status constraint to match app enums
 ALTER TABLE scrim_applications DROP CONSTRAINT IF EXISTS valid_application_status;
 ALTER TABLE scrim_applications ADD CONSTRAINT valid_application_status 
-    CHECK (status IN ('Pending', 'APPROVED', 'REJECTED', 'CANCELLED', 'Accepted'));
+    CHECK (status IN ('Pending', 'Accepted', 'Rejected'));
 
 -- 3. Scrim Application Notification Trigger Function
 CREATE OR REPLACE FUNCTION public.handle_scrim_application_notification()
@@ -56,7 +56,7 @@ BEGIN
                         jsonb_build_object('scrim_id', NEW.scrim_id::TEXT, 'host_team_id', (SELECT team_id FROM scrims WHERE id = NEW.scrim_id)::TEXT)
                     );
                 END IF;
-            ELSIF (NEW.status = 'REJECTED') THEN
+            ELSIF (NEW.status = 'Rejected') THEN
                 -- Notify Applicant about rejection
                 IF v_applicant_leader_id IS NOT NULL THEN
                     INSERT INTO app_notifications (user_id, type, title, body, data)

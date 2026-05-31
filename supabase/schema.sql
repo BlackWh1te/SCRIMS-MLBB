@@ -556,9 +556,9 @@ BEGIN
     RETURN QUERY
     SELECT
         COUNT(*)::BIGINT AS total_scrims,
-        COUNT(*) FILTER (WHERE s.status = 'COMPLETED')::BIGINT AS completed_scrims,
-        COUNT(*) FILTER (WHERE s.winner_team_id = p_team_id AND s.status = 'COMPLETED')::BIGINT AS wins,
-        COUNT(*) FILTER (WHERE s.winner_team_id IS NOT NULL AND s.winner_team_id != p_team_id AND s.status = 'COMPLETED')::BIGINT AS losses,
+        COUNT(*) FILTER (WHERE s.status = 'Completed')::BIGINT AS completed_scrims,
+        COUNT(*) FILTER (WHERE s.winner_team_id = p_team_id AND s.status = 'Completed')::BIGINT AS wins,
+        COUNT(*) FILTER (WHERE s.winner_team_id IS NOT NULL AND s.winner_team_id != p_team_id AND s.status = 'Completed')::BIGINT AS losses,
         COALESCE(SUM(ps.pts) FILTER (WHERE tm.team_id = p_team_id), 0)::BIGINT AS total_points
     FROM scrims s
     LEFT JOIN team_members tm ON tm.team_id = p_team_id

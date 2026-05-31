@@ -400,9 +400,7 @@ fun ScrimDetailScreen(
                                 currentTeamId = currentUserTeamId,
                                 onCancelScrim = { showCancelDialog = true },
                                 onApprove = { appId ->
-                                    val convId = java.util.UUID.randomUUID().toString()
                                     onApproveApplication(scrim.id, appId)
-                                    onNavigateToChat?.invoke(convId)
                                 },
                                 onReject = { appId -> onRejectApplication(scrim.id, appId) },
                                 onNavigateToChat = onNavigateToChat,

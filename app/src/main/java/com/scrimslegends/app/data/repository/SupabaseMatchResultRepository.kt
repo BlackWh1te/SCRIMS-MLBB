@@ -44,7 +44,7 @@ class SupabaseMatchResultRepository(
         try {
             // Fetch scrim match results
             val scrimResults = mutableListOf<MatchResult>()
-            val response = api.getScrims(status = "COMPLETED", order = "created_at.desc")
+            val response = api.getScrims(status = "Completed", order = "created_at.desc")
             if (response.isSuccessful) {
                 val scrims = response.body() ?: emptyList()
                 scrimResults.addAll(scrims.map { mapScrimToMatchResult(it) })
@@ -285,7 +285,7 @@ class SupabaseMatchResultRepository(
                         scrimId = scrim.id,
                         teamAId = scrim.teamId,
                         teamBId = scrim.opponentTeamId ?: "",
-                        status = "IN_PROGRESS"
+                        status = "In Progress"
                     )
                 ).body()?.firstOrNull()
                 created?.id

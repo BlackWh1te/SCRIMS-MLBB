@@ -1109,23 +1109,27 @@ fun AuthNavigation(
                                 }
                             },
                             onApproveApplication = { sid, appId ->
-                                val convId = java.util.UUID.randomUUID().toString()
-                                scrimViewModel.approveApplication(sid, appId, convId)
-                                // Create conversation for the two team leaders
-                                messageViewModel.sendApplyMessage(
-                                    scrimId = sid,
-                                    scrimTitle = scrim.teamName,
-                                    applicantId = userProfile?.id ?: "",
-                                    applicantName = userProfile?.username ?: "",
-                                    applicantTeamId = myTeam?.id ?: "",
-                                    applicantTeamName = myTeam?.name ?: "",
-                                    scrimCreatorId = scrim.teamLeader,
-                                    scrimCreatorName = scrim.teamLeader,
-                                    scrimCreatorTeamId = scrim.teamId,
-                                    scrimCreatorTeamName = scrim.teamName,
-                                    teamPlayerCount = myTeam?.players?.size ?: 0,
-                                    teamMaxPlayers = myTeam?.maxPlayers ?: 7
-                                )
+                                val app = scrim.applications.find { it.id == appId }
+                                if (app != null) {
+                                    // Create conversation between the REAL applicant leader and the host
+                                    messageViewModel.sendApplyMessage(
+                                        scrimId = sid,
+                                        scrimTitle = scrim.teamName,
+                                        applicantId = app.applicantTeamLeader,
+                                        applicantName = app.applicantTeamLeaderName,
+                                        applicantTeamId = app.applicantTeamId,
+                                        applicantTeamName = app.applicantTeamName,
+                                        scrimCreatorId = userProfile?.id ?: "",
+                                        scrimCreatorName = userProfile?.username ?: "",
+                                        scrimCreatorTeamId = myTeam?.id ?: "",
+                                        scrimCreatorTeamName = myTeam?.name ?: "",
+                                        teamPlayerCount = myTeam?.players?.size ?: 0,
+                                        teamMaxPlayers = myTeam?.maxPlayers ?: 7,
+                                        onConversationCreated = { conversation ->
+                                            scrimViewModel.approveApplication(sid, appId, conversation.id)
+                                        }
+                                    )
+                                }
                             },
                             onRejectApplication = { sid, appId ->
                                 scrimViewModel.rejectApplication(sid, appId)
