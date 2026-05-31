@@ -8,6 +8,41 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim lifecycle & realtime audit] — Duplicate guard, ready reset, create validation, realtime game results, and error logging
+
+### Commits
+- `1f6489f` — fix(scrim): add duplicate-guard, ready-reset, create validation, realtime game results, and error logging
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `applyToScrim`: added duplicate-application guard. Fetches existing applications and rejects if the applicant team already has a `PENDING` application for this scrim.
+  - `transitionToReadyCheck`: now resets `team_a_ready` and `team_b_ready` to `false` when entering `READY_CHECK`. Prevents stale ready flags from a previous ready check from leaking into the new one.
+  - `markReady`: added `alreadyReady` guard. Rejects with a clear error if the team has already marked ready, preventing spam and redundant API calls.
+  - `createScrim`: added `bestOf.games` validation (must be 1, 3, or 5) before calling the API. Prevents DB error 23514 from reaching the backend.
+  - `fetchGameResultsForScrim`: now logs API failures and exceptions via `Timber.w` instead of silently swallowing them.
+  - `subscribeToScrim` / `subscribeToAllScrims`: now call `fetchGameResultsForScrim` after receiving a realtime event and pass the results to `mapDtoToScrim`. Previously realtime updates would **wipe out** `gameResults` because `mapDtoToScrim` defaulted to `emptyList()`.
+  - `completeScrim`: hardened all downstream best-effort operations:
+    - `getMatches` now checks `isSuccessful` before reading body.
+    - `createMatch` now logs failure via `Timber.w`.
+    - `getMatchResults` now checks `isSuccessful`.
+    - `createMatchResult` / `updateMatchResult` now log failures.
+    - `awardScrimPoints` now checks `isSuccessful` and logs failure. Previously it silently failed because `Response<Unit>` never throws on non-2xx, so the `try-catch` was completely ineffective.
+
+### Root Cause
+Multiple lifecycle edge cases were unguarded: duplicate applications, double-ready, invalid best_of values, stale ready flags, and silent failures in downstream operations. Realtime subscriptions were broken for per-game data because `mapDtoToScrim` defaulted `gameResults` to `emptyList()`.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The duplicate-application guard is required. Do NOT remove it.
+- `[INTENTIONAL FIX]` — Ready-flag reset on transitionToReadyCheck is required. Do NOT remove it.
+- `[INTENTIONAL FIX]` — The bestOf validation is required to prevent DB constraint violations. Do NOT remove it.
+- `[INTENTIONAL FIX]` — Fetching game results in realtime subscriptions is required to prevent data loss. Do NOT remove it.
+- `[INTENTIONAL FIX]` — `isSuccessful` checks on downstream API calls are required for observability. Do NOT remove them.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim participant & winner validation audit] — Added participant validation, winner validation, and auto-cancel terminal-state guard
 
 ### Commits
