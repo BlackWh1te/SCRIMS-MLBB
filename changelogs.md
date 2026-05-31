@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-06-01 04:45 [Session: Audit revealed completed_requires_winner blocks BO2 ties]
+
+### Commits
+- `3f88eb4` — fix(db): allow NULL winner for BO2 ties in completed_requires_winner constraint
+
+### Fixed (AUDIT FINDING)
+- **DB Migration:** `supabase/migrations/20260631200001_fix_completed_requires_winner_for_bo2_ties.sql`
+  - `completed_requires_winner` CHECK constraint was: `status='Completed' => winner_team_id IS NOT NULL`
+  - This blocked the BO2 tie completion feature (`complete_scrim` RPC sets `winner_team_id = NULL` for ties)
+  - **Constraint relaxed to:** `status='Completed' => (winner_team_id IS NOT NULL OR best_of = 2)`
+  - The RPC already validates tie legitimacy (equal wins, best_of=2 only); the constraint just allows the DB to accept it
+
+---
+
 ## 2026-06-01 04:35 [Session: Change series format for unfinished series]
 
 ### Commits
