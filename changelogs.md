@@ -8,6 +8,39 @@
 
 ---
 
+## 2026-05-31 04:30 [Session: Team chat UI improvement] — Team chat header, member count, group avatar, team badge
+
+### Commits
+- `e20cb07` — feat(ui): improve team chat UI — header, member count, group avatar, team badge
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/MessageListScreen.kt`
+  - `TeamChatCard`: Added stacked dual-circle avatar (gold foreground + blue background) for team feel.
+  - `TeamChatCard`: Added member count pill (person icon + count) next to TEAM badge.
+  - `TeamChatCard`: Added pinned indicator (bookmark icon) next to timestamp.
+  - `TeamChatCard`: Added subtle gold glow accent at top edge of card.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ChatScreen.kt`
+  - Header now shows `groupName` + TEAM badge for team chats instead of other user's name.
+  - Subtitle shows member count ("5 members") for team chats instead of opponent team name.
+  - Group avatar (stacked circles with Group icon) shown for team chats instead of user avatar.
+  - Presence dot hidden for team chats (not applicable to groups).
+  - Report button hidden for team chats (no single user to report).
+  - Info button navigates to team info (`conversation.teamId`) for team chats.
+  - Message placeholder shows "Start chatting with your team..." for team chats.
+  - `EmptyChatState` updated with team chat support: group icon, team placeholder text, member count pill.
+  - `MessageBubble.onViewTeamInfo` uses `conversation.teamId` for team chats.
+- **File:** `app/src/main/res/values/strings.xml`
+  - Added `team_chat_members` string: `"%d members"`.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+- `./gradlew.bat assembleDebug` passes — APK built successfully.
+
+### Verdict
+- All changes are additive UI improvements. No behavioral regressions.
+
+---
+
 ## 2026-05-31 05:00 [Session: Scrim full pipeline fix] — Timestamp error 22007, current_players 0/10, team name, UI lag
 
 ### Commits
