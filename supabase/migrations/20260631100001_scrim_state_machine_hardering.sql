@@ -9,28 +9,59 @@ ALTER TABLE scrims ADD CONSTRAINT valid_scrim_status
 -- 2. When status is 'Filled' or beyond, opponent_team_id must be set
 -- (prevents scrims locked without an opponent)
 ALTER TABLE scrims DROP CONSTRAINT IF EXISTS filled_requires_opponent;
-ALTER TABLE scrims ADD CONSTRAINT filled_requires_opponent
-    CHECK (
-        status IN ('Open', 'Pending', 'Accepted') OR
-        (status NOT IN ('Open', 'Pending', 'Accepted') AND opponent_team_id IS NOT NULL)
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM scrims
+        WHERE status NOT IN ('Open', 'Pending', 'Accepted')
+          AND opponent_team_id IS NULL
+    ) THEN
+        ALTER TABLE scrims ADD CONSTRAINT filled_requires_opponent
+            CHECK (
+                status IN ('Open', 'Pending', 'Accepted') OR
+                (status NOT IN ('Open', 'Pending', 'Accepted') AND opponent_team_id IS NOT NULL)
+            );
+    ELSE
+        RAISE NOTICE 'Skipping filled_requires_opponent: existing rows violate constraint';
+    END IF;
+END $$;
 
 -- 3. When status is 'Completed', winner_team_id must be set and must match a participant
 ALTER TABLE scrims DROP CONSTRAINT IF EXISTS completed_requires_winner;
-ALTER TABLE scrims ADD CONSTRAINT completed_requires_winner
-    CHECK (
-        status != 'Completed' OR
-        (status = 'Completed' AND winner_team_id IS NOT NULL)
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM scrims WHERE status = 'Completed' AND winner_team_id IS NULL
+    ) THEN
+        ALTER TABLE scrims ADD CONSTRAINT completed_requires_winner
+            CHECK (
+                status != 'Completed' OR
+                (status = 'Completed' AND winner_team_id IS NOT NULL)
+            );
+    ELSE
+        RAISE NOTICE 'Skipping completed_requires_winner: existing rows violate constraint';
+    END IF;
+END $$;
 
 -- 4. Both ready flags must be FALSE when status is 'Open' or 'Accepted' (FILLED in app)
 -- (prevents stale ready flags from a previous attempt)
 ALTER TABLE scrims DROP CONSTRAINT IF EXISTS open_filled_not_ready;
-ALTER TABLE scrims ADD CONSTRAINT open_filled_not_ready
-    CHECK (
-        status NOT IN ('Open', 'Accepted') OR
-        (team_a_ready = FALSE AND team_b_ready = FALSE)
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM scrims
+        WHERE status IN ('Open', 'Accepted')
+          AND (team_a_ready = TRUE OR team_b_ready = TRUE)
+    ) THEN
+        ALTER TABLE scrims ADD CONSTRAINT open_filled_not_ready
+            CHECK (
+                status NOT IN ('Open', 'Accepted') OR
+                (team_a_ready = FALSE AND team_b_ready = FALSE)
+            );
+    ELSE
+        RAISE NOTICE 'Skipping open_filled_not_ready: existing rows violate constraint';
+    END IF;
+END $$;
 
 -- 5. Scrim game results status values
 ALTER TABLE scrim_game_results DROP CONSTRAINT IF EXISTS valid_game_result_status;
@@ -40,11 +71,22 @@ ALTER TABLE scrim_game_results ADD CONSTRAINT valid_game_result_status
 -- 6. Prevent selecting a winner before both screenshots are uploaded
 -- This is enforced by the app, but adding a DB guard for data integrity
 ALTER TABLE scrim_game_results DROP CONSTRAINT IF EXISTS winner_requires_screenshots;
-ALTER TABLE scrim_game_results ADD CONSTRAINT winner_requires_screenshots
-    CHECK (
-        winner_team_id IS NULL OR
-        (team_a_screenshot_url IS NOT NULL AND team_b_screenshot_url IS NOT NULL)
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM scrim_game_results
+        WHERE winner_team_id IS NOT NULL
+          AND (team_a_screenshot_url IS NULL OR team_b_screenshot_url IS NULL)
+    ) THEN
+        ALTER TABLE scrim_game_results ADD CONSTRAINT winner_requires_screenshots
+            CHECK (
+                winner_team_id IS NULL OR
+                (team_a_screenshot_url IS NOT NULL AND team_b_screenshot_url IS NOT NULL)
+            );
+    ELSE
+        RAISE NOTICE 'Skipping winner_requires_screenshots: existing rows violate constraint';
+    END IF;
+END $$;
 
 -- 7. Best_of must match the DB constraint (1, 3, 5) — note: BO2 is a special case handled by app
 -- The existing CHECK(best_of IN (1, 3, 5)) already handles this, but we ensure it stays

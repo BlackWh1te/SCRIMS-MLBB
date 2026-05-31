@@ -301,15 +301,28 @@ END;
 $$;
 
 -- 6. RLS policy for admin override (admins can update any game result)
-CREATE POLICY IF NOT EXISTS "Admins can resolve disputed game results"
-    ON scrim_game_results FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE
-        )
-    );
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'scrim_game_results'
+          AND policyname = 'Admins can resolve disputed game results'
+    ) THEN
+        CREATE POLICY "Admins can resolve disputed game results"
+            ON scrim_game_results FOR UPDATE
+            USING (
+                EXISTS (
+                    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE
+                )
+            )
+            WITH CHECK (
+                EXISTS (
+                    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE
+                )
+            );
+    END IF;
+END $$;
+
+-- 7. Force PostgREST to reload its schema cache immediately
+NOTIFY pgrst, 'reload schema';
