@@ -8,6 +8,41 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim UI + validation + state cleanup audit] — Fixed isHost detection, BO2 validation, error surfacing, and stale data
+
+### Commits
+- `2a9bb7f` — fix(scrim): isHost detection, BO2 validation, error handling, and stale state cleanup
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - `isHost` computation changed from `scrim.teamLeader == currentUserId` (always false because `teamLeader` is always `""`) to `scrim.teamId == currentUserTeamId && isTeamLeader`.
+  - This fixes the critical UI bug where the scrim host never saw `HostActions` (approve/reject/cancel) and instead saw the visitor apply button.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `createScrim` bestOf validation expanded from `setOf(1, 3, 5)` to `setOf(1, 2, 3, 5)` to match the DB migration that added `2` to the `valid_best_of` CHECK constraint.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - `sendApplyMessage`: added `_error.value` assignment on failure. Previously conversation creation failures during `onApproveApplication` were completely silent.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - `loadScrimById`: now clears `_selectedScrim.value = null` on failure so stale scrim data does not linger.
+  - `checkAndAutoCancelOverdueScrims`: now fetches all scrims from `scrimRepository.getAllScrims()` instead of filtering `_scrims.value` (which may only contain search results).
+  - `cancelScrim`: falls back to `scrimRepository.getScrimById(scrimId)` if the scrim is not found in the local `_scrims` list.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Added `else` branch for `ScrimDetailScreen` route when `scrim == null`. Shows "Scrim not found" with a back button instead of a blank screen.
+
+### Root Cause
+- `scrim.teamLeader` is intentionally empty (DB has no `team_leader` column). The UI was relying on it for host detection, breaking the entire host workflow.
+- `BO2` was added to the DB schema but the client validation was never updated, causing rejected creation requests.
+- `MessageViewModel.sendApplyMessage` omitted error state on failure, leaving the approval flow hanging silently.
+- Several ViewModel methods used `_scrims.value` as the source of truth, but `_scrims` can be overwritten by search results.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `isHost` computation change is required because `teamLeader` will remain empty until a DB schema migration adds the column. Do NOT revert to `scrim.teamLeader == currentUserId`.
+- `[INTENTIONAL FIX]` — The BO2 validation expansion is required to match the live DB constraint. Do NOT shrink it back to `(1, 3, 5)`.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim fire-and-forget audit] — Hardened approveApplication and setScrimRoster against silent API failures
 
 ### Commits
