@@ -32,6 +32,9 @@ interface ScrimRepositoryInterface {
     /** Select the winner of a specific game */
     suspend fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String): Flow<Result<Scrim>>
 
+    /** Change series format mid-series (e.g. BO5 -> BO3) when teams can't finish all games */
+    suspend fun changeSeriesFormat(scrimId: String, newBestOf: Int): Flow<Result<Scrim>>
+
     suspend fun completeScrim(scrimId: String, winnerTeamId: String?): Flow<Result<Scrim>>
     fun calculatePointsChanges(scrim: Scrim): PointsResult
     suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>>

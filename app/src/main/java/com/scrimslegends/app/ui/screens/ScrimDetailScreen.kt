@@ -77,6 +77,7 @@ fun ScrimDetailScreen(
     onUploadScreenshot: ((String, String, String) -> Unit)? = null, // scrimId, teamId, screenshotUrl
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null, // scrimId, teamId, gameNumber, screenshotUrl
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null, // scrimId, gameNumber, winnerTeamId
+    onChangeSeriesFormat: ((String, Int) -> Unit)? = null,  // scrimId, newBestOf
     onCompleteScrim: ((String, String?) -> Unit)? = null      // scrimId, winnerTeamId
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -428,6 +429,7 @@ fun ScrimDetailScreen(
                                 onUploadScreenshot = onUploadScreenshot,
                                 onUploadGameScreenshot = onUploadGameScreenshot,
                                 onSelectGameWinner = onSelectGameWinner,
+                                onChangeSeriesFormat = onChangeSeriesFormat,
                                 onCompleteScrim = onCompleteScrim
                             )
 
@@ -443,6 +445,7 @@ fun ScrimDetailScreen(
                                 onUploadScreenshot = onUploadScreenshot,
                                 onUploadGameScreenshot = onUploadGameScreenshot,
                                 onSelectGameWinner = onSelectGameWinner,
+                                onChangeSeriesFormat = onChangeSeriesFormat,
                                 onCompleteScrim = onCompleteScrim
                             )
 
@@ -686,6 +689,7 @@ private fun HostActions(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
+    onChangeSeriesFormat: ((String, Int) -> Unit)? = null,
     onCompleteScrim: ((String, String?) -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -814,6 +818,7 @@ private fun HostActions(
                     onUploadScreenshot = onUploadScreenshot,
                     onUploadGameScreenshot = onUploadGameScreenshot,
                     onSelectGameWinner = onSelectGameWinner,
+                    onChangeSeriesFormat = onChangeSeriesFormat,
                     onCompleteScrim = onCompleteScrim,
                     onNavigateToChat = onNavigateToChat
                 )
@@ -1161,6 +1166,7 @@ private fun OpponentActions(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
+    onChangeSeriesFormat: ((String, Int) -> Unit)? = null,
     onCompleteScrim: ((String, String?) -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1232,6 +1238,7 @@ private fun OpponentActions(
                     onUploadScreenshot = onUploadScreenshot,
                     onUploadGameScreenshot = onUploadGameScreenshot,
                     onSelectGameWinner = onSelectGameWinner,
+                    onChangeSeriesFormat = onChangeSeriesFormat,
                     onCompleteScrim = onCompleteScrim,
                     onNavigateToChat = onNavigateToChat
                 )
@@ -1661,6 +1668,7 @@ private fun InProgressSection(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)?,
     onSelectGameWinner: ((String, Int, String) -> Unit)?,
+    onChangeSeriesFormat: ((String, Int) -> Unit)?,
     onCompleteScrim: ((String, String?) -> Unit)?,
     onNavigateToChat: ((String) -> Unit)?
 ) {
@@ -1678,6 +1686,7 @@ private fun InProgressSection(
     var isUploading by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
     var showSeriesWinnerDialog by remember { mutableStateOf(false) }
+    var showChangeFormatDialog by remember { mutableStateOf(false) }
 
     // Create game result rows if they don't exist yet (BO1 legacy or newly-filled scrims)
     // In a real app this is handled by the backend on scrim creation/fill.
@@ -1720,6 +1729,14 @@ private fun InProgressSection(
                 }
             }
         }
+    }
+
+    val confirmedGames = scrim.gamesWithWinner
+    val availableFormats = when (scrim.bestOf) {
+        BestOf.BO5 -> listOf(BestOf.BO3, BestOf.BO2, BestOf.BO1).filter { it.games >= confirmedGames }
+        BestOf.BO3 -> listOf(BestOf.BO2, BestOf.BO1).filter { it.games >= confirmedGames }
+        BestOf.BO2 -> listOf(BestOf.BO1).filter { it.games >= confirmedGames }
+        else -> emptyList()
     }
 
     Card(
@@ -1837,6 +1854,23 @@ private fun InProgressSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Change format button (only if there are smaller valid formats)
+            if (availableFormats.isNotEmpty()) {
+                TextButton(
+                    onClick = { showChangeFormatDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Change format (${scrim.bestOf.displayName} → shorter)",
+                        color = WarningOrange,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Chat button
             if (scrim.isChatOpen) {
                 GradientButton(
@@ -1847,6 +1881,60 @@ private fun InProgressSection(
                 )
             }
         }
+    }
+
+    // Change format dialog
+    if (showChangeFormatDialog) {
+        AlertDialog(
+            onDismissRequest = { showChangeFormatDialog = false },
+            containerColor = DarkNavy,
+            title = {
+                Text("Change Series Format?", color = White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(
+                        "Teams can't continue playing. Choose a smaller format that includes the games already played.",
+                        color = LightGray,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    availableFormats.forEach { format ->
+                        val isSelected = format == scrim.bestOf
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) WarningOrange.copy(alpha = 0.15f) else Color.Transparent)
+                                .clickable {
+                                    onChangeSeriesFormat?.invoke(scrim.id, format.games)
+                                    showChangeFormatDialog = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = format.displayName,
+                                color = if (isSelected) WarningOrange else White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Text("Current", color = WarningOrange, fontSize = 12.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showChangeFormatDialog = false }) {
+                    Text("Cancel", color = MidGray)
+                }
+            }
+        )
     }
 
     // Series completion confirmation dialog

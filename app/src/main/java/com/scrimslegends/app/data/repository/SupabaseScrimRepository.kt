@@ -1143,4 +1143,29 @@ class SupabaseScrimRepository(
             }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
+
+    override suspend fun changeSeriesFormat(scrimId: String, newBestOf: Int): Flow<Result<Scrim>> = flow {
+        try {
+            val rpcResult = api.changeSeriesFormatRpc(mapOf(
+                "p_scrim_id" to scrimId,
+                "p_new_best_of" to newBestOf
+            ))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to change format: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
+            }
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Change format failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            getScrimById(scrimId).collect { result ->
+                result.getOrNull()?.let { emit(Result.success(it)) }
+                    ?: emit(Result.failure(Exception("Scrim not found after format change")))
+            }
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
 }

@@ -509,6 +509,25 @@ class ScrimViewModel @Inject constructor(
         }
     }
 
+    /** Change series format mid-series (e.g. BO5 -> BO3) when teams can't finish all games */
+    fun changeSeriesFormat(scrimId: String, newBestOf: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            scrimRepository.changeSeriesFormat(scrimId, newBestOf).collect { result ->
+                result.onSuccess { scrim ->
+                    _selectedScrim.value = scrim
+                    loadScrims()
+                    _isLoading.value = false
+                }.onFailure { exception ->
+                    _error.value = exception.message
+                    _isLoading.value = false
+                }
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // COMPLETE SCRIM — Select winner, calculate points
     // ═══════════════════════════════════════════════════════════════

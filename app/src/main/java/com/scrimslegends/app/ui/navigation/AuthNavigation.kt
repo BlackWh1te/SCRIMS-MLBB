@@ -1173,6 +1173,9 @@ fun AuthNavigation(
                             onSelectGameWinner = { sid, gameNum, winnerId ->
                                 scrimViewModel.selectGameWinner(sid, gameNum, winnerId)
                             },
+                            onChangeSeriesFormat = { sid, newBestOf ->
+                                scrimViewModel.changeSeriesFormat(sid, newBestOf)
+                            },
                             onCompleteScrim = { sid, winnerId ->
                                 scrimViewModel.completeScrim(sid, winnerId)
                             }

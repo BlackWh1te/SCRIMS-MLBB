@@ -398,6 +398,20 @@ class ScrimRepository : ScrimRepositoryInterface {
     // COMPLETE SCRIM — Select winner, award/deduct points
     // ═══════════════════════════════════════════════════════════════
 
+    /** Change series format mid-series (mock) */
+    override suspend fun changeSeriesFormat(scrimId: String, newBestOf: Int): Flow<Result<Scrim>> = flow {
+        delay(300)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index == -1) {
+            emit(Result.failure(Exception("Scrim not found")))
+            return@flow
+        }
+        val scrim = scrims[index]
+        val newBestOfEnum = BestOf.fromGames(newBestOf)
+        scrims[index] = scrim.copy(bestOf = newBestOfEnum, gameResults = scrim.gameResults.take(newBestOf))
+        emit(Result.success(scrims[index]))
+    }
+
     /** Complete scrim: must have screenshot uploaded, select winner */
     override suspend fun completeScrim(scrimId: String, winnerTeamId: String?): Flow<Result<Scrim>> = flow {
         delay(500)
