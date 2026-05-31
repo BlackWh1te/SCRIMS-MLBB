@@ -306,6 +306,8 @@ class MessageViewModel @Inject constructor(
                 result.onSuccess {
                     _selectedConversation.value = it
                     onConversationCreated(it)
+                }.onFailure { exception ->
+                    _error.value = "Failed to create conversation: ${exception.message}"
                 }
                 _isLoading.value = false
             }

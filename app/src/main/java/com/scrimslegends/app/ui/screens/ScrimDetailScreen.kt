@@ -387,7 +387,7 @@ fun ScrimDetailScreen(
                 // ACTION AREA — Team vs Team Application Flow + Ready/Screenshot/Complete
                 // ═══════════════════════════════════════════════════════
                 item {
-                    val isHost = scrim.teamLeader == currentUserId
+                    val isHost = scrim.teamId == currentUserTeamId && isTeamLeader
                     val myApplication = scrim.applications.find { it.applicantTeamId == currentUserTeamId }
                     val isOpponent = scrim.opponentTeamId == currentUserTeamId
                     val hasPendingApps = scrim.applications.any { it.status == ApplicationStatus.PENDING }

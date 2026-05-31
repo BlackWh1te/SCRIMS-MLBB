@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -103,6 +104,7 @@ class ScrimViewModel @Inject constructor(
                         _selectedScrim.value = scrim
                         _isLoading.value = false
                     }.onFailure { exception ->
+                        _selectedScrim.value = null
                         _error.value = exception.message
                         _isLoading.value = false
                     }
@@ -222,6 +224,11 @@ class ScrimViewModel @Inject constructor(
             _error.value = null
 
             val scrim = _scrims.value.find { it.id == scrimId }
+                ?: scrimRepository.getScrimById(scrimId)
+                    .catch { emit(Result.failure(it)) }
+                    .firstOrNull()
+                    ?.getOrNull()
+
             if (scrim != null) {
                 val cancelledBy = AuthorizationUtils.currentUserId()
                 scrimRepository.updateScrim(
@@ -540,20 +547,26 @@ class ScrimViewModel @Inject constructor(
     /** Check overdue scrims and auto-cancel if no result within 2h deadline */
     fun checkAndAutoCancelOverdueScrims() {
         viewModelScope.launch {
-            val overdueScrims = _scrims.value.filter { scrim ->
-                scrim.opponentTeamId != null &&
-                        scrim.isAutoCancelOverdue &&
-                        scrim.resultSubmittedAt == null &&
-                        scrim.status in setOf(ScrimStatus.IN_PROGRESS, ScrimStatus.READY_CHECK, ScrimStatus.FILLED)
-            }
-
-            overdueScrims.forEach { scrim ->
-                scrimRepository.createAutoCancelledRecord(scrim.id).collect { result ->
-                    result.onSuccess {
-                        loadScrims()
-                    }.onFailure { exception ->
-                        _error.value = "Failed to auto-cancel overdue scrim: ${exception.message}"
+            scrimRepository.getAllScrims().collect { result ->
+                result.onSuccess { allScrims ->
+                    val overdueScrims = allScrims.filter { scrim ->
+                        scrim.opponentTeamId != null &&
+                                scrim.isAutoCancelOverdue &&
+                                scrim.resultSubmittedAt == null &&
+                                scrim.status in setOf(ScrimStatus.IN_PROGRESS, ScrimStatus.READY_CHECK, ScrimStatus.FILLED)
                     }
+
+                    overdueScrims.forEach { scrim ->
+                        scrimRepository.createAutoCancelledRecord(scrim.id).collect { cancelResult ->
+                            cancelResult.onSuccess {
+                                loadScrims()
+                            }.onFailure { exception ->
+                                _error.value = "Failed to auto-cancel overdue scrim: ${exception.message}"
+                            }
+                        }
+                    }
+                }.onFailure { exception ->
+                    _error.value = "Failed to load scrims for auto-cancel check: ${exception.message}"
                 }
             }
         }

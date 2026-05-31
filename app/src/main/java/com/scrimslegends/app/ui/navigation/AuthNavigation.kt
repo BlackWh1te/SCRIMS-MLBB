@@ -6,6 +6,7 @@ import timber.log.Timber
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -1162,6 +1163,21 @@ fun AuthNavigation(
                                 scrimViewModel.completeScrim(sid, winnerId)
                             }
                         )
+                    } else {
+                        // Scrim not found (deep link stale or deleted)
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Scrim not found", color = Color.White)
+                                TextButton(
+                                    onClick = { navController.popBackStack() }
+                                ) {
+                                    Text("Go Back", color = GoldPrimary)
+                                }
+                            }
+                        }
                     }
                 }
 

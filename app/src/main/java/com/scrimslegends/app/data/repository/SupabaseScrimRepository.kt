@@ -196,9 +196,9 @@ class SupabaseScrimRepository(
         try {
             AuthorizationUtils.requireOwner(scrim.teamLeader, "create scrim")
                 .onFailure { emit(Result.failure(it)); return@flow }
-            // Validate best_of against DB constraint (1, 3, 5)
-            if (scrim.bestOf.games !in setOf(1, 3, 5)) {
-                emit(Result.failure(Exception("Invalid best-of value: ${scrim.bestOf.games}. Allowed: 1, 3, 5")))
+            // Validate best_of against DB constraint (1, 2, 3, 5)
+            if (scrim.bestOf.games !in setOf(1, 2, 3, 5)) {
+                emit(Result.failure(Exception("Invalid best-of value: ${scrim.bestOf.games}. Allowed: 1, 2, 3, 5")))
                 return@flow
             }
             val dto = mapScrimToDto(scrim)
