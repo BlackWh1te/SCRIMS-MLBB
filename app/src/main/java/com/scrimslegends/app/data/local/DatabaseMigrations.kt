@@ -179,3 +179,19 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
         db.execSQL("ALTER TABLE cached_scrims ADD COLUMN conversationId TEXT")
     }
 }
+
+/**
+ * Migration from version 16 to 17.
+ * Adds missing ScrimEntity fields for complete offline detail view:
+ * - resultSubmittedAt, cancellationReason, cancelledBy
+ * - teamAScreenshotUploadedAt, teamBScreenshotUploadedAt
+ */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN teamAScreenshotUploadedAt TEXT")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN teamBScreenshotUploadedAt TEXT")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN resultSubmittedAt TEXT")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN cancellationReason TEXT")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN cancelledBy TEXT")
+    }
+}

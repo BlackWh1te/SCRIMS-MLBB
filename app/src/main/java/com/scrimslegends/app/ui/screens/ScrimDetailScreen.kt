@@ -80,7 +80,6 @@ fun ScrimDetailScreen(
     onCompleteScrim: ((String, String) -> Unit)? = null      // scrimId, winnerTeamId
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
-    var isJoined by remember { mutableStateOf(false) }
 
     // ── Apply flow state ──
     var showTeamPicker by remember { mutableStateOf(false) }
@@ -1948,7 +1947,6 @@ private fun GameResultCard(
 ) {
     val myScreenshot = if (isTeamA) gameResult.teamAScreenshotUrl else gameResult.teamBScreenshotUrl
     val opponentScreenshot = if (isTeamA) gameResult.teamBScreenshotUrl else gameResult.teamAScreenshotUrl
-    var showWinnerPicker by remember { mutableStateOf(false) }
 
     val statusColor = when {
         gameResult.isDisputed -> ErrorRed

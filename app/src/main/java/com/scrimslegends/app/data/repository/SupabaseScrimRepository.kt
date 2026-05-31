@@ -105,7 +105,9 @@ class SupabaseScrimRepository(
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null
                 },
                 networkLoader = {
-                    val r = api.getScrims(range = "0-49")
+                    // TODO: implement proper pagination (offset/limit) when UI supports it
+                    // Cap at 200 rows to avoid unbounded data transfer on initial load
+                    val r = api.getScrims(range = "0-199")
                     if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) } ?: emptyList()
                     else throw Exception("Failed to fetch scrims")
                 },
@@ -224,17 +226,37 @@ class SupabaseScrimRepository(
             if (r.isSuccessful) {
                 val created = r.body()?.firstOrNull()
                 if (created != null) {
-                    // Create empty game result rows for each game in the series
+                    // Create empty game result rows for each game in the series.
+                    // All must succeed; if any fail, delete the scrim and fail the operation
+                    // to prevent incomplete game result sets that block completion.
                     val gameCount = scrim.bestOf.games
+                    var gameResultFailures = 0
                     for (gameNum in 1..gameCount) {
                         try {
-                            api.createScrimGameResult(
+                            val gr = api.createScrimGameResult(
                                 ScrimGameResultDto(
                                     scrimId = created.id,
                                     gameNumber = gameNum
                                 )
                             )
-                        } catch (_: Exception) { /* Best effort */ }
+                            if (!gr.isSuccessful) {
+                                gameResultFailures++
+                                Timber.w("ScrimRepo", "Failed to create game result $gameNum: ${gr.errorBody()?.string()}")
+                            }
+                        } catch (e: Exception) {
+                            gameResultFailures++
+                            Timber.w("ScrimRepo", "Exception creating game result $gameNum", e)
+                        }
+                    }
+                    if (gameResultFailures > 0) {
+                        // Rollback: delete the scrim so incomplete data doesn't persist
+                        try {
+                            api.deleteScrim(PostgrestFilter.eq(created.id))
+                        } catch (e: Exception) {
+                            Timber.w("ScrimRepo", "Rollback delete failed for scrim ${created.id}", e)
+                        }
+                        emit(Result.failure(Exception("Failed to create game results ($gameResultFailures/$gameCount failures). Scrim creation rolled back.")))
+                        return@flow
                     }
                     invalidateScrimCaches()
                     emit(Result.success(mapDtoToScrim(created)))
@@ -822,8 +844,13 @@ class SupabaseScrimRepository(
             teamAReadyAt = scrim.teamAReadyAt?.let { DateUtils.formatIsoUtc(it) },
             teamBReadyAt = scrim.teamBReadyAt?.let { DateUtils.formatIsoUtc(it) },
             teamAScreenshotUrl = scrim.teamAScreenshotUrl, teamBScreenshotUrl = scrim.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = scrim.teamAScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
+            teamBScreenshotUploadedAt = scrim.teamBScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
             conversationId = scrim.conversationId,
-            gameMode = scrim.gameMode.name, region = scrim.region.displayName,
+            resultSubmittedAt = scrim.resultSubmittedAt?.let { DateUtils.formatIsoUtc(it) },
+            cancellationReason = scrim.cancellationReason,
+            cancelledBy = scrim.cancelledBy,
+            gameMode = scrim.gameMode.name, region = scrim.region.name,
             skillLevel = scrim.skillLevel.name,
             maxPlayers = scrim.maxPlayers, currentPlayers = scrim.currentPlayers,
             createdAt = DateUtils.formatIsoUtc(scrim.createdAt)
@@ -850,7 +877,12 @@ class SupabaseScrimRepository(
             teamAReady = e.teamAReady, teamBReady = e.teamBReady,
             teamAReadyAt = parseTs(e.teamAReadyAt), teamBReadyAt = parseTs(e.teamBReadyAt),
             teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl,
+            teamAScreenshotUploadedAt = parseTs(e.teamAScreenshotUploadedAt),
+            teamBScreenshotUploadedAt = parseTs(e.teamBScreenshotUploadedAt),
             conversationId = e.conversationId,
+            resultSubmittedAt = parseTs(e.resultSubmittedAt),
+            cancellationReason = e.cancellationReason,
+            cancelledBy = e.cancelledBy,
             createdAt = try { DateUtils.parseIsoToMillis(e.createdAt) } catch (_: Exception) { System.currentTimeMillis() }
         )
     }
@@ -1019,15 +1051,12 @@ class SupabaseScrimRepository(
 
     override suspend fun uploadGameScreenshot(scrimId: String, teamId: String, gameNumber: Int, screenshotUrl: String): Flow<Result<Scrim>> = flow {
         try {
-            // Use atomic RPC: locks scrim + game result rows, prevents race condition
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val scrimDto = scrimResponse.body()?.firstOrNull()
-            if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            val isTeamA = scrimDto.teamId == teamId
+            // Use atomic RPC: locks scrim + game result rows, derives is_team_a from DB
+            // No pre-read needed — eliminates race condition where team_id changes between read and write
             val rpcResult = api.uploadGameScreenshotRpc(mapOf(
                 "p_scrim_id" to scrimId,
                 "p_game_number" to gameNumber,
-                "p_is_team_a" to isTeamA,
+                "p_team_id" to teamId,
                 "p_screenshot_url" to screenshotUrl
             ))
             if (!rpcResult.isSuccessful) {

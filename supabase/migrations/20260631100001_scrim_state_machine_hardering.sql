@@ -23,12 +23,12 @@ ALTER TABLE scrims ADD CONSTRAINT completed_requires_winner
         (status = 'Completed' AND winner_team_id IS NOT NULL)
     );
 
--- 4. Both ready flags must be FALSE when status is 'Open' or 'Filled'
+-- 4. Both ready flags must be FALSE when status is 'Open' or 'Accepted' (FILLED in app)
 -- (prevents stale ready flags from a previous attempt)
 ALTER TABLE scrims DROP CONSTRAINT IF EXISTS open_filled_not_ready;
 ALTER TABLE scrims ADD CONSTRAINT open_filled_not_ready
     CHECK (
-        status NOT IN ('Open', 'Filled') OR
+        status NOT IN ('Open', 'Accepted') OR
         (team_a_ready = FALSE AND team_b_ready = FALSE)
     );
 
