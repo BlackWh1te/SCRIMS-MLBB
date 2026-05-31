@@ -8,6 +8,38 @@
 
 ---
 
+## 2026-05-31 19:05 [Session: Atomic scrim approval + lock after confirm]
+
+### Commits
+- `b894f2b` — feat(scrim): atomic approval RPC + Cancelled status so no one else can apply after confirm
+
+### Changed
+- **File:** `supabase/migrations/20260631080001_approve_scrim_application_atomic.sql`
+  - Added `'Cancelled'` to `valid_application_status` constraint (was only Pending/Accepted/Rejected)
+  - Added `approve_scrim_application(p_application_id, p_conversation_id)` RPC function
+    - Verifies caller is the host team leader via `auth.uid()`
+    - Validates scrim is `Open` and application is `Pending`
+    - Atomically: approves the selected application, cancels all other pending applications, sets scrim to `Filled` with `opponent_team_id` and `conversation_id`
+    - Returns the updated scrim as JSON
+  - Cancelling other applications now uses `'Cancelled'` status instead of `'Rejected'`
+  - Cancelled teams no longer receive misleading "Your application was declined" notifications
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added `approveScrimApplication(@Body params: Map<String, Any>)` RPC endpoint
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `approveApplication` now calls the atomic RPC instead of fragile 3-step client flow:
+    - Removed: separate `updateScrimApplication` + `updateScrimApplicationsBulk` + `updateScrim` calls
+    - Added: single `api.approveScrimApplication()` call, then `getScrimById()` to return fully populated Scrim
+  - `toDbApplicationStatus(CANCELLED)` now correctly maps to `"Cancelled"` instead of `"Rejected"`
+  - `fromDbApplicationStatus` now handles `"Cancelled"` → `ApplicationStatus.CANCELLED`
+
+### Impact
+- Approval is now fully atomic in the DB — no partial states where application is approved but scrim is still OPEN
+- Once a team is confirmed, the scrim is immediately locked to FILLED; no other team can apply
+- Teams whose applications are cancelled due to another team being approved get no notification (clean UX)
+- Build passes with 0 errors
+
+---
+
 ## 2026-05-31 18:52 [Session: Scrim cache + realtime audit fixes — migration, entity fields, mapping, realtime data]
 
 ### Commits
