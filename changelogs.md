@@ -11,7 +11,7 @@
 ## 2026-05-31 08:20 [Session: Scrim apply flow fix] — Team picker, player picker, OpponentActions, multi-team support
 
 ### Commits
-- (pending)
+- `029a101` — fix(scrim-apply): add team picker + player picker dialogs, OpponentActions, multi-team support
 
 ### Changed
 - **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
