@@ -686,7 +686,9 @@ class SupabaseScrimRepository(
                     if (dto.id == scrimId) {
                         invalidateScrimCaches()
                         val gameResults = fetchGameResultsForScrim(dto.id)
-                        emit(mapDtoToScrim(dto, gameResults))
+                        val applications = fetchApplicationsForScrim(dto.id)
+                        val rosters = fetchRostersForScrim(dto.id)
+                        emit(mapDtoToScrim(dto, gameResults, applications, rosters))
                     }
                 } catch (e: Exception) {
                     Timber.w("ScrimRepo", "Failed to parse Realtime UPDATE: ${e.message}")
@@ -721,7 +723,9 @@ class SupabaseScrimRepository(
                         val dto = parseRealtimeRecordToScrimDto(record)
                         invalidateScrimCaches()
                         val gameResults = fetchGameResultsForScrim(dto.id)
-                        emit(mapDtoToScrim(dto, gameResults))
+                        val applications = fetchApplicationsForScrim(dto.id)
+                        val rosters = fetchRostersForScrim(dto.id)
+                        emit(mapDtoToScrim(dto, gameResults, applications, rosters))
                     }
                 } catch (e: Exception) {
                     Timber.w("ScrimRepo", "Failed to parse Realtime event: ${e.message}")
@@ -848,6 +852,8 @@ class SupabaseScrimRepository(
     private fun mapScrimToEntity(scrim: Scrim): ScrimEntity {
         return ScrimEntity(
             id = scrim.id, teamId = scrim.teamId,
+            teamName = scrim.teamName,
+            teamLeader = scrim.teamLeader,
             scheduledDate = DateUtils.formatDate(scrim.scheduledTime),
             scheduledTime = DateUtils.formatTime(scrim.scheduledTime),
             bestOf = scrim.bestOf.games, status = scrim.status.name,
@@ -858,9 +864,11 @@ class SupabaseScrimRepository(
             teamAReadyAt = scrim.teamAReadyAt?.let { DateUtils.formatIsoUtc(it) },
             teamBReadyAt = scrim.teamBReadyAt?.let { DateUtils.formatIsoUtc(it) },
             teamAScreenshotUrl = scrim.teamAScreenshotUrl, teamBScreenshotUrl = scrim.teamBScreenshotUrl,
+            conversationId = scrim.conversationId,
             gameMode = scrim.gameMode.name, region = scrim.region.displayName,
             skillLevel = scrim.skillLevel.name,
-            maxPlayers = scrim.maxPlayers, currentPlayers = scrim.currentPlayers
+            maxPlayers = scrim.maxPlayers, currentPlayers = scrim.currentPlayers,
+            createdAt = DateUtils.formatIsoUtc(scrim.createdAt)
         )
     }
 
@@ -869,7 +877,8 @@ class SupabaseScrimRepository(
         val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
         return Scrim(
             id = e.id, teamId = e.teamId,
-            teamName = "", teamLeader = "",
+            teamName = e.teamName,
+            teamLeader = e.teamLeader,
             gameMode = try { GameMode.valueOf(e.gameMode) } catch (_: Exception) { GameMode.RANKED },
             region = try { Region.valueOf(e.region) } catch (_: Exception) { try { Region.fromDisplayName(e.region) } catch (_: Exception) { Region.EU } },
             skillLevel = try { SkillLevel.valueOf(e.skillLevel) } catch (_: Exception) { SkillLevel.ALL },
@@ -882,7 +891,9 @@ class SupabaseScrimRepository(
             winnerTeamId = e.winnerTeamId,
             teamAReady = e.teamAReady, teamBReady = e.teamBReady,
             teamAReadyAt = parseTs(e.teamAReadyAt), teamBReadyAt = parseTs(e.teamBReadyAt),
-            teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl
+            teamAScreenshotUrl = e.teamAScreenshotUrl, teamBScreenshotUrl = e.teamBScreenshotUrl,
+            conversationId = e.conversationId,
+            createdAt = try { DateUtils.parseIsoToMillis(e.createdAt) } catch (_: Exception) { System.currentTimeMillis() }
         )
     }
 

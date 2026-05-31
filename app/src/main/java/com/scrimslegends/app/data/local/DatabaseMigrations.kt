@@ -166,3 +166,16 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         db.execSQL("ALTER TABLE pending_messages ADD COLUMN replyToSenderName TEXT")
     }
 }
+
+/**
+ * Migration from version 15 to 16.
+ * Adds missing ScrimEntity fields for proper offline detail view:
+ * - teamName, teamLeader, conversationId
+ */
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN teamName TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN teamLeader TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE cached_scrims ADD COLUMN conversationId TEXT")
+    }
+}

@@ -10,6 +10,8 @@ import androidx.room.PrimaryKey
 data class ScrimEntity(
     @PrimaryKey val id: String,
     val teamId: String,
+    val teamName: String = "",
+    val teamLeader: String = "",
     val scheduledDate: String,
     val scheduledTime: String,
     val bestOf: Int = 1,
@@ -24,6 +26,7 @@ data class ScrimEntity(
     val teamBReadyAt: String? = null,
     val teamAScreenshotUrl: String?,
     val teamBScreenshotUrl: String?,
+    val conversationId: String? = null,
     val gameMode: String = "RANKED",
     val region: String = "EU",
     val skillLevel: String = "ALL",
