@@ -326,8 +326,12 @@ class SupabaseScrimRepository(
             val application = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
             if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
             if (fromDbApplicationStatus(application.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
-            api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.APPROVED)))
-            api.updateScrimApplicationsBulk(scrimId = PostgrestFilter.eq(scrimId), status = PostgrestFilter.eq(toDbApplicationStatus(ApplicationStatus.PENDING)), body = mapOf("status" to toDbApplicationStatus(ApplicationStatus.CANCELLED)))
+            val approveR = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.APPROVED)))
+            if (!approveR.isSuccessful) { emit(Result.failure(Exception("Failed to approve application: ${approveR.errorBody()?.string()}"))); return@flow }
+
+            val bulkR = api.updateScrimApplicationsBulk(scrimId = PostgrestFilter.eq(scrimId), status = PostgrestFilter.eq(toDbApplicationStatus(ApplicationStatus.PENDING)), body = mapOf("status" to toDbApplicationStatus(ApplicationStatus.CANCELLED)))
+            if (!bulkR.isSuccessful) { Timber.w("ScrimRepo", "Failed to cancel other applications: ${bulkR.errorBody()?.string()}") }
+
             val updates = mutableMapOf<String, Any>("status" to toDbStatus(ScrimStatus.FILLED), "opponent_team_id" to application.applicantTeamId, "conversation_id" to conversationId)
             try { api.getTeamById(PostgrestFilter.eq(application.applicantTeamId)).body()?.firstOrNull()?.name?.let { updates["opponent_team_name"] = it } } catch (_: Exception) { }
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
@@ -410,8 +414,26 @@ class SupabaseScrimRepository(
                 .onFailure { emit(Result.failure(it)); return@flow }
 
             val existing = api.getScrimRosters(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId))
-            if (existing.isSuccessful) { existing.body()?.forEach { api.deleteScrimRosterEntry(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId), PostgrestFilter.eq(it.userId)) } }
-            roster.forEach { entry -> api.createScrimRosterEntry(ScrimRosterDto(scrimId = scrimId, teamId = teamId, userId = entry.playerId, isActive = entry.isActive)) }
+            if (existing.isSuccessful) {
+                existing.body()?.forEach {
+                    val dr = api.deleteScrimRosterEntry(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId), PostgrestFilter.eq(it.userId))
+                    if (!dr.isSuccessful) Timber.w("ScrimRepo", "Failed to delete roster entry ${it.userId}: ${dr.errorBody()?.string()}")
+                }
+            } else {
+                Timber.w("ScrimRepo", "Failed to fetch existing roster: ${existing.errorBody()?.string()}")
+            }
+            var rosterCreateFailures = 0
+            roster.forEach { entry ->
+                val cr = api.createScrimRosterEntry(ScrimRosterDto(scrimId = scrimId, teamId = teamId, userId = entry.playerId, isActive = entry.isActive))
+                if (!cr.isSuccessful) {
+                    rosterCreateFailures++
+                    Timber.w("ScrimRepo", "Failed to create roster entry ${entry.playerId}: ${cr.errorBody()?.string()}")
+                }
+            }
+            if (rosterCreateFailures > 0 && rosterCreateFailures == roster.size) {
+                emit(Result.failure(Exception("Failed to save roster: all $rosterCreateFailures entries failed")))
+                return@flow
+            }
             invalidateScrimCaches()
             getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
