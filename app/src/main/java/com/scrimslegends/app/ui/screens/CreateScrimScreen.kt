@@ -3,6 +3,7 @@ package com.scrimslegends.app.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.scrimslegends.app.data.model.BestOf
 import com.scrimslegends.app.data.model.GameMode
+import com.scrimslegends.app.data.model.Player
 import com.scrimslegends.app.data.model.Region
 import com.scrimslegends.app.data.model.SkillLevel
 import com.scrimslegends.app.data.model.Team
@@ -53,7 +55,8 @@ fun CreateScrimScreen(
         bestOf: BestOf,
         scheduledTime: Long,
         description: String,
-        currentPlayers: Int
+        currentPlayers: Int,
+        selectedPlayerIds: List<String>
     ) -> Unit
 ) {
     // Team selection state
@@ -61,8 +64,13 @@ fun CreateScrimScreen(
     val selectedTeam = teams.getOrElse(selectedTeamIndex) { teams.firstOrNull() }
     val teamName = selectedTeam?.name ?: stringResource(R.string.my_team_default)
     val teamId = selectedTeam?.id ?: ""
-    val currentPlayerCount = selectedTeam?.currentPlayerCount ?: 0
-    val meetsMinPlayers = selectedTeam?.meetsMinPlayers ?: false
+
+    // Player selection state — pre-select all team members as active by default
+    var selectedPlayerIds by remember(selectedTeam) {
+        mutableStateOf(selectedTeam?.players?.map { it.id }?.toSet() ?: emptySet())
+    }
+    var showPlayerSelectionDialog by remember { mutableStateOf(false) }
+    val activePlayerCount = selectedPlayerIds.size
 
     var showTeamPicker by remember { mutableStateOf(false) }
     var showMinPlayerDialog by remember { mutableStateOf(false) }
@@ -191,7 +199,7 @@ fun CreateScrimScreen(
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = if (meetsMinPlayers) SuccessGreen.copy(alpha = 0.15f) else WarningOrange.copy(alpha = 0.15f),
+                                    color = if (activePlayerCount >= 5) SuccessGreen.copy(alpha = 0.15f) else WarningOrange.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -199,14 +207,14 @@ fun CreateScrimScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.People, null,
-                                    tint = if (meetsMinPlayers) SuccessGreen else WarningOrange,
+                                    tint = if (activePlayerCount >= 5) SuccessGreen else WarningOrange,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "$currentPlayerCount/5",
+                                    text = "$activePlayerCount/5",
                                     style = iOSCaption2.copy(
-                                        color = if (meetsMinPlayers) SuccessGreen else WarningOrange,
+                                        color = if (activePlayerCount >= 5) SuccessGreen else WarningOrange,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 )
@@ -217,7 +225,96 @@ fun CreateScrimScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // ── Single compact form card ─────────────────────
+                // ── Player Selection Card ────────────────────────
+                AnimatedEntrance(delayMillis = 100) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceCard)
+                            .clickable { showPlayerSelectionDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            brush = Brush.verticalGradient(GoldGradient),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.HowToReg, null,
+                                        tint = DarkBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.select_roster),
+                                        style = iOSHeadline.copy(color = TextPrimary)
+                                    )
+                                    Text(
+                                        text = if (activePlayerCount >= 5)
+                                            "$activePlayerCount players selected"
+                                        else
+                                            "Need at least 5 — $activePlayerCount selected",
+                                        style = iOSCaption1.copy(
+                                            color = if (activePlayerCount >= 5) SuccessGreen else WarningOrange
+                                        )
+                                    )
+                                }
+                            }
+                            Icon(
+                                Icons.Default.ChevronRight, null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        // Show mini avatars of selected players
+                        if (selectedTeam != null && selectedPlayerIds.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                selectedTeam.players.filter { it.id in selectedPlayerIds }.take(7).forEach { player ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(BluePrimary.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BluePrimary
+                                        )
+                                    }
+                                }
+                                if (activePlayerCount > 7) {
+                                    Text(
+                                        "+${activePlayerCount - 7}",
+                                        fontSize = 11.sp,
+                                        color = TextTertiary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
                 AnimatedEntrance(delayMillis = 120) {
                     Column(
                         modifier = Modifier
@@ -524,7 +621,7 @@ fun CreateScrimScreen(
                 }
 
                 // ── Team size warning ────────────────────────────
-                if (currentPlayerCount < 5) {
+                if (activePlayerCount < 5) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -540,7 +637,7 @@ fun CreateScrimScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "$currentPlayerCount/5 players — need at least 5 to post.",
+                            text = "$activePlayerCount/5 players selected — need at least 5 to post.",
                             style = iOSCaption1.copy(color = WarningOrange)
                         )
                     }
@@ -549,10 +646,11 @@ fun CreateScrimScreen(
 
                 // ── Post Button ──────────────────────────────────
                 AnimatedEntrance(delayMillis = 280) {
+                    val canPost = activePlayerCount >= 5
                     GradientButton(
                         text = stringResource(R.string.post_scrim),
                         onClick = {
-                            if (!meetsMinPlayers) {
+                            if (!canPost) {
                                 showMinPlayerDialog = true
                             } else {
                                 val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
@@ -562,13 +660,14 @@ fun CreateScrimScreen(
                                 onCreateScrim(
                                     teamId, teamName, selectedGameMode, selectedRegion,
                                     selectedSkillLevel, selectedBestOf, scheduledTime, description,
-                                    currentPlayerCount
+                                    activePlayerCount,
+                                    selectedPlayerIds.toList()
                                 )
                             }
                         },
                         gradient = GoldGradient,
                         height = 52.dp,
-                        enabled = meetsMinPlayers
+                        enabled = canPost
                     )
                 }
 
@@ -674,7 +773,7 @@ fun CreateScrimScreen(
             text = {
                 Column {
                     Text(
-                        "Your team \"$teamName\" has only $currentPlayerCount out of 5 required players.",
+                        "You've selected $activePlayerCount out of 5 required players.",
                         color = LightGray,
                         fontSize = 14.sp
                     )
@@ -724,6 +823,180 @@ fun CreateScrimScreen(
                 TextButton(onClick = { showMinPlayerDialog = false }) {
                     Text(stringResource(R.string.ok), color = GoldPrimary, fontWeight = FontWeight.Bold)
                 }
+            }
+        )
+    }
+
+    // ── Player Selection Dialog ─────────────────────────────────
+    if (showPlayerSelectionDialog && selectedTeam != null) {
+        val teamPlayers = selectedTeam.players
+        AlertDialog(
+            onDismissRequest = { showPlayerSelectionDialog = false },
+            containerColor = DarkNavy,
+            title = {
+                Column {
+                    Text(stringResource(R.string.select_roster), color = White, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.People, null,
+                            tint = if (activePlayerCount >= 5) SuccessGreen else WarningOrange,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "$activePlayerCount/5 active players selected",
+                            fontSize = 13.sp,
+                            color = if (activePlayerCount >= 5) SuccessGreen else WarningOrange
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (activePlayerCount > 5) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(WarningOrange.copy(alpha = 0.10f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Info, null, tint = WarningOrange, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Only 5 play per game. Extra players will be substitutes.",
+                                fontSize = 12.sp, color = WarningOrange
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    // Select All / Deselect All
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            onClick = { selectedPlayerIds = teamPlayers.map { it.id }.toSet() }
+                        ) {
+                            Text("Select All", color = BluePrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        TextButton(
+                            onClick = { selectedPlayerIds = emptySet() }
+                        ) {
+                            Text("Deselect All", color = ErrorRed.copy(alpha = 0.7f), fontSize = 13.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // Player list
+                    teamPlayers.forEach { player ->
+                        val isSelected = player.id in selectedPlayerIds
+                        val roleLabel = when (player.role.name) {
+                            "LEADER" -> "CPT"
+                            "CO_LEADER" -> "CO"
+                            else -> null
+                        }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) GoldPrimary.copy(alpha = 0.10f) else White.copy(alpha = 0.05f)
+            ),
+            shape = RoundedCornerShape(10.dp),
+            onClick = {
+                selectedPlayerIds = if (isSelected) {
+                    selectedPlayerIds - player.id
+                } else {
+                    selectedPlayerIds + player.id
+                }
+            }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Checkbox indicator
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .then(
+                            if (isSelected) Modifier.background(Brush.horizontalGradient(GoldGradient))
+                            else Modifier.background(White.copy(alpha = 0.05f))
+                        )
+                        .then(
+                            if (!isSelected) Modifier.border(1.5.dp, TextTertiary, RoundedCornerShape(6.dp))
+                            else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check, null,
+                            tint = DarkBlue,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                // Player initial
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(BluePrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = player.name,
+                        color = if (isSelected) TextPrimary else TextSecondary,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 14.sp
+                    )
+                }
+                // Role badge
+                if (roleLabel != null) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                if (roleLabel == "CPT") GoldPrimary.copy(alpha = 0.15f) else Purple.copy(alpha = 0.15f),
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = roleLabel,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (roleLabel == "CPT") GoldPrimary else Purple
+                        )
+                    }
+                }
+            }
+        }
+                    }
+                }
+            },
+            confirmButton = {
+                GradientButton(
+                    text = "Done",
+                    onClick = { showPlayerSelectionDialog = false },
+                    gradient = GoldGradient,
+                    height = 40.dp,
+                    enabled = true
+                )
             }
         )
     }

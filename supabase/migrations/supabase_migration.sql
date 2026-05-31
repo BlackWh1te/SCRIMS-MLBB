@@ -40,7 +40,7 @@ ALTER TABLE scrims
     ADD COLUMN IF NOT EXISTS game_mode      TEXT DEFAULT 'RANKED',       -- GameMode enum
     ADD COLUMN IF NOT EXISTS region         TEXT DEFAULT 'EU',            -- Region enum
     ADD COLUMN IF NOT EXISTS skill_level    TEXT DEFAULT 'ALL',           -- SkillLevel enum
-    ADD COLUMN IF NOT EXISTS max_players    INT  DEFAULT 10,
+    ADD COLUMN IF NOT EXISTS max_players    INT  DEFAULT 5,
     ADD COLUMN IF NOT EXISTS current_players INT DEFAULT 0;
 
 -- ─────────────────────────────────────────

@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS scrims (
     game_mode TEXT DEFAULT 'RANKED',
     region TEXT DEFAULT 'EU',
     skill_level TEXT DEFAULT 'ALL',
-    max_players INTEGER DEFAULT 10,
+    max_players INTEGER DEFAULT 5,
     current_players INTEGER DEFAULT 0
 );
 

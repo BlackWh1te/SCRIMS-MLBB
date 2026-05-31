@@ -10,7 +10,7 @@ data class Scrim(
     val skillLevel: SkillLevel = SkillLevel.ALL,
     val bestOf: BestOf = BestOf.BO1,
     val scheduledTime: Long = System.currentTimeMillis(),
-    val maxPlayers: Int = 10,
+    val maxPlayers: Int = 5,
     val currentPlayers: Int = 0,
     val status: ScrimStatus = ScrimStatus.OPEN,
     val description: String = "",

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
+import timber.log.Timber
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -152,7 +153,8 @@ class ScrimViewModel @Inject constructor(
         bestOf: BestOf,
         scheduledTime: Long,
         description: String,
-        currentPlayers: Int = 0
+        currentPlayers: Int = 0,
+        selectedPlayerIds: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -173,6 +175,20 @@ class ScrimViewModel @Inject constructor(
             
             scrimRepository.createScrim(newScrim).collect { result ->
                 result.onSuccess { scrim ->
+                    // Auto-set roster with selected players (first 5 active, rest substitutes)
+                    if (selectedPlayerIds.isNotEmpty()) {
+                        val roster = selectedPlayerIds.mapIndexed { index, playerId ->
+                            ScrimRosterEntry(
+                                playerId = playerId,
+                                playerName = "", // Will be resolved by DB
+                                teamId = teamId,
+                                isActive = index < 5
+                            )
+                        }
+                        scrimRepository.setScrimRoster(scrim.id, teamId, roster)
+                            .catch { Timber.w("ScrimVM", "Auto-roster failed: ${it.message}") }
+                            .collect { }
+                    }
                     _selectedScrim.value = scrim
                     loadScrims() // Refresh the list
                     _isLoading.value = false
