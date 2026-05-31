@@ -662,6 +662,29 @@ class SupabaseScrimRepository(
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
+    override suspend fun cancelScrim(scrimId: String, reason: String, cancelledBy: String): Flow<Result<Unit>> = flow {
+        try {
+            val rpcResult = api.cancelScrimRpc(mapOf(
+                "p_scrim_id" to scrimId,
+                "p_reason" to reason,
+                "p_cancelled_by" to cancelledBy
+            ))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to cancel scrim: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
+            }
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Cancel scrim failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
+            invalidateScrimCaches()
+            emit(Result.success(Unit))
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // REALTIME SUBSCRIPTIONS
     // ═══════════════════════════════════════════════════════════════

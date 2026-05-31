@@ -36,6 +36,7 @@ interface ScrimRepositoryInterface {
     fun calculatePointsChanges(scrim: Scrim): PointsResult
     suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>>
     suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>>
+    suspend fun cancelScrim(scrimId: String, reason: String, cancelledBy: String): Flow<Result<Unit>>
 
     /** Subscribe to Realtime updates for a specific scrim (status changes, ready check, etc.) */
     fun subscribeToScrim(scrimId: String): Flow<Scrim>

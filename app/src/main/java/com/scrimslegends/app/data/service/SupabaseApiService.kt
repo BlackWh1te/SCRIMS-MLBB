@@ -942,6 +942,10 @@ interface SupabaseApiService {
     @POST("rpc/auto_cancel_scrim")
     suspend fun autoCancelScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    // Atomic manual cancel scrim: locks row, custom reason + canceller
+    @POST("rpc/cancel_scrim")
+    suspend fun cancelScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // Atomic per-scrim screenshot upload: locks row
     @POST("rpc/upload_scrim_screenshot")
     suspend fun uploadScrimScreenshotRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>

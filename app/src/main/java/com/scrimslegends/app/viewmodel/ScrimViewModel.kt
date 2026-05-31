@@ -250,33 +250,17 @@ class ScrimViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
 
-            val scrim = _scrims.value.find { it.id == scrimId }
-                ?: scrimRepository.getScrimById(scrimId)
-                    .catch { emit(Result.failure(it)) }
-                    .firstOrNull()
-                    ?.getOrNull()
-
-            if (scrim != null) {
-                val cancelledBy = AuthorizationUtils.currentUserId()
-                scrimRepository.updateScrim(
-                    scrim.copy(
-                        status = ScrimStatus.CANCELLED,
-                        cancellationReason = reason,
-                        cancelledBy = cancelledBy
-                    )
-                ).collect { result ->
-                    result.onSuccess { updated ->
-                        _selectedScrim.value = updated
-                        loadScrims()
-                        _isLoading.value = false
-                    }.onFailure { exception ->
-                        _error.value = exception.message
-                        _isLoading.value = false
-                    }
+            val cancelledBy = AuthorizationUtils.currentUserId() ?: ""
+            scrimRepository.cancelScrim(scrimId, reason, cancelledBy).collect { result ->
+                result.onSuccess {
+                    // Refresh to pick up the cancelled scrim from the server
+                    loadScrims()
+                    _selectedScrim.value = _scrims.value.find { it.id == scrimId }
+                    _isLoading.value = false
+                }.onFailure { exception ->
+                    _error.value = exception.message
+                    _isLoading.value = false
                 }
-            } else {
-                _error.value = "Scrim not found"
-                _isLoading.value = false
             }
         }
     }

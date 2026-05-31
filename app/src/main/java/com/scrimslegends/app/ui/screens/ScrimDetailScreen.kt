@@ -403,7 +403,10 @@ fun ScrimDetailScreen(
                     // Derive role from ALL user's teams (not just first)
                     val userTeamIds = teams.map { it.id }.toSet()
                     val isHost = teams.any { it.id == scrim.teamId && it.leaderId == currentUserId }
-                    val myApplication = scrim.applications.find { it.applicantTeamId in userTeamIds }
+                    // Only find PENDING applications — rejected/cancelled ones should not block re-apply
+                    val myPendingApplication = scrim.applications.find {
+                        it.applicantTeamId in userTeamIds && it.status == ApplicationStatus.PENDING
+                    }
                     val isOpponent = scrim.opponentTeamId in userTeamIds
                     val myOpponentTeam = teams.find { it.id == scrim.opponentTeamId }
                     val hasPendingApps = scrim.applications.any { it.status == ApplicationStatus.PENDING }
@@ -428,11 +431,26 @@ fun ScrimDetailScreen(
                                 onCompleteScrim = onCompleteScrim
                             )
 
-                            // ── APPLICANT VIEW: Already applied ──
-                            myApplication != null -> ApplicantStatusCard(
-                                application = myApplication,
+                            // ── OPPONENT VIEW: Approved applicant ──
+                            // Must be checked BEFORE pending application so approved users
+                            // see the full opponent action set (roster, ready, screenshot, complete)
+                            isOpponent -> OpponentActions(
                                 scrim = scrim,
-                                onCancel = { onCancelApplication(scrim.id, myApplication.id) },
+                                currentTeamId = myOpponentTeam?.id ?: "",
+                                onNavigateToChat = onNavigateToChat,
+                                onNavigateToRoster = onNavigateToRoster,
+                                onMarkReady = onMarkReady,
+                                onUploadScreenshot = onUploadScreenshot,
+                                onUploadGameScreenshot = onUploadGameScreenshot,
+                                onSelectGameWinner = onSelectGameWinner,
+                                onCompleteScrim = onCompleteScrim
+                            )
+
+                            // ── APPLICANT VIEW: Has pending application ──
+                            myPendingApplication != null -> ApplicantStatusCard(
+                                application = myPendingApplication,
+                                scrim = scrim,
+                                onCancel = { onCancelApplication(scrim.id, myPendingApplication.id) },
                                 onNavigateToChat = onNavigateToChat,
                                 onNavigateToRoster = onNavigateToRoster,
                                 onMarkReady = onMarkReady,
@@ -501,19 +519,6 @@ fun ScrimDetailScreen(
                                     height = 56.dp
                                 )
                             }
-
-                            // ── FILLED / IN_PROGRESS / COMPLETED / CANCELLED: Opponent actions ──
-                            isOpponent -> OpponentActions(
-                                scrim = scrim,
-                                currentTeamId = myOpponentTeam?.id ?: "",
-                                onNavigateToChat = onNavigateToChat,
-                                onNavigateToRoster = onNavigateToRoster,
-                                onMarkReady = onMarkReady,
-                                onUploadScreenshot = onUploadScreenshot,
-                                onUploadGameScreenshot = onUploadGameScreenshot,
-                                onSelectGameWinner = onSelectGameWinner,
-                                onCompleteScrim = onCompleteScrim
-                            )
 
                             // ── DEFAULT ──
                             else -> ScrimStatusCard(scrim = scrim)

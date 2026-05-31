@@ -513,6 +513,22 @@ class ScrimRepository : ScrimRepositoryInterface {
         emit(Result.success(Unit))
     }
 
+    override suspend fun cancelScrim(scrimId: String, reason: String, cancelledBy: String): Flow<Result<Unit>> = flow {
+        delay(300)
+        val index = scrims.indexOfFirst { it.id == scrimId }
+        if (index != -1) {
+            val scrim = scrims[index]
+            scrims[index] = scrim.copy(
+                status = ScrimStatus.CANCELLED,
+                cancellationReason = reason,
+                cancelledBy = cancelledBy
+            )
+            emit(Result.success(Unit))
+        } else {
+            emit(Result.failure(Exception("Scrim not found")))
+        }
+    }
+
     override fun subscribeToScrim(scrimId: String): Flow<Scrim> = flow {
         // Mock repository does not support Realtime subscriptions
     }
