@@ -8,6 +8,55 @@
 
 ---
 
+## 2026-05-31 21:15 [Session: Remaining scrim atomic fixes — apply/reject/cancel/auto-cancel/upload]
+
+### Commits
+- `dd95ecf` — feat(scrim): atomic RPCs for apply/reject/cancel/auto-cancel/upload to eliminate all race conditions
+
+### Changed
+- **File:** `supabase/migrations/20260631110001_scrim_remaining_atomic_fixes.sql`
+  - Added `reject_scrim_application` atomic RPC:
+    - Locks application row with `FOR UPDATE`
+    - Verifies caller is host leader, application is still `Pending`
+    - Atomically sets status to `Rejected`
+    - **Fixes race condition**: host could reject an already-approved application
+  - Added `cancel_scrim_application` atomic RPC:
+    - Locks application row, verifies caller is applicant team leader
+    - Verifies application is still `Pending`
+    - **Fixes race condition**: applicant could cancel an already-handled application
+  - Added `apply_to_scrim` atomic RPC:
+    - Locks scrim row, verifies status is still `Open`
+    - Verifies applicant is not the host team, caller is applicant leader
+    - Checks for duplicate pending application
+    - Atomically creates the application
+    - **Fixes race condition**: team could apply to a scrim that just got filled
+  - Added `auto_cancel_scrim` atomic RPC:
+    - Locks scrim row, prevents double-cancel
+    - Skips if already `Completed` or `Cancelled`
+    - Atomically sets status to `Cancelled`
+    - Deletes any remaining pending applications
+    - **Fixes race condition**: two cron jobs could both try to cancel the same scrim
+  - Added `upload_scrim_screenshot` atomic RPC:
+    - Locks scrim row, validates `In Progress`, participant, leader
+    - Atomically updates the per-scrim screenshot URL
+    - **Fixes race condition**: simultaneous per-scrim screenshot uploads
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added RPC endpoints: `rejectScrimApplicationRpc`, `cancelScrimApplicationRpc`, `applyToScrimRpc`, `autoCancelScrimRpc`, `uploadScrimScreenshotRpc`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `applyToScrim` → `applyToScrimRpc` (was: read scrim, then create app — race-prone)
+  - `rejectApplication` → `rejectScrimApplicationRpc` (was: read app, then update — race-prone)
+  - `cancelApplication` → `cancelScrimApplicationRpc` (was: read app, then update — race-prone)
+  - `submitResult` → `completeScrimRpc` (was: no game completion validation)
+  - `createAutoCancelledRecord` → `autoCancelScrimRpc` (was: read-then-write race)
+  - `uploadScreenshot` → `uploadScrimScreenshotRpc` (was: read-then-write race)
+
+### Impact
+- ALL scrim repository operations now use atomic DB-level RPCs with row locking
+- Zero read-then-write patterns remain in the scrim flow
+- Race conditions are eliminated across apply, reject, cancel, ready, complete, upload, and auto-cancel
+
+---
+
 ## 2026-05-31 21:00 [Session: Scrim state machine hardening — atomic RPCs, DB constraints, race condition fixes]
 
 ### Commits
