@@ -11,7 +11,7 @@
 ## 2026-05-31 06:20 [Session: Message feature audit fixes] — Double-fetch, unreadCount, sendMutex, retry context, DB schema
 
 ### Commits
-- `TBD` — fix(message): audit fixes — double-fetch, unreadCount, per-conversation send locks, retry reply context, DB v15
+- `85db4ae` — fix(message): audit fixes — double-fetch, unreadCount, per-conversation send locks, retry reply context, DB v15
 
 ### Changed
 - **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
