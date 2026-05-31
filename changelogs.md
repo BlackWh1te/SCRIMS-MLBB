@@ -8,6 +8,35 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim participant & winner validation audit] — Added participant validation, winner validation, and auto-cancel terminal-state guard
+
+### Commits
+- `aae831f` — fix(scrim): add participant/winner validation and auto-cancel terminal-state guard
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `uploadScreenshot`: added `teamId !in participantIds` check before deciding Team A vs Team B. Previously any non-host `teamId` would silently be treated as Team B, writing to the opponent's column.
+  - `uploadGameScreenshot`: same `teamId` participant validation added.
+  - `completeScrim`: added `winnerTeamId !in participantIds` check. Previously any arbitrary UUID could be set as the winner.
+  - `submitResult`: same `winnerTeamId` participant validation added.
+  - `selectGameWinner`: same `winnerTeamId` participant validation added.
+  - `createAutoCancelledRecord`: added terminal-state guard — fetches the scrim first and skips the update (returns success) if status is already `COMPLETED` or `CANCELLED`. Prevents a late auto-cancel job from overwriting a completed scrim.
+  - `getScrimsByTeam`: added `range = "0-199"` to `api.getScrims()` call. Previously fetched ALL scrims with no limit, then filtered client-side, causing unbounded data transfer.
+
+### Root Cause
+`uploadScreenshot` and `uploadGameScreenshot` used `isTeamA = existing.teamId == teamId` to decide which column to write. Any random `teamId` (not the opponent) would evaluate to `false` and write to Team B's column, potentially overwriting the opponent's screenshot.
+`completeScrim`, `submitResult`, and `selectGameWinner` accepted any `winnerTeamId` string without validating it was one of the two actual participants.
+`createAutoCancelledRecord` blindly updated the scrim to `CANCELLED` without checking if it had already been completed by a user.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — Participant validation on `teamId` and `winnerTeamId` is required for data integrity. Do NOT remove it.
+- `[INTENTIONAL FIX]` — Auto-cancel terminal-state guard is required to prevent race conditions where a completed scrim gets overwritten. Do NOT remove it.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim state gate audit] — Added missing state validations, fixed updateScrim field mapping, and fixed auto-cancel double-update
 
 ### Commits
