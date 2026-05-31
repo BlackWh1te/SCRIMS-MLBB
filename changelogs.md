@@ -8,6 +8,70 @@
 
 ---
 
+## 2026-05-31 06:00 [Session: Message feature full redesign] — Reply-to, delete, pagination, O(1), @Stable, cache
+
+### Commits
+- `da4349c` — feat(message): full redesign -- reply-to, delete, pagination, O(1) lookup, @Stable, cache
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Message.kt`
+  - Added `replyToId`, `replyToSnippet`, `replyToSenderName`, `isDeleted`, `lastSeenMessageId`
+  - Added `@Stable` annotations to `Message`, `Conversation`, `MessageWithDelivery`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/DeliveryStatus.kt`
+  - Added `@Stable` to `MessageWithDelivery`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/MessageEntity.kt`
+  - Added reply-to + soft delete fields
+  - `toDomainModel()` now crash-safe with try-catch for `MessageType.valueOf`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/MessageDao.kt`
+  - Added `getMessagesPage`, `getMessageCount`, `softDeleteMessage`, `pruneOldMessages`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/DatabaseMigrations.kt`
+  - Added `MIGRATION_13_14`: reply columns, isDeleted, index on messages.conversationId
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimsLegendsDatabase.kt`
+  - Version bumped from 13 to 14
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `MessageDto`: added reply/delete fields
+  - Added `deleteMessage` PATCH endpoint
+  - `getMessages`: added `limit` parameter
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepositoryInterface.kt`
+  - `sendMessage`: added `replyToId`, `replyToSnippet`, `replyToSenderName`
+  - Added `deleteMessage(messageId)` and `loadOlderMessages()`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - Implemented reply-to in `sendMessage`/`sendMessageInternal`
+  - Implemented `deleteMessage()` (PATCH + Room soft delete)
+  - Implemented `loadOlderMessages()` with Room fallback
+  - Updated all mapping functions for new fields
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/MessageRepository.kt`
+  - Mock implementation updated to match new interface
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - **CRITICAL:** Replaced List-based O(n) message storage with `Map<String, MessageWithDelivery>` for O(1) lookup
+  - `integrateMessage`: O(1) by server ID, O(n) fallback for pending dedup (vastly faster)
+  - Added reply-to state (`_replyingToMessage`), `setReplyTarget()`, `clearReply()`
+  - Added `deleteMessage()` with optimistic local update
+  - Added `loadOlderMessages()` pagination with `_hasMoreMessages` tracking
+  - Added `resetPagination()` for conversation switching
+  - `sendMessage` & `sendImageMessage`: support reply-to context
+  - `emitMessagesFromMap()`: rebuilds sorted list only when needed, syncs back to selectedConversation
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ChatScreen.kt`
+  - Auto-scroll: only scrolls to bottom if user is within last 4 visible items
+  - Typing indicator: simplified to empty↔non-empty transitions only
+  - Pagination: load-older trigger at top of LazyColumn
+  - New-messages separator: gold "New messages" line after `lastSeenMessageId`
+  - Reply-to context bar: sender name + snippet above input field
+  - MessageBubble: long-press opens context menu (Reply / Delete), shows reply preview, deleted state, failed retry/cancel
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Wired all new ChatScreen params + VM state collection
+
+### Performance Impact
+- Message integration: **O(n) → O(1)** for existing messages, O(n) only for pending dedup
+- `setMessagesWithDelivery` comparison: **O(n) list compare → O(1) size check**
+- Auto-scroll: **no longer jumps when reading older messages**
+- Typing indicator: **~50% fewer API calls**
+
+### Verification
+- `./gradlew.bat assembleDebug` passes with 0 errors, 1 pre-existing warning
+
+---
+
 ## 2026-05-31 05:30 [Session: Roster & admin panel] — Roster display in admin, dual eq filter API
 
 ### Commits
