@@ -644,7 +644,7 @@ interface SupabaseApiService {
     ): Response<List<ScrimDto>>
 
     @POST("scrims")
-    suspend fun createScrim(@Body scrim: ScrimDto): Response<List<ScrimDto>>
+    suspend fun createScrim(@Body scrim: Map<String, @JvmSuppressWildcards Any>): Response<List<ScrimDto>>
 
     @PATCH("scrims")
     suspend fun updateScrim(

@@ -1027,7 +1027,11 @@ class SupabaseMessageRepository(
             chatOpensAt = record.get("chat_opens_at")?.asString ?: "",
             participantATyping = record.get("participant_a_typing")?.asBoolean ?: false,
             participantBTyping = record.get("participant_b_typing")?.asBoolean ?: false,
-            participantCount = record.get("participant_count")?.asInt ?: 2
+            participantCount = record.get("participant_count")?.asInt ?: 2,
+            teamId = record.get("team_id")?.takeIf { !it.isJsonNull }?.asString,
+            isTeamChat = record.get("is_team_chat")?.asBoolean ?: false,
+            isPinned = record.get("is_pinned")?.asBoolean ?: false,
+            groupName = record.get("group_name")?.takeIf { !it.isJsonNull }?.asString
         )
     }
 

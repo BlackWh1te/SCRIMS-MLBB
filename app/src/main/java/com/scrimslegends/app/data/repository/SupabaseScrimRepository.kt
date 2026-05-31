@@ -179,7 +179,7 @@ class SupabaseScrimRepository(
                 range = "0-99",
                 status = status?.let { PostgrestFilter.eq(toDbStatus(it)) },
                 gameMode = gameMode?.let { PostgrestFilter.eq(it.name) },
-                region = region?.let { PostgrestFilter.eq(it.displayName) },
+                region = region?.let { PostgrestFilter.eq(it.name) },
                 skillLevel = skillLevel?.let { PostgrestFilter.eq(it.name) }
             )
             if (r.isSuccessful) {
@@ -201,8 +201,23 @@ class SupabaseScrimRepository(
                 emit(Result.failure(Exception("Invalid best-of value: ${scrim.bestOf.games}. Allowed: 1, 2, 3, 5")))
                 return@flow
             }
-            val dto = mapScrimToDto(scrim)
-            val r = api.createScrim(dto)
+            // Send only required fields as a Map — omit `status` so the DB DEFAULT ('Open') is used.
+            // This avoids CHECK constraint violations if the live DB constraint uses different casing.
+            // Also send region as enum name (e.g. "EU") not displayName ("Europe") to match DB default.
+            val body = mutableMapOf<String, Any>(
+                "team_id" to scrim.teamId,
+                "scheduled_date" to DateUtils.formatDate(scrim.scheduledTime),
+                "scheduled_time" to DateUtils.formatTime(scrim.scheduledTime),
+                "best_of" to scrim.bestOf.games,
+                "game_mode" to scrim.gameMode.name,
+                "region" to scrim.region.name,
+                "skill_level" to scrim.skillLevel.name,
+                "max_players" to scrim.maxPlayers,
+                "current_players" to scrim.currentPlayers
+            )
+            scrim.teamName.takeIf { it.isNotBlank() }?.let { body["team_name"] = it }
+            scrim.description.takeIf { it.isNotBlank() }?.let { body["description"] = it }
+            val r = api.createScrim(body)
             if (r.isSuccessful) {
                 val created = r.body()?.firstOrNull()
                 if (created != null) {
@@ -770,7 +785,7 @@ class SupabaseScrimRepository(
             teamAScreenshotUploadedAt = scrim.teamAScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
             teamBScreenshotUploadedAt = scrim.teamBScreenshotUploadedAt?.let { DateUtils.formatIsoUtc(it) },
             gameMode = scrim.gameMode.name,
-            region = scrim.region.displayName,
+            region = scrim.region.name,
             skillLevel = scrim.skillLevel.name,
             maxPlayers = scrim.maxPlayers,
             currentPlayers = scrim.currentPlayers
@@ -786,7 +801,7 @@ class SupabaseScrimRepository(
             teamName = dto.teamName ?: "",
             teamLeader = "",
             gameMode = try { GameMode.valueOf(dto.gameMode) } catch (_: Exception) { GameMode.RANKED },
-            region = try { Region.fromDisplayName(dto.region) } catch (_: Exception) { Region.EU },
+            region = try { Region.valueOf(dto.region) } catch (_: Exception) { try { Region.fromDisplayName(dto.region) } catch (_: Exception) { Region.EU } },
             skillLevel = try { SkillLevel.valueOf(dto.skillLevel) } catch (_: Exception) { SkillLevel.ALL },
             bestOf = BestOf.fromGames(dto.bestOf),
             scheduledTime = scheduledTime,
@@ -835,7 +850,7 @@ class SupabaseScrimRepository(
             id = e.id, teamId = e.teamId,
             teamName = "", teamLeader = "",
             gameMode = try { GameMode.valueOf(e.gameMode) } catch (_: Exception) { GameMode.RANKED },
-            region = try { Region.fromDisplayName(e.region) } catch (_: Exception) { Region.EU },
+            region = try { Region.valueOf(e.region) } catch (_: Exception) { try { Region.fromDisplayName(e.region) } catch (_: Exception) { Region.EU } },
             skillLevel = try { SkillLevel.valueOf(e.skillLevel) } catch (_: Exception) { SkillLevel.ALL },
             bestOf = BestOf.fromGames(e.bestOf),
             scheduledTime = scheduledTime,

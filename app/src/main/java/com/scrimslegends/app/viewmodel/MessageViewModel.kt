@@ -415,9 +415,15 @@ class MessageViewModel @Inject constructor(
                         teamId = team.id,
                         teamName = team.name,
                         leaderId = team.leaderId,
-                        leaderName = ""
-                    ).collect { }
-                } catch (_: Exception) { /* Best effort */ }
+                        leaderName = team.players.find { it.id == team.leaderId }?.name ?: ""
+                    ).collect { result ->
+                        result.onFailure { e ->
+                            Timber.w("MessageVM", "Failed to ensure team conversation for ${team.name}: ${e.message}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w("MessageVM", "Exception ensuring team conversation for ${team.name}: ${e.message}")
+                }
             }
         }
     }
