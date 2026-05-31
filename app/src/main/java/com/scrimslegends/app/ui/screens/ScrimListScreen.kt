@@ -80,11 +80,13 @@ fun ScrimListScreen(
     // Status chips — drives top filter row
     val statusChips = remember {
         listOf(
-            StatusChip("All",         null,                   GoldPrimary),
-            StatusChip("Open",        ScrimStatus.OPEN,       SuccessGreen),
-            StatusChip("Filled",      ScrimStatus.FILLED,     WarningOrange),
+            StatusChip("All",         null,                    GoldPrimary),
+            StatusChip("Open",        ScrimStatus.OPEN,        SuccessGreen),
+            StatusChip("Filled",      ScrimStatus.FILLED,      WarningOrange),
+            StatusChip("Ready",       ScrimStatus.READY_CHECK, WarningOrange),
             StatusChip("In Progress", ScrimStatus.IN_PROGRESS, BluePrimary),
-            StatusChip("Completed",   ScrimStatus.COMPLETED,  LightGray)
+            StatusChip("Completed",   ScrimStatus.COMPLETED,   LightGray),
+            StatusChip("Cancelled",   ScrimStatus.CANCELLED,   ErrorRed)
         )
     }
 

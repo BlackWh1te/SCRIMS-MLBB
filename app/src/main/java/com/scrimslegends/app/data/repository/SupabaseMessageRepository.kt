@@ -358,7 +358,7 @@ class SupabaseMessageRepository(
                 "participant_b_team_name" to participantBTeamName,
                 "last_message" to "",
                 "last_message_time" to DateUtils.formatIsoUtc(System.currentTimeMillis()),
-                "chat_opens_at" to DateUtils.formatIsoUtc(System.currentTimeMillis() + 300_000)
+                "chat_opens_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())
             )
             val response = api.createConversation(newConvBody)
             if (response.isSuccessful && !response.body().isNullOrEmpty()) {

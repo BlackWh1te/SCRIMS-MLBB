@@ -1086,7 +1086,14 @@ fun AuthNavigation(
                     )
                 ) { backStackEntry ->
                     val scrimId = backStackEntry.arguments?.getString("scrimId") ?: ""
-                    val scrim = scrims.find { it.id == scrimId }
+
+                    // Load fresh scrim data on entry (fixes deep links, notification taps)
+                    LaunchedEffect(scrimId) {
+                        scrimViewModel.loadScrimById(scrimId)
+                    }
+                    val selectedScrim by scrimViewModel.selectedScrim.collectAsState()
+                    val scrim = selectedScrim ?: scrims.find { it.id == scrimId }
+
                     if (scrim != null) {
                         val myTeam = teams.firstOrNull()
                         val isTeamLeader = myTeam?.leaderId == userProfile?.id

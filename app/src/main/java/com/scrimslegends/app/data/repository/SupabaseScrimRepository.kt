@@ -163,7 +163,9 @@ class SupabaseScrimRepository(
                 val s = r.body()?.firstOrNull()
                 if (s != null) {
                     val gameResults = fetchGameResultsForScrim(s.id)
-                    emit(Result.success(mapDtoToScrim(s, gameResults)))
+                    val applications = fetchApplicationsForScrim(s.id)
+                    val rosters = fetchRostersForScrim(s.id)
+                    emit(Result.success(mapDtoToScrim(s, gameResults, applications, rosters)))
                 } else emit(Result.success(null))
             } else emit(Result.failure(Exception("Failed to fetch scrim")))
         } catch (e: Exception) {
@@ -709,6 +711,11 @@ class SupabaseScrimRepository(
                 )
             ).collect { event ->
                 try {
+                    // Skip DELETE events — repository emits Scrim objects; consumer handles removal
+                    if (event.eventType == SupabaseRealtimeClient.EVENT_DELETE) {
+                        Timber.d("ScrimRepo", "Realtime DELETE for scrim ${event.oldRecord?.get("id")?.asString} — skipping emit")
+                        return@collect
+                    }
                     val record = event.record
                     if (record != null) {
                         val dto = parseRealtimeRecordToScrimDto(record)
@@ -792,9 +799,16 @@ class SupabaseScrimRepository(
         )
     }
 
-    private fun mapDtoToScrim(dto: ScrimDto, gameResults: List<ScrimGameResult> = emptyList()): Scrim {
+    private fun mapDtoToScrim(
+        dto: ScrimDto,
+        gameResults: List<ScrimGameResult> = emptyList(),
+        applications: List<ScrimApplication> = emptyList(),
+        rosters: List<ScrimRosterEntry> = emptyList()
+    ): Scrim {
         val scheduledTime = DateUtils.parseIsoToMillis("${dto.scheduledDate}T${dto.scheduledTime}")
         val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
+        val teamARoster = rosters.filter { it.teamId == dto.teamId }
+        val teamBRoster = rosters.filter { it.teamId == dto.opponentTeamId }
         return Scrim(
             id = dto.id,
             teamId = dto.teamId,
@@ -820,6 +834,13 @@ class SupabaseScrimRepository(
             teamBScreenshotUrl = dto.teamBScreenshotUrl,
             teamAScreenshotUploadedAt = parseTs(dto.teamAScreenshotUploadedAt),
             teamBScreenshotUploadedAt = parseTs(dto.teamBScreenshotUploadedAt),
+            conversationId = dto.conversationId,
+            resultSubmittedAt = parseTs(dto.resultSubmittedAt),
+            cancellationReason = dto.cancellationReason,
+            cancelledBy = dto.cancelledBy,
+            applications = applications,
+            teamARoster = teamARoster,
+            teamBRoster = teamBRoster,
             gameResults = gameResults
         )
     }
@@ -910,6 +931,62 @@ class SupabaseScrimRepository(
             Timber.w("ScrimRepo", "Exception fetching game results for scrim $scrimId", e)
             emptyList()
         }
+    }
+
+    // ─── Fetch applications for a scrim ───
+
+    private suspend fun fetchApplicationsForScrim(scrimId: String): List<ScrimApplication> {
+        return try {
+            val r = api.getScrimApplications(PostgrestFilter.eq(scrimId))
+            if (r.isSuccessful) {
+                r.body()?.map { mapDtoToScrimApplication(it) } ?: emptyList()
+            } else {
+                Timber.w("ScrimRepo", "Failed to fetch applications for scrim $scrimId")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Timber.w("ScrimRepo", "Exception fetching applications for scrim $scrimId", e)
+            emptyList()
+        }
+    }
+
+    private fun mapDtoToScrimApplication(dto: ScrimApplicationDto): ScrimApplication {
+        return ScrimApplication(
+            id = dto.id ?: "",
+            scrimId = dto.scrimId,
+            applicantTeamId = dto.applicantTeamId,
+            applicantTeamName = "", // Resolved by UI from team cache if needed
+            applicantTeamLeader = "",
+            applicantTeamLeaderName = "",
+            status = fromDbApplicationStatus(dto.status),
+            appliedAt = dto.appliedAt?.let { DateUtils.parseIsoToMillis(it) } ?: System.currentTimeMillis()
+        )
+    }
+
+    // ─── Fetch rosters for a scrim ───
+
+    private suspend fun fetchRostersForScrim(scrimId: String): List<ScrimRosterEntry> {
+        return try {
+            val r = api.getScrimRosters(PostgrestFilter.eq(scrimId))
+            if (r.isSuccessful) {
+                r.body()?.map { mapDtoToScrimRosterEntry(it) } ?: emptyList()
+            } else {
+                Timber.w("ScrimRepo", "Failed to fetch rosters for scrim $scrimId")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Timber.w("ScrimRepo", "Exception fetching rosters for scrim $scrimId", e)
+            emptyList()
+        }
+    }
+
+    private fun mapDtoToScrimRosterEntry(dto: ScrimRosterDto): ScrimRosterEntry {
+        return ScrimRosterEntry(
+            playerId = dto.userId,
+            playerName = "", // Not available in ScrimRosterDto; resolved by UI
+            teamId = dto.teamId,
+            isActive = dto.isActive
+        )
     }
 
     // ─── Per-game screenshot upload ───

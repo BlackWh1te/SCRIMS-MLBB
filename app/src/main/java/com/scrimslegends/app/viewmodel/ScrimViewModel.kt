@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import timber.log.Timber
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import java.util.Collections
 import javax.inject.Inject
 
 @HiltViewModel
@@ -56,6 +57,9 @@ class ScrimViewModel @Inject constructor(
     private var searchScrimsJob: Job? = null
     private var loadScrimJob: Job? = null
 
+    // ── Internal: Map-based O(1) scrim storage ──
+    private val _scrimMap = Collections.synchronizedMap(LinkedHashMap<String, Scrim>())
+
     init {
         loadScrims()
     }
@@ -76,6 +80,8 @@ class ScrimViewModel @Inject constructor(
                 }
                 .collect { result ->
                     result.onSuccess { scrimList ->
+                        _scrimMap.clear()
+                        scrimList.forEach { _scrimMap[it.id] = it }
                         _scrims.value = scrimList
                         _isLoading.value = false
                         _isRefreshing.value = false
@@ -629,19 +635,15 @@ class ScrimViewModel @Inject constructor(
     /**
      * Subscribe to Realtime updates for all scrims.
      * Automatically updates _scrims list when any scrim changes.
+     * Uses Map for O(1) updates instead of O(n) list scan.
      */
     fun subscribeToAllScrimUpdates() {
         allScrimsRealtimeJob?.cancel()
         allScrimsRealtimeJob = viewModelScope.launch {
             scrimRepository.subscribeToAllScrims().collect { updatedScrim ->
-                val current = _scrims.value.toMutableList()
-                val index = current.indexOfFirst { it.id == updatedScrim.id }
-                if (index >= 0) {
-                    current[index] = updatedScrim
-                } else {
-                    current.add(0, updatedScrim) // New scrim
-                }
-                _scrims.value = current
+                _scrimMap[updatedScrim.id] = updatedScrim
+                // Rebuild sorted list only when needed
+                _scrims.value = _scrimMap.values.toList()
             }
         }
     }
