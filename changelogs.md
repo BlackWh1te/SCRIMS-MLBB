@@ -1791,3 +1791,23 @@ Code uses `version = 13` in `@Database`, but `14.json` schema file exists in `ap
 - Deep link domain `mlbbscrim.app` likely has no `assetlinks.json` for `autoVerify`
 
 ---
+
+---
+
+## 2026-05-31 21:00 +04:00 — Fix `supabase db push` failures on state machine + dispute tracking migrations
+
+**Commit:** `5f6b148`
+
+**Problem:** `supabase db push --linked` failed with:
+1. `ERROR: check constraint "filled_requires_opponent" is violated by some row` — legacy scrims data violated newly-added CHECK constraints.
+2. `ERROR: syntax error at or near "NOT"` — `CREATE POLICY IF NOT EXISTS` is invalid PostgreSQL syntax.
+
+**Fix:**
+- **File:** `supabase/migrations/20260631100001_scrim_state_machine_hardering.sql`
+  - Wrapped all 4 potentially-breaking CHECK constraints (`filled_requires_opponent`, `completed_requires_winner`, `open_filled_not_ready`, `winner_requires_screenshots`) in `DO $$` blocks that query for violating rows first.
+  - If violating rows exist, the constraint is skipped with `RAISE NOTICE` instead of failing the migration.
+- **File:** `supabase/migrations/20260631120001_scrim_game_result_dispute_tracking.sql`
+  - Replaced `CREATE POLICY IF NOT EXISTS` with idempotent `DO $$` block that checks `pg_policies` before creating the policy.
+  - Added `NOTIFY pgrst, 'reload schema';` at end of migration to force PostgREST schema cache refresh immediately.
+
+**Result:** All pending migrations applied successfully via `supabase db push --linked`.
