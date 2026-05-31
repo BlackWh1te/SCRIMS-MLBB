@@ -344,7 +344,7 @@ CREATE POLICY "Conversation members can view messages" ON messages
                     c.is_team_chat = TRUE
                     AND c.team_id IN (
                         SELECT tm.team_id FROM team_members tm
-                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                        WHERE tm.user_id = auth.uid()
                     )
                 )
             )
@@ -365,7 +365,7 @@ CREATE POLICY "Conversation members can send messages" ON messages
                     c.is_team_chat = TRUE
                     AND c.team_id IN (
                         SELECT tm.team_id FROM team_members tm
-                        WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                        WHERE tm.user_id = auth.uid()
                     )
                 )
             )
@@ -426,7 +426,7 @@ CREATE POLICY "Conversation participants can view" ON conversations
             is_team_chat = TRUE
             AND team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = auth.uid()
             )
         )
     );
@@ -446,7 +446,7 @@ CREATE POLICY "Conversation participants can update" ON conversations
             is_team_chat = TRUE
             AND team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = auth.uid() AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = auth.uid()
             )
         )
     );
@@ -738,7 +738,7 @@ BEGIN
             c.is_team_chat = TRUE
             AND c.team_id IN (
                 SELECT tm.team_id FROM team_members tm
-                WHERE tm.user_id = p_user_id AND tm.status = 'ACTIVE'
+                WHERE tm.user_id = p_user_id
             )
         )
     ORDER BY c.is_pinned DESC, c.last_message_time DESC;

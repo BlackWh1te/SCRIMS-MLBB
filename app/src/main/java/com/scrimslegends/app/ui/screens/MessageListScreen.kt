@@ -68,10 +68,10 @@ fun MessageListScreen(
     error           : String? = null,
     onDismissError  : () -> Unit = {},
     onReportUser    : (userId: String, username: String) -> Unit = { _, _ -> },
-    teamConversation: Conversation? = null
+    teamConversations: List<Conversation> = emptyList()
 ) {
-    val totalUnread = conversations.sumOf { it.unreadCount } + (teamConversation?.unreadCount ?: 0)
-    val hasAnyConversation = conversations.isNotEmpty() || teamConversation != null
+    val totalUnread = conversations.sumOf { it.unreadCount } + teamConversations.sumOf { it.unreadCount }
+    val hasAnyConversation = conversations.isNotEmpty() || teamConversations.isNotEmpty()
     var reportTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     // Search + filter state
@@ -91,8 +91,9 @@ fun MessageListScreen(
         }
         list
     }
-    val visibleTeamConversation = remember(teamConversation, searchQuery, currentUserId) {
-        teamConversation?.takeIf { searchQuery.isBlank() || conversationMatchesSearch(it, currentUserId, searchQuery) }
+    val visibleTeamConversations = remember(teamConversations, searchQuery, currentUserId) {
+        if (searchQuery.isBlank()) teamConversations
+        else teamConversations.filter { conversationMatchesSearch(it, currentUserId, searchQuery) }
     }
 
     Box(
@@ -335,7 +336,7 @@ fun MessageListScreen(
                         }
                     }
 
-                    !hasAnyConversation || (filteredConversations.isEmpty() && visibleTeamConversation == null) -> {
+                    !hasAnyConversation || (filteredConversations.isEmpty() && visibleTeamConversations.isEmpty()) -> {
                         EmptyState(
                             icon     = Icons.Default.ChatBubble,
                             title    = if (activeFilter == MessageFilter.UNREAD && hasAnyConversation)
@@ -360,14 +361,13 @@ fun MessageListScreen(
                             ),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            // ── Pinned team chat (always at top if visible) ──
-                            if (visibleTeamConversation != null) {
-                                val teamConversationToShow = visibleTeamConversation
-                                item(key = "team_chat") {
-                                    AnimatedEntrance(delayMillis = 0) {
+                            // ── Pinned team chats (always at top if visible) ──
+                            visibleTeamConversations.forEachIndexed { index, teamConv ->
+                                item(key = "team_chat_${teamConv.id}") {
+                                    AnimatedEntrance(delayMillis = index * 100) {
                                         TeamChatCard(
-                                            conversation = teamConversationToShow,
-                                            onClick      = { onNavigateToChat(teamConversationToShow) }
+                                            conversation = teamConv,
+                                            onClick      = { onNavigateToChat(teamConv) }
                                         )
                                     }
                                 }

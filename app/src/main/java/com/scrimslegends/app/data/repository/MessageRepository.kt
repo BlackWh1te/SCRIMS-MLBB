@@ -318,4 +318,28 @@ class MessageRepository : MessageRepositoryInterface {
     override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
         // No-op for mock
     }
+
+    override suspend fun getOrCreateTeamConversation(
+        teamId: String,
+        teamName: String,
+        leaderId: String,
+        leaderName: String
+    ): Flow<Result<Conversation>> = flow {
+        kotlinx.coroutines.delay(300)
+        val convId = java.util.UUID.randomUUID().toString()
+        val newConv = Conversation(
+            id = convId,
+            teamId = teamId,
+            isTeamChat = true,
+            groupName = teamName,
+            participantAId = leaderId,
+            participantAName = leaderName,
+            participantATeamId = teamId,
+            participantATeamName = teamName,
+            lastMessage = "Team chat created",
+            lastMessageTime = System.currentTimeMillis()
+        )
+        conversations.add(newConv)
+        emit(Result.success(newConv))
+    }
 }

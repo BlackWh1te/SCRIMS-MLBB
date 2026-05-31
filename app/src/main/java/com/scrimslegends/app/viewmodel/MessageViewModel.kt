@@ -349,6 +349,22 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    // ── Ensure team conversations exist for all user's teams ──
+    fun ensureTeamConversations(teams: List<com.scrimslegends.app.data.model.Team>) {
+        viewModelScope.launch {
+            teams.forEach { team ->
+                try {
+                    messageRepository.getOrCreateTeamConversation(
+                        teamId = team.id,
+                        teamName = team.name,
+                        leaderId = team.leaderId,
+                        leaderName = ""
+                    ).collect { }
+                } catch (_: Exception) { /* Best effort */ }
+            }
+        }
+    }
+
     // ── State helpers ──
     private fun integrateMessage(newMessage: Message) {
         val current = _messagesWithDelivery.value.toMutableList()

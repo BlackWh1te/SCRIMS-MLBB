@@ -83,6 +83,13 @@ interface MessageRepositoryInterface {
         recipientName: String
     ): Flow<Result<Conversation>>
 
+    suspend fun getOrCreateTeamConversation(
+        teamId: String,
+        teamName: String,
+        leaderId: String,
+        leaderName: String
+    ): Flow<Result<Conversation>>
+
     /**
      * Explicitly unsubscribe from a message stream and clean up resources.
      */

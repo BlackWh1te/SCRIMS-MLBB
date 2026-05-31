@@ -894,6 +894,9 @@ interface SupabaseApiService {
     @POST("rpc/get_conversation_unread_count")
     suspend fun getConversationUnreadCountRpc(@Body params: Map<String, String>): Response<Int>
 
+    @POST("rpc/get_or_create_team_conversation")
+    suspend fun getOrCreateTeamConversation(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<List<ConversationDto>>
+
     // ─── Team Ratings ───
     @GET("rpc/get_team_ratings")
     suspend fun getTeamRatings(@Query("p_team_id") teamId: String): Response<List<TeamRatingDto>>

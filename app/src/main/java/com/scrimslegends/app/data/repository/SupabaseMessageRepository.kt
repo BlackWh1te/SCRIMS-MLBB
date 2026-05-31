@@ -900,6 +900,36 @@ class SupabaseMessageRepository(
         }
     }
 
+    // ── Team conversation ──
+    override suspend fun getOrCreateTeamConversation(
+        teamId: String,
+        teamName: String,
+        leaderId: String,
+        leaderName: String
+    ): Flow<Result<Conversation>> = flow {
+        try {
+            val response = api.getOrCreateTeamConversation(
+                mapOf(
+                    "p_team_id" to teamId,
+                    "p_team_name" to teamName,
+                    "p_leader_id" to leaderId,
+                    "p_leader_name" to leaderName
+                )
+            )
+            if (response.isSuccessful && !response.body().isNullOrEmpty()) {
+                val conv = mapDtoToConversation(response.body()!!.first())
+                cacheConversation(conv)
+                conversationDao.insertConversation(mapConversationToEntity(conv))
+                cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
+                emit(Result.success(conv))
+            } else {
+                emit(Result.failure(Exception("Failed to get/create team conversation: ${response.code()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // Mapping functions (unchanged from previous implementation)
     // ═══════════════════════════════════════════════════════════════════════

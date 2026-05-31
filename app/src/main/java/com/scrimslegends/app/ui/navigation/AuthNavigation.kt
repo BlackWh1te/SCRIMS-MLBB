@@ -1298,6 +1298,12 @@ fun AuthNavigation(
                     LaunchedEffect(Unit) {
                         messageViewModel.loadConversations(userId)
                     }
+                    // Ensure team conversations exist for all user's teams
+                    LaunchedEffect(teams) {
+                        if (teams.isNotEmpty()) {
+                            messageViewModel.ensureTeamConversations(teams)
+                        }
+                    }
                     // Start/stop background polling for new conversations
                     androidx.compose.runtime.DisposableEffect(userId) {
                         messageViewModel.startConversationsPolling(userId)
@@ -1322,7 +1328,7 @@ fun AuthNavigation(
                         isRefreshing = messagesIsRefreshing,
                         error = messageError,
                         onDismissError = { messageViewModel.clearError() },
-                        teamConversation = conversations.firstOrNull { it.isTeamChat }
+                        teamConversations = conversations.filter { it.isTeamChat }
                     )
                 }
 
