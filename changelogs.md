@@ -8,6 +8,35 @@
 
 ---
 
+## 2026-05-31 07:25 [Session: Free-tier optimizations] — FreeTierConfig, reduced polling, scrim realtime scope, backoff
+
+### Commits
+- `5ab242f` — feat(free-tier): add FreeTierConfig, reduce polling, move scrim realtime to ScrimList only, add backoff
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/util/FreeTierConfig.kt` (NEW)
+  - Centralized singleton for all free-tier tuning: polling intervals, backoff params, feature toggles
+  - `CONVERSATION_POLL_INTERVAL_MS = 30_000` (was 10s) — saves ~67% API calls
+  - `CHAT_FALLBACK_POLL_INTERVAL_MS = 15_000` (was 5s) — saves ~67% API calls
+  - `BACKOFF_INITIAL_MS = 5_000`, `BACKOFF_MAX_MS = 60_000`, `BACKOFF_MULTIPLIER = 2.0`
+  - `SUBSCRIBE_ALL_SCRIMS_ON_HOME = false` (prevents burning 1M realtime message quota)
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Updated all polling to use `FreeTierConfig` intervals
+  - Added `convPollFailures` / `chatPollFailures` tracking
+  - Added `extractHttpCode()` + `calculateBackoff()` helpers
+  - Polling now adds exponential backoff on 429/503 errors
+  - Typing indicator uses `FreeTierConfig.TYPING_INDICATOR_DURATION_MS`
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Removed `subscribeToAllScrimUpdates` from Home screen
+  - Added `subscribeToAllScrimUpdates` to ScrimList screen only (with DisposableEffect)
+
+### Impact
+- Before: 5 active users = ~1.3M API calls/month + 1M realtime messages easily exceeded
+- After: 5 active users = ~430K API calls/month + realtime only when viewing scrims
+- All intervals tunable in one file (`FreeTierConfig.kt`) without touching ViewModels
+
+---
+
 ## 2026-05-31 07:10 [Session: Team chat audit fixes] — Missing RPC, broken RLS policy, chat gate, participant_count
 
 ### Commits
