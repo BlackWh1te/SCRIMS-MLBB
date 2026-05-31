@@ -8,6 +8,57 @@
 
 ---
 
+## 2026-05-31 20:30 [Session: Region time validation + reject notify + calendar + countdown]
+
+### Commits
+- `2029017` — feat(scrim): region-aware time validation, notify+delete rejected apps, calendar intent, countdown
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - Added `timeZoneId` to `Region` enum (EU→Europe/Berlin, MSK→Europe/Moscow, NA→America/New_York, etc.)
+  - All regions now carry an IANA timezone ID for accurate local-time calculations
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/CreateScrimScreen.kt`
+  - Time construction now uses `Calendar.getInstance(TimeZone.getTimeZone(selectedRegion.timeZoneId))`
+  - Fixes bug: Moscow user picking 14:00 was storing it as 14:00 UTC (actually 17:00 Moscow)
+  - Added region-aware time validation: must be future, min 30 min advance, max 30 days
+  - `Post Scrim` button disabled when time is invalid; error banner shows specific message
+- **File:** `app/src/main/res/values/strings.xml`
+  - Added `scrim_time_past`, `scrim_time_min_advance`, `scrim_time_max_advance`, `scrim_time_invalid`
+- **File:** `supabase/migrations/20260631090001_scrim_time_validation.sql`
+  - Added DB CHECK constraints: `scheduled_date >= CURRENT_DATE` and `scheduled_date <= CURRENT_DATE + 30 days`
+- **File:** `supabase/migrations/20260631080001_approve_scrim_application_atomic.sql`
+  - Updated `approve_scrim_application` RPC: now DELETEs other pending applications instead of just cancelling them
+  - Before each DELETE, INSERTs `SCRIM_OPPONENT_FOUND` notification to the rejected team leader
+  - Message: "Team {HostName} found an opponent for their scrim."
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Notification.kt`
+  - Added `SCRIM_OPPONENT_FOUND` to `NotificationType` enum
+  - Added to `isMatchType()` and `icon` mapping
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/NotificationScreen.kt`
+  - Added `SCRIM_OPPONENT_FOUND` branch to `NotificationRow` exhaustive `when`
+- **File:** `app/src/main/java/com/scrimslegends/app/util/CalendarIntentHelper.kt` (NEW)
+  - Builds `Intent.ACTION_INSERT` into `Events.CONTENT_URI` with pre-filled title, description, start/end
+  - Estimated duration: BO1=+30m, BO2=+45m, BO3=+60m, BO5=+90m
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Added calendar icon button in the FILLED opponent card → opens default calendar app
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScheduleScreen.kt`
+  - Added calendar icon button on each ScheduleCard
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/components/ScrimCountdown.kt` (NEW)
+  - Live 1-second countdown composable with adaptive formatting
+  - Color coding: gray (>1h), orange (<1h), red (<5m), green (starting now)
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/HomeScreen.kt`
+  - Added `ScrimCountdown` to upcoming scrim carousel cards
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScheduleScreen.kt`
+  - Added `ScrimCountdown` to each ScheduleCard
+
+### Impact
+- Scrim posting now respects regional timezones (Moscow 14:00 = Moscow 14:00, not UTC)
+- Invalid times (past, too soon, too far) are blocked before submission
+- Rejected teams are properly notified + their dead applications are cleaned up
+- Users can add confirmed scrims to their phone's default calendar app
+- Home screen shows live countdown to upcoming scrims
+
+---
+
 ## 2026-05-31 19:05 [Session: Atomic scrim approval + lock after confirm]
 
 ### Commits
