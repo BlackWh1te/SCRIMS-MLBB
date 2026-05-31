@@ -196,6 +196,11 @@ class SupabaseScrimRepository(
         try {
             AuthorizationUtils.requireOwner(scrim.teamLeader, "create scrim")
                 .onFailure { emit(Result.failure(it)); return@flow }
+            // Validate best_of against DB constraint (1, 3, 5)
+            if (scrim.bestOf.games !in setOf(1, 3, 5)) {
+                emit(Result.failure(Exception("Invalid best-of value: ${scrim.bestOf.games}. Allowed: 1, 3, 5")))
+                return@flow
+            }
             val dto = mapScrimToDto(scrim)
             val r = api.createScrim(dto)
             if (r.isSuccessful) {
@@ -282,6 +287,13 @@ class SupabaseScrimRepository(
             if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
             if (scrim.teamId == application.applicantTeamId) { emit(Result.failure(Exception("You cannot apply to your own scrim"))); return@flow }
+
+            // Duplicate guard: applicant must not already have a pending application for this scrim
+            val existingApps = api.getScrimApplications(PostgrestFilter.eq(scrimId))
+            if (existingApps.isSuccessful) {
+                val alreadyPending = existingApps.body()?.any { it.applicantTeamId == application.applicantTeamId && fromDbApplicationStatus(it.status) == ApplicationStatus.PENDING } ?: false
+                if (alreadyPending) { emit(Result.failure(Exception("Your team already has a pending application for this scrim"))); return@flow }
+            }
 
             // Only the applicant team's leader may apply on behalf of their team
             val applicantTeam = api.getTeamById(PostgrestFilter.eq(application.applicantTeamId)).body()?.firstOrNull()
@@ -419,7 +431,13 @@ class SupabaseScrimRepository(
             if (fromDbStatus(scrim.status) != ScrimStatus.FILLED) { emit(Result.failure(Exception("Scrim must be filled before ready check"))); return@flow }
             if (scrim.opponentTeamId.isNullOrBlank()) { emit(Result.failure(Exception("No opponent has been set for this scrim"))); return@flow }
 
-            val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to toDbStatus(ScrimStatus.READY_CHECK)))
+            // Reset ready flags so a previous ready check doesn't pollute this one
+            val updates = mutableMapOf<String, Any>(
+                "status" to toDbStatus(ScrimStatus.READY_CHECK),
+                "team_a_ready" to false,
+                "team_b_ready" to false
+            )
+            val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Transition failed"))) }
             else emit(Result.failure(Exception("Error transitioning scrim")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -440,6 +458,9 @@ class SupabaseScrimRepository(
                 .onFailure { emit(Result.failure(it)); return@flow }
 
             val isTeamA = existing.teamId == teamId
+            val alreadyReady = if (isTeamA) existing.teamAReady else existing.teamBReady
+            if (alreadyReady) { emit(Result.failure(Exception("Your team is already marked ready"))); return@flow }
+
             val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
             if (isTeamA) { updates["team_a_ready"] = true; updates["team_a_ready_at"] = nowIso } else { updates["team_b_ready"] = true; updates["team_b_ready_at"] = nowIso }
@@ -493,16 +514,51 @@ class SupabaseScrimRepository(
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to toDbStatus(ScrimStatus.COMPLETED), "winner_team_id" to winnerTeamId))
             if (!r.isSuccessful) { emit(Result.failure(Exception("Error completing scrim: ${r.errorBody()?.string()}"))); return@flow }
             val updated = r.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Complete failed: no data returned"))); return@flow }
+
+            // Best-effort downstream: match record, match result, and points awarding.
+            // These are secondary to scrim completion; failures are logged but do not fail the operation.
             var matchId: String? = null
             try {
-                val em = api.getMatches(scrimId = scrimId).body()?.firstOrNull()
-                if (em != null) { matchId = em.id } else {
-                    val teamBId = updated.opponentTeamId
-                    if (teamBId != null) { val mr = api.createMatch(MatchDto(scrimId = scrimId, teamAId = updated.teamId, teamBId = teamBId, scheduledDate = updated.scheduledDate, scheduledTime = updated.scheduledTime, status = "Completed")); if (mr.isSuccessful) matchId = mr.body()?.firstOrNull()?.id }
+                val emr = api.getMatches(scrimId = scrimId)
+                if (emr.isSuccessful) {
+                    val em = emr.body()?.firstOrNull()
+                    if (em != null) {
+                        matchId = em.id
+                    } else {
+                        val teamBId = updated.opponentTeamId
+                        if (teamBId != null) {
+                            val mr = api.createMatch(MatchDto(scrimId = scrimId, teamAId = updated.teamId, teamBId = teamBId, scheduledDate = updated.scheduledDate, scheduledTime = updated.scheduledTime, status = "Completed"))
+                            if (mr.isSuccessful) matchId = mr.body()?.firstOrNull()?.id else Timber.w("ScrimRepo", "createMatch failed: ${mr.errorBody()?.string()}")
+                        }
+                    }
+                } else {
+                    Timber.w("ScrimRepo", "getMatches failed: ${emr.errorBody()?.string()}")
                 }
             } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to find/create match", e) }
-            try { if (matchId != null) { val emr = api.getMatchResults(PostgrestFilter.eq(matchId)); val existing = emr.body()?.firstOrNull(); if (existing == null) api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId)) else api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId)) } } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to create/update match result", e) }
-            try { api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS)) } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to award scrim points", e) }
+
+            try {
+                if (matchId != null) {
+                    val emr = api.getMatchResults(PostgrestFilter.eq(matchId))
+                    if (emr.isSuccessful) {
+                        val existing = emr.body()?.firstOrNull()
+                        if (existing == null) {
+                            val cmr = api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId))
+                            if (!cmr.isSuccessful) Timber.w("ScrimRepo", "createMatchResult failed: ${cmr.errorBody()?.string()}")
+                        } else {
+                            val umr = api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId))
+                            if (!umr.isSuccessful) Timber.w("ScrimRepo", "updateMatchResult failed: ${umr.errorBody()?.string()}")
+                        }
+                    } else {
+                        Timber.w("ScrimRepo", "getMatchResults failed: ${emr.errorBody()?.string()}")
+                    }
+                }
+            } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to create/update match result", e) }
+
+            try {
+                val ar = api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS))
+                if (!ar.isSuccessful) Timber.w("ScrimRepo", "awardScrimPoints failed: ${ar.errorBody()?.string()}")
+            } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to award scrim points", e) }
+
             invalidateScrimCaches()
             emit(Result.success(mapDtoToScrim(updated)))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -590,7 +646,8 @@ class SupabaseScrimRepository(
                     val dto = parseRealtimeRecordToScrimDto(event.record!!)
                     if (dto.id == scrimId) {
                         invalidateScrimCaches()
-                        emit(mapDtoToScrim(dto))
+                        val gameResults = fetchGameResultsForScrim(dto.id)
+                        emit(mapDtoToScrim(dto, gameResults))
                     }
                 } catch (e: Exception) {
                     Timber.w("ScrimRepo", "Failed to parse Realtime UPDATE: ${e.message}")
@@ -619,7 +676,8 @@ class SupabaseScrimRepository(
                     if (record != null) {
                         val dto = parseRealtimeRecordToScrimDto(record)
                         invalidateScrimCaches()
-                        emit(mapDtoToScrim(dto))
+                        val gameResults = fetchGameResultsForScrim(dto.id)
+                        emit(mapDtoToScrim(dto, gameResults))
                     }
                 } catch (e: Exception) {
                     Timber.w("ScrimRepo", "Failed to parse Realtime event: ${e.message}")
@@ -807,8 +865,14 @@ class SupabaseScrimRepository(
             val r = api.getScrimGameResults(scrimId = PostgrestFilter.eq(scrimId))
             if (r.isSuccessful) {
                 r.body()?.map { mapDtoToScrimGameResult(it) } ?: emptyList()
-            } else emptyList()
-        } catch (_: Exception) { emptyList() }
+            } else {
+                Timber.w("ScrimRepo", "Failed to fetch game results for scrim $scrimId: ${r.errorBody()?.string()}")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Timber.w("ScrimRepo", "Exception fetching game results for scrim $scrimId", e)
+            emptyList()
+        }
     }
 
     // ─── Per-game screenshot upload ───
