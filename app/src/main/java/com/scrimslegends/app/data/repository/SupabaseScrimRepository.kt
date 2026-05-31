@@ -59,19 +59,20 @@ class SupabaseScrimRepository(
         }
 
         // ── ApplicationStatus ↔ DB string mapping ──
-        // DB constraint: valid_application_status CHECK (status IN ('Pending','Accepted','Rejected'))
+        // DB constraint: valid_application_status CHECK (status IN ('Pending','Accepted','Rejected','Cancelled'))
         fun toDbApplicationStatus(status: ApplicationStatus): String = when (status) {
             ApplicationStatus.PENDING   -> "Pending"
             ApplicationStatus.APPROVED  -> "Accepted"
             ApplicationStatus.REJECTED  -> "Rejected"
-            ApplicationStatus.CANCELLED -> "Rejected" // DB only has 3 values; cancelled maps to Rejected
+            ApplicationStatus.CANCELLED -> "Cancelled"
         }
 
         fun fromDbApplicationStatus(dbStatus: String): ApplicationStatus = when (dbStatus) {
-            "Pending"   -> ApplicationStatus.PENDING
-            "Accepted"  -> ApplicationStatus.APPROVED
-            "Rejected"  -> ApplicationStatus.REJECTED
-            else        -> ApplicationStatus.PENDING
+            "Pending"    -> ApplicationStatus.PENDING
+            "Accepted"   -> ApplicationStatus.APPROVED
+            "Rejected"   -> ApplicationStatus.REJECTED
+            "Cancelled"  -> ApplicationStatus.CANCELLED
+            else         -> ApplicationStatus.PENDING
         }
     }
 
@@ -329,47 +330,43 @@ class SupabaseScrimRepository(
 
     override suspend fun approveApplication(scrimId: String, applicationId: String, conversationId: String): Flow<Result<Scrim>> = flow {
         try {
-            // Ownership: only the scrim host team leader may approve applications
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val scrim = scrimResponse.body()?.firstOrNull()
-            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            val hostTeam = api.getTeamById(PostgrestFilter.eq(scrim.teamId)).body()?.firstOrNull()
-            if (hostTeam == null) { emit(Result.failure(Exception("Host team not found"))); return@flow }
-            AuthorizationUtils.requireOwner(hostTeam.leaderId, "approve applications for this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
+            // Use atomic RPC: approves the app, cancels others, locks scrim in a single DB transaction
+            val rpcResult = api.approveScrimApplication(mapOf(
+                "p_application_id" to applicationId,
+                "p_conversation_id" to conversationId
+            ))
+            if (!rpcResult.isSuccessful) {
+                val errorBody = rpcResult.errorBody()?.string() ?: "Unknown error"
+                emit(Result.failure(Exception("Failed to approve application: $errorBody")))
+                return@flow
+            }
 
-            val appResponse = api.getScrimApplications(PostgrestFilter.eq(applicationId))
-            if (!appResponse.isSuccessful) { emit(Result.failure(Exception("Failed to fetch application"))); return@flow }
-            val application = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
-            if (fromDbStatus(scrim.status) != ScrimStatus.OPEN) { emit(Result.failure(Exception("Scrim is no longer open for applications"))); return@flow }
-            if (fromDbApplicationStatus(application.status) != ApplicationStatus.PENDING) { emit(Result.failure(Exception("Application is no longer pending"))); return@flow }
-            val approveR = api.updateScrimApplication(PostgrestFilter.eq(applicationId), mapOf("status" to toDbApplicationStatus(ApplicationStatus.APPROVED)))
-            if (!approveR.isSuccessful) { emit(Result.failure(Exception("Failed to approve application: ${approveR.errorBody()?.string()}"))); return@flow }
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Approval failed"
+                emit(Result.failure(Exception(error)))
+                return@flow
+            }
 
-            val bulkR = api.updateScrimApplicationsBulk(scrimId = PostgrestFilter.eq(scrimId), status = PostgrestFilter.eq(toDbApplicationStatus(ApplicationStatus.PENDING)), body = mapOf("status" to toDbApplicationStatus(ApplicationStatus.CANCELLED)))
-            if (!bulkR.isSuccessful) { Timber.w("ScrimRepo", "Failed to cancel other applications: ${bulkR.errorBody()?.string()}") }
-
-            val updates = mutableMapOf<String, Any>("status" to toDbStatus(ScrimStatus.FILLED), "opponent_team_id" to application.applicantTeamId, "conversation_id" to conversationId)
-            try { api.getTeamById(PostgrestFilter.eq(application.applicantTeamId)).body()?.firstOrNull()?.name?.let { updates["opponent_team_name"] = it } } catch (_: Exception) { }
-            val r = api.updateScrim(PostgrestFilter.eq(scrimId), updates)
-            if (r.isSuccessful) {
-                val u = r.body()?.firstOrNull()
-                if (u != null) {
-                    // Ensure game results exist (fallback for old scrims created before migration)
-                    val existingGames = fetchGameResultsForScrim(scrimId)
-                    if (existingGames.isEmpty()) {
-                        val gameCount = BestOf.fromGames(scrim.bestOf).games
-                        for (gameNum in 1..gameCount) {
-                            try {
-                                api.createScrimGameResult(ScrimGameResultDto(scrimId = scrimId, gameNumber = gameNum))
-                            } catch (_: Exception) { }
-                        }
+            // Ensure game results exist (fallback for old scrims created before migration)
+            val existingGames = fetchGameResultsForScrim(scrimId)
+            if (existingGames.isEmpty()) {
+                val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+                val scrimDto = scrimResponse.body()?.firstOrNull()
+                if (scrimDto != null) {
+                    val gameCount = BestOf.fromGames(scrimDto.bestOf).games
+                    for (gameNum in 1..gameCount) {
+                        try {
+                            api.createScrimGameResult(ScrimGameResultDto(scrimId = scrimId, gameNumber = gameNum))
+                        } catch (_: Exception) { }
                     }
-                    invalidateScrimCaches()
-                    emit(Result.success(mapDtoToScrim(u)))
                 }
-                else emit(Result.failure(Exception("Approve failed")))
-            } else emit(Result.failure(Exception("Error approving application")))
+            }
+
+            invalidateScrimCaches()
+            // Fetch fully populated scrim (with applications, rosters, game results)
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after approval") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 

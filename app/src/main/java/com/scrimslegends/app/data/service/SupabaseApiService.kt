@@ -896,6 +896,10 @@ interface SupabaseApiService {
     @POST("rpc/mark_messages_as_read")
     suspend fun markConversationAsRead(@Body params: Map<String, String>): Response<Unit>
 
+    // Atomic scrim application approval: approves one app, cancels others, locks scrim
+    @POST("rpc/approve_scrim_application")
+    suspend fun approveScrimApplication(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // ─── Message soft-delete ───
     @PATCH("messages")
     suspend fun deleteMessage(
