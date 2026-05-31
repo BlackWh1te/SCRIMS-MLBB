@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-05-31 18:52 [Session: Scrim cache + realtime audit fixes — migration, entity fields, mapping, realtime data]
+
+### Commits
+- `9d57ace` — fix(scrim-cache): add Room migration 15→16, fix realtime missing apps/rosters, fix entity mapping
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/DatabaseMigrations.kt`
+  - Added `MIGRATION_15_16`: adds `teamName`, `teamLeader`, `conversationId` columns to `cached_scrims`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimEntity.kt`
+  - Added `teamName: String = ""`, `teamLeader: String = ""`, `conversationId: String? = null` fields
+  - Fixes offline detail view showing empty team name and missing conversation link
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimsLegendsDatabase.kt`
+  - Bumped `version` from 15 to 16
+  - Registered `MIGRATION_15_16` in `.addMigrations()`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Fixed `subscribeToScrim`: now calls `fetchApplicationsForScrim()` + `fetchRostersForScrim()` before emitting updated Scrim (was emitting empty lists)
+  - Fixed `subscribeToAllScrims`: same fix — fetches applications + rosters for each realtime event
+  - Fixed `mapScrimToEntity`: persists `teamName`, `teamLeader`, `conversationId`, `createdAt` into Room
+  - Fixed `mapEntityToScrim`: reads `teamName`, `teamLeader`, `conversationId`, `createdAt` from entity instead of hardcoded empty strings/nulls
+
+### Impact
+- Offline cached scrims now retain team name, leader, and conversation ID
+- Realtime updates no longer wipe applications and rosters from scrim objects
+- Existing users upgrading from v15→v16 will preserve their cached scrim data (non-destructive migration)
+
+---
+
 ## 2026-05-31 09:15 [Session: Notification pipeline audit + polish]
 
 ### Commits
