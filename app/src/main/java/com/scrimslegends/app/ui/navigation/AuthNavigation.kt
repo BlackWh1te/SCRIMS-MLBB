@@ -1096,33 +1096,29 @@ fun AuthNavigation(
                     val scrim = selectedScrim ?: scrims.find { it.id == scrimId }
 
                     if (scrim != null) {
-                        val myTeam = teams.firstOrNull()
-                        val isTeamLeader = myTeam?.leaderId == userProfile?.id
-                        val teamHasMinPlayers = myTeam?.meetsMinPlayers ?: false
-
                         ScrimDetailScreen(
                             scrim = scrim,
                             currentUserId = userProfile?.id ?: "",
-                            currentUserTeamId = myTeam?.id,
-                            currentUserTeamName = myTeam?.name,
-                            isTeamLeader = isTeamLeader,
-                            teamHasMinPlayers = teamHasMinPlayers,
+                            teams = teams,
                             onNavigateBack = {
                                 navController.popBackStack()
                             },
-                            onApplyScrim = { appliedScrim ->
-                                if (myTeam != null && isTeamLeader && teamHasMinPlayers) {
+                            onApplyScrim = { appliedScrim, applicantTeamId, applicantTeamName, selectedPlayerIds ->
+                                val applicantTeam = teams.find { it.id == applicantTeamId }
+                                if (applicantTeam != null) {
                                     scrimViewModel.applyToScrim(
                                         scrimId = appliedScrim.id,
-                                        applicantTeamId = myTeam.id,
-                                        applicantTeamName = myTeam.name,
-                                        applicantTeamLeader = myTeam.leaderId,
-                                        applicantTeamLeaderName = userProfile?.username ?: ""
+                                        applicantTeamId = applicantTeamId,
+                                        applicantTeamName = applicantTeamName,
+                                        applicantTeamLeader = applicantTeam.leaderId,
+                                        applicantTeamLeaderName = userProfile?.username ?: "",
+                                        selectedPlayerIds = selectedPlayerIds
                                     )
                                 }
                             },
                             onApproveApplication = { sid, appId ->
                                 val app = scrim.applications.find { it.id == appId }
+                                val hostTeam = teams.find { it.id == scrim.teamId }
                                 if (app != null) {
                                     // Create conversation between the REAL applicant leader and the host
                                     messageViewModel.sendApplyMessage(
@@ -1134,10 +1130,10 @@ fun AuthNavigation(
                                         applicantTeamName = app.applicantTeamName,
                                         scrimCreatorId = userProfile?.id ?: "",
                                         scrimCreatorName = userProfile?.username ?: "",
-                                        scrimCreatorTeamId = myTeam?.id ?: "",
-                                        scrimCreatorTeamName = myTeam?.name ?: "",
-                                        teamPlayerCount = myTeam?.players?.size ?: 0,
-                                        teamMaxPlayers = myTeam?.maxPlayers ?: 7,
+                                        scrimCreatorTeamId = hostTeam?.id ?: "",
+                                        scrimCreatorTeamName = hostTeam?.name ?: "",
+                                        teamPlayerCount = hostTeam?.players?.size ?: 0,
+                                        teamMaxPlayers = hostTeam?.maxPlayers ?: 7,
                                         onConversationCreated = { conversation ->
                                             scrimViewModel.approveApplication(sid, appId, conversation.id)
                                         }

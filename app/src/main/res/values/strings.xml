@@ -249,6 +249,11 @@
     <string name="need_5_plus_players">Need 5+ Players</string>
     <string name="team_needs_5_players">Your team needs at least 5 players to apply</string>
     <string name="team_leaders_only">Team Leaders Only</string>
+    <string name="select_team_apply">Select Team to Apply</string>
+    <string name="team_players_count">%1$d / %2$d players</string>
+    <string name="select_roster_players">Select Roster for %s</string>
+    <string name="select_at_least_players">Select at least %d players</string>
+    <string name="confirm_players">Confirm (%d)</string>
     <string name="cancel_scrim">Cancel Scrim</string>
     <string name="cancel_scrim_confirm">This will cancel the scrim and notify all participants. Are you sure?</string>
     <string name="pending_applications">Pending Applications (%d)</string>

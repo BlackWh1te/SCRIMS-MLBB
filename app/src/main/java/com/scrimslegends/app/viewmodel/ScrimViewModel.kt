@@ -60,6 +60,9 @@ class ScrimViewModel @Inject constructor(
     // ── Internal: Map-based O(1) scrim storage ──
     private val _scrimMap = Collections.synchronizedMap(LinkedHashMap<String, Scrim>())
 
+    // ── Pending rosters: scrimId -> list of selected player IDs (cleared after roster submission) ──
+    private val _pendingRosters = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+
     init {
         loadScrims()
     }
@@ -288,7 +291,8 @@ class ScrimViewModel @Inject constructor(
         applicantTeamId: String,
         applicantTeamName: String,
         applicantTeamLeader: String,
-        applicantTeamLeaderName: String
+        applicantTeamLeaderName: String,
+        selectedPlayerIds: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -306,6 +310,11 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.applyToScrim(scrimId, application).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
+                    if (selectedPlayerIds.isNotEmpty()) {
+                        _pendingRosters.value = _pendingRosters.value.toMutableMap().apply {
+                            put(scrimId, selectedPlayerIds)
+                        }
+                    }
                     loadScrims()
                     _isLoading.value = false
                 }.onFailure { exception ->

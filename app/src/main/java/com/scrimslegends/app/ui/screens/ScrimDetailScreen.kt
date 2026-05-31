@@ -36,6 +36,7 @@ import com.scrimslegends.app.data.model.ScrimGameResult
 import com.scrimslegends.app.data.model.ScrimGameStatus
 import com.scrimslegends.app.data.model.ScrimRosterEntry
 import com.scrimslegends.app.data.model.ScrimStatus
+import com.scrimslegends.app.data.model.Team
 import com.scrimslegends.app.data.service.SupabaseConfig
 import com.scrimslegends.app.data.service.SupabaseStorageUpload
 import com.scrimslegends.app.ui.theme.*
@@ -54,14 +55,12 @@ import java.util.concurrent.TimeUnit
 fun ScrimDetailScreen(
     scrim: Scrim,
     currentUserId: String,
-    currentUserTeamId: String? = null,
-    currentUserTeamName: String? = null,
-    isTeamLeader: Boolean = false,
-    teamHasMinPlayers: Boolean = false,
+    teams: List<Team> = emptyList(),                          // All user's teams (for multi-team apply)
     onNavigateBack: () -> Unit,
     onJoinScrim: (String) -> Unit = {},
     onLeaveScrim: (String) -> Unit = {},
-    onApplyScrim: (Scrim) -> Unit = {},
+    // ── Apply callback: scrim, teamId, teamName, selectedPlayerIds ──
+    onApplyScrim: (Scrim, String, String, List<String>) -> Unit = { _, _, _, _ -> },
     onApproveApplication: (String, String) -> Unit = { _, _ -> },
     onRejectApplication: (String, String) -> Unit = { _, _ -> },
     onCancelApplication: (String, String) -> Unit = { _, _ -> },
@@ -77,6 +76,16 @@ fun ScrimDetailScreen(
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
     var isJoined by remember { mutableStateOf(false) }
+
+    // ── Apply flow state ──
+    var showTeamPicker by remember { mutableStateOf(false) }
+    var showPlayerPicker by remember { mutableStateOf(false) }
+    var selectedApplyTeam by remember { mutableStateOf<Team?>(null) }
+    var selectedPlayerIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Derive leader-capable teams (teams where current user IS the leader AND has min players)
+    val leaderTeams = teams.filter { it.leaderId == currentUserId && it.meetsMinPlayers }
+    val canApply = scrim.status == ScrimStatus.OPEN && leaderTeams.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -387,9 +396,12 @@ fun ScrimDetailScreen(
                 // ACTION AREA — Team vs Team Application Flow + Ready/Screenshot/Complete
                 // ═══════════════════════════════════════════════════════
                 item {
-                    val isHost = scrim.teamId == currentUserTeamId && isTeamLeader
-                    val myApplication = scrim.applications.find { it.applicantTeamId == currentUserTeamId }
-                    val isOpponent = scrim.opponentTeamId == currentUserTeamId
+                    // Derive role from ALL user's teams (not just first)
+                    val userTeamIds = teams.map { it.id }.toSet()
+                    val isHost = teams.any { it.id == scrim.teamId && it.leaderId == currentUserId }
+                    val myApplication = scrim.applications.find { it.applicantTeamId in userTeamIds }
+                    val isOpponent = scrim.opponentTeamId in userTeamIds
+                    val myOpponentTeam = teams.find { it.id == scrim.opponentTeamId }
                     val hasPendingApps = scrim.applications.any { it.status == ApplicationStatus.PENDING }
 
                     AnimatedEntrance(delayMillis = 150) {
@@ -397,7 +409,7 @@ fun ScrimDetailScreen(
                             // ── HOST VIEW ──
                             isHost -> HostActions(
                                 scrim = scrim,
-                                currentTeamId = currentUserTeamId,
+                                currentTeamId = scrim.teamId,
                                 onCancelScrim = { showCancelDialog = true },
                                 onApprove = { appId ->
                                     onApproveApplication(scrim.id, appId)
@@ -425,18 +437,29 @@ fun ScrimDetailScreen(
                             )
 
                             // ── VISITOR VIEW: Can apply ──
-                            scrim.status == ScrimStatus.OPEN && isTeamLeader && teamHasMinPlayers -> {
+                            canApply -> {
+                                val firstTeam = leaderTeams.first()
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     GradientButton(
                                         text = stringResource(R.string.apply_with_team),
-                                        onClick = { onApplyScrim(scrim) },
+                                        onClick = {
+                                            if (leaderTeams.size == 1) {
+                                                // Single team — skip picker, go straight to player picker
+                                                selectedApplyTeam = firstTeam
+                                                selectedPlayerIds = firstTeam.players.take(5).map { it.id }.toSet()
+                                                showPlayerPicker = true
+                                            } else {
+                                                // Multiple teams — show picker
+                                                showTeamPicker = true
+                                            }
+                                        },
                                         gradient = BlueGradient,
                                         height = 56.dp
                                     )
-                                    if (currentUserTeamName != null) {
+                                    if (leaderTeams.size == 1) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            text = stringResource(R.string.applying_as, currentUserTeamName),
+                                            text = stringResource(R.string.applying_as, firstTeam.name),
                                             fontSize = 13.sp,
                                             color = LightGray.copy(alpha = 0.6f),
                                             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -445,8 +468,8 @@ fun ScrimDetailScreen(
                                 }
                             }
 
-                            // ── VISITOR: No team or not enough players ──
-                            scrim.status == ScrimStatus.OPEN && isTeamLeader && !teamHasMinPlayers -> {
+                            // ── VISITOR: Has teams but not enough players ──
+                            scrim.status == ScrimStatus.OPEN && teams.any { it.leaderId == currentUserId && !it.meetsMinPlayers } -> {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     GradientButton(
                                         text = stringResource(R.string.need_5_plus_players),
@@ -464,7 +487,7 @@ fun ScrimDetailScreen(
                                 }
                             }
 
-                            // ── VISITOR: Not a team leader ──
+                            // ── VISITOR: Not a leader of any team ──
                             scrim.status == ScrimStatus.OPEN -> {
                                 GradientButton(
                                     text = stringResource(R.string.team_leaders_only),
@@ -475,7 +498,20 @@ fun ScrimDetailScreen(
                                 )
                             }
 
-                            // ── FILLED / IN_PROGRESS / COMPLETED / CANCELLED ──
+                            // ── FILLED / IN_PROGRESS / COMPLETED / CANCELLED: Opponent actions ──
+                            isOpponent -> OpponentActions(
+                                scrim = scrim,
+                                currentTeamId = myOpponentTeam?.id ?: "",
+                                onNavigateToChat = onNavigateToChat,
+                                onNavigateToRoster = onNavigateToRoster,
+                                onMarkReady = onMarkReady,
+                                onUploadScreenshot = onUploadScreenshot,
+                                onUploadGameScreenshot = onUploadGameScreenshot,
+                                onSelectGameWinner = onSelectGameWinner,
+                                onCompleteScrim = onCompleteScrim
+                            )
+
+                            // ── DEFAULT ──
                             else -> ScrimStatusCard(scrim = scrim)
                         }
                     }
@@ -521,6 +557,53 @@ fun ScrimDetailScreen(
                 TextButton(onClick = { showCancelDialog = false }) {
                     Text(stringResource(R.string.keep_scrim), color = MidGray)
                 }
+            }
+        )
+    }
+
+    // Team Picker Dialog
+    if (showTeamPicker) {
+        TeamPickerDialog(
+            teams = leaderTeams,
+            onTeamSelected = { team ->
+                selectedApplyTeam = team
+                selectedPlayerIds = team.players.take(5).map { it.id }.toSet()
+                showTeamPicker = false
+                showPlayerPicker = true
+            },
+            onDismiss = { showTeamPicker = false }
+        )
+    }
+
+    // Player Picker Dialog
+    if (showPlayerPicker && selectedApplyTeam != null) {
+        PlayerPickerDialog(
+            team = selectedApplyTeam!!,
+            selectedPlayerIds = selectedPlayerIds,
+            onPlayerToggle = { playerId ->
+                selectedPlayerIds = if (playerId in selectedPlayerIds) {
+                    selectedPlayerIds - playerId
+                } else {
+                    selectedPlayerIds + playerId
+                }
+            },
+            onConfirm = {
+                selectedApplyTeam?.let { team ->
+                    onApplyScrim(
+                        scrim,
+                        team.id,
+                        team.name,
+                        selectedPlayerIds.toList()
+                    )
+                }
+                showPlayerPicker = false
+                selectedApplyTeam = null
+                selectedPlayerIds = emptySet()
+            },
+            onDismiss = {
+                showPlayerPicker = false
+                selectedApplyTeam = null
+                selectedPlayerIds = emptySet()
             }
         )
     }
@@ -926,6 +1009,276 @@ private fun ScrimStatusCard(scrim: Scrim) {
             )
         }
     }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// OPPONENT ACTIONS — For the team that applied and was accepted
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun OpponentActions(
+    scrim: Scrim,
+    currentTeamId: String?,
+    onNavigateToChat: ((String) -> Unit)?,
+    onNavigateToRoster: ((String, String) -> Unit)?,
+    onMarkReady: ((String, String) -> Unit)?,
+    onUploadScreenshot: ((String, String, String) -> Unit)?,
+    onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
+    onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
+    onCompleteScrim: ((String, String) -> Unit)?
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        when (scrim.status) {
+            ScrimStatus.FILLED -> {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(SuccessGreen.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = LightGray)
+                                Text(stringResource(R.string.application_approved), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (currentTeamId != null && onNavigateToRoster != null) {
+                            GradientButton(
+                                text = stringResource(R.string.select_roster),
+                                onClick = { onNavigateToRoster(scrim.id, currentTeamId) },
+                                gradient = BlueGradient,
+                                height = 48.dp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        if (scrim.isChatOpen) {
+                            GradientButton(
+                                text = stringResource(R.string.open_chat),
+                                onClick = { scrim.conversationId?.let { onNavigateToChat?.invoke(it) } },
+                                gradient = GoldGradient,
+                                height = 48.dp
+                            )
+                        } else {
+                            ChatGateCountdown(timeUntilOpens = scrim.timeUntilChatOpens)
+                        }
+                    }
+                }
+            }
+
+            ScrimStatus.READY_CHECK -> {
+                ReadyCheckSection(
+                    scrim = scrim,
+                    currentTeamId = currentTeamId,
+                    onMarkReady = onMarkReady,
+                    onNavigateToChat = onNavigateToChat
+                )
+            }
+
+            ScrimStatus.IN_PROGRESS -> {
+                InProgressSection(
+                    scrim = scrim,
+                    currentTeamId = currentTeamId,
+                    onUploadScreenshot = onUploadScreenshot,
+                    onUploadGameScreenshot = onUploadGameScreenshot,
+                    onSelectGameWinner = onSelectGameWinner,
+                    onCompleteScrim = onCompleteScrim,
+                    onNavigateToChat = onNavigateToChat
+                )
+            }
+
+            ScrimStatus.COMPLETED -> ScrimStatusCard(scrim)
+            ScrimStatus.CANCELLED -> ScrimStatusCard(scrim)
+            else -> ScrimStatusCard(scrim)
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// TEAM PICKER DIALOG — Choose which team to apply with
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun TeamPickerDialog(
+    teams: List<Team>,
+    onTeamSelected: (Team) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkNavy,
+        title = {
+            Text(
+                text = stringResource(R.string.select_team_apply),
+                color = White,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                teams.forEach { team ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clickable { onTeamSelected(team) },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Brush.linearGradient(BlueGradient)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = White
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = team.name,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = White
+                                )
+                                Text(
+                                    text = stringResource(R.string.team_players_count, team.currentPlayerCount, team.maxPlayers),
+                                    fontSize = 13.sp,
+                                    color = LightGray
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = LightGray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), color = MidGray)
+            }
+        }
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════
+// PLAYER PICKER DIALOG — Select roster players before applying
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PlayerPickerDialog(
+    team: Team,
+    selectedPlayerIds: Set<String>,
+    onPlayerToggle: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val minPlayers = team.minPlayers
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkNavy,
+        title = {
+            Text(
+                text = stringResource(R.string.select_roster_players, team.name),
+                color = White,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.select_at_least_players, minPlayers),
+                    fontSize = 13.sp,
+                    color = LightGray,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                team.players.forEach { player ->
+                    val isSelected = player.id in selectedPlayerIds
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) BluePrimary.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { onPlayerToggle(player.id) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = { onPlayerToggle(player.id) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = BluePrimary,
+                                uncheckedColor = MidGray,
+                                checkmarkColor = White
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = player.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = White
+                            )
+                            Text(
+                                text = player.role.name.lowercase().replaceFirstChar { it.uppercase() },
+                                fontSize = 12.sp,
+                                color = LightGray
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = selectedPlayerIds.size >= minPlayers
+            ) {
+                Text(
+                    stringResource(R.string.confirm_players, selectedPlayerIds.size),
+                    color = if (selectedPlayerIds.size >= minPlayers) BluePrimary else MidGray
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), color = MidGray)
+            }
+        }
+    )
 }
 
 // ═════════════════════════════════════════════════════════════════

@@ -8,6 +8,38 @@
 
 ---
 
+## 2026-05-31 08:20 [Session: Scrim apply flow fix] — Team picker, player picker, OpponentActions, multi-team support
+
+### Commits
+- (pending)
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Added `OpponentActions` composable for accepted opponents (was referenced but didn't exist)
+  - Added `TeamPickerDialog` composable — lets multi-team users choose which team to apply with
+  - Added `PlayerPickerDialog` composable — multi-select checkbox list of team players before submitting
+  - Wired up dialog state: `showTeamPicker`, `showPlayerPicker`, `selectedApplyTeam`, `selectedPlayerIds`
+  - Apply button now triggers team picker (if multi-team) → player picker → submits with `onApplyScrim(scrim, teamId, teamName, playerIds)`
+  - `isHost` derivation now uses `teams.any { it.id == scrim.teamId && it.leaderId == currentUserId }` instead of single-team params [INTENTIONAL FIX]
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Removed old single-team params: `currentUserTeamId`, `currentUserTeamName`, `isTeamLeader`, `teamHasMinPlayers`
+  - Now passes full `teams = teams` list to `ScrimDetailScreen`
+  - `onApplyScrim` lambda updated to 4-arg signature, forwards `selectedPlayerIds` to `ScrimViewModel`
+  - Fixed `onApproveApplication` host team lookup: uses `teams.find { it.id == scrim.teamId }` instead of `myTeam`
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - `applyToScrim` now accepts `selectedPlayerIds: List<String>` with default `emptyList()`
+  - Stores selected player IDs in `_pendingRosters` map (scrimId -> playerIds) for later roster auto-population
+- **File:** `app/src/main/res/values/strings.xml`
+  - Added `select_team_apply`, `team_players_count`, `select_roster_players`, `select_at_least_players`, `confirm_players`
+
+### Impact
+- Fixes critical user-reported bug: "clicking apply doesn't show team picker or player picker"
+- Multi-team users can now choose which team to apply with
+- Users can pre-select their roster players before submitting the application
+- Selected player IDs are preserved client-side and can be auto-applied to roster after approval
+
+---
+
 ## 2026-05-31 07:25 [Session: Free-tier optimizations] — FreeTierConfig, reduced polling, scrim realtime scope, backoff
 
 ### Commits
