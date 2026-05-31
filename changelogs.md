@@ -8,6 +8,40 @@
 
 ---
 
+## 2026-06-01 04:35 [Session: Change series format for unfinished series]
+
+### Commits
+- `b5c705b` — feat(scrim): add change-series-format for unfinished series
+
+### Added
+- **DB Migration:** `supabase/migrations/20260631190001_change_series_format_rpc.sql`
+  - New `change_series_format(p_scrim_id, p_new_best_of)` RPC
+  - Locks scrim row, verifies caller is team leader
+  - Validates new format is smaller than current AND >= number of games already with confirmed winners
+  - Updates `scrims.best_of` and deletes orphaned `scrim_game_results` rows beyond new format
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added `changeSeriesFormatRpc` POST endpoint
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/ScrimRepositoryInterface.kt`
+  - Added `changeSeriesFormat(scrimId, newBestOf)` method
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Implemented `changeSeriesFormat` calling atomic RPC
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - Added `changeSeriesFormat(scrimId, newBestOf)` ViewModel method
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - `HostActions` + `OpponentActions` + `InProgressSection` all receive `onChangeSeriesFormat` callback
+  - In-progress scrims now show orange "Change format (BO5 -> shorter)" button when valid smaller formats exist
+  - Dialog lists available formats with current one highlighted; tapping a format immediately calls the RPC
+  - Only formats >= `gamesWithWinner` are offered (e.g., if 2 games confirmed in BO5, only BO3 is valid; BO1 would be excluded)
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Wired `scrimViewModel.changeSeriesFormat` to `ScrimDetailScreen.onChangeSeriesFormat`
+
+### Impact
+- Teams playing a BO5 that can only finish 3 games can now convert the series to BO3
+- Prevents scrims from being stuck "In Progress" forever when real-life interruptions occur
+- No fake wins awarded; played games are preserved, unplayed games are discarded
+
+---
+
 ## 2026-06-01 04:20 [Session: Apply/Approve unresponsive + BO2 tie + atomic roster + isReadyPhase clock fix]
 
 ### Commits
