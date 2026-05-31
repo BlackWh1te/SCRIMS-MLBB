@@ -8,6 +8,39 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Supabase CLI migration sync] — Pushed all pending migrations to remote DB
+
+### Commits
+- `4dfc425` — fix(db): apply all pending migrations via Supabase CLI
+
+### Changed
+- **File:** `supabase/migrations/20260528220001_rename_mlbb_id_to_game_id.sql`
+  - Made idempotent: checks if `mlbb_id` column exists before renaming to `game_id`.
+  - This migration was older than all applied remote migrations, so `--include-all` flag was required.
+- **File:** `supabase/migrations/20260631050001_add_screenshot_per_game_and_bo2.sql`
+  - Fixed `uuid_generate_v4()` → `gen_random_uuid()` (the `uuid-ossp` extension is not enabled on this project).
+- **New file:** `supabase/migrations/20260631070001_lfg_posts_table.sql`
+  - Converted skipped `lfg_migration.sql` (no timestamp) to a proper timestamped migration.
+  - All `CREATE TABLE` / `CREATE POLICY` statements are idempotent (`IF NOT EXISTS`).
+- **New file:** `supabase/migrations/20260631070002_supabase_schema_sync.sql`
+  - Converted skipped `supabase_migration.sql` (no timestamp) to a proper timestamped migration.
+  - Added `DROP FUNCTION IF EXISTS` before all `CREATE OR REPLACE FUNCTION` to avoid return-type conflicts.
+  - Fixed `scrim_roster` → `scrim_rosters` table name in trigger definition.
+
+### Remote Database State
+- All local migrations are now applied to the remote project (`BlackWh1te's Project`, West EU Paris).
+- Zero local-only migrations remain.
+
+### Critical Finding
+- The `profiles` table on the remote DB had `mlbb_id` while the app has been sending `game_id` for months.
+  - This means profile lookups by `game_id` may have been broken.
+  - The `20260528220001` rename migration is now applied, so the column is `game_id` on remote.
+
+### Verdict
+- `[INTENTIONAL FIX]` — Do NOT remove the `DROP FUNCTION IF EXISTS` guards from `20260631070002`; they are required because the remote DB already had conflicting function signatures.
+
+---
+
 ## 2026-05-31 04:18 [Session: Deep audit scrims conversation + teamName + status mapping] — Fixed broken leader-to-leader chat, wrong team names, and DB constraint violations
 
 ### Commits
