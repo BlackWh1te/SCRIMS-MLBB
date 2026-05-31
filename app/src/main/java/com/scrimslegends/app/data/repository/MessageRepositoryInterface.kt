@@ -71,8 +71,10 @@ interface MessageRepositoryInterface {
     /**
      * Subscribe to messages with full lifecycle management.
      * Automatically handles bridge fetch + Realtime + fallback polling.
+     * @param skipBridgeFetch If true, skip the Phase 2 bridge fetch (use when
+     *        messages were already loaded via getConversationById).
      */
-    fun subscribeToMessages(conversationId: String): Flow<Message>
+    fun subscribeToMessages(conversationId: String, skipBridgeFetch: Boolean = false): Flow<Message>
 
     fun subscribeToConversation(conversationId: String): Flow<Conversation>
 

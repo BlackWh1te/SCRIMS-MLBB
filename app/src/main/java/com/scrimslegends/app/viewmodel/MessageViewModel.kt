@@ -100,6 +100,17 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Pre-populate selectedConversation from the list so ChatScreen
+     * has data instantly without waiting for a network call.
+     */
+    fun preSelectConversation(conversation: Conversation) {
+        _selectedConversation.value = conversation
+        if (conversation.messages.isNotEmpty()) {
+            setMessagesWithDelivery(conversation.messages.map { MessageWithDelivery(message = it) })
+        }
+    }
+
     // ── Conversation list polling (REST fallback only) ──
     fun startConversationsPolling(userId: String) {
         convPollingJob?.cancel()
@@ -123,22 +134,28 @@ class MessageViewModel @Inject constructor(
         chatPollingJob?.cancel()
         messageRepository.unsubscribeFromMessages(conversationId)
 
-        chatSubscriptionJob = viewModelScope.launch {
-            // Mark as read on enter
+        // Fire-and-forget: mark as read in background (don't block message loading)
+        viewModelScope.launch {
             messageRepository.markConversationAsRead(conversationId, userId).collect {}
+        }
 
-            // Load initial conversation
-            messageRepository.getConversationById(conversationId).collect { result ->
-                result.onSuccess { conv ->
-                    _selectedConversation.value = conv
-                    conv?.messages?.let { msgs ->
-                        setMessagesWithDelivery(msgs.map { MessageWithDelivery(message = it) })
+        chatSubscriptionJob = viewModelScope.launch {
+            // Only fetch from network if we don't already have messages loaded
+            val current = _selectedConversation.value
+            val needsFetch = current?.id != conversationId || current.messages.isEmpty()
+            if (needsFetch) {
+                messageRepository.getConversationById(conversationId).collect { result ->
+                    result.onSuccess { conv ->
+                        _selectedConversation.value = conv
+                        conv?.messages?.let { msgs ->
+                            setMessagesWithDelivery(msgs.map { MessageWithDelivery(message = it) })
+                        }
                     }
                 }
             }
 
-            // Subscribe to new messages via Realtime
-            messageRepository.subscribeToMessages(conversationId).collect { newMessage ->
+            // Subscribe to new messages via Realtime (skip bridge fetch if we just loaded)
+            messageRepository.subscribeToMessages(conversationId, skipBridgeFetch = !needsFetch).collect { newMessage ->
                 integrateMessage(newMessage)
             }
         }
@@ -471,9 +488,15 @@ class MessageViewModel @Inject constructor(
 
     private fun setMessagesWithDelivery(messages: List<MessageWithDelivery>) {
         _messagesWithDelivery.value = messages
-        _selectedConversation.value = _selectedConversation.value?.copy(
-            messages = messages.map { it.message }
-        )
+        // Only update selectedConversation messages if the list has changed significantly
+        // (avoids double recomposition on every typing indicator or delivery status update)
+        val currentConvMessages = _selectedConversation.value?.messages
+        val newMessages = messages.map { it.message }
+        if (currentConvMessages != newMessages) {
+            _selectedConversation.value = _selectedConversation.value?.copy(
+                messages = newMessages
+            )
+        }
     }
 
     fun setError(message: String) { _error.value = message }

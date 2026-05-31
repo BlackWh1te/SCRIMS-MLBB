@@ -1334,8 +1334,9 @@ fun AuthNavigation(
                             navController.popBackStack()
                         },
                         onNavigateToChat = { conversation ->
-                            messageViewModel.loadConversation(conversation.id)
-                            messageViewModel.markAsRead(conversation.id, userId)
+                            // Set selectedConversation from list so ChatScreen has data instantly.
+                            // startChatSubscription will handle mark-as-read + message loading + realtime.
+                            messageViewModel.preSelectConversation(conversation)
                             navController.navigate(Screen.Chat.createRoute(conversation.id))
                         },
                         onRefresh = {

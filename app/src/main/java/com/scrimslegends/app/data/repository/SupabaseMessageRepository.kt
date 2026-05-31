@@ -705,7 +705,7 @@ class SupabaseMessageRepository(
     // REALTIME SUBSCRIPTION (lifecycle-managed, no polling conflict)
     // ═══════════════════════════════════════════════════════════════════════
 
-    override fun subscribeToMessages(conversationId: String): Flow<Message> = flow {
+    override fun subscribeToMessages(conversationId: String, skipBridgeFetch: Boolean): Flow<Message> = flow {
         activeSubscriptions.add(conversationId)
         val cachedIds = mutableSetOf<String>()
 
@@ -719,24 +719,27 @@ class SupabaseMessageRepository(
         } catch (e: Exception) { Timber.w(TAG, "Failed to load cached messages", e) }
 
         // Phase 2: Bridge fetch — delta between cache and Realtime start
-        try {
-            val latestResponse = api.getMessages(
-                conversationId = PostgrestFilter.eq(conversationId),
-                order = "created_at.asc"
-            )
-            if (latestResponse.isSuccessful) {
-                val serverMessages = latestResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
-                serverMessages.forEach { msg ->
-                    if (msg.id !in cachedIds) {
-                        cachedIds.add(msg.id)
-                        emit(msg)
+        // Skip if caller already loaded messages via getConversationById
+        if (!skipBridgeFetch) {
+            try {
+                val latestResponse = api.getMessages(
+                    conversationId = PostgrestFilter.eq(conversationId),
+                    order = "created_at.asc"
+                )
+                if (latestResponse.isSuccessful) {
+                    val serverMessages = latestResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                    serverMessages.forEach { msg ->
+                        if (msg.id !in cachedIds) {
+                            cachedIds.add(msg.id)
+                            emit(msg)
+                        }
                     }
+                    try {
+                        messageDao.insertMessages(serverMessages.map { mapMessageToEntity(it) })
+                    } catch (_: Exception) {}
                 }
-                try {
-                    messageDao.insertMessages(serverMessages.map { mapMessageToEntity(it) })
-                } catch (_: Exception) {}
-            }
-        } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
+            } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
+        }
 
         // Phase 3: Realtime (primary) with fallback polling only if WebSocket dies
         try {

@@ -311,7 +311,7 @@ class MessageRepository : MessageRepositoryInterface {
         emit(Result.success(Unit))
     }
 
-    override fun subscribeToMessages(conversationId: String): Flow<Message> = flow {
+    override fun subscribeToMessages(conversationId: String, skipBridgeFetch: Boolean): Flow<Message> = flow {
         // No-op for mock
     }
 
