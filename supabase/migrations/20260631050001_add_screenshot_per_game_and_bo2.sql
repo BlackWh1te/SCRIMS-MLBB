@@ -8,7 +8,7 @@ ALTER TABLE scrims ADD CONSTRAINT valid_best_of CHECK (best_of IN (1, 2, 3, 5));
 -- 2. Create per-game results table
 -- Each game in a best-of series gets its own row with screenshots from both teams.
 CREATE TABLE IF NOT EXISTS scrim_game_results (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scrim_id UUID NOT NULL REFERENCES scrims(id) ON DELETE CASCADE,
     game_number INTEGER NOT NULL,
     team_a_screenshot_url TEXT,
