@@ -32,7 +32,7 @@ interface ScrimRepositoryInterface {
     /** Select the winner of a specific game */
     suspend fun selectGameWinner(scrimId: String, gameNumber: Int, winnerTeamId: String): Flow<Result<Scrim>>
 
-    suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>>
+    suspend fun completeScrim(scrimId: String, winnerTeamId: String?): Flow<Result<Scrim>>
     fun calculatePointsChanges(scrim: Scrim): PointsResult
     suspend fun submitResult(scrimId: String, reporterId: String, winnerTeamId: String, notes: String?, screenshotUrl: String?): Flow<Result<Scrim>>
     suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>>

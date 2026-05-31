@@ -2,6 +2,7 @@ package com.scrimslegends.app.ui.navigation
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import timber.log.Timber
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
@@ -1117,9 +1118,11 @@ fun AuthNavigation(
                                 }
                             },
                             onApproveApplication = { sid, appId ->
+                                Timber.d("AuthNav: Approve tapped for scrim=$sid app=$appId")
                                 val app = scrim.applications.find { it.id == appId }
                                 val hostTeam = teams.find { it.id == scrim.teamId }
                                 if (app != null) {
+                                    Toast.makeText(context, "Creating conversation...", Toast.LENGTH_SHORT).show()
                                     // Create conversation between the REAL applicant leader and the host
                                     messageViewModel.sendApplyMessage(
                                         scrimId = sid,
@@ -1135,9 +1138,12 @@ fun AuthNavigation(
                                         teamPlayerCount = hostTeam?.players?.size ?: 0,
                                         teamMaxPlayers = hostTeam?.maxPlayers ?: 7,
                                         onConversationCreated = { conversation ->
+                                            Timber.d("AuthNav: Conversation created $conversation.id, calling approveApplication")
                                             scrimViewModel.approveApplication(sid, appId, conversation.id)
                                         }
                                     )
+                                } else {
+                                    Timber.w("AuthNav: Could not find application $appId in scrim $sid")
                                 }
                             },
                             onRejectApplication = { sid, appId ->

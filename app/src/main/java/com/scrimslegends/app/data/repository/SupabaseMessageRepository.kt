@@ -311,6 +311,7 @@ class SupabaseMessageRepository(
         participantBTeamName: String
     ): Flow<Result<Conversation>> = flow {
         try {
+            Timber.d("getOrCreateConversation: scrim=$scrimId a=$participantAId b=$participantBId")
             val cachedMatch = cacheMutex.withLock {
                 conversationLookupCache.values.find { entry ->
                     entry.isValid() && entry.conversation.scrimId == scrimId &&
@@ -319,20 +320,25 @@ class SupabaseMessageRepository(
                 }
             }
             if (cachedMatch != null) {
+                Timber.d("getOrCreateConversation: found cached ${cachedMatch.conversation.id}")
                 emit(Result.success(cachedMatch.conversation))
                 return@flow
             }
 
+            Timber.d("getOrCreateConversation: checking DB for existing conversation")
             val existing1 = api.getConversations(
                 scrimId = PostgrestFilter.eq(scrimId),
                 participantAId = PostgrestFilter.eq(participantAId),
                 participantBId = PostgrestFilter.eq(participantBId)
             )
             if (existing1.isSuccessful && !existing1.body().isNullOrEmpty()) {
+                Timber.d("getOrCreateConversation: found existing1 ${existing1.body()!!.first().id}")
                 val conv = mapDtoToConversation(existing1.body()!!.first())
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
+            } else if (!existing1.isSuccessful) {
+                Timber.e("getOrCreateConversation: existing1 query failed ${existing1.code()} ${existing1.errorBody()?.string()}")
             }
             val existing2 = api.getConversations(
                 scrimId = PostgrestFilter.eq(scrimId),
@@ -340,12 +346,16 @@ class SupabaseMessageRepository(
                 participantBId = PostgrestFilter.eq(participantAId)
             )
             if (existing2.isSuccessful && !existing2.body().isNullOrEmpty()) {
+                Timber.d("getOrCreateConversation: found existing2 ${existing2.body()!!.first().id}")
                 val conv = mapDtoToConversation(existing2.body()!!.first())
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
+            } else if (!existing2.isSuccessful) {
+                Timber.e("getOrCreateConversation: existing2 query failed ${existing2.code()} ${existing2.errorBody()?.string()}")
             }
 
+            Timber.d("getOrCreateConversation: creating new conversation")
             val newConvBody = mapOf(
                 "scrim_id" to scrimId,
                 "participant_a_id" to participantAId,
@@ -366,11 +376,15 @@ class SupabaseMessageRepository(
                 cacheConversation(created)
                 conversationDao.insertConversation(mapConversationToEntity(created))
                 cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
+                Timber.d("getOrCreateConversation: created new conversation ${created.id}")
                 emit(Result.success(created))
             } else {
-                emit(Result.failure(Exception("Failed to create conversation: ${response.code()}")))
+                val err = "Failed to create conversation: ${response.code()} ${response.errorBody()?.string()}"
+                Timber.e("getOrCreateConversation: $err")
+                emit(Result.failure(Exception(err)))
             }
         } catch (e: Exception) {
+            Timber.e("getOrCreateConversation: exception", e)
             emit(Result.failure(e))
         }
     }
@@ -703,6 +717,7 @@ class SupabaseMessageRepository(
         teamMaxPlayers: Int
     ): Flow<Result<Conversation>> = flow {
         try {
+            Timber.d("sendApplyMessage: scrim=$scrimId applicant=$applicantId creator=$scrimCreatorId")
             val convResult = getOrCreateConversation(
                 scrimId = scrimId, scrimTitle = scrimTitle,
                 participantAId = applicantId, participantAName = applicantName,
@@ -711,27 +726,43 @@ class SupabaseMessageRepository(
                 participantBTeamId = scrimCreatorTeamId, participantBTeamName = scrimCreatorTeamName
             )
             var conversation: Conversation? = null
-            convResult.collect { result -> result.onSuccess { conv -> conversation = conv } }
+            convResult.collect { result ->
+                result
+                    .onSuccess { conv -> conversation = conv; Timber.d("sendApplyMessage: conversation found/created ${conv.id}") }
+                    .onFailure { Timber.e("sendApplyMessage: failed to get/create conversation", it) }
+            }
             val conv = conversation ?: run {
                 emit(Result.failure(Exception("Failed to create conversation")))
                 return@flow
             }
 
+            // In the approve flow, the HOST calls this function, so sender MUST be the host
+            // (messages RLS requires sender_id = auth.uid()).
+            val senderId = scrimCreatorId
+            val senderName = scrimCreatorName
+
             val applyContent = "$applicantName ($applicantTeamName) applied to join \"$scrimTitle\" [$teamPlayerCount/$teamMaxPlayers players]"
             val messageDto = MessageDto(
                 conversationId = conv.id,
-                senderId = applicantId,
-                senderName = applicantName,
+                senderId = senderId,
+                senderName = senderName,
                 content = applyContent,
                 type = "apply"
             )
+            Timber.d("sendApplyMessage: sending message as host $senderId")
             val msgResponse = api.sendMessage(messageDto)
             if (msgResponse.isSuccessful) {
+                Timber.d("sendApplyMessage: message sent successfully")
                 emit(Result.success(conv))
             } else {
-                emit(Result.failure(Exception("Failed to send apply message: ${msgResponse.code()}")))
+                val errBody = msgResponse.errorBody()?.string() ?: ""
+                Timber.e("sendApplyMessage: failed to send message ${msgResponse.code()} — $errBody")
+                // Still return the conversation even if message fails —
+                // the caller (approve) should proceed with approveApplication regardless
+                emit(Result.success(conv))
             }
         } catch (e: Exception) {
+            Timber.e("sendApplyMessage: exception", e)
             emit(Result.failure(e))
         }
     }

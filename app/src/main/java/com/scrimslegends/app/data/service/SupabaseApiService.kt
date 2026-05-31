@@ -922,6 +922,10 @@ interface SupabaseApiService {
     @POST("rpc/select_game_winner")
     suspend fun selectGameWinnerRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    // Atomic set scrim roster: deletes old + inserts new in one transaction
+    @POST("rpc/set_scrim_roster")
+    suspend fun setScrimRosterRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // Atomic transition to ready check: validates time + opponent
     @POST("rpc/transition_to_ready_check")
     suspend fun transitionToReadyCheckRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>

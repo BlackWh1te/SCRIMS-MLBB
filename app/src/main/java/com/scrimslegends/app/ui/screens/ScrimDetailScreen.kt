@@ -77,7 +77,7 @@ fun ScrimDetailScreen(
     onUploadScreenshot: ((String, String, String) -> Unit)? = null, // scrimId, teamId, screenshotUrl
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null, // scrimId, teamId, gameNumber, screenshotUrl
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null, // scrimId, gameNumber, winnerTeamId
-    onCompleteScrim: ((String, String) -> Unit)? = null      // scrimId, winnerTeamId
+    onCompleteScrim: ((String, String?) -> Unit)? = null      // scrimId, winnerTeamId
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
 
@@ -686,7 +686,7 @@ private fun HostActions(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
-    onCompleteScrim: ((String, String) -> Unit)?
+    onCompleteScrim: ((String, String?) -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         when (scrim.status) {
@@ -1026,7 +1026,7 @@ private fun ApplicantStatusCard(
     onNavigateToRoster: ((String, String) -> Unit)?,
     onMarkReady: ((String, String) -> Unit)?,
     onUploadScreenshot: ((String, String, String) -> Unit)?,
-    onCompleteScrim: ((String, String) -> Unit)?
+    onCompleteScrim: ((String, String?) -> Unit)?
 ) {
     val statusColor = when (application.status) {
         ApplicationStatus.PENDING -> WarningOrange
@@ -1161,7 +1161,7 @@ private fun OpponentActions(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)? = null,
     onSelectGameWinner: ((String, Int, String) -> Unit)? = null,
-    onCompleteScrim: ((String, String) -> Unit)?
+    onCompleteScrim: ((String, String?) -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         when (scrim.status) {
@@ -1661,7 +1661,7 @@ private fun InProgressSection(
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)?,
     onSelectGameWinner: ((String, Int, String) -> Unit)?,
-    onCompleteScrim: ((String, String) -> Unit)?,
+    onCompleteScrim: ((String, String?) -> Unit)?,
     onNavigateToChat: ((String) -> Unit)?
 ) {
     val isTeamA = currentTeamId == scrim.teamId
@@ -1852,16 +1852,24 @@ private fun InProgressSection(
     // Series completion confirmation dialog
     if (showSeriesWinnerDialog) {
         val finalWinner = scrim.seriesWinnerTeamId
+        val isTie = finalWinner == null && scrim.bestOf == BestOf.BO2
         AlertDialog(
             onDismissRequest = { showSeriesWinnerDialog = false },
             containerColor = DarkNavy,
             title = {
-                Text("Complete Series?", color = White, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (isTie) "Complete Series?" else "Complete Series?",
+                    color = White, fontWeight = FontWeight.Bold
+                )
             },
             text = {
                 Column {
                     Text(
-                        "All ${scrim.bestOf.games} games have results. The series winner is ${if (finalWinner == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}.",
+                        text = if (isTie) {
+                            "All ${scrim.bestOf.games} games have results. The series ended in a tie (1-1)."
+                        } else {
+                            "All ${scrim.bestOf.games} games have results. The series winner is ${if (finalWinner == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}."
+                        },
                         color = LightGray,
                         fontSize = 14.sp
                     )
@@ -1869,7 +1877,7 @@ private fun InProgressSection(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    finalWinner?.let { onCompleteScrim?.invoke(scrim.id, it) }
+                    onCompleteScrim?.invoke(scrim.id, finalWinner)
                     showSeriesWinnerDialog = false
                 }) {
                     Text("Confirm", color = SuccessGreen, fontWeight = FontWeight.Bold)

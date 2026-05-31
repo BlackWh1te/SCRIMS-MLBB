@@ -42,10 +42,9 @@ data class Scrim(
     // ── Per-game results (screenshots + winner per game) ──
     val gameResults: List<ScrimGameResult> = emptyList()
 ) {
-    /** Ready buttons appear at match start time */
+    /** Ready buttons appear when server transitions status to READY_CHECK */
     val isReadyPhase: Boolean
-        get() = status == ScrimStatus.READY_CHECK &&
-                System.currentTimeMillis() >= scheduledTime
+        get() = status == ScrimStatus.READY_CHECK
 
     /** Both captains ready → can attach screenshots */
     val bothReady: Boolean

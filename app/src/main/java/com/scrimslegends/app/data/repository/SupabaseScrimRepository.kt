@@ -447,39 +447,25 @@ class SupabaseScrimRepository(
 
     override suspend fun setScrimRoster(scrimId: String, teamId: String, roster: List<ScrimRosterEntry>): Flow<Result<Scrim>> = flow {
         try {
-            // Ownership: only participating team leaders may set their roster
-            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
-            val scrim = scrimResponse.body()?.firstOrNull()
-            if (scrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
-            val hostTeam = api.getTeamById(PostgrestFilter.eq(scrim.teamId)).body()?.firstOrNull()
-            val opponentTeam = scrim.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
-            val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
-            AuthorizationUtils.requireTeamLeader(leaderIds, "set roster for this scrim")
-                .onFailure { emit(Result.failure(it)); return@flow }
-
-            val existing = api.getScrimRosters(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId))
-            if (existing.isSuccessful) {
-                existing.body()?.forEach {
-                    val dr = api.deleteScrimRosterEntry(PostgrestFilter.eq(scrimId), PostgrestFilter.eq(teamId), PostgrestFilter.eq(it.userId))
-                    if (!dr.isSuccessful) Timber.w("ScrimRepo", "Failed to delete roster entry ${it.userId}: ${dr.errorBody()?.string()}")
-                }
-            } else {
-                Timber.w("ScrimRepo", "Failed to fetch existing roster: ${existing.errorBody()?.string()}")
+            // Use atomic RPC: locks scrim row, verifies leader, deletes old roster, inserts new entries in one transaction
+            val rpcResult = api.setScrimRosterRpc(mapOf(
+                "p_scrim_id" to scrimId,
+                "p_team_id" to teamId,
+                "p_player_ids" to roster.filter { it.isActive }.map { it.playerId }
+            ))
+            if (!rpcResult.isSuccessful) {
+                emit(Result.failure(Exception("Failed to set roster: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
+                return@flow
             }
-            var rosterCreateFailures = 0
-            roster.forEach { entry ->
-                val cr = api.createScrimRosterEntry(ScrimRosterDto(scrimId = scrimId, teamId = teamId, userId = entry.playerId, isActive = entry.isActive))
-                if (!cr.isSuccessful) {
-                    rosterCreateFailures++
-                    Timber.w("ScrimRepo", "Failed to create roster entry ${entry.playerId}: ${cr.errorBody()?.string()}")
-                }
-            }
-            if (rosterCreateFailures > 0 && rosterCreateFailures == roster.size) {
-                emit(Result.failure(Exception("Failed to save roster: all $rosterCreateFailures entries failed")))
+            val body = rpcResult.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                val error = body?.get("error") as? String ?: "Set roster failed"
+                emit(Result.failure(Exception(error)))
                 return@flow
             }
             invalidateScrimCaches()
-            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found") }) }
+            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after roster update") }) }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
@@ -547,10 +533,15 @@ class SupabaseScrimRepository(
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
-    override suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun completeScrim(scrimId: String, winnerTeamId: String?): Flow<Result<Scrim>> = flow {
         try {
             // Use atomic RPC: validates all games have screenshots + winners, locks row, completes scrim
-            val rpcResult = api.completeScrimRpc(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId))
+            // For BO2 ties, winnerTeamId is null — omit the key so RPC receives NULL
+            val params = mutableMapOf<String, Any>("p_scrim_id" to scrimId)
+            if (!winnerTeamId.isNullOrBlank()) {
+                params["p_winner_team_id"] = winnerTeamId
+            }
+            val rpcResult = api.completeScrimRpc(params)
             if (!rpcResult.isSuccessful) {
                 emit(Result.failure(Exception("Failed to complete scrim: ${rpcResult.errorBody()?.string() ?: "Unknown error"}")))
                 return@flow
@@ -593,7 +584,7 @@ class SupabaseScrimRepository(
                         if (existing == null) {
                             val cmr = api.createMatchResult(MatchResultDto(matchId = matchId, winnerTeamId = winnerTeamId))
                             if (!cmr.isSuccessful) Timber.w("ScrimRepo", "createMatchResult failed: ${cmr.errorBody()?.string()}")
-                        } else {
+                        } else if (!winnerTeamId.isNullOrBlank()) {
                             val umr = api.updateMatchResult(PostgrestFilter.eq(existing.id), mapOf("winner_team_id" to winnerTeamId))
                             if (!umr.isSuccessful) Timber.w("ScrimRepo", "updateMatchResult failed: ${umr.errorBody()?.string()}")
                         }
@@ -604,8 +595,10 @@ class SupabaseScrimRepository(
             } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to create/update match result", e) }
 
             try {
-                val ar = api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS))
-                if (!ar.isSuccessful) Timber.w("ScrimRepo", "awardScrimPoints failed: ${ar.errorBody()?.string()}")
+                if (!winnerTeamId.isNullOrBlank()) {
+                    val ar = api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS))
+                    if (!ar.isSuccessful) Timber.w("ScrimRepo", "awardScrimPoints failed: ${ar.errorBody()?.string()}")
+                }
             } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to award scrim points", e) }
 
             invalidateScrimCaches()

@@ -72,8 +72,44 @@ class SupabaseTeamRepository(
                 },
                 networkLoader = {
                     val r = api.getTeams()
-                    if (r.isSuccessful) r.body()?.map { mapTeamDtoToModel(it) } ?: emptyList()
-                    else throw Exception("Failed to fetch teams")
+                    if (!r.isSuccessful) throw Exception("Failed to fetch teams")
+                    val dtos = r.body() ?: emptyList()
+                    if (dtos.isEmpty()) emptyList()
+                    else {
+                        val teamIds = dtos.map { it.id }
+                        val membersByTeamId = mutableMapOf<String, List<TeamMemberDto>>()
+                        try {
+                            val mr = api.getTeamMembers(teamId = PostgrestFilter.inList(teamIds))
+                            if (mr.isSuccessful) {
+                                val members = mr.body() ?: emptyList()
+                                membersByTeamId.putAll(members.groupBy { it.teamId })
+                            }
+                        } catch (_: Exception) { }
+                        val allUserIds = membersByTeamId.values.flatten().map { it.userId }.distinct()
+                        val profilesById = if (allUserIds.isNotEmpty()) {
+                            try { profileCache.getProfiles(allUserIds) } catch (_: Exception) { emptyMap() }
+                        } else emptyMap()
+                        dtos.map { dto ->
+                            val members = membersByTeamId[dto.id] ?: emptyList()
+                            Team(
+                                id = dto.id, name = dto.name, leaderId = dto.leaderId,
+                                players = members.map { m ->
+                                    val profile = profilesById[m.userId]
+                                    Player(
+                                        id = m.userId, name = profile?.username ?: m.userId.take(8),
+                                        role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER,
+                                        email = profile?.email ?: "", avatarUrl = profile?.avatarUrl
+                                    )
+                                },
+                                maxPlayers = dto.maxPlayers, minPlayers = dto.minPlayers,
+                                totalScrims = dto.completedScrims, completedScrims = dto.completedScrims,
+                                reputation = dto.reputation, noShows = dto.noShows,
+                                canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil),
+                                logoUrl = dto.logoUrl, isOpenForApplications = dto.isOpenForApplications,
+                                createdAt = parseCreatedAt(dto.createdAt)
+                            )
+                        }
+                    }
                 },
                 roomSaver = { list ->
                     teamDao.deleteAll()
@@ -116,7 +152,53 @@ class SupabaseTeamRepository(
                 return@flow
             }
             val teamDtos = teamsResponse.body() ?: emptyList()
-            val teams = teamDtos.map { mapTeamDtoToModel(it) }
+
+            // Step 3: Batch fetch ALL team members for ALL teams in ONE query
+            val membersByTeamId = mutableMapOf<String, List<TeamMemberDto>>()
+            if (activeTeamIds.isNotEmpty()) {
+                try {
+                    val mr = api.getTeamMembers(teamId = PostgrestFilter.inList(activeTeamIds))
+                    if (mr.isSuccessful) {
+                        val members = mr.body() ?: emptyList()
+                        membersByTeamId.putAll(members.groupBy { it.teamId })
+                    }
+                } catch (_: Exception) { }
+            }
+
+            // Step 4: Batch fetch profiles for all member user IDs via cache
+            val allUserIds = membersByTeamId.values.flatten().map { it.userId }.distinct()
+            val profilesById = if (allUserIds.isNotEmpty()) {
+                try { profileCache.getProfiles(allUserIds) } catch (_: Exception) { emptyMap() }
+            } else emptyMap()
+
+            val teams = teamDtos.map { dto ->
+                val members = membersByTeamId[dto.id] ?: emptyList()
+                Team(
+                    id = dto.id,
+                    name = dto.name,
+                    leaderId = dto.leaderId,
+                    players = members.map { m ->
+                        val profile = profilesById[m.userId]
+                        Player(
+                            id = m.userId,
+                            name = profile?.username ?: m.userId.take(8),
+                            role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER,
+                            email = profile?.email ?: "",
+                            avatarUrl = profile?.avatarUrl
+                        )
+                    },
+                    maxPlayers = dto.maxPlayers,
+                    minPlayers = dto.minPlayers,
+                    totalScrims = dto.completedScrims,
+                    completedScrims = dto.completedScrims,
+                    reputation = dto.reputation,
+                    noShows = dto.noShows,
+                    canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil),
+                    logoUrl = dto.logoUrl,
+                    isOpenForApplications = dto.isOpenForApplications,
+                    createdAt = parseCreatedAt(dto.createdAt)
+                )
+            }
             emit(Result.success(teams))
         } catch (e: Exception) {
             emit(Result.failure(e))

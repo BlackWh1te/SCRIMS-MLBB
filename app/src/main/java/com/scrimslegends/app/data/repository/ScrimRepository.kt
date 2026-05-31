@@ -399,7 +399,7 @@ class ScrimRepository : ScrimRepositoryInterface {
     // ═══════════════════════════════════════════════════════════════
 
     /** Complete scrim: must have screenshot uploaded, select winner */
-    override suspend fun completeScrim(scrimId: String, winnerTeamId: String): Flow<Result<Scrim>> = flow {
+    override suspend fun completeScrim(scrimId: String, winnerTeamId: String?): Flow<Result<Scrim>> = flow {
         delay(500)
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index == -1) {

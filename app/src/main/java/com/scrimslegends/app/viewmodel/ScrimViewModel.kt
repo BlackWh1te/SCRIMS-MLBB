@@ -514,7 +514,7 @@ class ScrimViewModel @Inject constructor(
     // ═══════════════════════════════════════════════════════════════
 
     /** Complete scrim with winner selection */
-    fun completeScrim(scrimId: String, winnerTeamId: String) {
+    fun completeScrim(scrimId: String, winnerTeamId: String?) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -522,7 +522,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.completeScrim(scrimId, winnerTeamId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    // Calculate points
+                    // Calculate points (no points change for ties)
                     _pointsResult.value = scrimRepository.calculatePointsChanges(scrim)
                     loadScrims()
                     _isLoading.value = false
