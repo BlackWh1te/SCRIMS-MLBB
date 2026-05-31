@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-05-31 05:15 [Session: Scrim player count fix] — Pre-select 5 not all, cap activePlayerCount
+
+### Commits
+- `389721d` — fix(scrim): pre-select only 5 players, cap activePlayerCount at 5
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/CreateScrimScreen.kt`
+  - Pre-select first 5 team members (not all) when opening create scrim screen.
+  - `activePlayerCount = selectedPlayerIds.size.coerceAtMost(5)` — only first 5 count as active, extras are substitutes.
+  - Shows "5 active + 1 sub" instead of "6/5" when 6 players are selected.
+  - `currentPlayers` sent to DB is always ≤5 (never shows 6/5).
+
+### Root Cause
+Pre-selection defaulted to ALL team members. A team with 6 members showed 6/5 because `activePlayerCount` was just `selectedPlayerIds.size` with no cap.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — `activePlayerCount` must be `coerceAtMost(5)`. Do NOT remove the cap.
+
+---
+
 ## 2026-05-31 05:00 [Session: Scrim player selection] — maxPlayers 10→5, player selection dialog
 
 ### Commits
