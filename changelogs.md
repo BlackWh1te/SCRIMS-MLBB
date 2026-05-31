@@ -8,6 +8,57 @@
 
 ---
 
+## 2026-05-31 21:00 [Session: Scrim state machine hardening — atomic RPCs, DB constraints, race condition fixes]
+
+### Commits
+- `1ed77d0` — feat(scrim): atomic RPCs + DB constraints to prevent race conditions and invalid states
+
+### Changed
+- **File:** `supabase/migrations/20260631100001_scrim_state_machine_hardering.sql`
+  - Added DB CHECK constraints:
+    - `valid_scrim_status`: only allows valid status strings
+    - `filled_requires_opponent`: Filled+ status requires `opponent_team_id` to be set
+    - `completed_requires_winner`: Completed status requires `winner_team_id`
+    - `open_filled_not_ready`: OPEN/FILLED must have `team_a_ready = team_b_ready = FALSE`
+    - `valid_game_result_status`: only allows valid game result statuses
+    - `winner_requires_screenshots`: cannot set winner before both screenshots uploaded
+  - Added `mark_scrim_ready` atomic RPC:
+    - Locks scrim row with `FOR UPDATE`
+    - Validates status=Ready, caller is team leader, team is participant
+    - Atomically sets ready flag + transitions to IN_PROGRESS if both ready
+    - **Fixes race condition**: both teams marking ready simultaneously no longer gets stuck
+  - Added `complete_scrim` atomic RPC:
+    - Validates all game results exist, all have both screenshots, all have winners
+    - Only then sets status=Completed
+    - **Fixes data corruption**: can no longer complete a scrim without all results
+  - Added `upload_game_screenshot` atomic RPC:
+    - Locks parent scrim + game result rows
+    - Reads current DB state (not stale parameter) to determine if both uploaded
+    - **Fixes race condition**: simultaneous uploads correctly detect both-present
+  - Added `select_game_winner` atomic RPC:
+    - Validates both screenshots exist before allowing winner selection
+    - **Fixes invalid state**: can no longer select winner before screenshots
+  - Added `transition_to_ready_check` atomic RPC:
+    - Validates scheduled time reached (within 5 minutes)
+    - Resets ready flags atomically
+    - **Fixes early ready check**: cannot start ready check before match time
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Added RPC endpoints: `markScrimReady`, `completeScrimRpc`, `uploadGameScreenshotRpc`, `selectGameWinnerRpc`, `transitionToReadyCheckRpc`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `transitionToReadyCheck` → calls `transitionToReadyCheckRpc`
+  - `markReady` → calls `markScrimReady` (was: read-then-write, race-prone)
+  - `completeScrim` → calls `completeScrimRpc` (was: no game completion validation)
+  - `uploadGameScreenshot` → calls `uploadGameScreenshotRpc` (was: stale-data race)
+  - `selectGameWinner` → calls `selectGameWinnerRpc` (was: no screenshot gate)
+
+### Impact
+- Race conditions in markReady, uploadScreenshot, and selectWinner are eliminated via DB row locking
+- Invalid state transitions are blocked at both DB (CHECK constraints) and RPC (business logic) levels
+- Scrim cannot be completed until every game has screenshots from both teams and a winner selected
+- Build passes with 0 errors
+
+---
+
 ## 2026-05-31 20:30 [Session: Region time validation + reject notify + calendar + countdown]
 
 ### Commits
