@@ -8,6 +8,44 @@
 
 ---
 
+## 2026-06-01 00:05 [Session: Scrim feature audit — critical bug fixes]
+
+### Commits
+- `827c99a` — fix(scrim): audit fixes — DB constraints, cache completeness, race conditions, dead code
+
+### Fixed (from audit)
+- **File:** `supabase/migrations/20260631100001_scrim_state_machine_hardering.sql`
+  - `open_filled_not_ready` constraint: changed `'Filled'` → `'Accepted'`
+  - **Bug:** DB status enum uses `'Accepted'` not `'Filled'`; constraint was only enforcing `ready=false` for `'Open'` status
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimEntity.kt`
+  - Added missing fields: `teamAScreenshotUploadedAt`, `teamBScreenshotUploadedAt`, `resultSubmittedAt`, `cancellationReason`, `cancelledBy`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/DatabaseMigrations.kt`
+  - Added `MIGRATION_16_17` for new ScrimEntity fields
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimsLegendsDatabase.kt`
+  - Bumped version 16 → 17, registered new migration
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `mapScrimToEntity`/`mapEntityToScrim`: now map all missing fields including screenshot upload timestamps, result submitted, cancellation metadata
+  - `mapScrimToEntity`: stores `region.name` instead of `region.displayName` for consistent enum deserialization
+  - `createScrim`: game result creation now tracked; if ANY game result fails, scrim is deleted and operation fails (rollback)
+  - `uploadGameScreenshot`: removed pre-RPC `getScrimById` read; now passes `p_team_id` to RPC which derives `is_team_a` from locked DB row
+  - `getAllScrims`: increased fetch range 50 → 200 rows (TODO: proper pagination)
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/ScrimRuleset.kt`
+  - Removed dead `ScrimRuleset` enum (replaced by `BestOf` + `GameMode`)
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Removed unused local variables: `isJoined`, `showWinnerPicker`
+- **File:** `supabase/migrations/20260631130001_fix_upload_game_screenshot_race.sql`
+  - New migration: updates `upload_game_screenshot` RPC signature from `p_is_team_a BOOLEAN` to `p_team_id UUID`
+  - RPC now derives `is_team_a` from locked scrim row, eliminating client-side race condition
+
+### Impact
+- DB constraint now correctly enforces `ready=false` for both `'Open'` and `'Accepted'` statuses
+- Offline cache no longer loses screenshot timestamps, cancellation reason, or result submitted time
+- Scrim creation is atomic: either all game results created or scrim is rolled back
+- Screenshot upload no longer has a client-side read-then-write race condition
+- Room schema 17.json generated for CI migration validation
+
+---
+
 ## 2026-05-31 23:18 [Session: Scrim dispute resolution + admin panel overhaul]
 
 ### Commits
