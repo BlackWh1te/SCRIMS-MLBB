@@ -132,7 +132,11 @@ class SupabaseScrimRepository(
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null
                 },
                 networkLoader = {
-                    val r = api.getScrims()
+                    // Defensive: limit to 200 rows to avoid unbounded data transfer.
+                    // PostgREST OR filtering (team_id=eq.X OR opponent_team_id=eq.X) would be ideal
+                    // but requires a dedicated RPC or complex query string. For now, client-side filter
+                    // with a cap is the safest available option.
+                    val r = api.getScrims(range = "0-199")
                     if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) }?.filter {
                         it.teamId == teamId || it.opponentTeamId == teamId
                     } ?: emptyList()
@@ -459,6 +463,8 @@ class SupabaseScrimRepository(
             AuthorizationUtils.requireTeamLeader(leaderIds, "upload screenshots for this scrim")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
+            val participantIds = listOfNotNull(existing.teamId, existing.opponentTeamId)
+            if (teamId !in participantIds) { emit(Result.failure(Exception("Team is not a participant in this scrim"))); return@flow }
             val isTeamA = existing.teamId == teamId
             val nowIso = DateUtils.formatIsoUtc(System.currentTimeMillis())
             val updates = mutableMapOf<String, Any>()
@@ -476,6 +482,8 @@ class SupabaseScrimRepository(
             val existingScrim = scrimResponse.body()?.firstOrNull()
             if (existingScrim == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             if (fromDbStatus(existingScrim.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
+            val participantIds = listOfNotNull(existingScrim.teamId, existingScrim.opponentTeamId)
+            if (winnerTeamId !in participantIds) { emit(Result.failure(Exception("Winner must be one of the participating teams"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(existingScrim.teamId)).body()?.firstOrNull()
             val opponentTeam = existingScrim.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -522,6 +530,9 @@ class SupabaseScrimRepository(
             AuthorizationUtils.requireTeamLeader(leaderIds, "submit results for this scrim")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
+            val participantIds = listOfNotNull(existingScrim.teamId, existingScrim.opponentTeamId)
+            if (winnerTeamId !in participantIds) { emit(Result.failure(Exception("Winner must be one of the participating teams"))); return@flow }
+
             val r = api.updateScrim(PostgrestFilter.eq(scrimId), mapOf("status" to toDbStatus(ScrimStatus.COMPLETED), "winner_team_id" to winnerTeamId))
             if (r.isSuccessful) { val u = r.body()?.firstOrNull(); if (u != null) { invalidateScrimCaches(); emit(Result.success(mapDtoToScrim(u))) } else emit(Result.failure(Exception("Submit result failed"))) }
             else emit(Result.failure(Exception("Error submitting result")))
@@ -530,6 +541,16 @@ class SupabaseScrimRepository(
 
     override suspend fun createAutoCancelledRecord(scrimId: String): Flow<Result<Unit>> = flow {
         try {
+            // Guard: do not overwrite an already-completed or already-cancelled scrim
+            val scrimResponse = api.getScrimById(PostgrestFilter.eq(scrimId))
+            val existing = scrimResponse.body()?.firstOrNull()
+            if (existing == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
+            val currentStatus = fromDbStatus(existing.status)
+            if (currentStatus == ScrimStatus.COMPLETED || currentStatus == ScrimStatus.CANCELLED) {
+                emit(Result.success(Unit)) // Already in a terminal state, nothing to do
+                return@flow
+            }
+
             // Mark scrim as auto-cancelled and notify participants
             // Note: `cancelled_by` is intentionally left null for auto-cancel (DB allows NULL).
             val r = api.updateScrim(
@@ -804,6 +825,8 @@ class SupabaseScrimRepository(
             val scrimDto = scrimResponse.body()?.firstOrNull()
             if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             if (fromDbStatus(scrimDto.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
+            val participantIds = listOfNotNull(scrimDto.teamId, scrimDto.opponentTeamId)
+            if (teamId !in participantIds) { emit(Result.failure(Exception("Team is not a participant in this scrim"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(scrimDto.teamId)).body()?.firstOrNull()
             val opponentTeam = scrimDto.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
@@ -854,6 +877,8 @@ class SupabaseScrimRepository(
             val scrimDto = scrimResponse.body()?.firstOrNull()
             if (scrimDto == null) { emit(Result.failure(Exception("Scrim not found"))); return@flow }
             if (fromDbStatus(scrimDto.status) != ScrimStatus.IN_PROGRESS) { emit(Result.failure(Exception("Scrim is not in progress"))); return@flow }
+            val participantIds = listOfNotNull(scrimDto.teamId, scrimDto.opponentTeamId)
+            if (winnerTeamId !in participantIds) { emit(Result.failure(Exception("Winner must be one of the participating teams"))); return@flow }
             val hostTeam = api.getTeamById(PostgrestFilter.eq(scrimDto.teamId)).body()?.firstOrNull()
             val opponentTeam = scrimDto.opponentTeamId?.let { api.getTeamById(PostgrestFilter.eq(it)).body()?.firstOrNull() }
             val leaderIds = listOfNotNull(hostTeam?.leaderId, opponentTeam?.leaderId)
