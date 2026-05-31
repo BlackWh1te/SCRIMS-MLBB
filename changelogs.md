@@ -8,6 +8,42 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Deep audit scrims creation + DB constraint alignment] — Fixed best_of 23514 error and all status schema drift
+
+### Commits
+- `53a0e98` — fix(scrim): align BestOf enum and all status mappings with DB constraints
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - Removed `BO2(2, "Best of 2")` and `BO4(4, "Best of 4")` from `BestOf` enum.
+  - DB constraint `valid_best_of` only allows `(1, 3, 5)`; these values caused error 23514 on insert.
+  - `CreateScrimScreen` automatically drops the invalid options since it iterates `BestOf.values()`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Added `toDbStatus()` / `fromDbStatus()` companion mapping functions.
+    - `OPEN → "Open"`, `FILLED → "Accepted"`, `READY_CHECK → "Ready"`, `IN_PROGRESS → "In Progress"`, `COMPLETED → "Completed"`, `CANCELLED → "Cancelled"`
+    - Read side handles both old uppercase DB values and new title-case values for backward compat.
+  - Added `toDbApplicationStatus()` companion mapping function.
+    - `APPROVED → "Accepted"`, `REJECTED → "Rejected"`, `CANCELLED → "Rejected"` (DB only has 3 values).
+  - Updated `mapScrimToDto()` to use `toDbStatus()` instead of `scrim.status.name`.
+  - Updated `mapDtoToScrim()` to use `fromDbStatus()` instead of `ScrimStatus.valueOf()`.
+  - Fixed `searchScrims()` API query: status filter now uses `toDbStatus()`, region filter now uses `displayName` (was `name`, causing `eq.EU` to never match `Europe` in DB).
+  - Fixed direct status string writes in `approveApplication`, `rejectApplication`, `cancelApplication`, `transitionToReadyCheck`, `completeScrim`, `submitResult`, `createAutoCancelledRecord`.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/cache/UnifiedCacheManager.kt`
+  - Added missing `return` in `get()` force-refresh path (line 126 was an orphaned expression).
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Why
+User reported error 23514 (`valid_best_of` CHECK violation) when creating scrims. A deep audit revealed the `BestOf` enum had drifted from the DB schema. During the audit, additional schema drift was found: `ScrimStatus` enum names did not match DB constraint values, `ApplicationStatus` write strings did not match the DB constraint, and the region search filter used the wrong field. All were fixed to make the scrims subsystem "perfect."
+
+### Verdict
+- `[INTENTIONAL FIX]` — Removing BO2 and BO4 from `BestOf` is the correct fix for DB error 23514. Do not re-add them.
+- `[INTENTIONAL FIX]` — The `toDbStatus` / `fromDbStatus` mapping layer is required because Kotlin enum naming conventions (UPPER_SNAKE_CASE) differ from DB CHECK constraint values (Title Case with spaces). Do not remove the mapping.
+- `[INTENTIONAL FIX]` — `toDbApplicationStatus` mapping is required because the app enum has 4 values but the DB constraint only allows 3 (`Pending`, `Accepted`, `Rejected`).
+
+---
+
 ## 2026-05-30 22:55 [Session: Fix createdAt DB error 22007] — Removed createdAt from ScrimDto and cleaned up dangling references
 
 ### Commits
