@@ -1811,3 +1811,30 @@ Code uses `version = 13` in `@Database`, but `14.json` schema file exists in `ap
   - Added `NOTIFY pgrst, 'reload schema';` at end of migration to force PostgREST schema cache refresh immediately.
 
 **Result:** All pending migrations applied successfully via `supabase db push --linked`.
+
+---
+
+## 2026-05-31 21:45 +04:00 — Fix scrim application flow: approval status, row locking, role resolution, cancel RPC
+
+**Commit:** `786e305`
+
+**Problem:** Deep audit of the scrim application vector revealed 7 critical/high bugs:
+1. `approve_scrim_application` set `status = 'Filled'` but DB `valid_scrim_status` only allows `'Accepted'` → **every approval fails with CHECK constraint violation**.
+2. `approve_scrim_application` used plain `SELECT` (no `FOR UPDATE`) → race condition: host approves while applicant cancels → approval overwrites cancelled status.
+3. `approve_scrim_application` `DELETE`d other pending apps instead of rejecting them → application history lost, misleading `SCRIM_OPPONENT_FOUND` notification.
+4. `transition_to_ready_check` checked for `status != 'Filled'` → ready check could never start after fixing #1.
+5. `ScrimDetailScreen` showed `ApplicantStatusCard` for APPROVED users instead of `OpponentActions` → approved applicants blocked from roster, ready, screenshot, complete.
+6. `ScrimDetailScreen` `myApplication` found ANY application (Rejected/Cancelled) → users with old rejected apps could never re-apply.
+7. `ScrimViewModel.cancelScrim` used read-then-write `updateScrim` instead of atomic RPC.
+
+**Fix:**
+- **New migration:** `supabase/migrations/20260631140001_fix_approve_and_ready_check.sql`
+  - Fixed approval to use `'Accepted'` and added `FOR UPDATE` locking.
+  - Replaced DELETE-other-apps with UPDATE-to-Rejected.
+  - Fixed `transition_to_ready_check` to check `'Accepted'`.
+- **New migration:** `supabase/migrations/20260631150001_add_manual_cancel_scrim_rpc.sql`
+  - Added atomic `cancel_scrim` RPC with row locking, host verification, and pending-app cleanup.
+- **Android:** Added `cancelScrimRpc` endpoint, repository method, ViewModel integration.
+- **UI:** Fixed role resolution so approved applicants see `OpponentActions`, rejected/cancelled users see apply button.
+
+**Result:** Application approval now succeeds atomically with proper row locking and history preservation.
