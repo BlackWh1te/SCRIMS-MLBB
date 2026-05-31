@@ -185,10 +185,24 @@ class NotificationViewModel @Inject constructor(
 
     fun markAsRead(notificationId: String) {
         markAsReadJob?.cancel()
+        // Optimistic UI: mark as read locally immediately
+        val current = _notifications.value.toMutableList()
+        val index = current.indexOfFirst { it.id == notificationId }
+        if (index != -1) {
+            current[index] = current[index].copy(isRead = true)
+            _notifications.value = current
+            recomputeUnreadCount()
+        }
         markAsReadJob = viewModelScope.launch {
             repository.markAsRead(notificationId).collect { result ->
-                result.onSuccess { loadNotifications() }
-                    .onFailure { _error.value = it.message }
+                result.onSuccess {
+                    // Full refresh to sync with server state
+                    loadNotifications()
+                }.onFailure {
+                    _error.value = it.message
+                    // Revert optimistic update on failure
+                    loadNotifications()
+                }
             }
         }
     }

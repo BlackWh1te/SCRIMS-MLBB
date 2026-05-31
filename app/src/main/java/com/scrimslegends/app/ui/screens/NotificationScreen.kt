@@ -200,7 +200,7 @@ fun NotificationScreen(
                                         NotificationRow(
                                             notification = notification,
                                             onClick = {
-                                                onMarkAsRead(notification.id)
+                                                // Navigation + mark-as-read handled in onNotificationClick
                                                 onNotificationClick(notification)
                                             },
                                             onDismiss = { onDelete(notification.id) }

@@ -31,6 +31,7 @@ DECLARE
     v_host_team_name TEXT;
     v_applicant_leader_id UUID;
     v_applicant_team_name TEXT;
+    v_current_user UUID;
     v_msg TEXT;
 BEGIN
     -- Get Host Info (Team leader of the scrim)
@@ -43,6 +44,9 @@ BEGIN
     SELECT t.leader_id, t.name INTO v_applicant_leader_id, v_applicant_team_name
     FROM teams t
     WHERE t.id = NEW.applicant_team_id;
+
+    -- Current user (null for service-role / internal operations)
+    v_current_user := auth.uid();
 
     IF (TG_OP = 'INSERT') THEN
         IF v_host_id IS NOT NULL THEN
@@ -73,7 +77,10 @@ BEGIN
                     );
                 END IF;
             ELSIF (NEW.status = 'Rejected') THEN
-                IF v_applicant_leader_id IS NOT NULL THEN
+                -- Only notify applicant if the rejection came from the HOST (not self-cancellation)
+                -- auth.uid() = applicant leader means they cancelled their own application
+                IF v_applicant_leader_id IS NOT NULL AND
+                   (v_current_user IS NULL OR v_current_user != v_applicant_leader_id) THEN
                     v_msg := format('Your application to %s''s scrim was declined.', v_host_team_name);
                     INSERT INTO app_notifications (user_id, type, title, message, body, action_id, data)
                     VALUES (
