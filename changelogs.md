@@ -8,6 +8,36 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim authorization audit] — Fixed all authorization checks comparing user IDs to team IDs
+
+### Commits
+- `ddf2009` — fix(scrim): correct authorization checks comparing user IDs to team IDs
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/security/AuthorizationUtils.kt`
+  - Added `requireTeamLeader(teamLeaderIds, action)` helper for checks where the current user must be a leader of at least one of the given teams.
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `createScrim`: added missing `requireOwner(scrim.teamLeader, "create scrim")` check.
+  - `updateScrim` / `deleteScrim`: now fetch the host team via `api.getTeamById(existing.teamId)` and check `requireOwner(team.leaderId, ...)`. Previously compared `currentUserId` to `existing.teamId` (team UUID), which always failed.
+  - `applyToScrim`: added missing authorization — now fetches the applicant team and verifies `requireOwner(applicantTeam.leaderId, ...)`. Previously any authenticated user could apply on behalf of any team.
+  - `approveApplication` / `rejectApplication`: now fetch host team and check `requireOwner(team.leaderId, ...)`. Previously compared user ID to team ID.
+  - `cancelApplication`: now fetches applicant team and checks `requireOwner(team.leaderId, ...)`. Previously compared user ID to team ID.
+  - `setRoster` / `markReady` / `uploadScreenshot` / `completeScrim` / `submitResult` / `uploadGameScreenshot` / `selectGameWinner`: now fetch both host and opponent teams, build a list of `leaderId`s, and use `requireTeamLeader(leaderIds, ...)`. Previously compared `currentUserId` to `teamId` / `opponentTeamId` via `requireParticipant`, which always failed.
+  - `transitionToReadyCheck`: now fetches host team and checks `requireOwner(team.leaderId, ...)`. Previously compared user ID to team ID.
+  - `createAutoCancelledRecord`: removed `"cancelled_at"` from the update map. The `scrims` table has no `cancelled_at` column; this would have caused a DB error on every auto-cancel.
+
+### Root Cause
+Every `requireOwner(scrim.teamId, ...)` and `requireParticipant(listOf(teamId, opponentTeamId), ...)` call in the repository was comparing a **user UUID** against a **team UUID**. These are different namespaces and will never match, so ALL sensitive scrim operations were effectively impossible to authorize client-side.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `requireTeamLeader` helper is required for all multi-team participant checks. Do NOT remove it.
+- `[INTENTIONAL FIX]` — Fetching teams via `api.getTeamById` to obtain `leaderId` is required because the `ScrimDto` does not include a `team_leader` field. Do NOT revert to comparing `currentUserId` directly against `teamId`.
+
+---
+
 ## 2026-05-31 04:18 [Session: Team chat not showing] — Fixed missing team conversations and multi-team support
 
 ### Commits
