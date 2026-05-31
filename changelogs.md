@@ -8,6 +8,31 @@
 
 ---
 
+## 2026-05-31 04:18 [Session: Scrim fire-and-forget audit] — Hardened approveApplication and setScrimRoster against silent API failures
+
+### Commits
+- `0d27d50` — fix(scrim): harden approveApplication and setScrimRoster against silent failures
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `approveApplication`: added `isSuccessful` check on `updateScrimApplication`. Previously if the approve call failed, the code continued to update the scrim status to `FILLED`, leaving the application in `PENDING` while the scrim was no longer `OPEN`.
+  - `approveApplication`: added `isSuccessful` check on `updateScrimApplicationsBulk`. If bulk cancellation of other applications failed, they remained `PENDING` while the scrim was `FILLED`. Now logs a warning via `Timber.w` but still proceeds (the main application was already approved successfully).
+  - `setScrimRoster`: added `isSuccessful` checks on every `deleteScrimRosterEntry` call. Previously deletion failures were silently ignored, leaving stale roster entries.
+  - `setScrimRoster`: added `isSuccessful` checks on every `createScrimRosterEntry` call. Previously creation failures were silently ignored, producing partial rosters.
+  - `setScrimRoster`: if ALL roster entries fail to create, the operation now fails explicitly instead of returning a scrim with an empty roster.
+
+### Root Cause
+Multiple repository methods performed API calls inside loops or as sequential steps without checking `isSuccessful`. A single failed call would leave the local and remote states inconsistent.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+
+### Verdict
+- `[INTENTIONAL FIX]` — The `isSuccessful` checks in `approveApplication` are required for data consistency. Do NOT remove them.
+- `[INTENTIONAL FIX]` — The `isSuccessful` checks in `setScrimRoster` are required to prevent partial roster states. Do NOT remove them.
+
+---
+
 ## 2026-05-31 04:18 [Session: Scrim lifecycle & realtime audit] — Duplicate guard, ready reset, create validation, realtime game results, and error logging
 
 ### Commits
