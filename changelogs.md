@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-05-31 06:45 [Session: Scrims + Message feature audit fixes] — Deep-link, applications, rosters, O(1) realtime, status chips, chat lock
+
+### Commits
+- `049a98b` — fix(scrim): audit fixes — deep-link fresh fetch, applications/rosters, O(1) realtime, status chips, chat lock
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Fixed ScrimDetail deep-link bug: `LaunchedEffect(scrimId) { loadScrimById(scrimId) }` + `selectedScrim` instead of stale `scrims.find`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Fixed `getScrimById`: now fetches applications + rosters + game results from separate tables (was always empty)
+  - Added `fetchApplicationsForScrim`, `fetchRostersForScrim`, `mapDtoToScrimApplication`, `mapDtoToScrimRosterEntry` helpers
+  - Updated `mapDtoToScrim` signature to accept `applications` and `rosters` with proper field mapping
+  - Fixed `subscribeToAllScrims`: skip `DELETE` events to avoid emitting stale scrims
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - Fixed `subscribeToAllScrimUpdates`: O(1) Map-based updates via `_scrimMap` instead of O(n) list scan
+  - Added `_scrimMap` + sync in `loadScrims` for O(1) realtime integration
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimListScreen.kt`
+  - Added missing status filter chips: "Ready" (READY_CHECK) and "Cancelled" (CANCELLED)
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - Fixed scrim conversation `chatOpensAt`: removed arbitrary 5-minute lock, set to immediate open
+
+---
+
 ## 2026-05-31 06:20 [Session: Message feature audit fixes] — Double-fetch, unreadCount, sendMutex, retry context, DB schema
 
 ### Commits
