@@ -452,8 +452,8 @@ fun ScrimListScreen(
                             ),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            itemsIndexed(displayScrims) { index, scrim ->
-                                AnimatedEntrance(delayMillis = index * 45) {
+                            itemsIndexed(displayScrims, key = { _, s -> s.id }) { index, scrim ->
+                                AnimatedEntrance(delayMillis = (index * 30).coerceAtMost(300)) {
                                     PremiumScrimCard(
                                         scrim   = scrim,
                                         onClick = { onNavigateToScrimDetail(scrim) }

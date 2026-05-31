@@ -121,7 +121,7 @@ fun ScrimDetailScreen(
             ) {
                 // Team Header Card
                 item {
-                    AnimatedEntrance(delayMillis = 100) {
+                    AnimatedEntrance(delayMillis = 20) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -210,7 +210,7 @@ fun ScrimDetailScreen(
 
                 // Scrim Info
                 item {
-                    AnimatedEntrance(delayMillis = 200) {
+                    AnimatedEntrance(delayMillis = 40) {
                         Text(
                             text = stringResource(R.string.scrim_info),
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -225,7 +225,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 250) {
+                    AnimatedEntrance(delayMillis = 50) {
                         InfoCard(
                             icon = Icons.Default.SportsEsports,
                             label = stringResource(R.string.game_mode),
@@ -239,7 +239,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 300) {
+                    AnimatedEntrance(delayMillis = 60) {
                         InfoCard(
                             icon = Icons.Default.Public,
                             label = stringResource(R.string.region),
@@ -253,7 +253,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 350) {
+                    AnimatedEntrance(delayMillis = 70) {
                         InfoCard(
                             icon = Icons.Default.Star,
                             label = stringResource(R.string.skill_level),
@@ -267,7 +267,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 375) {
+                    AnimatedEntrance(delayMillis = 80) {
                         InfoCard(
                             icon = Icons.Default.SportsScore,
                             label = stringResource(R.string.format_label),
@@ -281,7 +281,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 400) {
+                    AnimatedEntrance(delayMillis = 90) {
                         InfoCard(
                             icon = Icons.Default.AccessTime,
                             label = stringResource(R.string.scheduled_time),
@@ -295,7 +295,7 @@ fun ScrimDetailScreen(
                 }
 
                 item {
-                    AnimatedEntrance(delayMillis = 450) {
+                    AnimatedEntrance(delayMillis = 100) {
                         InfoCard(
                             icon = Icons.Default.Person,
                             label = stringResource(R.string.players),
@@ -311,7 +311,7 @@ fun ScrimDetailScreen(
                 // Description
                 if (scrim.description.isNotBlank()) {
                     item {
-                        AnimatedEntrance(delayMillis = 500) {
+                        AnimatedEntrance(delayMillis = 110) {
                             Text(
                                 text = stringResource(R.string.description),
                                 style = iOSTitle2.copy(color = TextPrimary)
@@ -322,7 +322,7 @@ fun ScrimDetailScreen(
                     }
 
                     item {
-                        AnimatedEntrance(delayMillis = 550) {
+                        AnimatedEntrance(delayMillis = 120) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -347,7 +347,7 @@ fun ScrimDetailScreen(
                 // Rosters
                 if (scrim.teamARoster.isNotEmpty() || scrim.teamBRoster.isNotEmpty()) {
                     item {
-                        AnimatedEntrance(delayMillis = 580) {
+                        AnimatedEntrance(delayMillis = 130) {
                             Text(
                                 text = stringResource(R.string.rosters),
                                 style = iOSTitle2.copy(color = TextPrimary)
@@ -359,7 +359,7 @@ fun ScrimDetailScreen(
                     // Team A Roster
                     if (scrim.teamARoster.isNotEmpty()) {
                         item {
-                            AnimatedEntrance(delayMillis = 590) {
+                            AnimatedEntrance(delayMillis = 140) {
                                 RosterDisplayCard(
                                     teamName = scrim.teamName,
                                     roster = scrim.teamARoster
@@ -372,7 +372,7 @@ fun ScrimDetailScreen(
                     // Team B Roster
                     if (scrim.teamBRoster.isNotEmpty()) {
                         item {
-                            AnimatedEntrance(delayMillis = 600) {
+                            AnimatedEntrance(delayMillis = 150) {
                                 RosterDisplayCard(
                                     teamName = scrim.opponentTeamName ?: stringResource(R.string.opponent_label),
                                     roster = scrim.teamBRoster
@@ -392,7 +392,7 @@ fun ScrimDetailScreen(
                     val isOpponent = scrim.opponentTeamId == currentUserTeamId
                     val hasPendingApps = scrim.applications.any { it.status == ApplicationStatus.PENDING }
 
-                    AnimatedEntrance(delayMillis = 600) {
+                    AnimatedEntrance(delayMillis = 150) {
                         when {
                             // ── HOST VIEW ──
                             isHost -> HostActions(

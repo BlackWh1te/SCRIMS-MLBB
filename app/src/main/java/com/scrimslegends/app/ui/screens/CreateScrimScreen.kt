@@ -52,7 +52,8 @@ fun CreateScrimScreen(
         skillLevel: SkillLevel,
         bestOf: BestOf,
         scheduledTime: Long,
-        description: String
+        description: String,
+        currentPlayers: Int
     ) -> Unit
 ) {
     // Team selection state
@@ -560,7 +561,8 @@ fun CreateScrimScreen(
                                 val scheduledTime = calendar.timeInMillis
                                 onCreateScrim(
                                     teamId, teamName, selectedGameMode, selectedRegion,
-                                    selectedSkillLevel, selectedBestOf, scheduledTime, description
+                                    selectedSkillLevel, selectedBestOf, scheduledTime, description,
+                                    currentPlayerCount
                                 )
                             }
                         },

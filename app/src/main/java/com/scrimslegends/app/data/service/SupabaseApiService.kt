@@ -190,11 +190,11 @@ data class ScrimDto(
 // ─── Scrim Application DTO ───
 
 data class ScrimApplicationDto(
-    @SerializedName("id") val id: String = "",
+    @SerializedName("id") val id: String? = null,
     @SerializedName("scrim_id") val scrimId: String = "",
     @SerializedName("applicant_team_id") val applicantTeamId: String = "",
     @SerializedName("status") val status: String = "Pending",
-    @SerializedName("applied_at") val appliedAt: String = ""
+    @SerializedName("applied_at") val appliedAt: String? = null  // null = let DB DEFAULT handle it; empty string causes error 22007
 )
 
 // ─── Team Application DTO ───

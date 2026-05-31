@@ -151,7 +151,8 @@ class ScrimViewModel @Inject constructor(
         skillLevel: SkillLevel,
         bestOf: BestOf,
         scheduledTime: Long,
-        description: String
+        description: String,
+        currentPlayers: Int = 0
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -166,7 +167,8 @@ class ScrimViewModel @Inject constructor(
                 skillLevel = skillLevel,
                 bestOf = bestOf,
                 scheduledTime = scheduledTime,
-                description = description
+                description = description,
+                currentPlayers = currentPlayers
             )
             
             scrimRepository.createScrim(newScrim).collect { result ->

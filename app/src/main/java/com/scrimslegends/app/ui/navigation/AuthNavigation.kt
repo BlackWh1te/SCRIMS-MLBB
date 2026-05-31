@@ -1057,17 +1057,18 @@ fun AuthNavigation(
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onCreateScrim = { teamId, teamName, gameMode, region, skillLevel, bestOf, scheduledTime, description ->
+                        onCreateScrim = { teamId, teamName, gameMode, region, skillLevel, bestOf, scheduledTime, description, currentPlayers ->
                             scrimViewModel.createScrim(
                                 teamId = teamId,
                                 teamName = teamName,
-                                teamLeader = userProfile?.username ?: "",
+                                teamLeader = userProfile?.id ?: "",
                                 gameMode = gameMode,
                                 region = region,
                                 skillLevel = skillLevel,
                                 bestOf = bestOf,
                                 scheduledTime = scheduledTime,
-                                description = description
+                                description = description,
+                                currentPlayers = currentPlayers
                             )
                             navController.popBackStack()
                             navController.navigate(Screen.ScrimList.route)
