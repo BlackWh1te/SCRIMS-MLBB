@@ -558,6 +558,7 @@
     <string name="team_chat_default_name">Team Chat</string>
     <string name="team_badge">TEAM</string>
     <string name="team_chat_placeholder">Start chatting with your team...</string>
+    <string name="team_chat_members">%d members</string>
     <string name="banned_title">Account Suspended</string>
     <string name="banned_subtitle">Your account is currently restricted.</string>
     <string name="banned_reason_label">Reason</string>

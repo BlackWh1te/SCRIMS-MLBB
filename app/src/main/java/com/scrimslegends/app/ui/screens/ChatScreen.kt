@@ -104,6 +104,7 @@ fun ChatScreen(
             }
     }
 
+    val isTeamChat      = conversation.isTeamChat
     val isCurrentUserParticipantA = conversation.participantAId == currentUserId
     val otherName      = if (isCurrentUserParticipantA) conversation.participantBName  else conversation.participantAName
     val otherTeam      = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
@@ -111,6 +112,14 @@ fun ChatScreen(
     val otherUserId    = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
     val otherAvatarUrl = if (isCurrentUserParticipantA) conversation.participantBAvatarUrl else conversation.participantAAvatarUrl
     val isOtherTyping  = conversation.isOtherTyping(currentUserId)
+
+    // Team chat display values
+    val headerName     = if (isTeamChat) {
+        conversation.groupName.takeIf { it.isNotBlank() } ?: stringResource(R.string.team_chat_default_name)
+    } else otherName
+    val headerSubtitle = if (isTeamChat) {
+        stringResource(R.string.team_chat_members, conversation.participantCount)
+    } else otherTeam
 
     Box(
         modifier = Modifier
@@ -145,9 +154,38 @@ fun ChatScreen(
 
                     Spacer(Modifier.width(12.dp))
 
-                    // Avatar
+                    // Avatar — team group icon or user avatar
                     Box {
-                        if (otherAvatarUrl != null) {
+                        if (isTeamChat) {
+                            // Team chat: stacked circles with group icon
+                            Box(
+                                modifier = Modifier.size(44.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = 3.dp, y = (-2).dp)
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(Brush.radialGradient(BlueGradient))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = (-3).dp, y = 2.dp)
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(Brush.radialGradient(GoldGradient)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Group,
+                                        contentDescription = null,
+                                        tint = DarkBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        } else if (otherAvatarUrl != null) {
                             SubcomposeAsyncImage(
                                 model              = otherAvatarUrl,
                                 contentDescription = otherName,
@@ -205,32 +243,57 @@ fun ChatScreen(
                             }
                         }
                         // Presence dot — neutral gray (no real-time presence tracking yet)
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .align(Alignment.BottomEnd)
-                                .background(DarkNavy, CircleShape)
-                                .padding(2.dp)
-                        ) {
+                        if (!isTeamChat) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(DimGray, CircleShape)
-                            )
+                                    .size(12.dp)
+                                    .align(Alignment.BottomEnd)
+                                    .background(DarkNavy, CircleShape)
+                                    .padding(2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(DimGray, CircleShape)
+                                )
+                            }
                         }
                     }
 
                     Spacer(Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text     = otherName,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color    = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text     = headerName,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color    = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (isTeamChat) {
+                                Spacer(Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .height(16.dp)
+                                        .background(
+                                            brush = Brush.horizontalGradient(GoldGradient),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 5.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text       = stringResource(R.string.team_badge),
+                                        fontSize   = 8.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color      = DarkBlue
+                                    )
+                                }
+                            }
+                        }
                         AnimatedContent(
                             targetState = isOtherTyping,
                             label       = "typingStatus",
@@ -243,46 +306,63 @@ fun ChatScreen(
                                     Text(stringResource(R.string.typing_status), fontSize = 12.sp, color = GoldPrimary)
                                 }
                             } else {
-                                if (otherTeam.isNotBlank()) {
-                                    Text(
-                                        text     = otherTeam,
-                                        fontSize = 12.sp,
-                                        color    = TextSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                if (headerSubtitle.isNotBlank()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isTeamChat) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = TextTertiary,
+                                                modifier = Modifier.size(10.dp)
+                                            )
+                                            Spacer(Modifier.width(3.dp))
+                                        }
+                                        Text(
+                                            text     = headerSubtitle,
+                                            fontSize = 12.sp,
+                                            color    = TextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Report button
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
-                            .clickable { onReportUser(otherUserId, otherName) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Report, null,
-                            tint     = ErrorRed.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                    // Report button (hidden for team chats — no single user to report)
+                    if (!isTeamChat) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceOverlay)
+                                .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                .clickable { onReportUser(otherUserId, otherName) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Report, null,
+                                tint     = ErrorRed.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(8.dp))
                     }
 
-                    Spacer(Modifier.width(8.dp))
-
-                    // Info button
+                    // Info button — team info for team chats, opponent team for scrim chats
                     Box(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(SurfaceOverlay)
                             .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
-                            .clickable { onViewTeamInfo(otherTeamId, otherTeam) },
+                            .clickable {
+                                val teamId = if (isTeamChat) conversation.teamId else otherTeamId
+                                val teamName = if (isTeamChat) headerName else otherTeam
+                                if (teamId != null) onViewTeamInfo(teamId, teamName)
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -302,7 +382,12 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (displayedMessages.isEmpty()) {
-                        EmptyChatState(otherTeamName = otherTeam)
+                        EmptyChatState(
+                            otherTeamName = otherTeam,
+                            isTeamChat = isTeamChat,
+                            groupName = headerName,
+                            memberCount = conversation.participantCount
+                        )
                     } else {
                         LazyColumn(
                             modifier       = Modifier.fillMaxSize(),
@@ -332,7 +417,11 @@ fun ChatScreen(
                                     clientMessageId = item.clientMessageId,
                                     onRetryMessage = onRetryMessage,
                                     onCancelMessage = onCancelMessage,
-                                    onViewTeamInfo = { onViewTeamInfo(otherTeamId, otherTeam) }
+                                    onViewTeamInfo = {
+                                        val tid = if (isTeamChat) conversation.teamId else otherTeamId
+                                        val tname = if (isTeamChat) headerName else otherTeam
+                                        if (tid != null) onViewTeamInfo(tid, tname)
+                                    }
                                 )
                             }
                         }
@@ -432,7 +521,11 @@ fun ChatScreen(
                             value         = messageText,
                             onValueChange = { messageText = it },
                             placeholder   = {
-                                Text(stringResource(R.string.message_placeholder), color = TextTertiary, fontSize = 15.sp)
+                                Text(
+                                    if (isTeamChat) stringResource(R.string.team_chat_placeholder)
+                                    else stringResource(R.string.message_placeholder),
+                                    color = TextTertiary, fontSize = 15.sp
+                                )
                             },
                             modifier      = Modifier.weight(1f),
                             colors        = OutlinedTextFieldDefaults.colors(
@@ -831,7 +924,12 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
 // ── Empty Chat State ──────────────────────────────────────
 
 @Composable
-private fun EmptyChatState(otherTeamName: String) {
+private fun EmptyChatState(
+    otherTeamName: String,
+    isTeamChat: Boolean = false,
+    groupName: String = "",
+    memberCount: Int = 0
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -840,7 +938,7 @@ private fun EmptyChatState(otherTeamName: String) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.ChatBubble,
+            imageVector = if (isTeamChat) Icons.Default.Group else Icons.Default.ChatBubble,
             contentDescription = null,
             tint = LightGray.copy(alpha = 0.4f),
             modifier = Modifier.size(72.dp)
@@ -855,7 +953,9 @@ private fun EmptyChatState(otherTeamName: String) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (otherTeamName.isNotBlank()) {
+            text = if (isTeamChat) {
+                stringResource(R.string.team_chat_placeholder)
+            } else if (otherTeamName.isNotBlank()) {
                 stringResource(R.string.start_conversation_with, otherTeamName)
             } else {
                 stringResource(R.string.start_conversation)
@@ -865,6 +965,28 @@ private fun EmptyChatState(otherTeamName: String) {
             ),
             textAlign = TextAlign.Center
         )
+        if (isTeamChat && memberCount > 0) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(SurfaceOverlay.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.People,
+                    contentDescription = null,
+                    tint = TextTertiary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.team_chat_members, memberCount),
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+        }
     }
 }
 

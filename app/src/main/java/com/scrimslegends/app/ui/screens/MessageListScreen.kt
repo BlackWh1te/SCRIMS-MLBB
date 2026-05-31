@@ -718,6 +718,7 @@ private fun TeamChatCard(
     val hasUnread   = conversation.unreadCount > 0
     val displayName = conversation.groupName.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.team_chat_default_name)
+    val memberCount = conversation.participantCount
 
     Box(
         modifier = Modifier
@@ -738,6 +739,18 @@ private fun TeamChatCard(
             )
             .clickable { onClick() }
     ) {
+        // Subtle gold glow at top edge
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth(0.6f)
+                .height(1.dp)
+                .background(
+                    brush = Brush.horizontalGradient(GoldGlowGradient),
+                    shape = RoundedCornerShape(2.dp)
+                )
+        )
+
         // Left gold accent stripe
         Box(
             modifier = Modifier
@@ -751,23 +764,38 @@ private fun TeamChatCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 14.dp, top = 14.dp, bottom = 14.dp),
+                .padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Group avatar
+            // Group avatar — stacked circles for team feel
             Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(GoldGradient)),
+                modifier = Modifier.size(50.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector        = Icons.Default.Group,
-                    contentDescription = null,
-                    tint               = DarkBlue,
-                    modifier           = Modifier.size(26.dp)
+                // Background circle (offset back-right)
+                Box(
+                    modifier = Modifier
+                        .offset(x = 4.dp, y = (-2).dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(BlueGradient))
                 )
+                // Foreground circle
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-4).dp, y = 2.dp)
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(GoldGradient)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.Group,
+                        contentDescription = null,
+                        tint               = DarkBlue,
+                        modifier           = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Spacer(Modifier.width(13.dp))
@@ -792,6 +820,7 @@ private fun TeamChatCard(
                             modifier   = Modifier.weight(1f, fill = false)
                         )
                         Spacer(Modifier.width(6.dp))
+                        // TEAM badge
                         Box(
                             modifier = Modifier
                                 .height(17.dp)
@@ -809,13 +838,48 @@ private fun TeamChatCard(
                                 color      = DarkBlue
                             )
                         }
+                        Spacer(Modifier.width(4.dp))
+                        // Member count pill
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(
+                                    SurfaceOverlay.copy(alpha = 0.7f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text       = memberCount.toString(),
+                                fontSize   = 9.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color      = TextSecondary
+                            )
+                        }
                     }
-                    Text(
-                        text       = formatMessageTime(conversation.lastMessageTime),
-                        fontSize   = 11.sp,
-                        color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else TextTertiary,
-                        fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Pinned icon
+                        Icon(
+                            imageVector = Icons.Default.Bookmark,
+                            contentDescription = null,
+                            tint       = GoldPrimary.copy(alpha = 0.5f),
+                            modifier   = Modifier.size(12.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text       = formatMessageTime(conversation.lastMessageTime),
+                            fontSize   = 11.sp,
+                            color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else TextTertiary,
+                            fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(4.dp))
