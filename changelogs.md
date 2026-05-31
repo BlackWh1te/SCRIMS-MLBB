@@ -8,6 +8,53 @@
 
 ---
 
+## 2026-06-01 04:20 [Session: Apply/Approve unresponsive + BO2 tie + atomic roster + isReadyPhase clock fix]
+
+### Commits
+- `6e45706` — fix(scrim): BO2 tie completion, atomic roster, isReadyPhase clock fix
+
+### Fixed
+- **DB Migration:** `supabase/migrations/20260631170001_fix_apply_to_scrim_reapplication.sql`
+  - Rewrote `apply_to_scrim` RPC to UPDATE existing Rejected/Cancelled applications back to Pending
+  - Previously: unique constraint `(scrim_id, applicant_team_id)` blocked re-application after rejection
+  - Now: re-activates old row with fresh `applied_at` instead of failing with duplicate key violation
+- **DB Migration:** `supabase/migrations/20260631180001_fix_complete_scrim_tie_and_atomic_roster.sql`
+  - `complete_scrim` RPC: `p_winner_team_id` now defaults to NULL
+    - When NULL: verifies `best_of = 2` and series is actually tied (equal wins)
+    - When provided: verifies winner is participant AND has majority wins
+    - BO2 ties can now be completed with `winner_team_id = NULL`
+  - New `set_scrim_roster` RPC: atomic delete-old + insert-new in single transaction
+    - Locks scrim row, verifies caller is team leader, validates all players are active members
+    - Replaces non-atomic client-side delete-then-create that could leave partial rosters on network failure
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - `sendApplyMessage`: sends message as `scrimCreatorId` (host) instead of `applicantId`
+  - **Root cause of unresponsive Approve button:** messages RLS requires `sender_id = auth.uid()`; the host was calling the API but sending `senderId = applicantId`, causing a 403 that silently blocked the approval flow
+  - Added extensive Timber logging throughout conversation creation and message send paths
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - `completeScrim`: accepts `String?` winner; omits `p_winner_team_id` from RPC params when null
+  - `setScrimRoster`: replaced non-atomic REST calls with atomic `setScrimRosterRpc`
+  - `createMatchResult` / `awardScrimPoints`: skipped for tie completions (winner is null)
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseTeamRepository.kt`
+  - `getTeams()` and `getTeamsForUser()`: batch-fetches ALL team members via single `in.()` query
+  - **Root cause of slow Apply button:** `mapTeamDtoToModel` was doing N+1 queries (one `getTeamMembers` per team); with 5 teams this caused 5+ API round trips before the Apply dialog could even render player selection
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/Scrim.kt`
+  - `isReadyPhase`: removed `System.currentTimeMillis() >= scheduledTime` device clock check
+  - Now purely `status == ScrimStatus.READY_CHECK` — server is the source of truth for ready phase timing
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Completion dialog now handles BO2 ties: shows "The series ended in a tie (1-1)." instead of winner name
+  - Confirm button always enabled; passes `finalWinner` (null for ties) to `onCompleteScrim`
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Added Toast "Creating conversation..." and Timber logs on Approve tap for live debugging visibility
+
+### Impact
+- Apply button now works for re-application after rejection/cancellation
+- Approve button now works (RLS fix + conversation creation logging)
+- BO2 scrims ending 1-1 can now be completed as ties
+- Team roster selection no longer hangs due to N+1 queries
+- Ready phase no longer breaks on devices with wrong system time
+
+---
+
 ## 2026-06-01 01:20 [Session: Fix game result creation — invalid UUID root cause]
 
 ### Commits
