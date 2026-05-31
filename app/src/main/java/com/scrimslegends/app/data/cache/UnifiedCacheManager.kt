@@ -56,57 +56,74 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
         roomTtlMs: Long,
         roomLoader: suspend () -> T?,
         networkLoader: suspend () -> T,
-        roomSaver: suspend (T) -> Unit
+        roomSaver: suspend (T) -> Unit,
+        forceRefresh: Boolean = false
     ): T {
-        // L1: Memory cache
-        val memEntry = memoryCache[key]
-        if (memEntry != null && memEntry.isValid()) {
-            Timber.d(TAG, "L1 HIT [$key] (${(System.currentTimeMillis() - memEntry.cachedAt) / 1000}s old)")
-            return memEntry.data as T
-        }
-
-        // Prevent thundering herd: only one coroutine fetches per key
-        val mutex = fetchLocks.getOrPut(key) { Mutex() }
-        return mutex.withLock {
-            // Double-check after acquiring lock (another coroutine may have populated it)
-            val recheck = memoryCache[key]
-            if (recheck != null && recheck.isValid()) {
-                return@withLock recheck.data as T
+        if (!forceRefresh) {
+            // L1: Memory cache
+            val memEntry = memoryCache[key]
+            if (memEntry != null && memEntry.isValid()) {
+                Timber.d(TAG, "L1 HIT [$key] (${(System.currentTimeMillis() - memEntry.cachedAt) / 1000}s old)")
+                return memEntry.data as T
             }
 
-            // L2: Room cache
-            val metadata = metadataDao.get(key)
-            if (metadata != null && System.currentTimeMillis() < metadata.expiresAt) {
-                val roomData = roomLoader()
-                if (roomData != null) {
-                    Timber.d(TAG, "L2 HIT [$key] (Room, expires in ${(metadata.expiresAt - System.currentTimeMillis()) / 1000}s)")
-                    // Promote to L1
-                    memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
-                    return@withLock roomData
+            // Prevent thundering herd: only one coroutine fetches per key
+            val mutex = fetchLocks.getOrPut(key) { Mutex() }
+            return mutex.withLock {
+                // Double-check after acquiring lock (another coroutine may have populated it)
+                val recheck = memoryCache[key]
+                if (recheck != null && recheck.isValid()) {
+                    return@withLock recheck.data as T
                 }
+
+                // L2: Room cache
+                val metadata = metadataDao.get(key)
+                if (metadata != null && System.currentTimeMillis() < metadata.expiresAt) {
+                    val roomData = roomLoader()
+                    if (roomData != null) {
+                        Timber.d(TAG, "L2 HIT [$key] (Room, expires in ${(metadata.expiresAt - System.currentTimeMillis()) / 1000}s)")
+                        // Promote to L1
+                        memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
+                        return@withLock roomData
+                    }
+                }
+
+                // L3: Network fetch
+                Timber.d(TAG, "MISS [$key] → fetching from network")
+                val freshData = networkLoader()
+
+                // Save to L1
+                memoryCache[key] = MemoryEntry(freshData as Any, System.currentTimeMillis(), memoryTtlMs)
+
+                // Save to L2
+                try {
+                    roomSaver(freshData)
+                    metadataDao.set(CacheMetadataEntity(
+                        cacheKey = key,
+                        lastFetched = System.currentTimeMillis(),
+                        expiresAt = System.currentTimeMillis() + roomTtlMs
+                    ))
+                } catch (e: Exception) {
+                    Timber.w(TAG, "Failed to save [$key] to Room", e)
+                }
+
+                freshData
             }
-
-            // L3: Network fetch
-            Timber.d(TAG, "MISS [$key] → fetching from network")
-            val freshData = networkLoader()
-
-            // Save to L1
-            memoryCache[key] = MemoryEntry(freshData as Any, System.currentTimeMillis(), memoryTtlMs)
-
-            // Save to L2
-            try {
-                roomSaver(freshData)
-                metadataDao.set(CacheMetadataEntity(
-                    cacheKey = key,
-                    lastFetched = System.currentTimeMillis(),
-                    expiresAt = System.currentTimeMillis() + roomTtlMs
-                ))
-            } catch (e: Exception) {
-                Timber.w(TAG, "Failed to save [$key] to Room", e)
-            }
-
-            freshData
         }
+
+        val freshData = networkLoader()
+        memoryCache[key] = MemoryEntry(freshData as Any, System.currentTimeMillis(), memoryTtlMs)
+        try {
+            roomSaver(freshData)
+            metadataDao.set(CacheMetadataEntity(
+                cacheKey = key,
+                lastFetched = System.currentTimeMillis(),
+                expiresAt = System.currentTimeMillis() + roomTtlMs
+            ))
+        } catch (e: Exception) {
+            Timber.w(TAG, "Failed to save [$key] to Room", e)
+        }
+        return freshData
     }
 
     /**
@@ -121,7 +138,8 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
         roomTtlMs: Long,
         roomLoader: suspend () -> T?,
         networkLoader: suspend () -> T,
-        roomSaver: suspend (T) -> Unit
+        roomSaver: suspend (T) -> Unit,
+        forceRefresh: Boolean = false
     ): kotlinx.coroutines.flow.Flow<T> = kotlinx.coroutines.flow.flow {
         var needNetworkFetch = true
 
@@ -129,7 +147,7 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
         val memEntry = memoryCache[key]
         if (memEntry != null) {
             emit(memEntry.data as T)
-            if (memEntry.isValid()) {
+            if (memEntry.isValid() && !forceRefresh) {
                 needNetworkFetch = false
             }
         }
@@ -141,11 +159,11 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
                 val roomData = roomLoader()
                 if (roomData != null) {
                     val isStillValid = System.currentTimeMillis() < metadata.expiresAt
-                    if (memEntry == null) {
+                    if (memEntry == null || forceRefresh) {
                         // Emit Room data if we didn't emit memory data
                         emit(roomData)
                     }
-                    if (isStillValid) {
+                    if (isStillValid && !forceRefresh) {
                         needNetworkFetch = false
                         memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
                     }

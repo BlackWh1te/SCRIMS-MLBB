@@ -104,9 +104,7 @@ data class ScrimRosterEntry(
 
 enum class BestOf(val games: Int, val displayName: String) {
     BO1(1, "Best of 1"),
-    BO2(2, "Best of 2"),
     BO3(3, "Best of 3"),
-    BO4(4, "Best of 4"),
     BO5(5, "Best of 5");
 
     companion object {

@@ -74,7 +74,7 @@ class MessageViewModel @Inject constructor(
         viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
-            messageRepository.getConversationsForUser(userId).collect { result ->
+            messageRepository.getConversationsForUser(userId, forceRefresh = true).collect { result ->
                 result.onSuccess { _conversations.value = it }
                 _isLoading.value = false
                 _isRefreshing.value = false
@@ -103,7 +103,7 @@ class MessageViewModel @Inject constructor(
         convPollingJob?.cancel()
         convPollingJob = viewModelScope.launch {
             while (isActive) {
-                messageRepository.getConversationsForUser(userId).collect { result ->
+                messageRepository.getConversationsForUser(userId, forceRefresh = true).collect { result ->
                     result.onSuccess { _conversations.value = it }
                 }
                 delay(10_000)

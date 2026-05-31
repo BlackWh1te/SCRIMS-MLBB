@@ -6,7 +6,7 @@ import com.scrimslegends.app.data.model.MessageType
 import kotlinx.coroutines.flow.Flow
 
 interface MessageRepositoryInterface {
-    suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>>
+    suspend fun getConversationsForUser(userId: String, forceRefresh: Boolean = false): Flow<Result<List<Conversation>>>
     suspend fun getConversationById(conversationId: String): Flow<Result<Conversation?>>
     suspend fun getOrCreateConversation(
         scrimId: String,

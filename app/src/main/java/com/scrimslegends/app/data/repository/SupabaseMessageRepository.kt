@@ -153,7 +153,7 @@ class SupabaseMessageRepository(
     }
 
     // ── Conversation list ──
-    override suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
+    override suspend fun getConversationsForUser(userId: String, forceRefresh: Boolean): Flow<Result<List<Conversation>>> = flow {
         try {
             val cacheKey = "${CACHE_KEY_CONVERSATIONS_PREFIX}$userId"
             cacheManager.getFlow<List<Conversation>>(
@@ -177,7 +177,8 @@ class SupabaseMessageRepository(
                 roomSaver = { conversations ->
                     conversationDao.insertConversations(conversations.map { mapConversationToEntity(it) })
                     conversations.forEach { cacheConversation(it) }
-                }
+                },
+                forceRefresh = forceRefresh
             ).collect { conversations ->
                 emit(Result.success(conversations))
             }

@@ -87,16 +87,12 @@ fun MessageListScreen(
         var list = conversations
         if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }
         if (searchQuery.isNotBlank()) {
-            list = list.filter { conv ->
-                val isMe = conv.participantAId == currentUserId
-                val otherName = if (isMe) conv.participantBName else conv.participantAName
-                val otherTeam = if (isMe) conv.participantBTeamName else conv.participantATeamName
-                otherName.contains(searchQuery, ignoreCase = true) ||
-                otherTeam.contains(searchQuery, ignoreCase = true) ||
-                conv.lastMessage.contains(searchQuery, ignoreCase = true)
-            }
+            list = list.filter { conv -> conversationMatchesSearch(conv, currentUserId, searchQuery) }
         }
         list
+    }
+    val visibleTeamConversation = remember(teamConversation, searchQuery, currentUserId) {
+        teamConversation?.takeIf { searchQuery.isBlank() || conversationMatchesSearch(it, currentUserId, searchQuery) }
     }
 
     Box(
@@ -339,7 +335,7 @@ fun MessageListScreen(
                         }
                     }
 
-                    !hasAnyConversation || (filteredConversations.isEmpty() && teamConversation == null) -> {
+                    !hasAnyConversation || (filteredConversations.isEmpty() && visibleTeamConversation == null) -> {
                         EmptyState(
                             icon     = Icons.Default.ChatBubble,
                             title    = if (activeFilter == MessageFilter.UNREAD && hasAnyConversation)
@@ -365,13 +361,13 @@ fun MessageListScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             // ── Pinned team chat (always at top if visible) ──
-                            if (teamConversation != null && (activeFilter == MessageFilter.ALL ||
-                                    teamConversation.unreadCount > 0)) {
+                            if (visibleTeamConversation != null) {
+                                val teamConversationToShow = visibleTeamConversation
                                 item(key = "team_chat") {
                                     AnimatedEntrance(delayMillis = 0) {
                                         TeamChatCard(
-                                            conversation = teamConversation,
-                                            onClick      = { onNavigateToChat(teamConversation) }
+                                            conversation = teamConversationToShow,
+                                            onClick      = { onNavigateToChat(teamConversationToShow) }
                                         )
                                     }
                                 }
@@ -885,4 +881,18 @@ private fun formatMessageTime(timestamp: Long): String {
         diff < 604_800_000L     -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))
         else                    -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
     }
+}
+
+private fun conversationMatchesSearch(
+    conversation: Conversation,
+    currentUserId: String,
+    searchQuery: String
+): Boolean {
+    val isMe = conversation.participantAId == currentUserId
+    val otherName = if (isMe) conversation.participantBName else conversation.participantAName
+    val otherTeam = if (isMe) conversation.participantBTeamName else conversation.participantATeamName
+    return otherName.contains(searchQuery, ignoreCase = true) ||
+        otherTeam.contains(searchQuery, ignoreCase = true) ||
+        conversation.lastMessage.contains(searchQuery, ignoreCase = true) ||
+        conversation.groupName.contains(searchQuery, ignoreCase = true)
 }

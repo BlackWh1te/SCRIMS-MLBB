@@ -84,7 +84,7 @@ class MessageRepository : MessageRepositoryInterface {
         )
     }
 
-    override suspend fun getConversationsForUser(userId: String): Flow<Result<List<Conversation>>> = flow {
+    override suspend fun getConversationsForUser(userId: String, forceRefresh: Boolean): Flow<Result<List<Conversation>>> = flow {
         kotlinx.coroutines.delay(300)
         val userConversations = conversations.filter {
             it.participantAId == userId || it.participantBId == userId
