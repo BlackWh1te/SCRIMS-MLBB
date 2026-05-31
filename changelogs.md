@@ -8,6 +8,41 @@
 
 ---
 
+## 2026-05-31 09:00 [Session: Application card + notification + upcoming filter fixes]
+
+### Commits
+- `495f343` — fix(scrim): populate application team info, fix notification read, fix upcoming filter
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/model/ScrimApplication.kt`
+  - Added `applicantTeamAvatarUrl` and `applicantTeamPlayers` fields
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Fixed `fetchApplicationsForScrim`: now batch-fetches applicant teams, team members, and profiles to populate team name, leader name, avatar URL, and full player roster
+  - Removed broken `mapDtoToScrimApplication` that set all team fields to empty strings
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - `ApplicationCard` now shows team avatar via `SubcomposeAsyncImage` (with loading + error fallbacks)
+  - `ApplicationCard` now shows applicant roster as a horizontal scrollable row of `PlayerChip` composables
+  - Added new `PlayerChip` composable: small avatar + name chip for roster preview
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - Fixed `markNotificationAsRead`: added missing `@Body` parameter for PATCH request
+  - This fixes the "Failed to mark notification as read" error (was sending PATCH with no body)
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/HomeScreen.kt`
+  - Fixed `upcomingScrims` filter: now only shows scrims the user is actively involved in
+    - Host: scrim has accepted opponent (status != OPEN && != CANCELLED)
+    - Opponent: user's team is the accepted opponent
+  - Was previously showing ALL OPEN + FILLED scrims in the system
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScheduleScreen.kt`
+  - Added `teams` parameter and same upcoming-scrim filter logic as HomeScreen
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - Passes `teams` to `ScheduleScreen`
+
+### Impact
+- Fixes critical bug: pending applications now show team name, avatar, leader, and full roster
+- Fixes "Failed to mark notification as read" error
+- Fixes "All posted scrims appear in my upcoming scrims" — now only shows user's own upcoming matches
+
+---
+
 ## 2026-05-31 08:20 [Session: Scrim apply flow fix] — Team picker, player picker, OpponentActions, multi-team support
 
 ### Commits
