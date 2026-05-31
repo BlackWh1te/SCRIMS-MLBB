@@ -154,3 +154,15 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversationId)")
     }
 }
+
+/**
+ * Migration from version 14 to 15.
+ * Adds reply-to fields to pending_messages outbox for retry context preservation.
+ */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE pending_messages ADD COLUMN replyToId TEXT")
+        db.execSQL("ALTER TABLE pending_messages ADD COLUMN replyToSnippet TEXT")
+        db.execSQL("ALTER TABLE pending_messages ADD COLUMN replyToSenderName TEXT")
+    }
+}

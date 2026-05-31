@@ -78,7 +78,14 @@ class SupabaseMessageRepository(
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // ── Concurrency guards ──
-    private val sendMutex = Mutex()
+    // Per-conversation send locks — prevents cross-conversation serialization
+    private val sendLocks = mutableMapOf<String, Mutex>()
+
+    private fun getSendMutex(conversationId: String): Mutex {
+        return synchronized(sendLocks) {
+            sendLocks.getOrPut(conversationId) { Mutex() }
+        }
+    }
     private val cacheMutex = Mutex()
     private val activeSubscriptions = Collections.synchronizedSet(HashSet<String>())
 
@@ -397,6 +404,9 @@ class SupabaseMessageRepository(
             imageUrl = imageUrl,
             voiceUrl = voiceUrl,
             voiceDuration = voiceDuration,
+            replyToId = replyToId,
+            replyToSnippet = replyToSnippet,
+            replyToSenderName = replyToSenderName,
             status = DeliveryStatus.PENDING.name
         )
         pendingMessageDao.insert(pending)
@@ -413,7 +423,7 @@ class SupabaseMessageRepository(
         replyToSnippet: String? = null,
         replyToSenderName: String? = null
     ): MessageWithDelivery {
-        return sendMutex.withLock {
+        return getSendMutex(pending.conversationId).withLock {
             // Idempotency: if already sent (e.g., previous attempt succeeded but client crashed),
             // return the existing success without re-sending.
             val existing = pendingMessageDao.getByClientId(pending.clientMessageId)
@@ -581,7 +591,12 @@ class SupabaseMessageRepository(
         val pending = pendingMessageDao.getByClientId(clientMessageId)
         if (pending != null) {
             emit(pending.toDomainModel())
-            val result = sendMessageInternal(pending.copy(retryCount = pending.retryCount))
+            val result = sendMessageInternal(
+                pending = pending.copy(retryCount = pending.retryCount),
+                replyToId = pending.replyToId,
+                replyToSnippet = pending.replyToSnippet,
+                replyToSenderName = pending.replyToSenderName
+            )
             emit(result)
         } else {
             emit(
@@ -1099,7 +1114,8 @@ class SupabaseMessageRepository(
             teamId = record.get("team_id")?.takeIf { !it.isJsonNull }?.asString,
             isTeamChat = record.get("is_team_chat")?.asBoolean ?: false,
             isPinned = record.get("is_pinned")?.asBoolean ?: false,
-            groupName = record.get("group_name")?.takeIf { !it.isJsonNull }?.asString
+            groupName = record.get("group_name")?.takeIf { !it.isJsonNull }?.asString,
+            unreadCount = record.get("unread_count")?.asInt ?: 0
         )
     }
 

@@ -891,6 +891,47 @@ CREATE TRIGGER trg_scrims_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Migration: Add reply-to and soft-delete columns to messages
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_id'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_snippet'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_snippet TEXT;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_sender_name'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'is_deleted'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
 -- 6. Add missing conversation composite indexes for performance
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_a_time ON conversations(participant_a_id, last_message_time DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_b_time ON conversations(participant_b_id, last_message_time DESC);

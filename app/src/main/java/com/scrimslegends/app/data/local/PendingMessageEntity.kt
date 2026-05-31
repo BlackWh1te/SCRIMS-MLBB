@@ -22,6 +22,9 @@ data class PendingMessageEntity(
     val imageUrl: String? = null,
     val voiceUrl: String? = null,
     val voiceDuration: Int? = null,
+    val replyToId: String? = null,
+    val replyToSnippet: String? = null,
+    val replyToSenderName: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val status: String = DeliveryStatus.PENDING.name,
     val retryCount: Int = 0,
@@ -42,7 +45,10 @@ data class PendingMessageEntity(
                 type = MessageType.valueOf(type),
                 imageUrl = imageUrl,
                 voiceUrl = voiceUrl,
-                voiceDuration = voiceDuration
+                voiceDuration = voiceDuration,
+                replyToId = replyToId,
+                replyToSnippet = replyToSnippet,
+                replyToSenderName = replyToSenderName
             ),
             status = DeliveryStatus.valueOf(status),
             clientMessageId = clientMessageId,

@@ -20,8 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+
 import java.util.UUID
 import java.util.Collections
 
@@ -77,10 +76,6 @@ class MessageViewModel @Inject constructor(
     // ── Internal: Map-based O(1) message storage ──
     // Key = message.id (or clientMessageId for pending), preserves insertion order for sorting
     private val _messageMap = Collections.synchronizedMap(LinkedHashMap<String, MessageWithDelivery>())
-
-    // ── Per-conversation send locks (allows parallel sends in different conversations) ──
-    private val _sendLocks = Collections.synchronizedMap(HashMap<String, Mutex>())
-    private fun getSendLock(conversationId: String): Mutex = _sendLocks.getOrPut(conversationId) { Mutex() }
 
     init {
         viewModelScope.launch {
@@ -175,8 +170,10 @@ class MessageViewModel @Inject constructor(
                 }
             }
 
-            // Subscribe to new messages via Realtime (skip bridge fetch if we just loaded)
-            messageRepository.subscribeToMessages(conversationId, skipBridgeFetch = !needsFetch).collect { newMessage ->
+            // Subscribe to new messages via Realtime
+            // If we just fetched from network above, skip the bridge fetch to avoid double-loading
+            val skipBridge = needsFetch
+            messageRepository.subscribeToMessages(conversationId, skipBridgeFetch = skipBridge).collect { newMessage ->
                 integrateMessage(newMessage)
             }
         }

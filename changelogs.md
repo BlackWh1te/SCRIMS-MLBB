@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-05-31 06:20 [Session: Message feature audit fixes] — Double-fetch, unreadCount, sendMutex, retry context, DB schema
+
+### Commits
+- `TBD` — fix(message): audit fixes — double-fetch, unreadCount, per-conversation send locks, retry reply context, DB v15
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/MessageViewModel.kt`
+  - Fixed `startChatSubscription` double-fetch: `skipBridgeFetch = needsFetch` instead of inverted logic
+  - Removed unused `_sendLocks` / `getSendLock` (cleanup; locking now lives in Repository)
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseMessageRepository.kt`
+  - Replaced global `sendMutex` with per-conversation `getSendMutex()` via `synchronized` + `MutableMap<String, Mutex>`
+  - Fixed `parseRealtimeRecordToConversationDto` missing `unreadCount` — realtime updates no longer wipe unread count
+  - Fixed `retryMessage` losing reply-to context: passes `replyToId`, `replyToSnippet`, `replyToSenderName` from pending entity
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/PendingMessageEntity.kt`
+  - Added `replyToId`, `replyToSnippet`, `replyToSenderName` to preserve reply context across retries / process death
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/DatabaseMigrations.kt`
+  - Added `MIGRATION_14_15`: reply columns on `pending_messages`
+- **File:** `app/src/main/java/com/scrimslegends/app/data/local/ScrimsLegendsDatabase.kt`
+  - Version bumped from 14 to 15; registered `MIGRATION_14_15`
+- **File:** `supabase/schema.sql`
+  - Added idempotent ALTER COLUMN blocks for `reply_to_id` (UUID FK), `reply_to_snippet` (TEXT), `reply_to_sender_name` (TEXT), `is_deleted` (BOOLEAN DEFAULT FALSE)
+
+---
+
 ## 2026-05-31 06:00 [Session: Message feature full redesign] — Reply-to, delete, pagination, O(1), @Stable, cache
 
 ### Commits
