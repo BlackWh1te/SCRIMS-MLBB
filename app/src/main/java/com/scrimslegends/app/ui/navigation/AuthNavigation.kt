@@ -1327,8 +1327,8 @@ fun AuthNavigation(
                     }
                     // Ensure team conversations exist for all user's teams
                     LaunchedEffect(teams) {
-                        if (teams.isNotEmpty()) {
-                            messageViewModel.ensureTeamConversations(teams)
+                        if (teams.isNotEmpty() && userId.isNotBlank()) {
+                            messageViewModel.ensureTeamConversations(teams, userId)
                         }
                     }
                     // Start/stop background polling for new conversations

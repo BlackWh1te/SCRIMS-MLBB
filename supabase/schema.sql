@@ -695,7 +695,8 @@ RETURNS TABLE (
     team_id UUID,
     is_team_chat BOOLEAN,
     is_pinned BOOLEAN,
-    group_name TEXT
+    group_name TEXT,
+    participant_count INTEGER
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -728,7 +729,8 @@ BEGIN
         c.team_id,
         c.is_team_chat,
         c.is_pinned,
-        c.group_name
+        c.group_name,
+        COALESCE(c.participant_count, 2)::INTEGER AS participant_count
     FROM conversations c
     LEFT JOIN profiles pa ON pa.id = c.participant_a_id
     LEFT JOIN profiles pb ON pb.id = c.participant_b_id
@@ -746,12 +748,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Enforce chat gate (server-side lock before chatOpensAt)
+-- Team chats are always open (exempt from gate)
 CREATE OR REPLACE FUNCTION enforce_chat_gate()
 RETURNS TRIGGER AS $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM conversations c
         WHERE c.id = NEW.conversation_id
+          AND c.is_team_chat = FALSE
           AND c.chat_opens_at > TIMEZONE('utc', NOW())
     ) THEN
         RAISE EXCEPTION 'Chat is locked until %', (
@@ -809,7 +813,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_direct_conversation ON conversation
     GREATEST(participant_a_id, participant_b_id)
 ) WHERE scrim_id IS NULL;
 
--- 2. Hardened messages INSERT RLS policy with chat gate check
+-- 2. Hardened messages INSERT RLS policy with chat gate check AND team chat support
+-- [DO NOT UNDO] Previous version at lines 355-374 already had team chat support.
+-- This replacement preserves that support while adding the chat gate.
 DROP POLICY IF EXISTS "Conversation members can send messages" ON messages;
 CREATE POLICY "Conversation members can send messages" ON messages
     FOR INSERT WITH CHECK (
@@ -817,8 +823,21 @@ CREATE POLICY "Conversation members can send messages" ON messages
         AND EXISTS (
             SELECT 1 FROM conversations c
             WHERE c.id = messages.conversation_id
-            AND (c.participant_a_id = auth.uid() OR c.participant_b_id = auth.uid())
-            AND c.chat_opens_at <= TIMEZONE('utc', NOW())
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid()
+                    )
+                )
+            )
+            AND (
+                c.is_team_chat = TRUE          -- Team chats are always open
+                OR c.chat_opens_at <= TIMEZONE('utc', NOW())
+            )
         )
     );
 
@@ -935,3 +954,126 @@ END $$;
 -- 6. Add missing conversation composite indexes for performance
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_a_time ON conversations(participant_a_id, last_message_time DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_participant_b_time ON conversations(participant_b_id, last_message_time DESC);
+
+-- ═══════════════════════════════════════════════════════════════
+-- TEAM CHAT FIXES (2026-05-31 Audit)
+-- ═══════════════════════════════════════════════════════════════
+
+-- 1. Add participant_count to conversations (for team chat member count)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'conversations' AND column_name = 'participant_count'
+    ) THEN
+        ALTER TABLE conversations ADD COLUMN participant_count INTEGER DEFAULT 2;
+    END IF;
+END $$;
+
+-- 2. Fix enforce_chat_gate trigger: team chats are always open
+CREATE OR REPLACE FUNCTION enforce_chat_gate()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM conversations c
+        WHERE c.id = NEW.conversation_id
+          AND c.is_team_chat = FALSE
+          AND c.chat_opens_at > TIMEZONE('utc', NOW())
+    ) THEN
+        RAISE EXCEPTION 'Chat is locked until %', (
+            SELECT c.chat_opens_at FROM conversations c WHERE c.id = NEW.conversation_id
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. get_or_create_team_conversation RPC
+-- Creates a team group chat if it doesn't exist, returns existing one otherwise.
+CREATE OR REPLACE FUNCTION get_or_create_team_conversation(
+    p_team_id UUID,
+    p_team_name TEXT,
+    p_leader_id UUID,
+    p_leader_name TEXT
+)
+RETURNS TABLE (
+    id UUID,
+    scrim_id UUID,
+    participant_a_id UUID,
+    participant_a_name TEXT,
+    participant_a_team_id UUID,
+    participant_a_team_name TEXT,
+    participant_b_id UUID,
+    participant_b_name TEXT,
+    participant_b_team_id UUID,
+    participant_b_team_name TEXT,
+    last_message TEXT,
+    last_message_time TIMESTAMP WITH TIME ZONE,
+    chat_opens_at TIMESTAMP WITH TIME ZONE,
+    participant_a_typing BOOLEAN,
+    participant_b_typing BOOLEAN,
+    unread_count BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    team_id UUID,
+    is_team_chat BOOLEAN,
+    is_pinned BOOLEAN,
+    group_name TEXT
+) AS $$
+DECLARE
+    v_conversation_id UUID;
+    v_member_count INTEGER;
+BEGIN
+    -- Check if team conversation already exists
+    SELECT c.id INTO v_conversation_id
+    FROM conversations c
+    WHERE c.is_team_chat = TRUE AND c.team_id = p_team_id
+    LIMIT 1;
+
+    IF v_conversation_id IS NOT NULL THEN
+        -- Return existing conversation
+        RETURN QUERY
+        SELECT
+            c.id, c.scrim_id, c.participant_a_id, c.participant_a_name,
+            c.participant_a_team_id, c.participant_a_team_name,
+            c.participant_b_id, c.participant_b_name,
+            c.participant_b_team_id, c.participant_b_team_name,
+            c.last_message, c.last_message_time, c.chat_opens_at,
+            c.participant_a_typing, c.participant_b_typing,
+            0::BIGINT AS unread_count, c.created_at,
+            c.team_id, c.is_team_chat, c.is_pinned, c.group_name
+        FROM conversations c
+        WHERE c.id = v_conversation_id;
+        RETURN;
+    END IF;
+
+    -- Count team members for participant_count
+    SELECT COUNT(*)::INTEGER INTO v_member_count
+    FROM team_members WHERE team_id = p_team_id;
+
+    -- Create new team conversation
+    INSERT INTO conversations (
+        participant_a_id, participant_a_name,
+        last_message, last_message_time, chat_opens_at,
+        team_id, is_team_chat, group_name, participant_count
+    ) VALUES (
+        p_leader_id, p_leader_name,
+        'Team chat created', TIMEZONE('utc', NOW()), TIMEZONE('utc', NOW()),
+        p_team_id, TRUE, p_team_name, v_member_count
+    )
+    RETURNING conversations.id INTO v_conversation_id;
+
+    -- Return created conversation
+    RETURN QUERY
+    SELECT
+        c.id, c.scrim_id, c.participant_a_id, c.participant_a_name,
+        c.participant_a_team_id, c.participant_a_team_name,
+        c.participant_b_id, c.participant_b_name,
+        c.participant_b_team_id, c.participant_b_team_name,
+        c.last_message, c.last_message_time, c.chat_opens_at,
+        c.participant_a_typing, c.participant_b_typing,
+        0::BIGINT AS unread_count, c.created_at,
+        c.team_id, c.is_team_chat, c.is_pinned, c.group_name
+    FROM conversations c
+    WHERE c.id = v_conversation_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

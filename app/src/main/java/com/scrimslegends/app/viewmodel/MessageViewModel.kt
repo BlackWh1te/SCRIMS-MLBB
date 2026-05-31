@@ -434,8 +434,9 @@ class MessageViewModel @Inject constructor(
     }
 
     // ── Ensure team conversations exist for all user's teams ──
-    fun ensureTeamConversations(teams: List<com.scrimslegends.app.data.model.Team>) {
+    fun ensureTeamConversations(teams: List<com.scrimslegends.app.data.model.Team>, userId: String) {
         viewModelScope.launch {
+            var anyCreated = false
             teams.forEach { team ->
                 try {
                     messageRepository.getOrCreateTeamConversation(
@@ -444,6 +445,7 @@ class MessageViewModel @Inject constructor(
                         leaderId = team.leaderId,
                         leaderName = team.players.find { it.id == team.leaderId }?.name ?: ""
                     ).collect { result ->
+                        result.onSuccess { anyCreated = true }
                         result.onFailure { e ->
                             Timber.w("MessageVM", "Failed to ensure team conversation for ${team.name}: ${e.message}")
                         }
@@ -451,6 +453,10 @@ class MessageViewModel @Inject constructor(
                 } catch (e: Exception) {
                     Timber.w("MessageVM", "Exception ensuring team conversation for ${team.name}: ${e.message}")
                 }
+            }
+            // Refresh conversation list so team chats appear immediately
+            if (anyCreated) {
+                loadConversations(userId, isRefresh = true)
             }
         }
     }
