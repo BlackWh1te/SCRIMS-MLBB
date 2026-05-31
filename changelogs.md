@@ -8,6 +8,54 @@
 
 ---
 
+## 2026-05-31 05:00 [Session: Scrim full pipeline fix] — Timestamp error 22007, current_players 0/10, team name, UI lag
+
+### Commits
+- `42c91b5` — fix(scrim): timestamp error 22007 on apply, current_players 0/10, team name, UI lag
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `ScrimApplicationDto.appliedAt`: changed from `String = ""` to `String? = null`. Empty string caused PostgreSQL error 22007 (invalid_datetime_format) because `applied_at` is TIMESTAMPTZ. Null lets the DB DEFAULT (`TIMEZONE('utc', NOW())`) handle it.
+  - `ScrimApplicationDto.id`: changed from `String = ""` to `String? = null` since DB auto-generates UUID.
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/ScrimViewModel.kt`
+  - `createScrim`: added `currentPlayers: Int = 0` parameter. The Scrim object now sets `currentPlayers` from the team's player count instead of defaulting to 0.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/CreateScrimScreen.kt`
+  - `onCreateScrim` callback: added `currentPlayers: Int` parameter. Passes `currentPlayerCount` from the selected team.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/navigation/AuthNavigation.kt`
+  - `onCreateScrim` lambda: updated to pass `currentPlayers` from CreateScrimScreen.
+  - **CRITICAL FIX:** Changed `teamLeader = userProfile?.username` to `teamLeader = userProfile?.id`. The old code passed the username instead of the user ID, causing `AuthorizationUtils.requireOwner` to always fail (it compares user IDs).
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimListScreen.kt`
+  - `AnimatedEntrance` stagger delay: changed from `index * 45` (900ms for item #20) to `(index * 30).coerceAtMost(300)` (max 300ms). Added `key` parameter to `itemsIndexed` for proper LazyColumn recomposition.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/ScrimDetailScreen.kt`
+  - Compressed 16 `AnimatedEntrance` delays from 0-600ms range to 0-150ms range (4x faster screen load).
+
+### Root Causes
+1. **Error 22007**: `ScrimApplicationDto.appliedAt = ""` sent empty string to TIMESTAMPTZ column.
+2. **0/10 players**: `createScrim` didn't pass the team's player count; `Scrim.currentPlayers` defaulted to 0.
+3. **Team name missing**: The `team_name` column may not exist on the live DB (migration `20260631060001_add_team_name_to_scrims.sql` not run). The app now sends `team_name` during creation, but existing scrims need the migration.
+4. **UI lag**: Staggered animation delays were too long (up to 600ms), making screens feel sluggish.
+
+### Verification
+- `./gradlew.bat :app:compileDebugKotlin` passes with 0 errors.
+- `./gradlew.bat assembleDebug` passes — APK built successfully.
+
+### Verdict
+- `[INTENTIONAL FIX]` — `ScrimApplicationDto.appliedAt` must be `null` (not `""`) to let DB DEFAULT work. Do NOT revert to empty string.
+- `[INTENTIONAL FIX]` — `teamLeader` must be `userProfile?.id` (not `username`). Do NOT revert.
+- `[INTENTIONAL FIX]` — Animation delays are intentionally compressed for snappier UX. Do NOT restore old 600ms delays.
+
+### Important Note for User
+If team names still don't show on existing scrims, run this migration on your Supabase DB:
+```sql
+-- From: supabase/migrations/20260631060001_add_team_name_to_scrims.sql
+ALTER TABLE scrims ADD COLUMN IF NOT EXISTS team_name TEXT;
+
+-- Backfill existing scrims with team names
+UPDATE scrims s SET team_name = t.name FROM teams t WHERE s.team_id = t.id AND s.team_name IS NULL;
+```
+
+---
+
 ## 2026-05-31 04:40 [Session: Scrim creation + team chat fix] — Scrim constraint violation, missing team chats, region enum mismatch
 
 ### Commits
