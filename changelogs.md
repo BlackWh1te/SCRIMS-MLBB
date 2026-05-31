@@ -8,6 +8,31 @@
 
 ---
 
+## 2026-06-01 01:00 [Session: Game result status casing + CreateScrimScreen time bug]
+
+### Commits
+- `8727d40` — fix(scrim): game result status casing + CreateScrimScreen time auto-update
+
+### Fixed
+- **File:** `app/src/main/java/com/scrimslegends/app/data/service/SupabaseApiService.kt`
+  - `ScrimGameResultDto.status` default changed `"PENDING"` → `"Pending"` (matches DB CHECK constraint)
+- **File:** `app/src/main/java/com/scrimslegends/app/data/repository/SupabaseScrimRepository.kt`
+  - Added `toDbGameStatus()` / `fromDbGameStatus()` mapping functions for `ScrimGameStatus ↔ DB string`
+  - `mapDtoToScrimGameResult`: uses `fromDbGameStatus()` instead of `ScrimGameStatus.valueOf()` which failed on spaced names like `"Awaiting Opponent"`
+  - `mapScrimGameResultToDto`: uses `toDbGameStatus()` instead of `result.status.name` which produced all-caps `"PENDING"` that violated the DB constraint
+  - **Root cause of "Failed to create game results (2/2 failures)":** `createScrim` was calling `api.createScrimGameResult()` with `status = "PENDING"`, but the DB `valid_game_result_status` constraint only accepts `"Pending"`. This caused a CHECK constraint violation on every game result insert. The error was previously silently swallowed by `try/catch`; the audit rollback logic made it visible.
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/CreateScrimScreen.kt`
+  - Added `getRegionTime()` helper: reads current hour/minute from the region's IANA timezone
+  - `selectedHour` / `selectedMinute` now initialized from region's current time instead of hardcoded `18:00`
+  - Added `LaunchedEffect(selectedRegion)` that auto-updates hour/minute to the current time in the newly selected region whenever the user taps a different region chip
+  - **Fixes:** "time fixed always 18:00" — now shows Moscow time when Moscow is selected, etc.
+
+### Impact
+- Scrim creation now succeeds: game result rows insert correctly with DB-compatible status casing
+- CreateScrimScreen time picker now reflects real current time in the selected region and updates automatically on region change
+
+---
+
 ## 2026-06-01 00:05 [Session: Scrim feature audit — critical bug fixes]
 
 ### Commits
