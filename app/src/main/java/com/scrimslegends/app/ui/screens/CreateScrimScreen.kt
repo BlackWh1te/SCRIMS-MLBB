@@ -65,12 +65,13 @@ fun CreateScrimScreen(
     val teamName = selectedTeam?.name ?: stringResource(R.string.my_team_default)
     val teamId = selectedTeam?.id ?: ""
 
-    // Player selection state — pre-select all team members as active by default
+    // Player selection state — pre-select up to 5 team members as active by default
     var selectedPlayerIds by remember(selectedTeam) {
-        mutableStateOf(selectedTeam?.players?.map { it.id }?.toSet() ?: emptySet())
+        mutableStateOf(selectedTeam?.players?.take(5)?.map { it.id }?.toSet() ?: emptySet())
     }
     var showPlayerSelectionDialog by remember { mutableStateOf(false) }
-    val activePlayerCount = selectedPlayerIds.size
+    // Active players = first 5 selected (MLBB 5v5). Extras are substitutes.
+    val activePlayerCount = selectedPlayerIds.size.coerceAtMost(5)
 
     var showTeamPicker by remember { mutableStateOf(false) }
     var showMinPlayerDialog by remember { mutableStateOf(false) }
@@ -263,9 +264,10 @@ fun CreateScrimScreen(
                                         style = iOSHeadline.copy(color = TextPrimary)
                                     )
                                     Text(
-                                        text = if (activePlayerCount >= 5)
-                                            "$activePlayerCount players selected"
-                                        else
+                                        text = if (activePlayerCount >= 5) {
+                                            val subs = selectedPlayerIds.size - 5
+                                            if (subs > 0) "5 active + $subs sub" else "5 active players"
+                                        } else
                                             "Need at least 5 — $activePlayerCount selected",
                                         style = iOSCaption1.copy(
                                             color = if (activePlayerCount >= 5) SuccessGreen else WarningOrange
@@ -845,7 +847,10 @@ fun CreateScrimScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "$activePlayerCount/5 active players selected",
+                            text = if (activePlayerCount >= 5) {
+                                val subs = selectedPlayerIds.size - 5
+                                if (subs > 0) "5 active + $subs sub" else "5/5 active"
+                            } else "$activePlayerCount/5 active",
                             fontSize = 13.sp,
                             color = if (activePlayerCount >= 5) SuccessGreen else WarningOrange
                         )
