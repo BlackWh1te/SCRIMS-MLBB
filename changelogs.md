@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-05-31 09:15 [Session: Notification pipeline audit + polish]
+
+### Commits
+- `2137382` — fix(notifications): optimistic mark-as-read, avoid self-cancellation notify, dedupe taps
+
+### Changed
+- **File:** `app/src/main/java/com/scrimslegends/app/viewmodel/NotificationViewModel.kt`
+  - `markAsRead` now optimistically updates the local notification list + badge count BEFORE the network call
+  - On failure, `loadNotifications()` is called to revert to server state
+  - Eliminates the lag where a tapped notification stays "unread" until the PATCH completes
+- **File:** `app/src/main/java/com/scrimslegends/app/ui/screens/NotificationScreen.kt`
+  - Removed redundant `onMarkAsRead(notification.id)` from `NotificationRow.onClick`
+  - `onNotificationClick` in AuthNavigation already handles both mark-as-read + navigation
+  - Prevents double PATCH to `app_notifications` on every tap
+- **File:** `supabase/migrations/20260531060004_ultimate_messaging_fix.sql`
+  - Updated `handle_scrim_application_notification()` trigger
+  - Added `v_current_user := auth.uid()` check
+  - For `REJECTED` status: skips notification when `auth.uid() == applicant_leader_id`
+  - Prevents misleading "Your application was declined" notification when the applicant cancelled their own application
+
+### Impact
+- Notification badge updates instantly on tap (no network lag)
+- No more redundant PATCH calls
+- No more false "declined" notifications for self-cancellations
+
+---
+
 ## 2026-05-31 09:00 [Session: Application card + notification + upcoming filter fixes]
 
 ### Commits
