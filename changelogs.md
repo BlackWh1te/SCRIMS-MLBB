@@ -23,6 +23,7 @@
 
 ### Validated Logic
 - Verified AdminPanel allows full deletion of scrims (bypassing RLS).
+- **Added missing Storage cleanup:** Scrim deletion now extracts all screenshot URLs from `scrim_game_results` and `scrims` and cleanly deletes the files from the Supabase `match-screenshots` storage bucket to prevent massive storage leaks.
 - Verified AdminPanel Scrims Dashboard already provides full visibility into chat history (messages) and per-game screenshots.
 - Verified point distribution logic is securely handled by `award_scrim_points` backend RPC.
 
