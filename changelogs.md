@@ -8,6 +8,36 @@
 
 ---
 
+## 2026-06-01 21:00 [Session: Tournament polish — host panel, i18n, NotificationBell]
+
+### Commits
+- `1692abc` — Add missing tournament i18n translations (ru, de, es, fr, tr)
+- `790884b` (AdminPanel) — Polish host panel + wire NotificationBell to Supabase
+
+### Android
+- **Files:** `values-de/strings.xml`, `values-es/strings.xml`, `values-fr/strings.xml`, `values-ru/strings.xml`, `values-tr/strings.xml`
+  - Added 65 missing tournament-related string keys per locale
+  - Covers: tournament list, detail, create, host request/management, filters, statuses, matches, schedule, standings
+  - French strings properly escape apostrophes as `\'` per Android string resource rules
+
+### AdminPanel
+- **File:** `src/app/host/[tournamentId]/dashboard/page.tsx`
+  - Expanded activity feed to merge 4 sources: applications, check-ins, match results, disputes
+  - Sorted by timestamp, deduped, limited to 15 most recent items
+- **File:** `src/app/host/[tournamentId]/matches/page.tsx`
+  - Added round filter tabs (All Rounds / Round N) above match list
+  - Added "Schedule" button on each unscheduled match card
+  - Added schedule modal with date/time inputs that writes to `tournament_swiss_matches.scheduled_at`
+- **File:** `src/app/host/[tournamentId]/bracket/page.tsx`
+  - Added team search filter above standings table
+  - Shows result count when filtering; empty state for no matches
+- **File:** `src/components/NotificationBell.tsx`
+  - Now fetches from Supabase `app_notifications` for the logged-in user
+  - Realtime subscription to `app_notifications` table
+  - Merges Supabase + localStorage notifications; supports mark-as-read and delete for both
+
+---
+
 ## 2026-06-01 20:45 [Session: AdminPanel tournament middleware + type fixes]
 
 ### Commits
