@@ -8,6 +8,37 @@
 
 ---
 
+## 2026-06-01 21:10 [Session: i18n gap fill — scrim + tournament + common keys]
+
+### Commits
+- `939955e` — Add scrim + tournament + common i18n to all 9 locales
+
+### Added
+- **Files:** `values-ar/strings.xml`, `values-de/strings.xml`, `values-es/strings.xml`, `values-fr/strings.xml`, `values-ko/strings.xml`, `values-pt/strings.xml`, `values-ru/strings.xml`, `values-tr/strings.xml`, `values-zh/strings.xml`
+  - 15 scrim string keys added to all 9 locales (e.g., `scrim_status_*`, `cancel_scrim`, `find_scrims`, `post_scrim`)
+  - 65 tournament string keys added to ar, ko, pt, zh (already present in de, es, fr, ru, tr)
+  - 12 high-usage common UI keys added to ar, ko, pt, zh (`accept`, `apply`, `back`, `cancel`, `confirm`, `description`, `error`, `loading`, `no`, `save`, `submit`, `yes`)
+
+### Totals per locale
+| Locale | Added | Tournament | Scrim | Common |
+|--------|-------|------------|-------|--------|
+| ar | +92 | 65 | 15 | 12 |
+| de | +15 | 0 (prev) | 15 | 0 |
+| es | +15 | 0 (prev) | 15 | 0 |
+| fr | +15 | 0 (prev) | 15 | 0 |
+| ko | +92 | 65 | 15 | 12 |
+| pt | +92 | 65 | 15 | 12 |
+| ru | +15 | 0 (prev) | 15 | 0 |
+| tr | +15 | 0 (prev) | 15 | 0 |
+| zh | +92 | 65 | 15 | 12 |
+
+### Still Missing
+- 100-200 generic UI keys per locale remain untranslated (low-usage labels, error messages, settings strings)
+- 88 dead string keys in `values/strings.xml` are never referenced anywhere in code
+- Android NewsScreen was removed; AdminPanel News Service page has no consumer
+
+---
+
 ## 2026-06-01 21:00 [Session: Tournament polish — host panel, i18n, NotificationBell]
 
 ### Commits
