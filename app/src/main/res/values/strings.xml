@@ -5,7 +5,8 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_teams">Teams</string>
-    <string name="nav_scrims">Scrims</string>    <string name="nav_messages">Messages</string>
+    <string name="nav_scrims">Scrims</string>
+    <string name="nav_messages">Messages</string>
     <string name="nav_profile">Profile</string>
     <string name="nav_match_history">History</string>
     <string name="nav_player_finder">Find Players</string>
@@ -70,7 +71,8 @@
     <string name="my_teams">My Teams</string>
     <string name="find_scrims_title">Find Scrims</string>
     <string name="see_all">See all</string>
-    <string name="quick_actions">Quick Actions</string>    <string name="rank_progress">Rank Progress</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="rank_progress">Rank Progress</string>
     <string name="to_next_tier">to %s</string>
     <string name="view_all">View all</string>
     <string name="post_scrim">Post a Scrim</string>
