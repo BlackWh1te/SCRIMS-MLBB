@@ -450,4 +450,19 @@
     <string name="tournament_details">Detaylar</string>
     <string name="tournament_view_full">Tam Görünüm</string>
     <string name="tournament_prize_pool">Ödül Havuzu</string>
+    <string name="scrim_application">Scrim Application</string>
+    <string name="add_scrim_details_hint">Add details about your scrim...</string>
+    <string name="team_needs_5_players_to_post_scrims">Your team needs at least 5 players to post scrims</string>
+    <string name="scrim_time_past">Scrim time must be in the future</string>
+    <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
+    <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
+    <string name="scrim_time_invalid">Please select a valid scrim time</string>
+    <string name="scrim_team_label">Scrim: %s</string>
+    <string name="who_won_scrim">Who won this scrim?</string>
+    <string name="be_first_to_post_scrim">Be the first to post a scrim</string>
+    <string name="complete_scrim">Complete Scrim</string>
+    <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
+    <string name="no_scrims_found">No scrims found</string>
+    <string name="step_2_complete_scrim">Step 2: Complete Scrim</string>
+    <string name="keep_scrim">Keep Scrim</string>
 </resources>
