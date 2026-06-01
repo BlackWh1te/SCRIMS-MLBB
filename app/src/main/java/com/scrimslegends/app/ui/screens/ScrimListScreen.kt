@@ -449,7 +449,10 @@ fun ScrimListScreen(
                             LaunchedEffect(listState, displayScrims) {
                                 androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
                                     .collect { lastIndex ->
-                                        if (lastIndex != null && lastIndex >= displayScrims.size - 3) {
+                                        // Only load more if no backend filters are active, otherwise it wipes search results
+                                        val hasBackendFilters = selectedGameMode != null || selectedRegion != null || 
+                                                selectedSkillLevel != null || searchQuery.isNotBlank()
+                                        if (!hasBackendFilters && lastIndex != null && lastIndex >= displayScrims.size - 3) {
                                             onLoadMore()
                                         }
                                     }
