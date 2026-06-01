@@ -8,6 +8,26 @@
 
 ---
 
+## 2026-06-01 21:20 [Session: Deep Audit — Admin Scrim Notifications]
+
+### Commits
+- `e9f0e93f` (AdminPanel) — feat(admin): add team leader notifications for scrim validation and deletion
+
+### Added
+- **File:** `AdminPanel/src/app/dashboard/scrims/page.tsx`
+  - Added push notifications to Team Leaders for critical admin actions.
+  - When an admin **deletes** a scrim, a notification is sent to both Team A and Team B leaders explaining the scrim was removed.
+  - When an admin **resolves a game dispute**, a notification is sent to both leaders announcing the winner of that specific game.
+  - When an admin **completes/validates the final series**, a notification is sent to both leaders announcing the final winner and that points have been awarded.
+  - Uses existing `insert_app_notification` RPC to safely push messages directly to `app_notifications`.
+
+### Validated Logic
+- Verified AdminPanel allows full deletion of scrims (bypassing RLS).
+- Verified AdminPanel Scrims Dashboard already provides full visibility into chat history (messages) and per-game screenshots.
+- Verified point distribution logic is securely handled by `award_scrim_points` backend RPC.
+
+---
+
 ## 2026-06-01 21:10 [Session: i18n gap fill — scrim + tournament + common keys]
 
 ### Commits
