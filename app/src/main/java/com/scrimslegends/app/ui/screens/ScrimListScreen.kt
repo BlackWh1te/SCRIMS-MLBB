@@ -66,6 +66,7 @@ fun ScrimListScreen(
     onNavigateToScrimDetail: (Scrim) -> Unit,
     onSearch: (String, GameMode?, Region?, SkillLevel?, ScrimStatus?) -> Unit,
     onRefresh: () -> Unit = {},
+    onLoadMore: () -> Unit = {},
     onDismissError: () -> Unit = {}
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -444,7 +445,17 @@ fun ScrimListScreen(
                     }
 
                     else -> {
-                        LazyColumn(
+                        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                            LaunchedEffect(listState, displayScrims) {
+                                androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                                    .collect { lastIndex ->
+                                        if (lastIndex != null && lastIndex >= displayScrims.size - 3) {
+                                            onLoadMore()
+                                        }
+                                    }
+                            }
+                            LazyColumn(
+                                state = listState,
                             modifier            = Modifier.fillMaxSize(),
                             contentPadding      = PaddingValues(
                                 start  = 14.dp,

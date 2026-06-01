@@ -109,7 +109,7 @@ class ScrimRepository : ScrimRepositoryInterface {
         )
     }
 
-    override fun getAllScrims(): Flow<Result<List<Scrim>>> = flowOf(Result.success(scrims.toList()))
+    override fun getAllScrims(page: Int, pageSize: Int): Flow<Result<List<Scrim>>> = flowOf(Result.success(scrims.toList()))
 
     override fun getScrimById(id: String): Flow<Result<Scrim?>> = flowOf(Result.success(scrims.find { it.id == id }))
 

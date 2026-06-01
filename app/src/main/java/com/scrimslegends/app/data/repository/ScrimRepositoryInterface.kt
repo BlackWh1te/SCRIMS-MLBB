@@ -10,7 +10,7 @@ import com.scrimslegends.app.data.model.SkillLevel
 import kotlinx.coroutines.flow.Flow
 
 interface ScrimRepositoryInterface {
-    fun getAllScrims(): Flow<Result<List<Scrim>>>
+    fun getAllScrims(page: Int = 0, pageSize: Int = 200): Flow<Result<List<Scrim>>>
     fun getScrimById(id: String): Flow<Result<Scrim?>>
     fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>>
     fun searchScrims(query: String, gameMode: GameMode?, region: Region?, skillLevel: SkillLevel?, status: ScrimStatus?): Flow<Result<List<Scrim>>>

@@ -117,7 +117,7 @@ class SupabaseScrimRepository(
         cacheManager.invalidateByPrefix("scrims_")
     }
 
-    override fun getAllScrims(): Flow<Result<List<Scrim>>> = flow {
+    override fun getAllScrims(page: Int, pageSize: Int): Flow<Result<List<Scrim>>> = flow {
         try {
             cacheManager.getFlow<List<Scrim>>(
                 key = SupabaseSession.userScopedKey(CACHE_KEY_ALL), memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
@@ -128,7 +128,7 @@ class SupabaseScrimRepository(
                 networkLoader = {
                     // TODO: implement proper pagination (offset/limit) when UI supports it
                     // Cap at 200 rows to avoid unbounded data transfer on initial load
-                    val r = api.getScrims(range = "0-199")
+                    val r = api.getScrims(range = "${page * pageSize}-${(page + 1) * pageSize - 1}")
                     if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) } ?: emptyList()
                     else throw Exception("Failed to fetch scrims")
                 },

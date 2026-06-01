@@ -63,18 +63,29 @@ class ScrimViewModel @Inject constructor(
     // ── Pending rosters: scrimId -> list of selected player IDs (cleared after roster submission) ──
     private val _pendingRosters = MutableStateFlow<Map<String, List<String>>>(emptyMap())
 
+    private var currentPage = 0
+    private var isLastPage = false
+    private val pageSize = 20
+
     init {
         loadScrims()
     }
 
     fun loadScrims(isRefresh: Boolean = false) {
+        if (isRefresh) {
+            currentPage = 0
+            isLastPage = false
+        }
+        
+        if (isLastPage && !isRefresh) return
+
         loadScrimsJob?.cancel()
         loadScrimsJob = viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
 
-            scrimRepository.getAllScrims()
+            scrimRepository.getAllScrims(page = currentPage, pageSize = pageSize)
                 .onStart { _isLoading.value = true }
                 .catch { exception ->
                     _error.value = exception.message
@@ -82,10 +93,24 @@ class ScrimViewModel @Inject constructor(
                     _isRefreshing.value = false
                 }
                 .collect { result ->
-                    result.onSuccess { scrimList ->
-                        _scrimMap.clear()
-                        scrimList.forEach { _scrimMap[it.id] = it }
-                        _scrims.value = scrimList
+                    result.onSuccess { newScrims ->
+                        if (isRefresh) {
+                            _scrimMap.clear()
+                        }
+                        
+                        if (newScrims.size < pageSize) {
+                            isLastPage = true
+                        }
+                        
+                        newScrims.forEach { _scrimMap[it.id] = it }
+                        
+                        // Sort descending by date (newest first)
+                        _scrims.value = _scrimMap.values.toList().sortedByDescending { it.createdAt }
+                        
+                        if (newScrims.isNotEmpty()) {
+                            currentPage++
+                        }
+                        
                         _isLoading.value = false
                         _isRefreshing.value = false
                     }.onFailure { exception ->

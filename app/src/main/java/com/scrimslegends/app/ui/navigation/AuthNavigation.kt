@@ -1051,6 +1051,9 @@ fun AuthNavigation(
                         onRefresh = {
                             scrimViewModel.loadScrims(isRefresh = true)
                         },
+                        onLoadMore = {
+                            scrimViewModel.loadScrims(isRefresh = false)
+                        },
                         onDismissError = { scrimViewModel.clearError() }
                     )
                 }
