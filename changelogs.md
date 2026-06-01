@@ -8,6 +8,27 @@
 
 ---
 
+## 2026-06-01 20:45 [Session: AdminPanel tournament middleware + type fixes]
+
+### Commits
+- `71ad07a` — fix(admin): middleware auth separation + conversation participant types
+
+### Fixed
+- **File:** `AdminPanel/src/middleware.ts`
+  - Removed `/host/*` from admin auth protection in middleware
+  - **Root cause:** The host panel uses a completely separate auth system (`HostAuthContext` with `localStorage` + anon-key Supabase client). The middleware uses `@supabase/ssr` with cookies for admin auth. Unauthenticated host users were being redirected to `/login` (admin login), which they could never pass.
+  - **Fix:** `isProtectedRoute` now only covers `/dashboard`. `/host/login` is explicitly allowed. `HostLayout` handles its own auth validation.
+- **File:** `AdminPanel/src/types/database.ts`
+  - `ConversationParticipant.role` expanded from `'team_a_leader' | 'team_b_leader' | 'host' | 'admin' | 'member'` to include `'support'` and `'substitute'` per the DB schema
+  - Added missing fields: `team_id`, `can_send`, `is_typing`, `last_read_at`
+  - Changed `joined_at` → `created_at` to match actual schema
+
+### Impact
+- Tournament host panel login flow now works correctly
+- Type safety for `conversation_participants` table matches the actual PostgreSQL schema
+
+---
+
 ## 2026-06-01 04:45 [Session: Audit revealed completed_requires_winner blocks BO2 ties]
 
 ### Commits
