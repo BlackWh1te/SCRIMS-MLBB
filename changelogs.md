@@ -8,6 +8,24 @@
 
 ---
 
+## 2026-06-01 21:30 [Session: Codebase Cleanup + Pagination + FCM Prep]
+
+### Commits
+- `61591ed` — chore(i18n): prune unused string resources across all locales
+- `cae4ac4a` (AdminPanel) — chore(admin): remove unused News Service page
+- `c070af8` — feat(scrims): implement pagination (infinite scroll) for scrims list
+- `f01b47d` — feat(db): add fcm_token to profiles for background push notifications
+
+### Fixes & Removals
+- **Pruned 88 dead string keys** from `values/strings.xml` and all localized files that were never referenced in Kotlin/XML code, reducing APK bloat and translation debt.
+- **Removed AdminPanel News Service:** Deleted `/dashboard/news` since the Android app no longer consumes news articles.
+
+### Added Features
+- **Scrim Pagination:** Added infinite scrolling to `ScrimListScreen.kt`. The UI now passes an `onLoadMore` callback when scrolling hits the bottom. `SupabaseScrimRepository.kt` uses `page` and `pageSize` arguments to cleanly slice the PostgREST range (`${page * pageSize}-${(page + 1) * pageSize - 1}`).
+- **FCM Push Notification Prep:** Created DB migration `20260631300001_add_fcm_tokens_to_profiles.sql` to add the `fcm_token` column to the `profiles` table. This prepares the backend for Firebase Cloud Messaging integrations, allowing future Edge Functions to read the token and send offline device push notifications alongside the existing real-time `app_notifications`.
+
+---
+
 ## 2026-06-01 21:20 [Session: Deep Audit — Admin Scrim Notifications]
 
 ### Commits
