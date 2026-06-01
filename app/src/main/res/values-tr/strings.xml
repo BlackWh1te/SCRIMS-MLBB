@@ -2,15 +2,10 @@
 <resources>
     <!-- Bottom Navigation -->
     <string name="nav_home">Ana Sayfa</string>
-    <string name="nav_teams">Takimlar</string>
     <string name="nav_scrims">Scrims</string>    <string name="nav_messages">Mesajlar</string>
     <string name="nav_profile">Profil</string>
-    <string name="nav_match_history">Geçmiş</string>
-    <string name="nav_create_team">Yeni Takım</string>
     <string name="app_name">Scrims Legends</string>
-    <string name="login">Giriş</string>
     <string name="signup">Kayıt Ol</string>
-    <string name="register">Kayıt Ol</string>
     <string name="email">E-posta</string>
     <string name="password">Şifre</string>
     <string name="confirm_password">Şifreyi Onayla</string>
@@ -28,7 +23,6 @@
     <string name="password_min_length">En az 6 karakter</string>
     <string name="invalid_email">Geçerli e-posta gir</string>
     <string name="take_tour">Tura Katıl</string>
-    <string name="welcome_back_label">Hoşgeldin,</string>
     <string name="player_default">Oyuncu</string>
     <string name="matches">Maçlar</string>
     <string name="win_rate">Galibiyet</string>
@@ -46,7 +40,6 @@
     <string name="match_history_sub">Geçmiş maçları gör</string>
     <string name="schedule">Schedule</string>
     <string name="schedule_sub">Yaklaşan scrims</string>
-    <string name="logout">Logout</string>
     <string name="notifications">Notifications</string>
     <string name="my_profile">Profilim</string>
     <string name="edit">Düzenle</string>
@@ -85,20 +78,12 @@
     <string name="language_sub">Uygulama dilini değiştir</string>
     <string name="select_language">Dil Seç</string>
     <string name="support">Destek</string>
-    <string name="rate_app">Uygulamayı Puanla</string>
-    <string name="rate_app_sub">Mağazada bize geri bildirim ver</string>
-    <string name="share_app">Paylaş</string>
-    <string name="share_app_sub">Arkadaşlarını davet et</string>
     <string name="contact_support">Destekle İletişime Geç</string>
     <string name="contact_support_sub">Sorun bildir veya yardım al</string>
     <string name="about">Hakkında</string>
-    <string name="app_version">Sürüm</string>
     <string name="privacy_policy">Gizlilik Politikası</string>
     <string name="terms_of_service">Kullanım Şartları</string>
     <string name="account">Hesap</string>
-    <string name="clear_cache">Önbelleği Temizle</string>
-    <string name="clear_cache_sub">Depolama alanını temizle</string>
-    <string name="cache_cleared">Önbellek temizlendi</string>
     <string name="log_out">Çıkış Yap</string>
     <string name="log_out_sub">Hesabından çık</string>
     <string name="delete_account">Hesabı Sil</string>
@@ -120,11 +105,6 @@
 
 
     <!-- News -->    <string name="refresh">Yenile</string>
-    <string name="try_again">Tekrar Dene</string>
-    <string name="read_full_article">Tam Makaleyi Oku</string>
-    <string name="open_in_browser">Tarayıcıda Aç</string>
-    <string name="translated">Çevrildi</string>
-
     <!-- Time Ago -->
     <string name="just_now">Az önce</string>
     <string name="minutes_ago">%d dk önce</string>
@@ -147,18 +127,7 @@
     <string name="scrim_status_completed">Completed</string>
     <string name="scrim_status_cancelled">Cancelled</string>
     <!-- Rank Tiers -->
-    <string name="rank_bronze">Bronze</string>
-    <string name="rank_solver">Solver</string>
-    <string name="rank_gold">Gold</string>
-    <string name="rank_grandmaster">Grandmaster</string>
-    <string name="rank_epic">Epic</string>
-    <string name="rank_legend">Legend</string>
-    <string name="rank_mythic">Mythic</string>
-
     <!-- Regional TOP Badges -->
-    <string name="regional_top1">TOP 1 RU</string>
-    <string name="regional_top2">TOP 2 RU</string>
-    <string name="regional_top3">TOP 3 RU</string>
     <!-- Email Verification -->
     <string name="verify_email_title">Verify Your Email</string>
     <string name="verify_email_subtitle">We sent a confirmation link to your email address. Please check your inbox and click the link to activate your account.</string>
@@ -166,13 +135,10 @@
     <string name="resend_email">Resend Email</string>
     <string name="resend_in_seconds">Resend in %ds</string>
     <string name="enter_code">6 haneli kodu girin</string>
-    <string name="check_spam_folder">Check your spam/junk folder if you do not see the email.</string>
     <string name="back_to_login">Back to Login</string>
-    <string name="email_not_verified">Email not verified</string>
     <string name="account_auto_delete_warning">Unverified accounts are auto-deleted in 1 hour</string>
     <string name="account_deleted_title">Account Deleted</string>
     <string name="account_deleted_subtitle">Your unverified account has been automatically deleted. Please sign up again to create a new account.</string>
-    <string name="lfg">LFG</string>
     <string name="achievements">Başarılar</string>
     <string name="lfg_board">LFG Panosu</string>
     <string name="invite">Davet Et</string>
@@ -180,7 +146,6 @@
     <string name="be_first_to_post">İlk paylaşan sen ol!</string>
     <string name="create_post">Gönderi Oluştur</string>
     <string name="no_achievements_yet">Başarımların kilidini açmak için scrimleri tamamla!</string>
-    <string name="percent_complete">%d%% tamamlandı</string>
     <string name="logout_confirm_message">Çıkış yapmak istediğinize emin misiniz?</string>
     <string name="delete_account_confirm_message">Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.</string>
     <string name="settings_sub">Bildirimler, gizlilik ve daha fazlası</string>
@@ -193,10 +158,7 @@
     <string name="details_optional">Detaylar (isteğe bağlı)</string>
     <string name="describe_what_happened">Ne olduğunu açıklayın...</string>
     <string name="submit_report">Şikayet Gönder</string>
-    <string name="unlocked_date">Açıldı %s</string>
     <string name="my_teams">Takımlarım</string>
-    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">Sıralama İlerlemesi</string>
-    <string name="to_next_tier">%s\'e kadar</string>
     <string name="view_all">Tümünü Gör</string>
     <string name="scrim_details">Scrim Details</string>
     <string name="scrim_info">Scrim Info</string>
@@ -215,12 +177,6 @@
     <string name="reject">Reddet</string>
     <string name="chat_opens_in">Sohbet şu sürede açılır</string>
     <string name="chat_unlocks_2h">Sohbet, scrimden 2 saat önce açılır</string>
-    <string name="type_message">Bir mesaj yaz...</string>
-    <string name="team_application">Takım Başvurusu</string>
-    <string name="from_sender">Kimden: %s</string>
-    <string name="view_team_players">Takım Oyuncularını Gör</string>
-    <string name="chat_locked">Sohbet Kilitli</string>
-    <string name="opens_in_time">%s içinde açılır</string>
     <string name="report_result">Sonuç Bildir</string>
     <string name="match_label">Maç</string>
     <string name="who_won">Kim kazandı?</string>
@@ -257,7 +213,6 @@
     <string name="result_disputed_waiting">Sonuç tartışmalı - çözüm bekleniyor</string>
     <string name="players_count">%1$d/%2$d oyuncu</string>
     <string name="scrim_label">Scrim %s</string>
-    <string name="players_count_label">%1$d/%2$d oyuncu</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>
@@ -271,12 +226,6 @@
     <string name="role">Role</string>
     <string name="add_player">Add Player</string>
     <string name="posting_as">Posting as</string>
-    <string name="year">Year</string>
-    <string name="month">Month</string>
-    <string name="day">Day</string>
-    <string name="hour">Hour</string>
-    <string name="minute">Minute</string>
-    <string name="timezone">Timezone</string>
     <string name="team_details">Team Details</string>
     <string name="team_stats">Team Stats</string>
     <string name="players">Players</string>
@@ -299,19 +248,11 @@
     <string name="joined_team_success">You\'ve successfully joined the team.</string>
     <string name="go_to_teams">Go to Teams</string>
     <string name="reset_password">Reset Password</string>
-    <string name="forgot_password_hint">Enter your email and we\'ll send you a link to reset your password.</string>
-    <string name="send_reset_link">Send Reset Link</string>
-    <string name="check_email">Check your email!</string>
-    <string name="reset_link_sent">We\'ve sent a password reset link to %s.</string>
     <string name="invite_to_team">Invite to %s</string>
     <string name="invite_code_share_hint">Share this invite code with your teammate. They can use it to join your team.</string>
     <string name="share">Share</string>
     <string name="done">Done</string>
     <string name="team_requirements">Team Requirements</string>
-    <string name="team_requirements_desc">Teams must have 3-7 players</string>
-    <string name="tier_label">%s Tier</string>
-    <string name="locked_count">%d locked</string>
-    <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
     <string name="nav_player_finder">Oyuncu Bul</string>
@@ -381,10 +322,7 @@
     <string name="privacy_policy_link">Privacy Policy</string>
     <string name="and">and</string>
     <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
-    <string name="message_inappropriate">Message blocked: inappropriate language</string>
     <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
-    <string name="report_image">Report Image</string>
-    <string name="image_reported">Image reported for review</string>
     <string name="match_time">Maç Saati!</string>
     <string name="match_in_progress">Maç Devam Ediyor</string>
     <string name="scheduled_time">Planlanan Saat</string>
@@ -452,17 +390,12 @@
     <string name="tournament_prize_pool">Ödül Havuzu</string>
     <string name="scrim_application">Scrim Application</string>
     <string name="add_scrim_details_hint">Add details about your scrim...</string>
-    <string name="team_needs_5_players_to_post_scrims">Your team needs at least 5 players to post scrims</string>
     <string name="scrim_time_past">Scrim time must be in the future</string>
     <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
     <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
-    <string name="scrim_time_invalid">Please select a valid scrim time</string>
     <string name="scrim_team_label">Scrim: %s</string>
-    <string name="who_won_scrim">Who won this scrim?</string>
     <string name="be_first_to_post_scrim">Be the first to post a scrim</string>
-    <string name="complete_scrim">Complete Scrim</string>
     <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
     <string name="no_scrims_found">No scrims found</string>
-    <string name="step_2_complete_scrim">Step 2: Complete Scrim</string>
     <string name="keep_scrim">Keep Scrim</string>
 </resources>

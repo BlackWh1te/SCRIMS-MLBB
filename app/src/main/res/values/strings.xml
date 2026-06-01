@@ -4,11 +4,9 @@
 
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
-    <string name="nav_teams">Teams</string>
     <string name="nav_scrims">Scrims</string>
     <string name="nav_messages">Messages</string>
     <string name="nav_profile">Profile</string>
-    <string name="nav_match_history">History</string>
     <string name="nav_player_finder">Find Players</string>
     <string name="player_finder_title" translatable="false">Player Finder</string>
     <string name="post_as_solo" translatable="false">Post as Solo Player</string>
@@ -32,10 +30,7 @@
     <string name="post_is_live" translatable="false">Your post is live!</string>
     <string name="remove_my_post" translatable="false">Remove My Post</string>
     <string name="your_post_active" translatable="false">Your post is active</string>
-    <string name="nav_create_team">New Team</string>
-    <string name="login">Login</string>
     <string name="signup">Sign Up</string>
-    <string name="register">Register</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="confirm_password">Confirm Password</string>
@@ -57,23 +52,16 @@
     <string name="privacy_policy_link">Privacy Policy</string>
     <string name="and">and</string>
     <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
-    <string name="message_inappropriate">Message blocked: inappropriate language</string>
     <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
-    <string name="report_image">Report Image</string>
-    <string name="image_reported">Image reported for review</string>
     <string name="take_tour">Take a tour</string>
-    <string name="welcome_back_label">Welcome back,</string>
     <string name="player_default">Player</string>
     <string name="matches">Matches</string>
     <string name="win_rate">Win Rate</string>
     <string name="xp_label">XP</string>
     <string name="upcoming_scrims">Upcoming Scrims</string>
     <string name="my_teams">My Teams</string>
-    <string name="find_scrims_title">Find Scrims</string>
     <string name="see_all">See all</string>
     <string name="quick_actions">Quick Actions</string>
-    <string name="rank_progress">Rank Progress</string>
-    <string name="to_next_tier">to %s</string>
     <string name="view_all">View all</string>
     <string name="post_scrim">Post a Scrim</string>
     <string name="post_scrim_sub">List your team for a match</string>
@@ -85,7 +73,6 @@
     <string name="match_history_sub">View past matches</string>
     <string name="schedule">Schedule</string>
     <string name="schedule_sub">Upcoming scrims</string>
-    <string name="logout">Logout</string>
     <string name="notifications">Notifications</string>
     <string name="my_profile">My Profile</string>
     <string name="edit">Edit</string>
@@ -126,20 +113,12 @@
     <string name="language_sub">Change app language</string>
     <string name="select_language">Select Language</string>
     <string name="support">Support</string>
-    <string name="rate_app">Rate App</string>
-    <string name="rate_app_sub">Give us feedback on the store</string>
-    <string name="share_app">Share App</string>
-    <string name="share_app_sub">Invite friends to join</string>
     <string name="contact_support">Contact Support</string>
     <string name="contact_support_sub">Report issues or get help</string>
     <string name="about">About</string>
-    <string name="app_version">App Version</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_service">Terms of Service</string>
     <string name="account">Account</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_sub">Free up local storage</string>
-    <string name="cache_cleared">Cache cleared</string>
     <string name="log_out">Log Out</string>
     <string name="log_out_sub">Sign out of your account</string>
     <string name="delete_account">Delete Account</string>
@@ -160,11 +139,6 @@
     <string name="tagline">Compete. Rank. Dominate.</string>
 
     <!-- News -->    <string name="refresh">Refresh</string>
-    <string name="try_again">Try Again</string>
-    <string name="read_full_article">Read Full Article</string>
-    <string name="open_in_browser">Open in Browser</string>
-    <string name="translated">Translated</string>
-
     <!-- Time Ago -->
     <string name="just_now">Just now</string>
     <string name="minutes_ago">%d min ago</string>
@@ -197,19 +171,7 @@
     <string name="leader_name">Leader: %s</string>
 
     <!-- Rank Tiers -->
-    <string name="rank_bronze">Bronze</string>
-    <string name="rank_solver">Solver</string>
-    <string name="rank_gold">Gold</string>
-    <string name="rank_grandmaster">Grandmaster</string>
-    <string name="rank_epic">Epic</string>
-    <string name="rank_legend">Legend</string>
-    <string name="rank_mythic">Mythic</string>
-
     <!-- Regional TOP Badges -->
-    <string name="regional_top1">TOP 1 RU</string>
-    <string name="regional_top2">TOP 2 RU</string>
-    <string name="regional_top3">TOP 3 RU</string>
-
     <!-- Email Verification -->
     <string name="verify_email_title">Verify Your Email</string>
     <string name="verify_email_subtitle">We sent an 8-digit code to your email. Enter it below to activate your account.</string>
@@ -217,13 +179,10 @@
     <string name="resend_email">Resend Code</string>
     <string name="resend_in_seconds">Resend in %ds</string>
     <string name="enter_code">Enter 8-digit code</string>
-    <string name="check_spam_folder">Check your spam/junk folder if you don\'t see the email.</string>
     <string name="back_to_login">Back to Login</string>
-    <string name="email_not_verified">Email not verified</string>
     <string name="account_auto_delete_warning">Unverified accounts are auto-deleted in 1 hour</string>
     <string name="account_deleted_title">Account Deleted</string>
     <string name="account_deleted_subtitle">Your unverified account has been automatically deleted. Please sign up again to create a new account.</string>
-    <string name="lfg">LFG</string>
     <string name="achievements">Achievements</string>
     <string name="lfg_board">LFG Board</string>
     <string name="invite">Invite</string>
@@ -231,7 +190,6 @@
     <string name="be_first_to_post">Be the first to post!</string>
     <string name="create_post">Create Post</string>
     <string name="no_achievements_yet">Complete scrims to unlock achievements!</string>
-    <string name="percent_complete">%d%% Complete</string>
     <string name="logout_confirm_message">Are you sure you want to log out?</string>
     <string name="delete_account_confirm_message">This action is irreversible. All your data will be permanently deleted.</string>
     <string name="rank_up">Rank Up!</string>
@@ -242,7 +200,6 @@
     <string name="details_optional">Details (optional)</string>
     <string name="describe_what_happened">Describe what happened...</string>
     <string name="submit_report">Submit Report</string>
-    <string name="unlocked_date">Unlocked %s</string>
     <string name="scrim_details">Scrim Details</string>
     <string name="scrim_info">Scrim Info</string>
     <string name="description">Description</string>
@@ -266,12 +223,6 @@
     <string name="reject">Reject</string>
     <string name="chat_opens_in">Chat opens in</string>
     <string name="chat_unlocks_2h">Chat unlocks 2 hours before scrim time</string>
-    <string name="type_message">Type a message...</string>
-    <string name="team_application">Team Application</string>
-    <string name="from_sender">From: %s</string>
-    <string name="view_team_players">View Team Players</string>
-    <string name="chat_locked">Chat Locked</string>
-    <string name="opens_in_time">Opens in %s</string>
     <string name="report_result">Report Result</string>
     <string name="match_label">Match</string>
     <string name="who_won">Who won?</string>
@@ -308,7 +259,6 @@
     <string name="result_disputed_waiting">Result disputed - waiting for resolution</string>
     <string name="players_count">%1$d/%2$d players</string>
     <string name="scrim_label">Scrim %s</string>
-    <string name="players_count_label">%1$d/%2$d players</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>
@@ -323,12 +273,6 @@
     <string name="role">Role</string>
     <string name="add_player">Add Player</string>
     <string name="posting_as">Posting as</string>
-    <string name="year">Year</string>
-    <string name="month">Month</string>
-    <string name="day">Day</string>
-    <string name="hour">Hour</string>
-    <string name="minute">Minute</string>
-    <string name="timezone">Timezone</string>
     <string name="team_details">Team Details</string>
     <string name="team_stats">Team Stats</string>
     <string name="players">Players</string>
@@ -351,10 +295,6 @@
     <string name="joined_team_success">You\'ve successfully joined the team.</string>
     <string name="go_to_teams">Go to Teams</string>
     <string name="reset_password">Reset Password</string>
-    <string name="forgot_password_hint">Enter your email and we\'ll send an 8-digit code before you can reset your password.</string>
-    <string name="send_reset_link">Send Reset Code</string>
-    <string name="check_email">Check your email!</string>
-    <string name="reset_link_sent">Your password has been updated for %s. Please sign in with your new password.</string>
     <string name="forgot_password_otp_hint">Enter your email and we\'ll send an 8-digit code before you can reset your password.</string>
     <string name="send_reset_code">Send Reset Code</string>
     <string name="password_reset_complete">Your password has been updated for %s. Please sign in with your new password.</string>
@@ -363,10 +303,6 @@
     <string name="share">Share</string>
     <string name="done">Done</string>
     <string name="team_requirements">Team Requirements</string>
-    <string name="team_requirements_desc">Teams must have 3-7 players</string>
-    <string name="tier_label">%s Tier</string>
-    <string name="locked_count">%d locked</string>
-    <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
 
@@ -389,7 +325,6 @@
 
     <!-- Create Scrim Screen -->
     <string name="add_scrim_details_hint">Add details about your scrim...</string>
-    <string name="team_needs_5_players_to_post_scrims">Your team needs at least 5 players to post scrims</string>
     <string name="select_team">Select Team</string>
     <string name="not_enough_players">Not Enough Players</string>
     <string name="need_5_players_to_post">You need at least 5 players in your team before you can post scrims. Add more players to your team first.</string>
@@ -397,11 +332,9 @@
     <string name="ok">OK</string>
 
     <!-- Chat Screen -->
-    <string name="online">Online</string>
     <string name="shared_image">Shared image</string>
 
     <!-- Create Scrim Screen -->
-    <string name="switch_team">Switch team</string>
     <string name="players_count_short">%d players</string>
     <string name="bo_format">BO%d</string>
 
@@ -409,8 +342,6 @@
     <string name="scrim_time_past">Scrim time must be in the future</string>
     <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
     <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
-    <string name="scrim_time_invalid">Please select a valid scrim time</string>
-
     <!-- Find Teams Screen -->
     <string name="players_fraction">%1$d/%2$d players</string>
     <string name="reputation_label">Reputation %s</string>
@@ -439,7 +370,6 @@
     <string name="use_microphone">Use Microphone?</string>
     <string name="tell_about_yourself">Tell team leaders about yourself…</string>
     <string name="post_profile">Post Profile</string>
-    <string name="reset_filters">Reset Filters</string>
     <string name="content_desc_post">Post</string>
     <string name="content_desc_remove_post">Remove post</string>
     <string name="content_desc_profile_screenshot">Profile Screenshot</string>
@@ -458,11 +388,6 @@
     <!-- Scrim Detail Screen -->
     <string name="scrim_team_label">Scrim: %s</string>
     <string name="you_are_ready">You are ready!</string>
-    <string name="uploading">Uploading…</string>
-    <string name="screenshot_uploaded_label">Screenshot uploaded</string>
-    <string name="select_winner">Select Winner</string>
-    <string name="who_won_scrim">Who won this scrim?</string>
-    <string name="cancel_btn_gray">Cancel</string>
     <string name="waiting_opponent_ready">Waiting for opponent to ready up…</string>
     <string name="match_time">Match Time!</string>
     <string name="opponent_label">Opponent</string>
@@ -473,8 +398,6 @@
     <string name="content_desc_invite_code">Invite by Code</string>
     <string name="content_desc_disband">Disband</string>
     <string name="content_desc_leave">Leave</string>
-    <string name="content_desc_change_role">Change role</string>
-
     <!-- Login Screen -->
     <string name="content_desc_app_logo">App Logo</string>
 
@@ -485,11 +408,9 @@
     <string name="number_of_games">Number of Games</string>
     <string name="date_and_time">Date &amp; Time</string>
     <string name="description_optional">Description (Optional)</string>
-    <string name="attach_screenshot">Attach Screenshot</string>
     <string name="be_first_to_post_scrim">Be the first to post a scrim</string>
     <string name="bio_placeholder">Bio (Something about yourself)</string>
     <string name="captcha_verify_human">Please slide to verify you are human</string>
-    <string name="complete_scrim">Complete Scrim</string>
     <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
     <string name="content_desc_change_avatar">Change avatar</string>
     <string name="content_desc_profile_avatar">Profile Avatar</string>
@@ -505,7 +426,6 @@
     <string name="error_password_min_length">New password must be at least 6 characters</string>
     <string name="error_password_must_differ">New password must be different</string>
     <string name="error_passwords_not_match">New passwords do not match</string>
-    <string name="filters">Filters</string>
     <string name="find_teams">Find Teams</string>
     <string name="format_label">Format</string>
     <string name="greeting_good_afternoon">Good afternoon,</string>
@@ -523,7 +443,6 @@
     <string name="notifications_hint">You will receive notifications when someone invites you to a team or scrim, or when match results are ready</string>
     <string name="pts_label">PTS</string>
     <string name="ready">READY</string>
-    <string name="region_eu_na">EU/NA</string>
     <string name="role_placeholder">Main Role (e.g., Jungler, Roamer)</string>
     <string name="scheduled_time">Scheduled Time</string>
     <string name="search_teams">Search teams...</string>
@@ -531,10 +450,7 @@
     <string name="signing_in">Signing in...</string>
     <string name="start_conversation">Start the conversation with the other team</string>
     <string name="start_conversation_with">Start the conversation with %s</string>
-    <string name="step_1_attach_screenshot">Step 1: Attach Screenshot</string>
-    <string name="step_2_complete_scrim">Step 2: Complete Scrim</string>
     <string name="update_password_sub">Update your account password</string>
-    <string name="upload_screenshot_first">Upload screenshot first</string>
     <string name="version_label">Version %s</string>
     <string name="view_team">View team</string>
     <string name="accept">Accept</string>

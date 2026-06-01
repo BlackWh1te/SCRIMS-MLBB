@@ -2,15 +2,10 @@
 <resources>
     <!-- Bottom Navigation -->
     <string name="nav_home">首页</string>
-    <string name="nav_teams">战队</string>
     <string name="nav_scrims">Scrims</string>    <string name="nav_messages">消息</string>
     <string name="nav_profile">我的</string>
-    <string name="nav_match_history">历史</string>
-    <string name="nav_create_team">新建战队</string>
     <string name="app_name">Scrims Legends</string>
-    <string name="login">登录</string>
     <string name="signup">注册</string>
-    <string name="register">注册</string>
     <string name="email">电子邮件</string>
     <string name="password">密码</string>
     <string name="confirm_password">确认密码</string>
@@ -28,7 +23,6 @@
     <string name="password_min_length">密码至少6个字符</string>
     <string name="invalid_email">请输入有效邮箱</string>
     <string name="take_tour">导览</string>
-    <string name="welcome_back_label">欢迎回来，</string>
     <string name="player_default">玩家</string>
     <string name="matches">比赛</string>
     <string name="win_rate">胜率</string>
@@ -46,7 +40,6 @@
     <string name="match_history_sub">查看已完成比赛</string>
     <string name="schedule">Schedule</string>
     <string name="schedule_sub">即将到来的训练赛</string>
-    <string name="logout">Logout</string>
     <string name="notifications">Notifications</string>
     <string name="my_profile">我的个人资料</string>
     <string name="edit">编辑</string>
@@ -85,20 +78,12 @@
     <string name="language_sub">更改应用语言</string>
     <string name="select_language">选择语言</string>
     <string name="support">帮助</string>
-    <string name="rate_app">评分</string>
-    <string name="rate_app_sub">在应用市场留下反馈</string>
-    <string name="share_app">分享</string>
-    <string name="share_app_sub">邀请朋友加入</string>
     <string name="contact_support">联系客服</string>
     <string name="contact_support_sub">报告问题或获取帮助</string>
     <string name="about">关于</string>
-    <string name="app_version">版本</string>
     <string name="privacy_policy">隐私政策</string>
     <string name="terms_of_service">服务条款</string>
     <string name="account">账户</string>
-    <string name="clear_cache">清除缓存</string>
-    <string name="clear_cache_sub">释放本地存储空间</string>
-    <string name="cache_cleared">缓存已清除</string>
     <string name="log_out">退出登录</string>
     <string name="log_out_sub">退出当前账户</string>
     <string name="delete_account">删除账户</string>
@@ -120,11 +105,6 @@
 
 
     <!-- News -->    <string name="refresh">刷新</string>
-    <string name="try_again">重试</string>
-    <string name="read_full_article">阅读完整文章</string>
-    <string name="open_in_browser">在浏览器中打开</string>
-    <string name="translated">已翻译</string>
-
     <!-- Time Ago -->
     <string name="just_now">刚刚</string>
     <string name="minutes_ago">%d 分钟前</string>
@@ -147,18 +127,7 @@
     <string name="scrim_status_completed">Completed</string>
     <string name="scrim_status_cancelled">Cancelled</string>
     <!-- Rank Tiers -->
-    <string name="rank_bronze">Bronze</string>
-    <string name="rank_solver">Solver</string>
-    <string name="rank_gold">Gold</string>
-    <string name="rank_grandmaster">Grandmaster</string>
-    <string name="rank_epic">Epic</string>
-    <string name="rank_legend">Legend</string>
-    <string name="rank_mythic">Mythic</string>
-
     <!-- Regional TOP Badges -->
-    <string name="regional_top1">TOP 1 RU</string>
-    <string name="regional_top2">TOP 2 RU</string>
-    <string name="regional_top3">TOP 3 RU</string>
     <!-- Email Verification -->
     <string name="verify_email_title">Verify Your Email</string>
     <string name="verify_email_subtitle">We sent a confirmation link to your email address. Please check your inbox and click the link to activate your account.</string>
@@ -166,13 +135,10 @@
     <string name="resend_email">Resend Email</string>
     <string name="resend_in_seconds">Resend in %ds</string>
     <string name="enter_code">输入6位验证码</string>
-    <string name="check_spam_folder">Check your spam/junk folder if you do not see the email.</string>
     <string name="back_to_login">Back to Login</string>
-    <string name="email_not_verified">Email not verified</string>
     <string name="account_auto_delete_warning">Unverified accounts are auto-deleted in 1 hour</string>
     <string name="account_deleted_title">Account Deleted</string>
     <string name="account_deleted_subtitle">Your unverified account has been automatically deleted. Please sign up again to create a new account.</string>
-    <string name="lfg">LFG</string>
     <string name="achievements">成就</string>
     <string name="lfg_board">LFG 看板</string>
     <string name="invite">邀请</string>
@@ -180,7 +146,6 @@
     <string name="be_first_to_post">成为第一个发布的人!</string>
     <string name="create_post">创建帖子</string>
     <string name="no_achievements_yet">完成练习赛以解锁成就!</string>
-    <string name="percent_complete">已完成 %d%%</string>
     <string name="logout_confirm_message">确定要退出登录吗?</string>
     <string name="delete_account_confirm_message">此操作不可逆。您的所有数据将被永久删除。</string>
     <string name="settings_sub">通知、隐私及更多</string>
@@ -193,10 +158,7 @@
     <string name="details_optional">详情 (可选)</string>
     <string name="describe_what_happened">描述发生了什么...</string>
     <string name="submit_report">提交举报</string>
-    <string name="unlocked_date">已解锁 %s</string>
     <string name="my_teams">我的战队</string>
-    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">段位进度</string>
-    <string name="to_next_tier">距 %s</string>
     <string name="view_all">查看全部</string>
     <string name="scrim_details">Scrim Details</string>
     <string name="scrim_info">Scrim Info</string>
@@ -215,12 +177,6 @@
     <string name="reject">拒绝</string>
     <string name="chat_opens_in">聊天开启倒计时</string>
     <string name="chat_unlocks_2h">比赛前2小时解锁聊天</string>
-    <string name="type_message">输入消息...</string>
-    <string name="team_application">团队申请</string>
-    <string name="from_sender">来自: %s</string>
-    <string name="view_team_players">查看团队成员</string>
-    <string name="chat_locked">聊天已锁定</string>
-    <string name="opens_in_time">%s后开启</string>
     <string name="report_result">报告结果</string>
     <string name="match_label">比赛</string>
     <string name="who_won">谁赢了？</string>
@@ -257,7 +213,6 @@
     <string name="result_disputed_waiting">结果有争议 - 等待解决</string>
     <string name="players_count">%1$d/%2$d 玩家</string>
     <string name="scrim_label">训练赛 %s</string>
-    <string name="players_count_label">%1$d/%2$d 玩家</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>
@@ -271,12 +226,6 @@
     <string name="role">Role</string>
     <string name="add_player">Add Player</string>
     <string name="posting_as">Posting as</string>
-    <string name="year">Year</string>
-    <string name="month">Month</string>
-    <string name="day">Day</string>
-    <string name="hour">Hour</string>
-    <string name="minute">Minute</string>
-    <string name="timezone">Timezone</string>
     <string name="team_details">Team Details</string>
     <string name="team_stats">Team Stats</string>
     <string name="players">Players</string>
@@ -299,19 +248,11 @@
     <string name="joined_team_success">You\'ve successfully joined the team.</string>
     <string name="go_to_teams">Go to Teams</string>
     <string name="reset_password">Reset Password</string>
-    <string name="forgot_password_hint">Enter your email and we\'ll send you a link to reset your password.</string>
-    <string name="send_reset_link">Send Reset Link</string>
-    <string name="check_email">Check your email!</string>
-    <string name="reset_link_sent">We\'ve sent a password reset link to %s.</string>
     <string name="invite_to_team">Invite to %s</string>
     <string name="invite_code_share_hint">Share this invite code with your teammate. They can use it to join your team.</string>
     <string name="share">Share</string>
     <string name="done">Done</string>
     <string name="team_requirements">Team Requirements</string>
-    <string name="team_requirements_desc">Teams must have 3-7 players</string>
-    <string name="tier_label">%s Tier</string>
-    <string name="locked_count">%d locked</string>
-    <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
     <string name="nav_player_finder">寻找玩家</string>
@@ -381,24 +322,16 @@
     <string name="privacy_policy_link">Privacy Policy</string>
     <string name="and">and</string>
     <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
-    <string name="message_inappropriate">Message blocked: inappropriate language</string>
     <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
-    <string name="report_image">Report Image</string>
-    <string name="image_reported">Image reported for review</string>
     <string name="scrim_application">Scrim Application</string>
     <string name="add_scrim_details_hint">Add details about your scrim...</string>
-    <string name="team_needs_5_players_to_post_scrims">Your team needs at least 5 players to post scrims</string>
     <string name="scrim_time_past">Scrim time must be in the future</string>
     <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
     <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
-    <string name="scrim_time_invalid">Please select a valid scrim time</string>
     <string name="scrim_team_label">Scrim: %s</string>
-    <string name="who_won_scrim">Who won this scrim?</string>
     <string name="be_first_to_post_scrim">Be the first to post a scrim</string>
-    <string name="complete_scrim">Complete Scrim</string>
     <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
     <string name="no_scrims_found">No scrims found</string>
-    <string name="step_2_complete_scrim">Step 2: Complete Scrim</string>
     <string name="keep_scrim">Keep Scrim</string>
     <string name="match_time">Match Time!</string>
     <string name="match_in_progress">Match 进行中</string>

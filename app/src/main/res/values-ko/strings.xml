@@ -2,15 +2,10 @@
 <resources>
     <!-- Bottom Navigation -->
     <string name="nav_home">홈</string>
-    <string name="nav_teams">팀</string>
     <string name="nav_scrims">Scrims</string>    <string name="nav_messages">메시지</string>
     <string name="nav_profile">프로필</string>
-    <string name="nav_match_history">기록</string>
-    <string name="nav_create_team">새 팀</string>
     <string name="app_name">Scrims Legends</string>
-    <string name="login">로그인</string>
     <string name="signup">회원가입</string>
-    <string name="register">회원가입</string>
     <string name="email">이메일</string>
     <string name="password">비밀번호</string>
     <string name="confirm_password">비밀번호 확인</string>
@@ -28,7 +23,6 @@
     <string name="password_min_length">최소 6자 이상</string>
     <string name="invalid_email">유효한 이메일을 입력하세요</string>
     <string name="take_tour">킬로 보기</string>
-    <string name="welcome_back_label">다시 오셨네요,</string>
     <string name="player_default">플레이어</string>
     <string name="matches">경기</string>
     <string name="win_rate">승률</string>
@@ -46,7 +40,6 @@
     <string name="match_history_sub">지난 경기 보기</string>
     <string name="schedule">Schedule</string>
     <string name="schedule_sub">예정된 스크림</string>
-    <string name="logout">Logout</string>
     <string name="notifications">Notifications</string>
     <string name="my_profile">내 프로필</string>
     <string name="edit">편집</string>
@@ -85,20 +78,12 @@
     <string name="language_sub">앱 언어 변경</string>
     <string name="select_language">언어 선택</string>
     <string name="support">지원</string>
-    <string name="rate_app">앱 평가</string>
-    <string name="rate_app_sub">스토어에서 평가하기</string>
-    <string name="share_app">앱 공유</string>
-    <string name="share_app_sub">친구를 초대하세요</string>
     <string name="contact_support">지원팀에 문의</string>
     <string name="contact_support_sub">문제 보고 또는 도움 받기</string>
     <string name="about">정보</string>
-    <string name="app_version">버전</string>
     <string name="privacy_policy">개인정보처리방침</string>
     <string name="terms_of_service">이용약관</string>
     <string name="account">계정</string>
-    <string name="clear_cache">캐시 삭제</string>
-    <string name="clear_cache_sub">로컬 저장공간 확보</string>
-    <string name="cache_cleared">캐시가 삭제되었습니다</string>
     <string name="log_out">로그아웃</string>
     <string name="log_out_sub">계정에서 로그아웃</string>
     <string name="delete_account">계정 삭제</string>
@@ -120,11 +105,6 @@
 
 
     <!-- News -->    <string name="refresh">새로고침</string>
-    <string name="try_again">다시 시도</string>
-    <string name="read_full_article">전체 기사 읽기</string>
-    <string name="open_in_browser">브라우저에서 열기</string>
-    <string name="translated">번역됨</string>
-
     <!-- Time Ago -->
     <string name="just_now">방금</string>
     <string name="minutes_ago">%d분 전</string>
@@ -147,18 +127,7 @@
     <string name="scrim_status_completed">Completed</string>
     <string name="scrim_status_cancelled">Cancelled</string>
     <!-- Rank Tiers -->
-    <string name="rank_bronze">Bronze</string>
-    <string name="rank_solver">Solver</string>
-    <string name="rank_gold">Gold</string>
-    <string name="rank_grandmaster">Grandmaster</string>
-    <string name="rank_epic">Epic</string>
-    <string name="rank_legend">Legend</string>
-    <string name="rank_mythic">Mythic</string>
-
     <!-- Regional TOP Badges -->
-    <string name="regional_top1">TOP 1 RU</string>
-    <string name="regional_top2">TOP 2 RU</string>
-    <string name="regional_top3">TOP 3 RU</string>
     <!-- Email Verification -->
     <string name="verify_email_title">Verify Your Email</string>
     <string name="verify_email_subtitle">We sent a confirmation link to your email address. Please check your inbox and click the link to activate your account.</string>
@@ -166,13 +135,10 @@
     <string name="resend_email">Resend Email</string>
     <string name="resend_in_seconds">Resend in %ds</string>
     <string name="enter_code">6자리 코드 입력</string>
-    <string name="check_spam_folder">Check your spam/junk folder if you do not see the email.</string>
     <string name="back_to_login">Back to Login</string>
-    <string name="email_not_verified">Email not verified</string>
     <string name="account_auto_delete_warning">Unverified accounts are auto-deleted in 1 hour</string>
     <string name="account_deleted_title">Account Deleted</string>
     <string name="account_deleted_subtitle">Your unverified account has been automatically deleted. Please sign up again to create a new account.</string>
-    <string name="lfg">LFG</string>
     <string name="achievements">업적</string>
     <string name="lfg_board">LFG 게시판</string>
     <string name="invite">초대</string>
@@ -180,7 +146,6 @@
     <string name="be_first_to_post">첫 번째로 게시하세요!</string>
     <string name="create_post">게시물 작성</string>
     <string name="no_achievements_yet">스크림을 완료하여 업적을 잠금 해제하세요!</string>
-    <string name="percent_complete">%d%% 완료</string>
     <string name="logout_confirm_message">정말로 로그아웃하시겠습니까?</string>
     <string name="delete_account_confirm_message">이 작업은 되돌릴 수 없습니다. 모든 데이터가 영구적으로 삭제됩니다.</string>
     <string name="settings_sub">알림, 개인정보 등</string>
@@ -193,10 +158,7 @@
     <string name="details_optional">상세 내용 (선택)</string>
     <string name="describe_what_happened">발생한 일을 설명하세요...</string>
     <string name="submit_report">신고 제출</string>
-    <string name="unlocked_date">해제됨 %s</string>
     <string name="my_teams">내 팀</string>
-    <string name="find_scrims_title">Find Scrims</string>    <string name="rank_progress">랭크 진행</string>
-    <string name="to_next_tier">다음 %s까지</string>
     <string name="view_all">모두 보기</string>
     <string name="scrim_details">Scrim Details</string>
     <string name="scrim_info">Scrim Info</string>
@@ -215,12 +177,6 @@
     <string name="reject">거부</string>
     <string name="chat_opens_in">채팅 열림까지</string>
     <string name="chat_unlocks_2h">스크림 2시간 전에 채팅이 열립니다</string>
-    <string name="type_message">메시지 입력...</string>
-    <string name="team_application">팀 신청</string>
-    <string name="from_sender">보낸 사람: %s</string>
-    <string name="view_team_players">팀원 보기</string>
-    <string name="chat_locked">채팅 잠김</string>
-    <string name="opens_in_time">%s 후 열림</string>
     <string name="report_result">결과 보고</string>
     <string name="match_label">경기</string>
     <string name="who_won">누가 이겼나요?</string>
@@ -257,7 +213,6 @@
     <string name="result_disputed_waiting">결과 분쟁 중 - 해결 대기 중</string>
     <string name="players_count">%1$d/%2$d 플레이어</string>
     <string name="scrim_label">스크림 %s</string>
-    <string name="players_count_label">%1$d/%2$d 플레이어</string>
     <string name="vs_label">VS</string>
     <string name="current_email">Current: %s</string>
     <string name="in_game_id_label">In-Game ID: %s</string>
@@ -271,12 +226,6 @@
     <string name="role">Role</string>
     <string name="add_player">Add Player</string>
     <string name="posting_as">Posting as</string>
-    <string name="year">Year</string>
-    <string name="month">Month</string>
-    <string name="day">Day</string>
-    <string name="hour">Hour</string>
-    <string name="minute">Minute</string>
-    <string name="timezone">Timezone</string>
     <string name="team_details">Team Details</string>
     <string name="team_stats">Team Stats</string>
     <string name="players">Players</string>
@@ -299,19 +248,11 @@
     <string name="joined_team_success">You\'ve successfully joined the team.</string>
     <string name="go_to_teams">Go to Teams</string>
     <string name="reset_password">Reset Password</string>
-    <string name="forgot_password_hint">Enter your email and we\'ll send you a link to reset your password.</string>
-    <string name="send_reset_link">Send Reset Link</string>
-    <string name="check_email">Check your email!</string>
-    <string name="reset_link_sent">We\'ve sent a password reset link to %s.</string>
     <string name="invite_to_team">Invite to %s</string>
     <string name="invite_code_share_hint">Share this invite code with your teammate. They can use it to join your team.</string>
     <string name="share">Share</string>
     <string name="done">Done</string>
     <string name="team_requirements">Team Requirements</string>
-    <string name="team_requirements_desc">Teams must have 3-7 players</string>
-    <string name="tier_label">%s Tier</string>
-    <string name="locked_count">%d locked</string>
-    <string name="achievement_progress">%1$d/%2$d</string>
     <string name="update_email">Update Email</string>
     <string name="no_upcoming_scrims">No upcoming scrims</string>
     <string name="nav_player_finder">플레이어 찾기</string>
@@ -381,24 +322,16 @@
     <string name="privacy_policy_link">Privacy Policy</string>
     <string name="and">and</string>
     <string name="terms_required">You must agree to the Terms of Service and Privacy Policy to continue</string>
-    <string name="message_inappropriate">Message blocked: inappropriate language</string>
     <string name="image_content_warning">Images are subject to moderation. Inappropriate content will result in account suspension.</string>
-    <string name="report_image">Report Image</string>
-    <string name="image_reported">Image reported for review</string>
     <string name="scrim_application">Scrim Application</string>
     <string name="add_scrim_details_hint">Add details about your scrim...</string>
-    <string name="team_needs_5_players_to_post_scrims">Your team needs at least 5 players to post scrims</string>
     <string name="scrim_time_past">Scrim time must be in the future</string>
     <string name="scrim_time_min_advance">Scrim must be scheduled at least 30 minutes in advance</string>
     <string name="scrim_time_max_advance">Scrim cannot be scheduled more than 30 days in advance</string>
-    <string name="scrim_time_invalid">Please select a valid scrim time</string>
     <string name="scrim_team_label">Scrim: %s</string>
-    <string name="who_won_scrim">Who won this scrim?</string>
     <string name="be_first_to_post_scrim">Be the first to post a scrim</string>
-    <string name="complete_scrim">Complete Scrim</string>
     <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
     <string name="no_scrims_found">No scrims found</string>
-    <string name="step_2_complete_scrim">Step 2: Complete Scrim</string>
     <string name="keep_scrim">Keep Scrim</string>
     <string name="match_time">Match Time!</string>
     <string name="match_in_progress">Match 진행 중</string>
