@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-06-02 08:05 +04:00 — Fix "Failed to Search scrims" error
+
+### Commits
+- `e9079f5` — fix(scrim): improve search error handling + add offline Room fallback
+
+### Investigation
+User reported "Failed to Search scrims" error.
+ADB logcat revealed:
+1. Emulator-5554 (host/Account A) has broken auth: **ALL API calls return 401**
+2. The stored refresh token is invalid (`refresh_token_not_found`)
+3. The `SupabaseAuthenticator` tries to refresh but fails, so every search request fails
+4. The previous generic error message "Failed to search scrims" gave no clue it was an auth issue
+
+### Fix applied
+- `SupabaseScrimRepository.searchScrims()` now reports the **actual HTTP status code and error body** in the failure message
+- Added `Timber.w` logging for easier remote debugging
+- Added **offline Room fallback**: if the network request fails, search falls back to the local `scrimDao` cache with the same query + filter criteria
+
+### User action required
+**Clear app data on emulator-5554 and re-log in:**
+```bash
+adb -s emulator-5554 shell pm clear com.scrimslegends.app.debug
+```
+Then open the app and log in again on that emulator.
+
+---
+
 ## 2026-06-02 08:00 +04:00 — Debug: scrim apply notification not received
 
 ### Commits
