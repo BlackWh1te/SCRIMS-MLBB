@@ -177,7 +177,8 @@ class SupabaseLeaderboardRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
             }.collect { event ->
                 try {
-                    val entry = parseRealtimeRecordToLeaderboardEntry(event.record!!)
+                    val record = event.record ?: return@collect
+                    val entry = parseRealtimeRecordToLeaderboardEntry(record)
                     emit(entry)
                 } catch (e: Exception) {
                     Timber.w("LeaderboardRepo", "Failed to parse Realtime UPDATE: ${e.message}")

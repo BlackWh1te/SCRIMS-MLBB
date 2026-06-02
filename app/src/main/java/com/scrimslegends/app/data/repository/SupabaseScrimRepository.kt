@@ -751,7 +751,8 @@ class SupabaseScrimRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
             }.collect { event ->
                 try {
-                    val dto = parseRealtimeRecordToScrimDto(event.record!!)
+                    val record = event.record ?: return@collect
+                    val dto = parseRealtimeRecordToScrimDto(record)
                     if (dto.id == scrimId) {
                         invalidateScrimCaches()
                         val gameResults = fetchGameResultsForScrim(dto.id)

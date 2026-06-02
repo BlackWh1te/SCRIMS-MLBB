@@ -2176,10 +2176,11 @@ private fun GameResultCard(
                         onClick = { onSelectWinner(gameResult.gameNumber, scrim.teamId) },
                         modifier = Modifier.weight(1f)
                     )
-                    if (scrim.opponentTeamId != null) {
+                    val opponentId = scrim.opponentTeamId
+                    if (opponentId != null) {
                         WinnerChip(
                             text = scrim.opponentTeamName ?: "Opponent",
-                            onClick = { onSelectWinner(gameResult.gameNumber, scrim.opponentTeamId!!) },
+                            onClick = { onSelectWinner(gameResult.gameNumber, opponentId) },
                             modifier = Modifier.weight(1f)
                         )
                     }

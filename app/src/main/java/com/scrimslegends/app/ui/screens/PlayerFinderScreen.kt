@@ -1259,10 +1259,10 @@ private fun CreatePostSheet(
                 onClick = {
                     scope.launch {
                         var screenshotUrl = ""
-                        if (screenshotUri != null) {
+                        screenshotUri?.let { uri ->
                             isUploading = true
                             try {
-                                val bytes = context.contentResolver.openInputStream(screenshotUri!!)?.use { it.readBytes() }
+                                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                                 if (bytes != null) {
                                     val path = "lfg/${System.currentTimeMillis()}_${currentUserProfile?.id ?: "anon"}.jpg"
                                     val result = SupabaseStorageUpload.uploadFile(

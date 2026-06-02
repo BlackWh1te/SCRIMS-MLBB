@@ -180,7 +180,7 @@ fun NotificationScreen(
                                 .padding(horizontal = 20.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
-                            itemsIndexed(notifications) { index, notification ->
+                            itemsIndexed(notifications, key = { _, n -> n.id }) { index, notification ->
                                 AnimatedEntrance(delayMillis = index * 60) {
                                     SwipeToAction(
                                         actions = {

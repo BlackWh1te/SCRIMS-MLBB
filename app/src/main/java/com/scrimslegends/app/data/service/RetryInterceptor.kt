@@ -35,7 +35,13 @@ class RetryInterceptor(
                 if (attempt < maxRetries && response.code in RETRYABLE_CODES) {
                     Timber.w("Retry %d/%d for %s (HTTP %d)", attempt + 1, maxRetries, request.url, response.code)
                     response.body?.close()
-                    Thread.sleep(initialDelayMs * (1 shl attempt)) // exponential backoff
+                    // Flat delay capped at initialDelayMs to avoid blocking OkHttp dispatcher threads
+                    try {
+                        Thread.sleep(initialDelayMs.coerceAtMost(500L))
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw IOException("Retry interrupted for ${request.url}", e)
+                    }
                     continue
                 }
                 return response
@@ -43,13 +49,23 @@ class RetryInterceptor(
                 Timber.w(e, "Retry %d/%d for %s (timeout)", attempt + 1, maxRetries, request.url)
                 lastException = e
                 if (attempt < maxRetries) {
-                    Thread.sleep(initialDelayMs * (1 shl attempt))
+                    try {
+                        Thread.sleep(initialDelayMs.coerceAtMost(500L))
+                    } catch (ie: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw IOException("Retry interrupted for ${request.url}", ie)
+                    }
                 }
             } catch (e: IOException) {
                 Timber.w(e, "Retry %d/%d for %s (IO error)", attempt + 1, maxRetries, request.url)
                 lastException = e
                 if (attempt < maxRetries) {
-                    Thread.sleep(initialDelayMs * (1 shl attempt))
+                    try {
+                        Thread.sleep(initialDelayMs.coerceAtMost(500L))
+                    } catch (ie: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw IOException("Retry interrupted for ${request.url}", ie)
+                    }
                 }
             }
         }

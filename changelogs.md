@@ -8,6 +8,35 @@
 
 ---
 
+## 2026-06-02 08:50 +04:00 — Audit: fix 10 bugs across Android app
+
+### Commits
+- `AUDIT_FIX` — fix(audit): resolve 10 bugs found in codebase audit
+
+### Crash Prevention
+- **SupabaseScrimRepository.kt:754** — Replaced `event.record!!` with `event.record ?: return@collect` to prevent NPE if a malformed realtime event arrives.
+- **SupabaseNotificationRepository.kt:173** — Same `!!` → safe null cast fix for notification realtime parsing.
+- **SupabaseLeaderboardRepository.kt:180** — Same `!!` → safe null cast fix for leaderboard realtime parsing.
+- **PlayerFinderScreen.kt:1265** — Replaced `screenshotUri!!` inside `scope.launch` with `screenshotUri?.let { uri -> ... }` to avoid race-condition NPE.
+- **ScrimDetailScreen.kt:2182** — Extracted `opponentId` local variable to replace `scrim.opponentTeamId!!` smart cast.
+- **AuthNavigation.kt:1766,1778,1779** — Replaced 3 `inviteLfgPost!!` usages with local `invitePost` smart cast.
+
+### UI Stability
+- **ScrimListScreen.kt:449** — Removed unstable `listState` from `LaunchedEffect` keys; now uses `displayScrims.size` + filter keys to prevent effect restart on every scroll.
+- **ChatScreen.kt:470** — Added `!isLoadingOlder && hasMoreMessages` guards before `LaunchedEffect(Unit) { onLoadOlder() }` to prevent duplicate load triggers.
+- **7 LazyColumn/LazyRow calls** — Added stable `key` parameters to `items()` / `itemsIndexed()` across:
+  - `TeamDetailScreen.kt`, `NotificationScreen.kt`, `LfgBoardScreen.kt`, `MatchResultListScreen.kt`, `MatchHistoryScreen.kt`, `LeaderboardScreen.kt`, `ScrimRosterScreen.kt`
+
+### Performance & Correctness
+- **RetryInterceptor.kt:38,46,52** — Replaced exponential `Thread.sleep` with flat capped delay + `InterruptedException` handling to reduce OkHttp dispatcher thread starvation.
+- **MessageViewModel.kt:467-484** — Parallelized `ensureTeamConversations` with `async/awaitAll` instead of sequential `forEach` to prevent blocking when user belongs to multiple teams.
+- **MessageSyncWorker.kt:36** — Fixed logic inversion: `Result.success()` on sync success instead of `Result.retry()`.
+
+### Result
+Build compiles with **0 errors**.
+
+---
+
 ## 2026-06-02 08:20 +04:00 — Fix: team leader not receiving notification on scrim apply
 
 ### Commits

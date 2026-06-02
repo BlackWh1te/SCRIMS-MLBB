@@ -13,6 +13,8 @@ import com.scrimslegends.app.data.service.ChatConnectionState
 import com.scrimslegends.app.data.service.SupabaseStorageUpload
 import com.scrimslegends.app.util.FreeTierConfig
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -463,25 +465,29 @@ class MessageViewModel @Inject constructor(
     // ── Ensure team conversations exist for all user's teams ──
     fun ensureTeamConversations(teams: List<com.scrimslegends.app.data.model.Team>, userId: String) {
         viewModelScope.launch {
-            var anyCreated = false
-            teams.forEach { team ->
-                try {
-                    messageRepository.getOrCreateTeamConversation(
-                        teamId = team.id,
-                        teamName = team.name,
-                        leaderId = team.leaderId,
-                        leaderName = team.players.find { it.id == team.leaderId }?.name ?: ""
-                    ).collect { result ->
-                        result.onSuccess { anyCreated = true }
-                        result.onFailure { e ->
-                            Timber.w("MessageVM", "Failed to ensure team conversation for ${team.name}: ${e.message}")
+            val jobs = teams.map { team ->
+                async {
+                    var created = false
+                    try {
+                        messageRepository.getOrCreateTeamConversation(
+                            teamId = team.id,
+                            teamName = team.name,
+                            leaderId = team.leaderId,
+                            leaderName = team.players.find { it.id == team.leaderId }?.name ?: ""
+                        ).collect { result ->
+                            result.onSuccess { created = true }
+                            result.onFailure { e ->
+                                Timber.w("MessageVM", "Failed to ensure team conversation for ${team.name}: ${e.message}")
+                            }
                         }
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Timber.w("MessageVM", "Exception ensuring team conversation for ${team.name}: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e
-                    Timber.w("MessageVM", "Exception ensuring team conversation for ${team.name}: ${e.message}")
+                    created
                 }
             }
+            val anyCreated = jobs.awaitAll().any { it }
             // Refresh conversation list so team chats appear immediately
             if (anyCreated) {
                 loadConversations(userId, isRefresh = true)

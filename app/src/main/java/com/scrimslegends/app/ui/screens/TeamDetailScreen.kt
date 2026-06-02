@@ -428,7 +428,7 @@ fun TeamDetailScreen(
                 }
 
                 // Player List
-                itemsIndexed(team.players) { index, player ->
+                itemsIndexed(team.players, key = { _, p -> p.id }) { index, player ->
                     AnimatedEntrance(delayMillis = 250 + index * 60) {
                         PlayerCard(
                             player = player,

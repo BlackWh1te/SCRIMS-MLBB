@@ -139,7 +139,7 @@ fun MatchHistoryScreen(
                                 .padding(horizontal = 20.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
-                            itemsIndexed(matchResults) { index, match ->
+                            itemsIndexed(matchResults, key = { _, m -> m.id }) { index, match ->
                                 AnimatedEntrance(delayMillis = 100 + index * 60) {
                                     MatchHistoryCard(
                                         match = match,

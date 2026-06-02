@@ -225,7 +225,7 @@ fun ScrimRosterScreen(
                     .padding(horizontal = 20.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                itemsIndexed(rosterEntries) { index, entry ->
+                itemsIndexed(rosterEntries, key = { _, e -> e.playerId }) { index, entry ->
                     AnimatedEntrance(delayMillis = 250 + index * 40) {
                         RosterPlayerCard(
                             entry = entry,

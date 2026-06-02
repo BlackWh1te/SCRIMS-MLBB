@@ -1760,10 +1760,11 @@ fun AuthNavigation(
             }
             
             // Invite Dialog - Team Selection
-            if (showInviteDialog && inviteLfgPost != null) {
+            val invitePost = inviteLfgPost
+            if (showInviteDialog && invitePost != null) {
                 val playerLedTeams = teams.filter { it.leaderId == userProfile?.id }
                 TeamSelectionDialog(
-                    playerName = inviteLfgPost!!.playerName,
+                    playerName = invitePost.playerName,
                     myTeams = playerLedTeams,
                     onDismiss = {
                         showInviteDialog = false
@@ -1775,8 +1776,8 @@ fun AuthNavigation(
                             teamName = team.name,
                             invitedBy = userProfile?.id ?: "",
                             invitedByName = userProfile?.username ?: "",
-                            invitedUserId = inviteLfgPost!!.playerId,
-                            invitedUserName = inviteLfgPost!!.playerName
+                            invitedUserId = invitePost.playerId,
+                            invitedUserName = invitePost.playerName
                         )
                         showInviteDialog = false
                         inviteLfgPost = null

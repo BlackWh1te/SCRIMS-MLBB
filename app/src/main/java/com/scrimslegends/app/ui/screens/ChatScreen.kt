@@ -466,7 +466,7 @@ fun ChatScreen(
                                                     listState.layoutInfo.visibleItemsInfo.any { it.key == "load_older" }
                                                 }
                                             }
-                                            if (isVisible) {
+                                            if (isVisible && !isLoadingOlder && hasMoreMessages) {
                                                 LaunchedEffect(Unit) { onLoadOlder() }
                                             }
                                         }

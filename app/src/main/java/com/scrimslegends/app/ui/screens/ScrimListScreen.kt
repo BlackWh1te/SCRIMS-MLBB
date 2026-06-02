@@ -446,7 +446,7 @@ fun ScrimListScreen(
 
                     else -> {
                         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                            LaunchedEffect(listState, displayScrims) {
+                            LaunchedEffect(displayScrims.size, selectedGameMode, selectedRegion, selectedSkillLevel, searchQuery) {
                                 androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
                                     .collect { lastIndex ->
                                         // Only load more if no backend filters are active, otherwise it wipes search results

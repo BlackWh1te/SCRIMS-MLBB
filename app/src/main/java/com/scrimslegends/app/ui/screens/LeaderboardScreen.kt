@@ -205,7 +205,7 @@ fun LeaderboardScreen(
                                     .padding(horizontal = 20.dp),
                                 contentPadding = PaddingValues(vertical = 12.dp)
                             ) {
-                                itemsIndexed(entries) { index, entry ->
+                                itemsIndexed(entries, key = { _, e -> e.playerId }) { index, entry ->
                                     AnimatedEntrance(delayMillis = 150 + index * 60) {
                                         LeaderboardRow(
                                             entry = entry,

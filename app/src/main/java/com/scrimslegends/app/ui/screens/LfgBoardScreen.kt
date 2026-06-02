@@ -106,7 +106,7 @@ fun LfgBoardScreen(
                             contentPadding = PaddingValues(vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(posts) { post ->
+                            items(posts, key = { it.id }) { post ->
                                 LfgPostCard(post = post, onInvite = { onInvitePlayer(post) })
                             }
                         }

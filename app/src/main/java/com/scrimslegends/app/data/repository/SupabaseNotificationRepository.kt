@@ -170,7 +170,8 @@ class SupabaseNotificationRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_INSERT && event.record != null
             }.collect { event ->
                 try {
-                    val dto = parseRealtimeRecordToNotificationDto(event.record!!)
+                    val record = event.record ?: return@collect
+                    val dto = parseRealtimeRecordToNotificationDto(record)
                     if (dto.userId == userId) {
                         // Invalidate cache and persist to Room
                         cacheManager.invalidateByPrefix(CACHE_KEY_PREFIX)

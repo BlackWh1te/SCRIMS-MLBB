@@ -33,7 +33,7 @@ class MessageSyncWorker @AssistedInject constructor(
             result.fold(
                 onSuccess = { count ->
                     Timber.d(TAG, "Synced $count messages from outbox")
-                    if (count > 0) Result.retry() else Result.success()
+                    Result.success()
                 },
                 onFailure = { e ->
                     Timber.e(TAG, "Outbox sync failed", e)

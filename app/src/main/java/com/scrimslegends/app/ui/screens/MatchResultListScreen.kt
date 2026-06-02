@@ -131,7 +131,7 @@ fun MatchResultListScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
 
-                            itemsIndexed(matchResults) { index, result ->
+                            itemsIndexed(matchResults, key = { _, r -> r.id }) { index, result ->
                                 AnimatedEntrance(delayMillis = index * 60) {
                                     MatchResultCard(
                                         matchResult = result,
