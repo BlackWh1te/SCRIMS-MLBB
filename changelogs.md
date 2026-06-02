@@ -8,6 +8,45 @@
 
 ---
 
+## 2026-06-02 08:00 +04:00 — Debug: scrim apply notification not received
+
+### Commits
+- `edc171e` — fix(db): recreate missing scrim application notification trigger + defensive RPC inserts
+
+### Investigation
+User reported: "I made a post and applied from a second account but did not receive a notification when I clicked Apply."
+Two emulators running (emulator-5554 = host/Account A, emulator-5556 = applicant/Account B).
+
+**ADB + Database findings:**
+1. `app_notifications` table queried via REST API: **completely empty for ALL users**
+2. `apply_to_scrim` RPC returns `success=true` but inserts zero notification rows
+3. `on_scrim_application_change` trigger (defined in migration `20260531060001_scrim_notifications_and_lfg_avatar.sql`) is either missing from the live database or was dropped during a prior schema migration
+4. Even if the trigger existed, it would NOT handle re-applications (`Rejected`/`Cancelled` -> `Pending`) introduced by the re-application fix migration (`20260631170001_fix_apply_to_scrim_reapplication.sql`)
+5. Host emulator (emulator-5554) has broken auth: `refresh_token_not_found` / `JWT expired` in logcat, which breaks the realtime subscription to `app_notifications`
+6. Realtime is known-broken at infrastructure level (documented in changelogs), so even with a valid JWT the host would need to refresh/poll to see new notifications
+
+**Fix applied:**
+- New migration `20260602080001_fix_missing_scrim_application_trigger.sql`:
+  - Recreates `handle_scrim_application_notification()` covering all transitions:
+    * `INSERT` -> notify host about new application
+    * `UPDATE` Rejected/Cancelled -> Pending -> notify host about re-application
+    * `UPDATE` Pending -> Accepted -> notify applicant about approval
+    * `UPDATE` Pending -> Rejected -> notify applicant about rejection
+    * `UPDATE` Pending -> Cancelled -> notify host about cancellation
+  - Recreates `on_scrim_application_change` trigger (idempotent)
+  - Updates `apply_to_scrim` RPC to insert host notification directly (defensive fallback)
+  - Updates `approve_scrim_application` RPC to insert approval notification directly
+
+### Still needed (user action)
+1. **Apply the migration** to the live Supabase database via the Supabase Dashboard SQL Editor (run the contents of `20260602080001_fix_missing_scrim_application_trigger.sql`)
+2. **Fix auth on host emulator** (emulator-5554): Log out and log back in, or clear app data:
+   ```bash
+   adb -s emulator-5554 shell pm clear com.scrimslegends.app.debug
+   ```
+3. After the migration is applied, test again. The host will NOT receive a real-time push (realtime is broken) but WILL see the notification after refreshing the notification list or reopening the notification bell.
+
+---
+
 ## 2026-06-02 07:50 +04:00 — Audit follow-up: crash/concurrency/memory fixes + compile fixes
 
 ### Commits
