@@ -32,6 +32,14 @@ class SupabaseAuthRepository(
         private const val KEY_USER_ID = "supabase_user_id"
         private const val KEY_USER_EMAIL = "supabase_user_email"
         private const val VERIFICATION_WINDOW_MS = 3_600_000L // 1 hour
+
+        // Shared geo-location client to avoid spawning new thread/connection pools per call.
+        private val geoClient by lazy {
+            okhttp3.OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+        }
     }
 
     private val secureStorage = SecureStorage.getInstance(context)
@@ -67,7 +75,7 @@ class SupabaseAuthRepository(
         secureStorage.remove(KEY_USER_EMAIL)
         cachedProfile = null
         // Purge ALL caches on logout to prevent cross-user data leakage
-        try { cacheManager.clearAll() } catch (_: Exception) {}
+        try { cacheManager.clearAll() } catch (e: Exception) { Timber.w(e, "clearTokens: cache clear failed") }
     }
 
     private fun authHeader(): String? = getAccessToken()?.let { "Bearer $it" }
@@ -132,8 +140,8 @@ class SupabaseAuthRepository(
             // Check if Game ID is already taken or banned
             val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
-                val profile = checkResponse.body()!!.first()
-                if (profile.isBanned) {
+                val profile = checkResponse.body()?.firstOrNull()
+                if (profile?.isBanned == true) {
                     emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
                 } else {
                     emit(AuthResult.Error("This Game ID is already linked to another account."))
@@ -178,30 +186,43 @@ class SupabaseAuthRepository(
                             authHeader = "Bearer ${authData.accessToken}",
                             request = mapOf("password" to password)
                         )
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        Timber.e(e, "verifyOtp: failed to set password after OTP verification")
+                        emit(AuthResult.Error("Account created but password could not be set. Please use 'Forgot Password' to set one."))
+                        return@flow
+                    }
 
                     // Step 3: Update profile with username and inGameId
                     // The DB trigger may take a moment to create the profile row after OTP verify,
                     // so retry with a small delay if the first attempt fails.
+                    var profileCreated = false
                     try {
                         val profileUpdate = mapOf(
                             "username" to (pendingUsername.ifBlank { email.substringBefore("@") }),
                             "game_id" to (pendingInGameId.ifBlank { "" })
                         )
                         val updateResult = api.updateProfile(PostgrestFilter.eq(authData.user.id), profileUpdate)
-                        if (!updateResult.isSuccessful) {
+                        if (updateResult.isSuccessful) {
+                            profileCreated = true
+                        } else {
                             // Profile row may not exist yet — try PATCH → POST fallback
                             kotlinx.coroutines.delay(500)
                             try {
-                                api.createProfile(ProfileDto(
+                                val createResult = api.createProfile(ProfileDto(
                                     id = authData.user.id,
                                     username = pendingUsername.ifBlank { email.substringBefore("@") },
                                     email = email,
                                     gameId = pendingInGameId.ifBlank { "" }
                                 ))
-                            } catch (_: Exception) { }
+                                if (createResult.isSuccessful) profileCreated = true
+                                else Timber.e("verifyOtp: fallback profile create returned ${createResult.code()}")
+                            } catch (e: Exception) { Timber.e(e, "verifyOtp: fallback profile create failed") }
                         }
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) { Timber.e(e, "verifyOtp: profile update failed") }
+                    if (!profileCreated) {
+                        emit(AuthResult.Error("Account created but profile setup failed. Please contact support."))
+                        return@flow
+                    }
 
                     pendingUsername = ""
                     pendingInGameId = ""
@@ -302,8 +323,8 @@ class SupabaseAuthRepository(
             // Check if Game ID is already taken or banned
             val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
             if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
-                val profile = checkResponse.body()!!.first()
-                if (profile.isBanned) {
+                val profile = checkResponse.body()?.firstOrNull()
+                if (profile?.isBanned == true) {
                     emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
                 } else {
                     emit(AuthResult.Error("This Game ID is already linked to another account."))
@@ -335,7 +356,8 @@ class SupabaseAuthRepository(
                                 "email" to email,
                                 "game_id" to inGameId
                             ))
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            Timber.w(e, "signUp: failed to update profile for $userId")
                         }
                     }
 
@@ -456,16 +478,14 @@ class SupabaseAuthRepository(
                         .build()
                     // Reuse the shared Retrofit OkHttpClient — do NOT create a new
                     // OkHttpClient() per call (spawns a new thread pool each time, never released).
-                    val response = SupabaseRetrofitClient.retrofit.callFactory()
-                        .let { it as? okhttp3.OkHttpClient }
-                        ?.newCall(request)?.execute()
-                        ?: okhttp3.OkHttpClient.Builder()
-                            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                            .build()
-                            .newCall(request).execute()
-                    if (!response.isSuccessful) {
-                        Timber.w("Edge Function delete-user returned %s", response.code)
+                    val sharedClient = SupabaseRetrofitClient.retrofit.callFactory() as? okhttp3.OkHttpClient
+                    if (sharedClient == null) {
+                        Timber.e("deleteAccount: shared OkHttpClient not available")
+                    } else {
+                        val response = sharedClient.newCall(request).execute()
+                        if (!response.isSuccessful) {
+                            Timber.w("Edge Function delete-user returned %s", response.code)
+                        }
                     }
                 } catch (e: Exception) {
                     Timber.w(e, "Failed to call delete-user Edge Function")
@@ -536,8 +556,8 @@ class SupabaseAuthRepository(
                 // Check if Game ID is already taken by someone else
                 val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
                 if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
-                    val existing = checkResponse.body()!!.first()
-                    if (existing.id != userId) {
+                    val existing = checkResponse.body()?.firstOrNull()
+                    if (existing != null && existing.id != userId) {
                         emit(AuthResult.Error("This Game ID is already linked to another account."))
                         return@flow
                     }
@@ -824,18 +844,12 @@ class SupabaseAuthRepository(
     override suspend fun updateLocationAndLastSeen() {
         try {
             val userId = getUserId() ?: return
-            
-            // Use a specific client for this with short timeouts to avoid hanging
-            val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                .build()
 
             val request = okhttp3.Request.Builder()
                 .url("https://get.geojs.io/v1/ip/geo.json")
                 .build()
-                
-            client.newCall(request).execute().use { response ->
+
+            geoClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val bodyString = response.body?.string()
                     if (bodyString != null) {

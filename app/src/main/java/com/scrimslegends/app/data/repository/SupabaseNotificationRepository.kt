@@ -176,7 +176,9 @@ class SupabaseNotificationRepository(
                         cacheManager.invalidateByPrefix(CACHE_KEY_PREFIX)
                         try {
                             notificationDao.insert(mapModelToEntity(mapDtoToModel(dto), userId))
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Timber.w("NotifRepo", "Failed to persist notification to Room: ${e.message}")
+                        }
                         emit(mapDtoToModel(dto))
                     }
                 } catch (e: Exception) {

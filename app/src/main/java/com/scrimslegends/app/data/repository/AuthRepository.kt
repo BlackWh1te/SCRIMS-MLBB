@@ -5,6 +5,7 @@ import com.scrimslegends.app.data.model.RankTier
 import com.scrimslegends.app.data.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Authentication repository handling user sign-up, sign-in, and profile management.
@@ -20,22 +21,15 @@ class AuthRepository : AuthRepositoryInterface {
         const val VERIFICATION_WINDOW_MS = 3_600_000L // 1 hour
     }
 
-    private var currentUser: String? = null
-    private var userProfile: UserProfile? = null
-    private var storedPassword: String? = null
-
-    init {
-        // Reset to logged out state on initialization
-        currentUser = null
-        userProfile = null
-        storedPassword = null
-    }
+    private val currentUser = AtomicReference<String?>(null)
+    private val userProfile = AtomicReference<UserProfile?>(null)
+    private val storedPassword = AtomicReference<String?>(null)
 
     /**
      * Returns true if the unverified account has exceeded the 1-hour window.
      */
     override fun isVerificationExpired(): Boolean {
-        val profile = userProfile ?: return false
+        val profile = userProfile.get() ?: return false
         if (profile.emailVerified) return false
         val elapsed = System.currentTimeMillis() - profile.createdAt
         return elapsed > VERIFICATION_WINDOW_MS
@@ -46,7 +40,7 @@ class AuthRepository : AuthRepositoryInterface {
      * Returns 0 if already expired or not applicable.
      */
     override fun secondsUntilDeletion(): Long {
-        val profile = userProfile ?: return 0L
+        val profile = userProfile.get() ?: return 0L
         if (profile.emailVerified) return 0L
         val elapsed = System.currentTimeMillis() - profile.createdAt
         val remaining = VERIFICATION_WINDOW_MS - elapsed
@@ -59,9 +53,9 @@ class AuthRepository : AuthRepositoryInterface {
      */
     override suspend fun purgeIfExpired(): Boolean {
         if (isVerificationExpired()) {
-            currentUser = null
-            userProfile = null
-            storedPassword = null
+            currentUser.set(null)
+            userProfile.set(null)
+            storedPassword.set(null)
             return true
         }
         return false
@@ -71,8 +65,8 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800)
         if (email.contains("@")) {
-            currentUser = email
-            userProfile = UserProfile(
+            currentUser.set(email)
+            userProfile.set(UserProfile(
                 id = java.util.UUID.randomUUID().toString(),
                 username = username,
                 email = email,
@@ -83,7 +77,7 @@ class AuthRepository : AuthRepositoryInterface {
                 losses = 4,
                 currentTier = RankTier.GOLD,
                 emailVerified = false
-            )
+            ))
             emit(AuthResult.EmailNotVerified(email))
         } else {
             emit(AuthResult.Error("Invalid email address"))
@@ -94,8 +88,8 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(1000)
         if (token.length == 8 && token.all { it.isDigit() }) {
-            userProfile = userProfile?.copy(emailVerified = true)
-            storedPassword = password
+            userProfile.set(userProfile.get()?.copy(emailVerified = true))
+            storedPassword.set(password)
             emit(AuthResult.Success)
         } else {
             emit(AuthResult.Error("Invalid code. Please enter the 8-digit code from your email."))
@@ -130,9 +124,9 @@ class AuthRepository : AuthRepositoryInterface {
 
         // Mock validation
         if (email.contains("@") && password.length >= 6 && username.isNotBlank()) {
-            currentUser = email
-            storedPassword = password
-            userProfile = UserProfile(
+            currentUser.set(email)
+            storedPassword.set(password)
+            userProfile.set(UserProfile(
                 id = java.util.UUID.randomUUID().toString(),
                 username = username,
                 email = email,
@@ -143,7 +137,7 @@ class AuthRepository : AuthRepositoryInterface {
                 losses = 4,
                 currentTier = RankTier.GOLD,
                 emailVerified = false
-            )
+            ))
             // Require email verification before full access
             emit(AuthResult.EmailNotVerified(email))
         } else {
@@ -158,8 +152,8 @@ class AuthRepository : AuthRepositoryInterface {
         // Mock validation - accept any valid email format
         if (email.contains("@") && password.length >= 6) {
             // Set a mock profile on sign in if none exists
-            if (userProfile == null) {
-                userProfile = UserProfile(
+            if (userProfile.get() == null) {
+                userProfile.set(UserProfile(
                     id = java.util.UUID.randomUUID().toString(),
                     username = email.substringBefore("@"),
                     email = email,
@@ -170,12 +164,12 @@ class AuthRepository : AuthRepositoryInterface {
                     losses = 4,
                     currentTier = RankTier.GOLD,
                     emailVerified = true // Assume verified for mock sign-in flow
-                )
+                ))
             }
-            currentUser = email
+            currentUser.set(email)
 
             // Check if email is verified before allowing access
-            if (userProfile?.emailVerified == false) {
+            if (userProfile.get()?.emailVerified == false) {
                 emit(AuthResult.EmailNotVerified(email))
             } else {
                 emit(AuthResult.Success)
@@ -198,7 +192,7 @@ class AuthRepository : AuthRepositoryInterface {
             emit(AuthResult.Error("Verification window expired. Your account has been deleted. Please sign up again."))
             return@flow
         }
-        userProfile = userProfile?.copy(emailVerified = true)
+        userProfile.set(userProfile.get()?.copy(emailVerified = true))
         emit(AuthResult.Success)
     }
 
@@ -215,18 +209,18 @@ class AuthRepository : AuthRepositoryInterface {
     override suspend fun signOut(): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(500) // Simulate network delay
-        currentUser = null
-        userProfile = null
-        storedPassword = null
+        currentUser.set(null)
+        userProfile.set(null)
+        storedPassword.set(null)
         emit(AuthResult.Success)
     }
 
     override suspend fun deleteAccount(): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
-        currentUser = null
-        userProfile = null
-        storedPassword = null
+        currentUser.set(null)
+        userProfile.set(null)
+        storedPassword.set(null)
         emit(AuthResult.Success)
     }
     
@@ -234,14 +228,15 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(500) // Simulate network delay
 
-        if (userProfile != null) {
-            userProfile = userProfile!!.copy(
+        val currentProfile = userProfile.get()
+        if (currentProfile != null) {
+            userProfile.set(currentProfile.copy(
                 username = username,
                 inGameId = inGameId,
-                role = role ?: userProfile!!.role,
-                bio = bio ?: userProfile!!.bio,
-                mainHeroes = mainHeroes ?: userProfile!!.mainHeroes
-            )
+                role = role ?: currentProfile.role,
+                bio = bio ?: currentProfile.bio,
+                mainHeroes = mainHeroes ?: currentProfile.mainHeroes
+            ))
             emit(AuthResult.Success)
         } else {
             emit(AuthResult.Error("No user profile found"))
@@ -266,13 +261,13 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
 
-        if (userProfile == null) {
+        if (userProfile.get() == null) {
             emit(AuthResult.Error("No user profile found. Please sign in again."))
             return@flow
         }
 
         // Mock validation: require password verification
-        if (currentPassword.length < 6 || storedPassword?.let { currentPassword != it } == true) {
+        if (currentPassword.length < 6 || storedPassword.get()?.let { currentPassword != it } == true) {
             emit(AuthResult.Error("Current password is incorrect."))
             return@flow
         }
@@ -283,8 +278,11 @@ class AuthRepository : AuthRepositoryInterface {
         }
 
         // Update email in profile and current user
-        userProfile = userProfile!!.copy(email = newEmail)
-        currentUser = newEmail
+        val currentProfile = userProfile.get()
+        if (currentProfile != null) {
+            userProfile.set(currentProfile.copy(email = newEmail))
+        }
+        currentUser.set(newEmail)
         emit(AuthResult.Success)
     }
 
@@ -292,13 +290,13 @@ class AuthRepository : AuthRepositoryInterface {
         emit(AuthResult.Loading)
         kotlinx.coroutines.delay(800) // Simulate network delay
 
-        if (userProfile == null) {
+        if (userProfile.get() == null) {
             emit(AuthResult.Error("No user profile found. Please sign in again."))
             return@flow
         }
 
         // Mock validation
-        if (currentPassword.length < 6 || storedPassword?.let { currentPassword != it } == true) {
+        if (currentPassword.length < 6 || storedPassword.get()?.let { currentPassword != it } == true) {
             emit(AuthResult.Error("Current password is incorrect."))
             return@flow
         }
@@ -318,16 +316,16 @@ class AuthRepository : AuthRepositoryInterface {
             return@flow
         }
 
-        storedPassword = newPassword
+        storedPassword.set(newPassword)
         emit(AuthResult.Success)
     }
 
     override fun getCurrentUser(): String? {
-        return currentUser
+        return currentUser.get()
     }
     
     override suspend fun getUserProfile(): UserProfile? {
-        return userProfile
+        return userProfile.get()
     }
 
     override suspend fun invalidateProfileCache() {
@@ -336,7 +334,7 @@ class AuthRepository : AuthRepositoryInterface {
 
     override suspend fun isLoggedIn(): Boolean {
         purgeIfExpired() // silently clean up expired unverified accounts
-        return currentUser != null
+        return currentUser.get() != null
     }
 
     override suspend fun updateLocationAndLastSeen() {

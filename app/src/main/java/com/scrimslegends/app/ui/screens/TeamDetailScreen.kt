@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +85,14 @@ fun TeamDetailScreen(
     val inviteCode = remember(team.id) {
         "SL-${team.name.take(3).uppercase()}${team.id.takeLast(4).uppercase()}"
     }
+
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = mutableListOf("Overview", "Roster")
+    // Only show Manage tab if there's manage actions or leader
+    if (isLeader || onLeaveTeam != null) {
+        tabs.add("Manage")
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -212,8 +221,46 @@ fun TeamDetailScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Team Stats Section (real data from get_team_stats RPC)
+                // TabRow Section
                 item {
+                    AnimatedEntrance(delayMillis = 150) {
+                        TabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            containerColor = Color.Transparent,
+                            contentColor = White,
+                            indicator = { tabPositions ->
+                                TabRowDefaults.Indicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                    color = GoldPrimary,
+                                    height = 3.dp
+                                )
+                            },
+                            divider = {
+                                Divider(color = GlassBorder)
+                            }
+                        ) {
+                            tabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTabIndex == index,
+                                    onClick = { selectedTabIndex = index },
+                                    text = { 
+                                        Text(
+                                            text = title, 
+                                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (selectedTabIndex == index) GoldPrimary else LightGray
+                                        ) 
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // ─── OVERVIEW TAB ───
+                if (tabs[selectedTabIndex] == "Overview") {
+                    // Team Stats Section (real data from get_team_stats RPC)
+                    item {
                     AnimatedEntrance(delayMillis = 175) {
                         Text(
                             text = stringResource(R.string.team_stats),
@@ -360,8 +407,11 @@ fun TeamDetailScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
+                } // End Overview Tab
 
-                // Players Section
+                // ─── ROSTER TAB ───
+                if (tabs[selectedTabIndex] == "Roster") {
+                    // Players Section
                 item {
                     AnimatedEntrance(delayMillis = 200) {
                         Text(
@@ -487,8 +537,11 @@ fun TeamDetailScreen(
                         }
                     }
                 }
+                } // End Roster Tab
 
-                // Pending Applications (Leader only)
+                // ─── MANAGE TAB ───
+                if (tabs.getOrNull(selectedTabIndex) == "Manage") {
+                    // Pending Applications (Leader only)
                 if (isLeader && applications.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(24.dp))
@@ -706,6 +759,7 @@ fun TeamDetailScreen(
                         }
                     }
                 }
+                } // End Manage Tab
             }
         }
     }

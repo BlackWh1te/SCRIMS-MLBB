@@ -40,6 +40,7 @@ class SupabaseScrimRepository(
         // DB constraint: valid_scrim_status CHECK (status IN ('Open','Pending','Accepted','Ready','In Progress','Completed','Cancelled'))
         fun toDbStatus(status: ScrimStatus): String = when (status) {
             ScrimStatus.OPEN        -> "Open"
+            ScrimStatus.PENDING     -> "Pending"
             ScrimStatus.FILLED      -> "Accepted"
             ScrimStatus.READY_CHECK -> "Ready"
             ScrimStatus.IN_PROGRESS -> "In Progress"
@@ -49,7 +50,7 @@ class SupabaseScrimRepository(
 
         fun fromDbStatus(dbStatus: String): ScrimStatus = when (dbStatus) {
             "Open"        -> ScrimStatus.OPEN
-            "Pending"     -> ScrimStatus.OPEN   // DB has no direct equivalent; closest semantic match
+            "Pending"     -> ScrimStatus.PENDING
             "Accepted"    -> ScrimStatus.FILLED
             "Ready"       -> ScrimStatus.READY_CHECK
             "In Progress" -> ScrimStatus.IN_PROGRESS
@@ -156,11 +157,10 @@ class SupabaseScrimRepository(
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null
                 },
                 networkLoader = {
-                    // Defensive: limit to 200 rows to avoid unbounded data transfer.
                     // PostgREST OR filtering (team_id=eq.X OR opponent_team_id=eq.X) would be ideal
-                    // but requires a dedicated RPC or complex query string. For now, client-side filter
-                    // with a cap is the safest available option.
-                    val r = api.getScrims(range = "0-199")
+                    // but requires a dedicated RPC or query-string support in the API interface.
+                    // For now we fetch a large slice and filter client-side.
+                    val r = api.getScrims(range = "0-999")
                     if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) }?.filter {
                         it.teamId == teamId || it.opponentTeamId == teamId
                     } ?: emptyList()
@@ -201,15 +201,17 @@ class SupabaseScrimRepository(
 
     override fun searchScrims(query: String, gameMode: GameMode?, region: Region?, skillLevel: SkillLevel?, status: ScrimStatus?): Flow<Result<List<Scrim>>> = flow {
         try {
+            // When a text query is provided we must search over a larger slice because
+            // the server does not support text search — filtering happens client-side.
+            val q = query.lowercase().trim()
             val r = api.getScrims(
-                range = "0-99",
+                range = if (q.isEmpty()) "0-99" else "0-499",
                 status = status?.let { PostgrestFilter.eq(toDbStatus(it)) },
                 gameMode = gameMode?.let { PostgrestFilter.eq(it.name) },
                 region = region?.let { PostgrestFilter.eq(it.name) },
                 skillLevel = skillLevel?.let { PostgrestFilter.eq(it.name) }
             )
             if (r.isSuccessful) {
-                val q = query.lowercase().trim()
                 val scrims = r.body()?.map { mapDtoToScrim(it) }?.filter { s ->
                     q.isEmpty() || s.teamName.lowercase().contains(q) || s.description.lowercase().contains(q)
                 } ?: emptyList()
@@ -394,7 +396,9 @@ class SupabaseScrimRepository(
                     for (gameNum in 1..gameCount) {
                         try {
                             api.createScrimGameResult(ScrimGameResultDto(scrimId = scrimId, gameNumber = gameNum))
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Timber.w("createAutoCancelledRecord: failed to create game result $gameNum for $scrimId: ${e.message}")
+                        }
                     }
                 }
             }
@@ -1013,7 +1017,9 @@ class SupabaseScrimRepository(
                         membersByTeamId.putAll(members.groupBy { it.teamId })
                         allUserIds.addAll(members.map { it.userId }.distinct())
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Timber.w("fetchApplicationsForScrim: failed to load team members: ${e.message}")
+                }
             }
 
             // Batch fetch profiles for player names

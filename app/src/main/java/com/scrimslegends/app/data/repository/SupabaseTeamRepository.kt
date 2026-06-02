@@ -84,7 +84,9 @@ class SupabaseTeamRepository(
                                 val members = mr.body() ?: emptyList()
                                 membersByTeamId.putAll(members.groupBy { it.teamId })
                             }
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Timber.w("getTeams: failed to load team members: ${e.message}")
+                        }
                         val allUserIds = membersByTeamId.values.flatten().map { it.userId }.distinct()
                         val profilesById = if (allUserIds.isNotEmpty()) {
                             try { profileCache.getProfiles(allUserIds) } catch (_: Exception) { emptyMap() }
@@ -162,7 +164,9 @@ class SupabaseTeamRepository(
                         val members = mr.body() ?: emptyList()
                         membersByTeamId.putAll(members.groupBy { it.teamId })
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Timber.w("getTeamsForUser: failed to load team members: ${e.message}")
+                }
             }
 
             // Step 4: Batch fetch profiles for all member user IDs via cache
@@ -345,7 +349,7 @@ class SupabaseTeamRepository(
         try {
             val mr = api.getTeamMembers(id = PostgrestFilter.eq(inviteId))
             if (!mr.isSuccessful || mr.body().isNullOrEmpty()) { emit(Result.failure(Exception("Invite not found"))); return@flow }
-            val member = mr.body()!!.first()
+            val member = mr.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Invite not found"))); return@flow }
             // Ownership: only the invited user may accept the invite
             AuthorizationUtils.requireOwner(member.userId, "accept this invite")
                 .onFailure { emit(Result.failure(it)); return@flow }
@@ -360,7 +364,7 @@ class SupabaseTeamRepository(
         try {
             val mr = api.getTeamMembers(id = PostgrestFilter.eq(inviteId))
             if (!mr.isSuccessful || mr.body().isNullOrEmpty()) { emit(Result.success(Unit)); return@flow }
-            val member = mr.body()!!.first()
+            val member = mr.body()?.firstOrNull() ?: run { emit(Result.success(Unit)); return@flow }
             // Ownership: only the invited user (or team leader) may decline the invite
             val userId = AuthorizationUtils.currentUserId()
             val isLeader = try {
@@ -457,6 +461,13 @@ class SupabaseTeamRepository(
                 emit(Result.failure(SecurityException("Forbidden: you do not have permission to remove this player")))
                 return@flow
             }
+
+            // Prevent leader from leaving the team
+            if (playerId == team.leaderId) {
+                emit(Result.failure(Exception("The leader cannot leave the team. Please transfer leadership first or delete the team.")))
+                return@flow
+            }
+
             api.removeTeamMember(PostgrestFilter.eq(teamId), PostgrestFilter.eq(playerId))
             invalidateTeamCaches()
             getTeam(teamId).collect { emit(it) }
@@ -562,7 +573,7 @@ class SupabaseTeamRepository(
                 emit(Result.failure(Exception("Application not found")))
                 return@flow
             }
-            val app = appResponse.body()!!.first()
+            val app = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
             val teamResponse = api.getTeamById(PostgrestFilter.eq(app.teamId))
             val team = teamResponse.body()?.firstOrNull()
             if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
@@ -590,7 +601,7 @@ class SupabaseTeamRepository(
                 emit(Result.failure(Exception("Application not found")))
                 return@flow
             }
-            val app = appResponse.body()!!.first()
+            val app = appResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Application not found"))); return@flow }
             val teamResponse = api.getTeamById(PostgrestFilter.eq(app.teamId))
             val team = teamResponse.body()?.firstOrNull()
             if (team == null) { emit(Result.failure(Exception("Team not found"))); return@flow }
@@ -640,7 +651,7 @@ class SupabaseTeamRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
             }.collect { event ->
                 try {
-                    val dto = parseRealtimeRecordToTeamDto(event.record!!)
+                    val dto = parseRealtimeRecordToTeamDto(event.record ?: return@collect)
                     if (dto.id == teamId) {
                         invalidateTeamCaches()
                         emit(mapTeamDtoToModel(dto))
@@ -672,7 +683,7 @@ class SupabaseTeamRepository(
                         event.eventType == SupabaseRealtimeClient.EVENT_UPDATE) && event.record != null
             }.collect { event ->
                 try {
-                    val partial = parseRealtimeRecordToTeamInvite(event.record!!)
+                    val partial = parseRealtimeRecordToTeamInvite(event.record ?: return@collect)
                     // Fetch team name and inviter profile to populate blank names
                     val enriched = enrichTeamInvite(partial)
                     emit(enriched)

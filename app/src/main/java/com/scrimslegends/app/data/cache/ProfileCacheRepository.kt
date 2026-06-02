@@ -77,7 +77,9 @@ class ProfileCacheRepository(
                         points = 0,
                         lastUpdated = System.currentTimeMillis()
                     ))
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Timber.w(TAG, "Failed to persist profile to Room for $userId: ${e.message}")
+                }
             }
             dto ?: roomProfile?.let { ProfileDto(id = it.id, username = it.username) }
         } catch (e: Exception) {
@@ -152,7 +154,9 @@ class ProfileCacheRepository(
 
                     // Bulk persist to Room
                     if (entities.isNotEmpty()) {
-                        try { profileDao.insertProfiles(entities) } catch (_: Exception) { }
+                        try { profileDao.insertProfiles(entities) } catch (e: Exception) {
+                            Timber.w(TAG, "Failed to persist batch profiles to Room: ${e.message}")
+                        }
                     }
                 } catch (e: Exception) {
                     Timber.w(TAG, "Batch fetch failed, trying Room fallback", e)
@@ -163,7 +167,9 @@ class ProfileCacheRepository(
                             if (entity != null) {
                                 result[id] = ProfileDto(id = entity.id, username = entity.username)
                             }
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Timber.w(TAG, "Failed to load Room profile for $id: ${e.message}")
+                        }
                     }
                 }
             }

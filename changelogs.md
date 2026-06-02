@@ -2054,3 +2054,50 @@ Code uses `version = 13` in `@Database`, but `14.json` schema file exists in `ap
 - **UI:** Fixed role resolution so approved applicants see `OpponentActions`, rejected/cancelled users see apply button.
 
 **Result:** Application approval now succeeds atomically with proper row locking and history preservation.
+
+---
+
+## 2026-06-02 05:35 +04:00 — Audit follow-up: empty catch blocks + pre-existing compile fixes
+
+**Commit:** (pending)
+
+**Problem:** Deep audit report listed 25 crash/concurrency/logic bugs. Investigation revealed most were already fixed in prior sessions (e.g., `!!.first()` replaced with `?.firstOrNull()`, AtomicReference conversions, `geoClient` reuse, `cleanup()` method added, `fromDbStatus` mapping corrected, DELETE events handled in LFG realtime, tournament deadline validation hardened, match result lookup chain fixed).
+
+**Remaining issues fixed:**
+1. **Silent error swallowing — 9 empty/near-empty catch blocks in data layer:**
+   - `SupabaseScrimRepository.kt:399` — `catch (_: Exception) { }` during game result creation fallback now logs via `Timber.w`.
+   - `SupabaseScrimRepository.kt:1020` — `catch (_: Exception) { }` during batch team member fetch for applications now logs via `Timber.w`.
+   - `SupabaseTeamRepository.kt:87` — `catch (_: Exception) { }` during batch team member fetch in `getTeams()` now logs via `Timber.w`.
+   - `SupabaseTeamRepository.kt:167` — `catch (_: Exception) { }` during batch team member fetch in `getTeamsForUser()` now logs via `Timber.w`.
+   - `SupabaseAuthRepository.kt:359` — `catch (_: Exception) { }` during profile update in `signUp()` now logs via `Timber.w`.
+   - `ProfileCacheRepository.kt:80` — `catch (_: Exception) { }` during profile Room persist now logs via `Timber.w`.
+   - `ProfileCacheRepository.kt:157` — `catch (_: Exception) { }` during batch profile Room persist now logs via `Timber.w`.
+   - `ProfileCacheRepository.kt:170` — `catch (_: Exception) { }` during individual Room fallback read now logs via `Timber.w`.
+   - `SupabaseNotificationRepository.kt:179` — `catch (_: Exception) { }` during notification Room persist now logs via `Timber.w`.
+
+2. **Pre-existing compile failure — `AuthRepository.kt` incomplete AtomicReference migration:**
+   - Previous session changed `currentUser`, `userProfile`, `storedPassword` from plain `var` to `AtomicReference` but left ~30 usage sites using direct assignment (`=`) and direct reads without `.get()`.
+   - Fixed all assignment sites to use `.set()` and all read sites to use `.get()`, restoring compilability of the mock repository.
+
+3. **Pre-existing compile failure — `TeamDetailScreen.kt` brace mismatch:**
+   - Uncommitted diff from prior session added a `Manage` tab `if` block around Team Actions but misplaced the closing `}` comment, leaving the `if` block unclosed.
+   - Added the missing `}` before `} // End Manage Tab` to balance braces.
+
+**Already fixed in prior sessions (no changes needed):**
+- `!!.first()` crash patterns — all replaced with `?.firstOrNull()`.
+- `_messageMap.remove(pendingKey)!!` — replaced with safe null check.
+- `AuthRepository` mutable state — converted to `AtomicReference` (usage sites now also fixed).
+- `SupabaseMessageRepository` cache mutation race — `lastMessageFetch` updates now use `.copy()` inside `cacheMutex`.
+- `SupabaseRealtimeClient` `collectJob` scope — `subscribe()` uses `callbackFlow` scope, not class `scope`.
+- `UnifiedCacheManager.getFlow()` — per-key `Mutex` provides thundering-herd protection.
+- `SupabaseAuthRepository.deleteAccount` — reuses shared Retrofit `OkHttpClient` instead of creating a new one per call.
+- `SupabaseAuthRepository.updateLocationAndLastSeen` — uses a single lazy `geoClient`.
+- `SupabaseMessageRepository.repositoryScope` — `cleanup()` method exists to cancel scope on teardown.
+- `SupabaseRealtimeClient.pendingJoins` — 30-second timeout cleanup coroutine handles stuck deferreds; `disconnect()` clears the map.
+- `SupabaseMatchResultRepository.uploadScreenshot` — scrim lookup now correctly chains `matchResult -> match -> scrim`.
+- `SupabaseLfgRepository.incrementViewCount` fallback — now uses `getLfgPostById(postId)` instead of fetching ALL posts.
+- `SupabaseScrimRepository.fromDbStatus` — now correctly maps `"Pending" -> ScrimStatus.PENDING`.
+- `SupabaseTournamentRepository.createTournament` — validates computed `checkInDeadline` is in the future.
+- `SupabaseLfgRepository.subscribeToLfgPosts` — `.filter` explicitly includes `EVENT_DELETE` and `.collect` uses `event.record ?: event.oldRecord`.
+
+**Result:** All genuinely remaining audit issues are now addressed. Build compiles for all touched files; pre-existing uncommitted compilation errors in unrelated files (`MessageRepository.kt`, `SupabaseMessageRepository.kt`, `ChatScreen.kt`, `TournamentViewModel.kt`) remain from earlier sessions.
