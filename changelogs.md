@@ -8,6 +8,35 @@
 
 ---
 
+## 2026-06-02 08:20 +04:00 — Fix: team leader not receiving notification on scrim apply
+
+### Commits
+- `d7bee4a` — fix(scrim): client-side notification fallback when applying to scrim
+
+### Problem
+User reported: "I click Apply and the team leader did not receive notification."
+Confirmed via API: `app_notifications` table is still completely empty.
+
+### Root cause
+The `on_scrim_application_change` database trigger (supposed to auto-insert
+notifications when a scrim application is created) is **missing from the live
+Supabase database**. The migration file exists in the repo but was never applied
+to the live DB.
+
+### Fix
+Added a **client-side fallback** in `SupabaseScrimRepository.applyToScrim()`:
+- After the apply RPC succeeds and the scrim is reloaded, the repository fetches
+the host team to get `leader_id`, then directly calls `api.createNotification()`
+to insert a `SCRIM_APPLICATION_NEW` row
+- Wrapped in `try/catch` so notification failures never break the apply flow
+- This works **immediately** without requiring the database migration
+
+### Still recommended (for completeness)
+Apply the database migration `20260602080001_fix_missing_scrim_application_trigger.sql`
+to the live Supabase database so the trigger handles this server-side as well.
+
+---
+
 ## 2026-06-02 08:15 +04:00 — Fix roster player names blank in ScrimDetailScreen
 
 ### Commits
