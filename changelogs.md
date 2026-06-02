@@ -11,7 +11,7 @@
 ## 2026-06-02 08:50 +04:00 — Audit: fix 10 bugs across Android app
 
 ### Commits
-- `AUDIT_FIX` — fix(audit): resolve 10 bugs found in codebase audit
+- `382ee67` — fix(audit): resolve 10 bugs found in codebase audit
 
 ### Crash Prevention
 - **SupabaseScrimRepository.kt:754** — Replaced `event.record!!` with `event.record ?: return@collect` to prevent NPE if a malformed realtime event arrives.
