@@ -8,6 +8,26 @@
 
 ---
 
+## 2026-06-02 08:15 +04:00 — Fix roster player names blank in ScrimDetailScreen
+
+### Commits
+- `de98f1e` — fix(scrim): populate player names in roster display
+
+### Problem
+User reported: "I see roster but I don't see player nicknames."
+The `RosterDisplayCard` showed ACTIVE/SUBSTITUTES sections with checkmarks/icons but empty player names.
+
+### Root cause
+- `fetchRostersForScrim` only queries the `scrim_rosters` table, which returns `user_id`, `team_id`, `is_active` — **no player name**
+- `mapDtoToScrimRosterEntry` hardcoded `playerName = ""` with a comment "resolved by UI" but the UI never looked up names
+
+### Fix
+- `fetchRostersForScrim` now **batch-fetches profiles** for all `user_id`s in the roster (same pattern already used for applications)
+- Resolved `username` from `ProfileDto` is passed into `mapDtoToScrimRosterEntry(...)`
+- Player nicknames now appear correctly in the roster card
+
+---
+
 ## 2026-06-02 08:05 +04:00 — Fix "Failed to Search scrims" error
 
 ### Commits
