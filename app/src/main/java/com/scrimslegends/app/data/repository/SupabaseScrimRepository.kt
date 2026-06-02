@@ -1093,22 +1093,30 @@ class SupabaseScrimRepository(
     private suspend fun fetchRostersForScrim(scrimId: String): List<ScrimRosterEntry> {
         return try {
             val r = api.getScrimRosters(PostgrestFilter.eq(scrimId))
-            if (r.isSuccessful) {
-                r.body()?.map { mapDtoToScrimRosterEntry(it) } ?: emptyList()
-            } else {
+            if (!r.isSuccessful) {
                 Timber.w("ScrimRepo", "Failed to fetch rosters for scrim $scrimId")
-                emptyList()
+                return emptyList()
             }
+            val rosters = r.body() ?: return emptyList()
+            // Batch-fetch profiles to populate player names
+            val userIds = rosters.map { it.userId }.distinct()
+            val profilesById = if (userIds.isNotEmpty()) {
+                try {
+                    val pr = api.getProfiles(idFilter = PostgrestFilter.inList(userIds))
+                    if (pr.isSuccessful) pr.body()?.associateBy { it.id } ?: emptyMap() else emptyMap()
+                } catch (_: Exception) { emptyMap() }
+            } else emptyMap()
+            return rosters.map { mapDtoToScrimRosterEntry(it, profilesById[it.userId]?.username) }
         } catch (e: Exception) {
             Timber.w("ScrimRepo", "Exception fetching rosters for scrim $scrimId", e)
             emptyList()
         }
     }
 
-    private fun mapDtoToScrimRosterEntry(dto: ScrimRosterDto): ScrimRosterEntry {
+    private fun mapDtoToScrimRosterEntry(dto: ScrimRosterDto, playerName: String? = null): ScrimRosterEntry {
         return ScrimRosterEntry(
             playerId = dto.userId,
-            playerName = "", // Not available in ScrimRosterDto; resolved by UI
+            playerName = playerName ?: "", // Resolved via batch profile fetch
             teamId = dto.teamId,
             isActive = dto.isActive
         )
