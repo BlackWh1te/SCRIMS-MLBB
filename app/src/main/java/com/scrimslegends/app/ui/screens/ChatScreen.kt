@@ -82,6 +82,7 @@ fun ChatScreen(
     onClearReply    : () -> Unit = {},
     onSetReplyTarget: (MessageWithDelivery) -> Unit = {},
     onDeleteMessage : (String) -> Unit = {},
+    onClearChatHistory : () -> Unit = {},
     isLoadingOlder  : Boolean = false,
     hasMoreMessages : Boolean = true,
     onLoadOlder     : () -> Unit = {}
@@ -386,6 +387,41 @@ fun ChatScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Options menu for "Clear History"
+                    Box {
+                        var showOptionsMenu by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceOverlay)
+                                .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                .clickable { showOptionsMenu = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert, null,
+                                tint     = TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = showOptionsMenu,
+                            onDismissRequest = { showOptionsMenu = false },
+                            modifier = Modifier.background(DarkNavy)
+                        ) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("Clear History", color = ErrorRed) },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onClearChatHistory()
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -466,6 +502,7 @@ fun ChatScreen(
                                     isLastInGroup  = isLastInGroup,
                                     deliveryStatus = item.status,
                                     clientMessageId = item.clientMessageId,
+                                    isTeamChat     = isTeamChat,
                                     onRetryMessage = onRetryMessage,
                                     onCancelMessage = onCancelMessage,
                                     onViewTeamInfo = {
@@ -755,6 +792,7 @@ private fun MessageBubble(
     isLastInGroup : Boolean,
     deliveryStatus: DeliveryStatus = DeliveryStatus.SENT,
     clientMessageId: String? = null,
+    isTeamChat: Boolean = false,
     onRetryMessage: (String) -> Unit = {},
     onCancelMessage: (String) -> Unit = {},
     onViewTeamInfo: () -> Unit,
@@ -787,20 +825,70 @@ private fun MessageBubble(
             .padding(top = if (isFirstInGroup) 10.dp else 2.dp),
         contentAlignment = if (isFromMe) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        Column(
-            horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start,
-            modifier            = Modifier.widthIn(max = 310.dp)
+        Row(
+            modifier = Modifier.widthIn(max = 310.dp),
+            horizontalArrangement = if (isFromMe) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Bottom
         ) {
-            // Sender name for received messages in first position
-            if (!isFromMe && isFirstInGroup && !message.isDeleted) {
-                Text(
-                    text       = message.senderName,
-                    fontSize   = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = BluePrimary,
-                    modifier   = Modifier.padding(start = 14.dp, bottom = 3.dp)
-                )
+            // Avatar for team chat received messages
+            if (isTeamChat && !isFromMe) {
+                if (isLastInGroup && !message.isDeleted) {
+                    if (message.senderAvatarUrl != null) {
+                        SubcomposeAsyncImage(
+                            model = message.senderAvatarUrl,
+                            contentDescription = message.senderName,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                            loading = { Box(modifier = Modifier.size(28.dp).background(SurfaceElevated, CircleShape)) },
+                            error = {
+                                Box(
+                                    modifier = Modifier.size(28.dp).background(brush = Brush.linearGradient(BlueGradient), shape = CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = message.senderName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                        color = White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.size(28.dp).background(brush = Brush.linearGradient(BlueGradient), shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = message.senderName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                color = White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(28.dp))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
             }
+
+            Column(
+                horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                // Sender name for received messages in first position
+                if (!isFromMe && isFirstInGroup && !message.isDeleted) {
+                    Text(
+                        text       = message.senderName,
+                        fontSize   = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = BluePrimary,
+                        modifier   = Modifier.padding(start = 14.dp, bottom = 3.dp)
+                    )
+                }
 
             // Bubble with long-press for context menu
             Box(
@@ -913,9 +1001,10 @@ private fun MessageBubble(
                     )
                 }
             }
+        }
 
-            // Context menu for reply/delete
-            if (showContextMenu) {
+        // Context menu overlay
+        if (showContextMenu) {
                 MessageContextMenu(
                     onDismiss = { showContextMenu = false },
                     onReply = {

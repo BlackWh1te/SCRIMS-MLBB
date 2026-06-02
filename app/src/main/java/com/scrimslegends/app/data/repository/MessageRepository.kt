@@ -192,6 +192,8 @@ class MessageRepository : MessageRepositoryInterface {
 
     override suspend fun deleteMessage(messageId: String): Result<Unit> = Result.success(Unit)
 
+    override suspend fun clearChatHistory(conversationId: String): Result<Unit> = Result.success(Unit)
+
     override suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int): Result<List<Message>> =
         Result.success(emptyList())
 
@@ -272,7 +274,12 @@ class MessageRepository : MessageRepositoryInterface {
             )
         }
 
-        emit(Result.success(conversations.find { it.id == convId }!!))
+        val updatedConv = conversations.find { it.id == convId }
+        if (updatedConv != null) {
+            emit(Result.success(updatedConv))
+        } else {
+            emit(Result.failure(Exception("Conversation not found after update")))
+        }
     }
 
     override suspend fun markConversationAsRead(conversationId: String, userId: String): Flow<Result<Unit>> = flow {

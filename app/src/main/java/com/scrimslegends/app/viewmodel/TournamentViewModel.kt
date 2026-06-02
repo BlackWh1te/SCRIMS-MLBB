@@ -90,9 +90,14 @@ class TournamentViewModel @Inject constructor(
 
     // ── Pending logo upload (set by navigation before createTournament is called) ──
     var pendingLogoBytes: ByteArray? = null
-    var pendingLogoMime: String = "image/jpeg"
+    var pendingLogoMime: String? = null
 
-    // ── Jobs ──
+    fun clearPendingLogo() {
+        pendingLogoBytes = null
+        pendingLogoMime = null
+    }
+
+    // ── Filters ──
     private var loadTournamentsJob: Job? = null
     private var loadTournamentJob: Job? = null
     private var loadMatchesJob: Job? = null
@@ -301,26 +306,41 @@ class TournamentViewModel @Inject constructor(
             tournamentRepository.createTournament(tournament)
                 .onSuccess { created ->
                     _selectedTournament.value = created
+                    var isPartialFailure = false
                     // Insert requirements after the tournament row is committed
                     if (requirements.isNotEmpty()) {
                         tournamentRepository.createRequirements(created.id, requirements)
-                            .onFailure { e -> _error.value = "Tournament created but requirements failed: ${e.message}" }
+                            .onFailure { e -> 
+                                _error.value = "Tournament created but requirements failed: ${e.message}" 
+                                isPartialFailure = true
+                            }
                         loadRequirements(created.id)
                     }
                     // Upload logo if provided
                     val logoBytes = pendingLogoBytes
                     if (logoBytes != null) {
-                        tournamentRepository.uploadTournamentLogo(created.id, logoBytes, pendingLogoMime)
-                            .onFailure { e -> _error.value = "Tournament created but logo upload failed: ${e.message}" }
+                        tournamentRepository.uploadTournamentLogo(created.id, logoBytes, pendingLogoMime ?: "image/jpeg")
+                            .onFailure { e -> 
+                                _error.value = "Tournament created but logo upload failed: ${e.message}" 
+                                isPartialFailure = true
+                            }
                         pendingLogoBytes = null
+                        pendingLogoMime = null
                     }
-                    _createResult.value = Result.success(created)
+                    
+                    if (isPartialFailure) {
+                        _createResult.value = Result.failure(Exception("Tournament created with partial failures. Please check logo and requirements."))
+                    } else {
+                        _createResult.value = Result.success(created)
+                    }
                     _isLoading.value = false
                     loadTournaments()
                 }.onFailure { e ->
                     _createResult.value = Result.failure(e)
                     _error.value = e.message
                     _isLoading.value = false
+                    pendingLogoBytes = null
+                    pendingLogoMime = null
                 }
         }
     }
@@ -553,7 +573,6 @@ class TournamentViewModel @Inject constructor(
             _error.value = null
             tournamentRepository.submitMatchResult(matchId, winnerTeamId, isDraw, gameAScore, gameBScore)
                 .onSuccess {
-                    _isLoading.value = false
                     // Refresh the current tournament data
                     _selectedTournament.value?.let { loadTournamentById(it.id) }
                 }.onFailure { e ->

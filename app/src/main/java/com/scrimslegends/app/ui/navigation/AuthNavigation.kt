@@ -1450,6 +1450,7 @@ fun AuthNavigation(
                             onClearReply = { messageViewModel.clearReply() },
                             onSetReplyTarget = { messageViewModel.setReplyTarget(it) },
                             onDeleteMessage = { messageViewModel.deleteMessage(it) },
+                            onClearChatHistory = { messageViewModel.clearChatHistory(conversationId) },
                             isLoadingOlder = isLoadingOlder,
                             hasMoreMessages = messageViewModel.hasMoreMessages,
                             onLoadOlder = { messageViewModel.loadOlderMessages(conversationId) }

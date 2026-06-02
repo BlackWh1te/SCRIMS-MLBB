@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -135,6 +137,14 @@ class SupabaseMessageRepository(
         }
     }
 
+    /**
+     * Cancel the repository-scoped coroutines to prevent leaks when this repository
+     * is no longer needed (e.g., on user logout or process teardown).
+     */
+    fun cleanup() {
+        repositoryScope.cancel()
+    }
+
     // ── Cache helpers (Mutex-protected) ──
     private suspend fun cacheConversation(conv: Conversation) {
         cacheMutex.withLock {
@@ -219,11 +229,13 @@ class SupabaseMessageRepository(
 
                 val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                 val messages = if (messagesResponse.isSuccessful) {
-                    cachedEntry.lastMessageFetch = System.currentTimeMillis()
+                    cacheMutex.withLock {
+                        conversationLookupCache[conversationId] = cachedEntry.copy(lastMessageFetch = System.currentTimeMillis())
+                    }
                     messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
                 } else emptyList()
                 if (messages.isNotEmpty()) {
-                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (_: Exception) {}
+                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
                 }
                 emit(Result.success(cachedEntry.conversation.copy(messages = messages)))
                 return@flow
@@ -248,11 +260,13 @@ class SupabaseMessageRepository(
 
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                     val messages = if (messagesResponse.isSuccessful) {
-                        newCacheEntry.lastMessageFetch = System.currentTimeMillis()
+                        cacheMutex.withLock {
+                            conversationLookupCache[conversationId] = newCacheEntry.copy(lastMessageFetch = System.currentTimeMillis())
+                        }
                         messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
                     } else emptyList()
                     if (messages.isNotEmpty()) {
-                        try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (_: Exception) {}
+                        try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
                     }
                     emit(Result.success(domainConv.copy(messages = messages)))
                     return@flow
@@ -263,18 +277,26 @@ class SupabaseMessageRepository(
             if (response.isSuccessful) {
                 val dto = response.body()?.firstOrNull()
                 if (dto != null) {
-                    val conv = mapDtoToConversation(dto)
+                    var conv = mapDtoToConversation(dto)
+                    val existingRoomConv = try { conversationDao.getConversationById(conversationId).firstOrNull() } catch (_: Exception) { null }
+                    if (existingRoomConv != null) {
+                        conv = conv.copy(historyClearedAt = existingRoomConv.historyClearedAt)
+                    }
                     cacheConversation(conv)
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
                     val messages = if (messagesResponse.isSuccessful) {
-                        val entry = cacheMutex.withLock { conversationLookupCache[conversationId] }
-                        if (entry != null) entry.lastMessageFetch = System.currentTimeMillis()
+                        cacheMutex.withLock {
+                            val entry = conversationLookupCache[conversationId]
+                            if (entry != null) {
+                                conversationLookupCache[conversationId] = entry.copy(lastMessageFetch = System.currentTimeMillis())
+                            }
+                        }
                         messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
                     } else emptyList()
                     try {
                         conversationDao.insertConversation(mapConversationToEntity(conv))
                         if (messages.isNotEmpty()) messageDao.insertMessages(messages.map { mapMessageToEntity(it) })
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Timber.w(TAG, "Failed to persist conversation/messages to Room", e) }
                     emit(Result.success(conv.copy(messages = messages)))
                 } else {
                     emit(Result.success(null))
@@ -332,8 +354,8 @@ class SupabaseMessageRepository(
                 participantBId = PostgrestFilter.eq(participantBId)
             )
             if (existing1.isSuccessful && !existing1.body().isNullOrEmpty()) {
-                Timber.d("getOrCreateConversation: found existing1 ${existing1.body()!!.first().id}")
-                val conv = mapDtoToConversation(existing1.body()!!.first())
+                Timber.d("getOrCreateConversation: found existing1 ${existing1.body()?.firstOrNull()?.id}")
+                val conv = mapDtoToConversation(existing1.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Conversation lookup failed"))); return@flow })
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
@@ -346,8 +368,8 @@ class SupabaseMessageRepository(
                 participantBId = PostgrestFilter.eq(participantAId)
             )
             if (existing2.isSuccessful && !existing2.body().isNullOrEmpty()) {
-                Timber.d("getOrCreateConversation: found existing2 ${existing2.body()!!.first().id}")
-                val conv = mapDtoToConversation(existing2.body()!!.first())
+                Timber.d("getOrCreateConversation: found existing2 ${existing2.body()?.firstOrNull()?.id}")
+                val conv = mapDtoToConversation(existing2.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Conversation lookup failed"))); return@flow })
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
@@ -372,7 +394,7 @@ class SupabaseMessageRepository(
             )
             val response = api.createConversation(newConvBody)
             if (response.isSuccessful && !response.body().isNullOrEmpty()) {
-                val created = mapDtoToConversation(response.body()!!.first())
+                val created = mapDtoToConversation(response.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Failed to create conversation"))); return@flow })
                 cacheConversation(created)
                 conversationDao.insertConversation(mapConversationToEntity(created))
                 cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
@@ -639,10 +661,28 @@ class SupabaseMessageRepository(
                 body = mapOf("is_deleted" to true, "content" to "")
             )
             if (response.isSuccessful) {
-                try { messageDao.softDeleteMessage(messageId) } catch (_: Exception) {}
+                try { messageDao.softDeleteMessage(messageId) } catch (e: Exception) { Timber.w(TAG, "Failed to soft-delete message in Room", e) }
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Failed to delete message: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun clearChatHistory(conversationId: String): Result<Unit> {
+        return try {
+            val response = api.clearConversationHistory(mapOf("p_conversation_id" to conversationId))
+            if (response.isSuccessful) {
+                // Invalidate local cache and DB messages
+                invalidateConversationCache(conversationId)
+                try {
+                    messageDao.deleteMessagesForConversation(conversationId)
+                } catch (e: Exception) { Timber.w(TAG, "Failed to delete messages from Room after history clear", e) }
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to clear history: ${response.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -661,7 +701,7 @@ class SupabaseMessageRepository(
             if (response.isSuccessful) {
                 val messages = response.body()?.map { mapDtoToMessage(it) }?.reversed() ?: emptyList()
                 if (messages.isNotEmpty()) {
-                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (_: Exception) {}
+                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
                 }
                 Result.success(messages)
             } else {
@@ -842,7 +882,7 @@ class SupabaseMessageRepository(
                     }
                     try {
                         messageDao.insertMessages(serverMessages.map { mapMessageToEntity(it) })
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Timber.w(TAG, "Failed to persist bridge messages to Room", e) }
                 }
             } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
         }
@@ -864,7 +904,7 @@ class SupabaseMessageRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_INSERT && event.record != null
             }.collect { event ->
                 try {
-                    val dto = parseRealtimeRecordToMessageDto(event.record!!)
+                    val dto = parseRealtimeRecordToMessageDto(event.record ?: return@collect)
                     if (dto.conversationId == conversationId) {
                         val message = mapDtoToMessage(dto)
                         if (message.id !in cachedIds) {
@@ -889,7 +929,7 @@ class SupabaseMessageRepository(
     override fun unsubscribeFromMessages(conversationId: String) {
         activeSubscriptions.remove(conversationId)
         val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
-        try { realtimeClient.unsubscribe(channelName) } catch (_: Exception) {}
+        try { realtimeClient.unsubscribe(channelName) } catch (e: Exception) { Timber.w(TAG, "Failed to unsubscribe from messages", e) }
     }
 
     override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
@@ -909,7 +949,7 @@ class SupabaseMessageRepository(
                 event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
             }.collect { event ->
                 try {
-                    val dto = parseRealtimeRecordToConversationDto(event.record!!)
+                    val dto = parseRealtimeRecordToConversationDto(event.record ?: return@collect)
                     if (dto.id == conversationId) {
                         emit(mapDtoToConversation(dto))
                     }
@@ -962,7 +1002,7 @@ class SupabaseMessageRepository(
                 participantBId = PostgrestFilter.eq(recipientId)
             )
             if (existing1.isSuccessful && !existing1.body().isNullOrEmpty()) {
-                val conv = mapDtoToConversation(existing1.body()!!.first())
+                val conv = mapDtoToConversation(existing1.body()?.firstOrNull() ?: return@flow emit(Result.failure(Exception("Conversation lookup failed"))))
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
@@ -972,7 +1012,7 @@ class SupabaseMessageRepository(
                 participantBId = PostgrestFilter.eq(senderId)
             )
             if (existing2.isSuccessful && !existing2.body().isNullOrEmpty()) {
-                val conv = mapDtoToConversation(existing2.body()!!.first())
+                val conv = mapDtoToConversation(existing2.body()?.firstOrNull() ?: return@flow emit(Result.failure(Exception("Conversation lookup failed"))))
                 cacheConversation(conv)
                 emit(Result.success(conv))
                 return@flow
@@ -1024,7 +1064,7 @@ class SupabaseMessageRepository(
                 )
             )
             if (response.isSuccessful && !response.body().isNullOrEmpty()) {
-                val conv = mapDtoToConversation(response.body()!!.first())
+                val conv = mapDtoToConversation(response.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Failed to get/create team conversation"))); return@flow })
                 cacheConversation(conv)
                 conversationDao.insertConversation(mapConversationToEntity(conv))
                 cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)
@@ -1092,7 +1132,8 @@ class SupabaseMessageRepository(
             teamId = dto.teamId,
             isTeamChat = dto.isTeamChat,
             isPinned = dto.isPinned,
-            groupName = dto.groupName ?: ""
+            groupName = dto.groupName ?: "",
+            historyClearedAt = dto.historyClearedAt?.let { DateUtils.parseIsoToMillis(it) } ?: 0L
         )
     }
 
@@ -1177,7 +1218,8 @@ class SupabaseMessageRepository(
             teamId = conv.teamId,
             isTeamChat = conv.isTeamChat,
             isPinned = conv.isPinned,
-            groupName = conv.groupName
+            groupName = conv.groupName,
+            historyClearedAt = conv.historyClearedAt
         )
     }
 
