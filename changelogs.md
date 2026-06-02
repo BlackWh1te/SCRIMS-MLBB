@@ -2059,7 +2059,7 @@ Code uses `version = 13` in `@Database`, but `14.json` schema file exists in `ap
 
 ## 2026-06-02 05:35 +04:00 — Audit follow-up: empty catch blocks + pre-existing compile fixes
 
-**Commit:** (pending)
+**Commit:** `c9f1e35`
 
 **Problem:** Deep audit report listed 25 crash/concurrency/logic bugs. Investigation revealed most were already fixed in prior sessions (e.g., `!!.first()` replaced with `?.firstOrNull()`, AtomicReference conversions, `geoClient` reuse, `cleanup()` method added, `fromDbStatus` mapping corrected, DELETE events handled in LFG realtime, tournament deadline validation hardened, match result lookup chain fixed).
 
