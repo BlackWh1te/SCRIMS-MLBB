@@ -200,10 +200,10 @@ class SupabaseScrimRepository(
     }
 
     override fun searchScrims(query: String, gameMode: GameMode?, region: Region?, skillLevel: SkillLevel?, status: ScrimStatus?): Flow<Result<List<Scrim>>> = flow {
+        // When a text query is provided we must search over a larger slice because
+        // the server does not support text search — filtering happens client-side.
+        val q = query.lowercase().trim()
         try {
-            // When a text query is provided we must search over a larger slice because
-            // the server does not support text search — filtering happens client-side.
-            val q = query.lowercase().trim()
             val r = api.getScrims(
                 range = if (q.isEmpty()) "0-99" else "0-499",
                 status = status?.let { PostgrestFilter.eq(toDbStatus(it)) },
@@ -216,8 +216,32 @@ class SupabaseScrimRepository(
                     q.isEmpty() || s.teamName.lowercase().contains(q) || s.description.lowercase().contains(q)
                 } ?: emptyList()
                 emit(Result.success(scrims))
-            } else emit(Result.failure(Exception("Failed to search scrims")))
-        } catch (e: Exception) { emit(Result.failure(e)) }
+            } else {
+                val errorBody = r.errorBody()?.string()?.take(200) ?: ""
+                val msg = "Failed to search scrims (HTTP ${r.code()}). $errorBody"
+                Timber.w("ScrimRepo", msg)
+                emit(Result.failure(Exception(msg)))
+            }
+        } catch (e: Exception) {
+            // Fallback to local Room cache for offline search
+            try {
+                val cached = scrimDao.getAll().map { mapEntityToScrim(it) }.filter { s ->
+                    val matchesQuery = q.isEmpty() || s.teamName.lowercase().contains(q) || s.description.lowercase().contains(q)
+                    val matchesGameMode = gameMode == null || s.gameMode == gameMode
+                    val matchesRegion = region == null || s.region == region
+                    val matchesSkill = skillLevel == null || s.skillLevel == skillLevel
+                    val matchesStatus = status == null || s.status == status
+                    matchesQuery && matchesGameMode && matchesRegion && matchesSkill && matchesStatus
+                }
+                if (cached.isNotEmpty()) {
+                    emit(Result.success(cached))
+                } else {
+                    emit(Result.failure(e))
+                }
+            } catch (_: Exception) {
+                emit(Result.failure(e))
+            }
+        }
     }
 
     override suspend fun createScrim(scrim: Scrim): Flow<Result<Scrim>> = flow {
