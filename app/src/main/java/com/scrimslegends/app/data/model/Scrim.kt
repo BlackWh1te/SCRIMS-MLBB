@@ -231,6 +231,7 @@ enum class SkillLevel {
 
 enum class ScrimStatus {
     OPEN,           // Posted, waiting for opponent
+    PENDING,        // Has pending applications, not yet accepted (DB legacy / transitional)
     FILLED,         // Opponent accepted, chat open
     READY_CHECK,    // Match time reached, waiting for both captains to ready
     IN_PROGRESS,    // Both ready, match being played

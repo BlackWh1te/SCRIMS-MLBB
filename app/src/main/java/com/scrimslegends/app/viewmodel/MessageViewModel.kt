@@ -38,6 +38,7 @@ class MessageViewModel @Inject constructor(
     private var convPollingJob: Job? = null
     private var typingDebounceJob: Job? = null
     private var conversationUpdatesJob: Job? = null
+    private var loadConversationsJob: Job? = null
 
     // ── UI State ──
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
@@ -86,9 +87,9 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    // ── Conversation list ──
     fun loadConversations(userId: String, isRefresh: Boolean = false) {
-        viewModelScope.launch {
+        loadConversationsJob?.cancel()
+        loadConversationsJob = viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             messageRepository.getConversationsForUser(userId, forceRefresh = true).collect { result ->
@@ -176,6 +177,7 @@ class MessageViewModel @Inject constructor(
             val current = _selectedConversation.value
             val needsFetch = current?.id != conversationId || current.messages.isEmpty()
             if (needsFetch) {
+                clearMessages()
                 messageRepository.getConversationById(conversationId).collect { result ->
                     result.onSuccess { conv ->
                         _selectedConversation.value = conv
@@ -450,6 +452,7 @@ class MessageViewModel @Inject constructor(
                 Timber.d("MessageFlow", "VM: timeout after 10s")
                 _error.value = "Request timed out. Check your connection."
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Timber.d("MessageFlow", "VM: exception ${e.javaClass.simpleName}: ${e.message}")
                 _error.value = e.message ?: "Unknown error"
             }
@@ -475,6 +478,7 @@ class MessageViewModel @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     Timber.w("MessageVM", "Exception ensuring team conversation for ${team.name}: ${e.message}")
                 }
             }
@@ -492,10 +496,13 @@ class MessageViewModel @Inject constructor(
      * Call this after any Map mutation.
      */
     private fun emitMessagesFromMap() {
-        val sorted = _messageMap.values.sortedBy { it.message.timestamp }
+        val currentConv = _selectedConversation.value
+        val historyClearedAt = currentConv?.historyClearedAt ?: 0L
+        val sorted = _messageMap.values
+            .filter { it.message.timestamp >= historyClearedAt }
+            .sortedBy { it.message.timestamp }
         _messagesWithDelivery.value = sorted
         // Sync back to selectedConversation (lightweight — only if changed)
-        val currentConv = _selectedConversation.value
         if (currentConv != null) {
             val newMessageList = sorted.map { it.message }
             if (currentConv.messages.size != newMessageList.size ||
@@ -533,13 +540,15 @@ class MessageViewModel @Inject constructor(
                 kotlin.math.abs(v.message.timestamp - newMessage.timestamp) < 30_000
         }?.key
         if (pendingKey != null) {
-            val pending = _messageMap.remove(pendingKey)!!
-            addOrUpdateMessage(newMessage.id, MessageWithDelivery(
-                message = newMessage,
-                status = DeliveryStatus.SENT,
-                clientMessageId = pending.clientMessageId
-            ))
-            return
+            val pending = _messageMap.remove(pendingKey)
+            if (pending != null) {
+                addOrUpdateMessage(newMessage.id, MessageWithDelivery(
+                    message = newMessage,
+                    status = DeliveryStatus.SENT,
+                    clientMessageId = pending.clientMessageId
+                ))
+                return
+            }
         }
         // New message
         addOrUpdateMessage(newMessage.id, MessageWithDelivery(message = newMessage))
@@ -622,8 +631,32 @@ class MessageViewModel @Inject constructor(
     fun resetPagination() {
         _hasMoreMessages = true
         _isLoadingOlder.value = false
-        _messageMap.clear()
         _replyingToMessage.value = null
+    }
+
+    /** Clear loaded messages completely */
+    fun clearMessages() {
+        _messageMap.clear()
+        emitMessagesFromMap()
+    }
+
+    /** Clear chat history for the current user */
+    fun clearChatHistory(conversationId: String) {
+        viewModelScope.launch {
+            val result = messageRepository.clearChatHistory(conversationId)
+            result.onSuccess {
+                // Update local conversation state to reflect current time as historyClearedAt
+                val currentConv = _selectedConversation.value
+                if (currentConv != null && currentConv.id == conversationId) {
+                    val updatedConv = currentConv.copy(historyClearedAt = System.currentTimeMillis())
+                    _selectedConversation.value = updatedConv
+                    emitMessagesFromMap() // Will re-filter and clear old messages from UI
+                }
+            }.onFailure { e ->
+                Timber.w("MessageVM", "Failed to clear chat history: ${e.message}")
+                _error.value = "Failed to clear history: ${e.message}"
+            }
+        }
     }
 
     fun setError(message: String) { _error.value = message }

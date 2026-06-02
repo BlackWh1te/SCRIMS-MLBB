@@ -40,9 +40,7 @@ class NotificationViewModel @Inject constructor(
     private var currentUserId: String? = null
 
     private var loadNotificationsJob: Job? = null
-    private var markAsReadJob: Job? = null
     private var markAllAsReadJob: Job? = null
-    private var deleteNotificationJob: Job? = null
     private var realtimeJob: Job? = null
 
     private val _notifications = MutableStateFlow<List<Notification>>(emptyList())
@@ -184,7 +182,6 @@ class NotificationViewModel @Inject constructor(
     }
 
     fun markAsRead(notificationId: String) {
-        markAsReadJob?.cancel()
         // Optimistic UI: mark as read locally immediately
         val current = _notifications.value.toMutableList()
         val index = current.indexOfFirst { it.id == notificationId }
@@ -193,7 +190,7 @@ class NotificationViewModel @Inject constructor(
             _notifications.value = current
             recomputeUnreadCount()
         }
-        markAsReadJob = viewModelScope.launch {
+        viewModelScope.launch {
             repository.markAsRead(notificationId).collect { result ->
                 result.onSuccess {
                     // Full refresh to sync with server state
@@ -219,8 +216,7 @@ class NotificationViewModel @Inject constructor(
     }
 
     fun deleteNotification(notificationId: String) {
-        deleteNotificationJob?.cancel()
-        deleteNotificationJob = viewModelScope.launch {
+        viewModelScope.launch {
             repository.deleteNotification(notificationId).collect { result ->
                 result.onSuccess { loadNotifications() }
                     .onFailure { _error.value = it.message }

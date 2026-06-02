@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "e6ccdf287f7499126c4a0e683d69d57e",
+    "identityHash": "5a636c8235bb0500727be61f223c7782",
     "entities": [
       {
         "tableName": "profiles",
@@ -110,7 +110,7 @@
       },
       {
         "tableName": "conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `scrimId` TEXT, `scrimTitle` TEXT, `participantAId` TEXT NOT NULL, `participantAName` TEXT NOT NULL, `participantATeamId` TEXT, `participantATeamName` TEXT NOT NULL, `participantAAvatarUrl` TEXT, `participantBId` TEXT NOT NULL, `participantBName` TEXT NOT NULL, `participantBTeamId` TEXT, `participantBTeamName` TEXT NOT NULL, `participantBAvatarUrl` TEXT, `lastMessage` TEXT NOT NULL, `lastMessageTime` INTEGER NOT NULL, `chatOpensAt` INTEGER NOT NULL, `isParticipantATyping` INTEGER NOT NULL, `isParticipantBTyping` INTEGER NOT NULL, `tournamentMatchId` TEXT, `participantCount` INTEGER NOT NULL, `isGroupChat` INTEGER NOT NULL, `unreadCount` INTEGER NOT NULL, `teamId` TEXT, `isTeamChat` INTEGER NOT NULL, `isPinned` INTEGER NOT NULL, `groupName` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `scrimId` TEXT, `scrimTitle` TEXT, `participantAId` TEXT NOT NULL, `participantAName` TEXT NOT NULL, `participantATeamId` TEXT, `participantATeamName` TEXT NOT NULL, `participantAAvatarUrl` TEXT, `participantBId` TEXT NOT NULL, `participantBName` TEXT NOT NULL, `participantBTeamId` TEXT, `participantBTeamName` TEXT NOT NULL, `participantBAvatarUrl` TEXT, `lastMessage` TEXT NOT NULL, `lastMessageTime` INTEGER NOT NULL, `chatOpensAt` INTEGER NOT NULL, `isParticipantATyping` INTEGER NOT NULL, `isParticipantBTyping` INTEGER NOT NULL, `tournamentMatchId` TEXT, `participantCount` INTEGER NOT NULL, `isGroupChat` INTEGER NOT NULL, `unreadCount` INTEGER NOT NULL, `teamId` TEXT, `isTeamChat` INTEGER NOT NULL, `isPinned` INTEGER NOT NULL, `groupName` TEXT, `historyClearedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -267,6 +267,12 @@
             "columnName": "groupName",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "historyClearedAt",
+            "columnName": "historyClearedAt",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -1198,7 +1204,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e6ccdf287f7499126c4a0e683d69d57e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5a636c8235bb0500727be61f223c7782')"
     ]
   }
 }

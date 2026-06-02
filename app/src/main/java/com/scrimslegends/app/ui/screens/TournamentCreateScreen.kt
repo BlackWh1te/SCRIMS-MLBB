@@ -61,6 +61,8 @@ fun TournamentCreateScreen(
     var newReqType by remember { mutableStateOf(RequirementType.CUSTOM) }
     var newReqLabel by remember { mutableStateOf("") }
     var newReqUrl by remember { mutableStateOf("") }
+    
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     // Date/time picker states — registration
     val regDatePickerState = rememberDatePickerState(
@@ -522,6 +524,15 @@ fun TournamentCreateScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (validationError != null) {
+                    Text(
+                        text = validationError!!,
+                        color = ErrorRed,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 // Create button
                 iOSPrimaryButton(
                     text = stringResource(R.string.tournament_create_submit),
@@ -536,9 +547,17 @@ fun TournamentCreateScreen(
                         val maxTeamsVal = maxTeams.toIntOrNull() ?: 16
                         val minTeamSizeVal = minTeamSize.toIntOrNull() ?: 5
                         val bestOfVal = bestOf.toIntOrNull() ?: 1
-                        if (maxTeamsVal < 4 || maxTeamsVal > 64) return@iOSPrimaryButton
-                        if (minTeamSizeVal < 3 || minTeamSizeVal > 7) return@iOSPrimaryButton
+                        if (maxTeamsVal < 4 || maxTeamsVal > 64) {
+                            validationError = "Max teams must be between 4 and 64"
+                            return@iOSPrimaryButton
+                        }
+                        if (minTeamSizeVal < 3 || minTeamSizeVal > 7) {
+                            validationError = "Min team size must be between 3 and 7"
+                            return@iOSPrimaryButton
+                        }
                         if (bestOfVal !in listOf(1, 2)) return@iOSPrimaryButton
+                        
+                        validationError = null
                         val tournament = Tournament(
                             title = title.trim(),
                             description = description.trim(),

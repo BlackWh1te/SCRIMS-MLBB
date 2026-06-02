@@ -1,6 +1,7 @@
 package com.scrimslegends.app.ui.screens
 
 import android.net.Uri
+import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -1272,7 +1273,9 @@ private fun CreatePostSheet(
                                     )
                                     result.onSuccess { url -> screenshotUrl = url }
                                 }
-                            } catch (_: Exception) { }
+                            } catch (e: Exception) {
+                                Timber.w("Screenshot upload failed: ${e.message}")
+                            }
                             isUploading = false
                         }
 

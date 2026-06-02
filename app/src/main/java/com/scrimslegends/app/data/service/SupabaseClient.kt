@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
  * Uses Retrofit/OkHttp (already in dependencies) to call Supabase's auto-generated REST API.
  * No additional Kotlin client library needed.
  *
- * Database is live at: https://efhbyrhxtsadbqjsfogc.supabase.co
+ * Production Supabase URL is injected via BuildConfig at build time.
  */
 object SupabaseConfig {
     val SUPABASE_URL = BuildConfig.SUPABASE_URL

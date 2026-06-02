@@ -174,7 +174,7 @@ class ScrimRepository : ScrimRepositoryInterface {
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
             val scrim = scrims[index]
-            if (scrim.status != ScrimStatus.OPEN) {
+            if (scrim.status != ScrimStatus.OPEN && scrim.status != ScrimStatus.PENDING) {
                 emit(Result.failure(Exception("Scrim is no longer open for applications")))
                 return@flow
             }

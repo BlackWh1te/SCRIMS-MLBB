@@ -7,6 +7,7 @@ import com.scrimslegends.app.util.DateUtils
 import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.util.Collections
 
 /**
  * Supabase-backed match result repository.
@@ -34,11 +35,11 @@ class SupabaseMatchResultRepository(
 
     // ─── Team name cache (avoids repeated fetchTeamName calls) ───
     // HARDENED: Bounded LRU cache (max 50 entries) to prevent unbounded growth
-    private val teamNameCache = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+    private val teamNameCache = Collections.synchronizedMap(object : LinkedHashMap<String, String>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
             return size > 50
         }
-    }
+    })
 
     override suspend fun getAllMatchResults(): Flow<Result<List<MatchResult>>> = flow {
         try {
@@ -83,7 +84,7 @@ class SupabaseMatchResultRepository(
             // Try to find by match_results.id first
             val mrResponse = api.getMatchResults(PostgrestFilter.eq(id))
             if (mrResponse.isSuccessful && mrResponse.body()?.isNotEmpty() == true) {
-                val mr = mrResponse.body()!!.first()
+                val mr = mrResponse.body()?.firstOrNull() ?: run { emit(Result.failure(Exception("Match result not found"))); return@flow }
                 // match_results.match_id now references matches.id, not scrims.id
                 val matchResponse = api.getMatchById(PostgrestFilter.eq(mr.matchId))
                 val matchDto = matchResponse.body()?.firstOrNull()
@@ -361,10 +362,16 @@ class SupabaseMatchResultRepository(
                     mapOf(column to screenshotUrl)
                 )
             }
-            val scrimResp = api.getScrimById(PostgrestFilter.eq(matchResultId))
-            val scrim = scrimResp.body()?.firstOrNull()
+            // Look up scrim via match_result -> match -> scrim chain
+            val scrim = if (mr != null) {
+                val matchResp = api.getMatchById(PostgrestFilter.eq(mr.matchId))
+                val match = matchResp.body()?.firstOrNull()
+                if (match != null) {
+                    api.getScrimById(PostgrestFilter.eq(match.scrimId)).body()?.firstOrNull()
+                } else null
+            } else null
             if (scrim != null) {
-                emit(Result.success(mapScrimToMatchResult(scrim)))
+                emit(Result.success(mapScrimToMatchResult(scrim, mr)))
             } else {
                 emit(Result.failure(Exception("Match result not found")))
             }
@@ -383,8 +390,6 @@ class SupabaseMatchResultRepository(
     // ─── Mapping (N+1 FIXED: uses batch profile cache) ───
 
     private suspend fun mapScrimToMatchResult(scrimDto: ScrimDto, mrDto: MatchResultDto? = null): MatchResult {
-        val isTeamA = scrimDto.winnerTeamId == scrimDto.teamId
-
         // Fetch team names (with local cache to avoid redundant calls)
         val teamAName = fetchTeamNameCached(scrimDto.teamId)
         val teamBName = scrimDto.opponentTeamId?.let { fetchTeamNameCached(it) } ?: scrimDto.opponentTeamName ?: ""
@@ -430,11 +435,13 @@ class SupabaseMatchResultRepository(
                 )
             }
 
+        // Both reports reflect the resolved winner; per-team claimed winners are not stored
+        // separately in the current schema, so we show the single resolved result for both.
         val teamAReport = winnerTeamId?.let {
             TeamReport(
                 reporterId = scrimDto.teamId,
                 reporterName = "",
-                reportedWinnerId = if (isTeamA) scrimDto.teamId else scrimDto.opponentTeamId ?: "",
+                reportedWinnerId = winnerTeamId,
                 reportedAt = System.currentTimeMillis()
             )
         }
@@ -442,7 +449,7 @@ class SupabaseMatchResultRepository(
             TeamReport(
                 reporterId = scrimDto.opponentTeamId ?: "",
                 reporterName = "",
-                reportedWinnerId = if (!isTeamA) scrimDto.opponentTeamId ?: "" else scrimDto.teamId,
+                reportedWinnerId = winnerTeamId,
                 reportedAt = System.currentTimeMillis()
             )
         }

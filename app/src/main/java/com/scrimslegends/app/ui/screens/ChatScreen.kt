@@ -1211,6 +1211,7 @@ private fun DateSeparator(timestamp: Long) {
 private fun ChatLockedOverlay(timeUntilOpens: Long) {
     var remaining by remember { mutableLongStateOf(timeUntilOpens) }
     LaunchedEffect(timeUntilOpens) {
+        remaining = timeUntilOpens
         while (remaining > 0) {
             kotlinx.coroutines.delay(1000)
             remaining = (remaining - 1000).coerceAtLeast(0)

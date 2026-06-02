@@ -7,6 +7,7 @@ import com.scrimslegends.app.data.model.Team
 import com.scrimslegends.app.data.model.TeamInvite
 import com.scrimslegends.app.data.repository.TeamRepositoryInterface
 import dagger.hilt.android.lifecycle.HiltViewModel
+import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,7 +157,9 @@ class TeamViewModel @Inject constructor(
                             }
                             (teamRepository as? com.scrimslegends.app.data.repository.SupabaseTeamRepository)
                                 ?.uploadTeamLogo(team.id, bytes)
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Timber.w("Logo upload failed: ${e.message}")
+                        }
                     }
                     loadTeams()
                 }.onFailure { error ->

@@ -50,7 +50,7 @@ fun ScheduleScreen(
             val isHost = scrim.teamId in userTeamIds
             val isOpponent = scrim.opponentTeamId in userTeamIds
             when {
-                isHost -> scrim.status != ScrimStatus.OPEN && scrim.status != ScrimStatus.CANCELLED
+                isHost -> scrim.status !in setOf(ScrimStatus.OPEN, ScrimStatus.PENDING, ScrimStatus.CANCELLED)
                 isOpponent -> true
                 else -> false
             }
@@ -186,7 +186,7 @@ private fun ScheduleCard(
     onClick: () -> Unit
 ) {
     val statusColor = when (scrim.status) {
-        ScrimStatus.OPEN -> SuccessGreen
+        ScrimStatus.OPEN, ScrimStatus.PENDING -> SuccessGreen
         ScrimStatus.FILLED -> BluePrimary
         ScrimStatus.READY_CHECK -> WarningOrange
         ScrimStatus.IN_PROGRESS -> WarningOrange

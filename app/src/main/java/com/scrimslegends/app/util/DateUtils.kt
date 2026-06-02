@@ -34,11 +34,11 @@ object DateUtils {
     }
 
     private val dateFormatter by lazy {
-        SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = utcTimeZone }
     }
 
     private val timeFormatter by lazy {
-        SimpleDateFormat("HH:mm:ss", Locale.US)
+        SimpleDateFormat("HH:mm:ss", Locale.US).apply { timeZone = utcTimeZone }
     }
 
     /**
@@ -71,4 +71,21 @@ object DateUtils {
      * Format epoch millis as ISO-8601 UTC string (used for chat opens at, etc.)
      */
     fun formatIsoNow(): String = isoFormatter.format(Date())
+
+    /**
+     * Format epoch millis as a human-readable date+time string in the given region's timezone.
+     * Appends the region display name in parentheses.
+     * Falls back to UTC if regionTimeZoneId is null.
+     */
+    fun formatDetailedTimeInRegion(
+        timestamp: Long,
+        regionTimeZoneId: String? = null,
+        regionDisplayName: String? = null
+    ): String {
+        val tz = if (regionTimeZoneId != null) TimeZone.getTimeZone(regionTimeZoneId) else utcTimeZone
+        val sdf = SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", java.util.Locale.getDefault())
+        sdf.timeZone = tz
+        val formatted = sdf.format(Date(timestamp))
+        return if (regionDisplayName != null) "$formatted ($regionDisplayName)" else formatted
+    }
 }

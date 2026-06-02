@@ -39,12 +39,15 @@ class LfgViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private var loadPostsJob: kotlinx.coroutines.Job? = null
+
     init {
         loadPosts()
     }
 
     fun loadPosts(isRefresh: Boolean = false) {
-        viewModelScope.launch {
+        loadPostsJob?.cancel()
+        loadPostsJob = viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
@@ -87,14 +90,11 @@ class LfgViewModel @Inject constructor(
         facebook: String = "",
         avatarUrl: String? = null
     ) {
-        // Enforce 1 post per day per user
+        // Enforce 1 active post per user at a time
         val myRecentPost = _posts.value.find { it.playerId == playerId }
         if (myRecentPost != null) {
-            val twentyFourHoursAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
-            if (myRecentPost.createdAt > twentyFourHoursAgo) {
-                _error.value = "You can only create 1 post per day. Delete your current post first."
-                return
-            }
+            _error.value = "You already have an active post. Delete your current post first."
+            return
         }
 
         viewModelScope.launch {

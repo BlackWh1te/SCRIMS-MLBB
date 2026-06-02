@@ -160,11 +160,11 @@ class SupabaseLfgRepository(
             cacheManager.invalidate(CACHE_KEY_ALL)
             Result.success(Unit)
         } else {
-            // Fallback: read current count and PATCH with +1
+            // Fallback: read just this post by id and PATCH with +1
             try {
-                val current = api.getLfgPosts(playerId = null, range = null)
+                val current = api.getLfgPostById(PostgrestFilter.eq(postId))
                 if (current.isSuccessful) {
-                    val post = current.body()?.find { it.id == postId }
+                    val post = current.body()?.firstOrNull()
                     val newCount = (post?.viewCount ?: 0) + 1
                     val patchResponse = api.updateLfgPost(
                         id = PostgrestFilter.eq(postId),
@@ -350,13 +350,19 @@ class SupabaseLfgRepository(
                     )
                 )
             ).filter { event ->
-                (event.eventType == SupabaseRealtimeClient.EVENT_INSERT ||
+                event.eventType == SupabaseRealtimeClient.EVENT_INSERT ||
                         event.eventType == SupabaseRealtimeClient.EVENT_UPDATE ||
-                        event.eventType == SupabaseRealtimeClient.EVENT_DELETE) && event.record != null
+                        event.eventType == SupabaseRealtimeClient.EVENT_DELETE
             }.collect { event ->
                 try {
-                    val post = mapDtoToModel(parseRealtimeRecordToLfgPostDto(event.record!!))
-                    emit(post)
+                    // DELETE events have oldRecord, not record. INSERT/UPDATE have record.
+                    val record = event.record ?: event.oldRecord
+                    if (record != null) {
+                        val post = mapDtoToModel(parseRealtimeRecordToLfgPostDto(record))
+                        emit(post)
+                    } else {
+                        Timber.w("LfgRepo", "Realtime LFG event has no record or oldRecord")
+                    }
                 } catch (e: Exception) {
                     Timber.w("LfgRepo", "Failed to parse Realtime LFG event: ${e.message}")
                 }

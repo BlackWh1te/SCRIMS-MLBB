@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import timber.log.Timber
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -292,8 +293,12 @@ fun TournamentDetailScreen(
                                         )
                                     }
 
-                                    // Generate Pairings (check_in or in_progress with no matches yet)
-                                    if ((t.isCheckIn || (t.isLive && matches.isEmpty())) && teams.count { it.checkedIn } >= 4) {
+                                    // Generate Pairings (check_in or in_progress with no matches yet, or next round)
+                                    val maxRounds = t.swissRounds ?: kotlin.math.ceil(kotlin.math.log2(t.maxTeams.toDouble())).toInt()
+                                    val allCurrentRoundMatchesFinished = matches.isNotEmpty() && matches.filter { it.roundNumber == t.currentRound }.all { it.status == MatchStatus.COMPLETED || it.status == MatchStatus.CANCELLED || it.status == MatchStatus.BYE }
+                                    val canGenerateNextRound = t.isLive && allCurrentRoundMatchesFinished && t.currentRound < maxRounds
+                                    
+                                    if ((t.isCheckIn && teams.count { it.checkedIn } >= 4) || canGenerateNextRound) {
                                         HostActionButton(
                                             icon = Icons.Default.Casino,
                                             label = "Generate Round ${t.currentRound + 1} Pairings",
@@ -325,7 +330,8 @@ fun TournamentDetailScreen(
                                     }
 
                                     // Complete Tournament
-                                    if (t.isLive && matches.all { it.status == MatchStatus.COMPLETED || it.status == MatchStatus.CANCELLED || it.status == MatchStatus.BYE } && matches.isNotEmpty()) {
+                                    val isFinalRoundFinished = t.isLive && allCurrentRoundMatchesFinished && t.currentRound >= maxRounds
+                                    if (isFinalRoundFinished) {
                                         HostActionButton(
                                             icon = Icons.Default.EmojiEvents,
                                             label = "Complete Tournament",
@@ -567,46 +573,66 @@ fun TournamentDetailScreen(
                             style = MaterialTheme.typography.labelMedium.copy(color = TextTertiary, fontWeight = FontWeight.SemiBold)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
-                        myTeams.forEach { team ->
-                            val isSelected = selectedTeamId == team.id
-                            val animBorder by animateColorAsState(
-                                if (isSelected) GoldPrimary else Separator,
-                                label = "team_border"
-                            )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) GoldPrimary.copy(alpha = 0.1f) else SurfaceElevated)
-                                    .clickable { selectedTeamId = team.id }
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        if (myTeams.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier.size(36.dp).clip(CircleShape)
-                                        .background(if (isSelected) GoldPrimary.copy(alpha = 0.2f) else Separator.copy(alpha = 0.5f)),
-                                    contentAlignment = Alignment.Center
+                                Text(
+                                    text = "You don't have any teams. Create or join a team first.",
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        } else {
+                            myTeams.forEach { team ->
+                                val isSelected = selectedTeamId == team.id
+                                val hasEnoughPlayers = team.currentPlayerCount >= t.minTeamSize
+                                val animBorder by animateColorAsState(
+                                    if (isSelected) GoldPrimary else Separator,
+                                    label = "team_border"
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(if (isSelected) GoldPrimary.copy(alpha = 0.1f) else SurfaceElevated)
+                                        .clickable(enabled = hasEnoughPlayers) { selectedTeamId = team.id }
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    if (isSelected) {
-                                        Icon(Icons.Default.Check, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
-                                    } else {
-                                        Icon(Icons.Default.Groups, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+                                    Box(
+                                        modifier = Modifier.size(36.dp).clip(CircleShape)
+                                            .background(if (isSelected) GoldPrimary.copy(alpha = 0.2f) else Separator.copy(alpha = 0.5f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                                        } else {
+                                            Icon(Icons.Default.Groups, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+                                        }
                                     }
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = team.name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = if (isSelected) GoldPrimary else White,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = team.name,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = if (isSelected) GoldPrimary else if (hasEnoughPlayers) White else TextSecondary,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
                                         )
-                                    )
-                                    Text(
-                                        text = "${team.currentPlayerCount}/${team.maxPlayers} players",
-                                        style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 11.sp)
-                                    )
+                                        Text(
+                                            text = "${team.currentPlayerCount}/${team.maxPlayers} players",
+                                            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 11.sp)
+                                        )
+                                        if (!hasEnoughPlayers) {
+                                            Text(
+                                                text = "Not enough players (min ${t.minTeamSize})",
+                                                style = MaterialTheme.typography.labelSmall.copy(color = ErrorRed, fontSize = 11.sp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1782,7 +1808,7 @@ private fun MatchVsCard(
                     if (!match.liveStreamUrl.isNullOrBlank()) {
                         OutlinedButton(
                             onClick = {
-                                try { uriHandler.openUri(match.liveStreamUrl) } catch (_: Exception) {}
+                                try { uriHandler.openUri(match.liveStreamUrl) } catch (e: Exception) { Timber.w("Failed to open live stream: ${e.message}") }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),

@@ -63,7 +63,9 @@ data class Conversation(
     val isPinned: Boolean = false,          // pinned at top of message list
     val groupName: String = "",             // display name for the group
     // ── New-messages tracking ──
-    val lastSeenMessageId: String? = null   // last message ID the user saw (for "new messages" separator)
+    val lastSeenMessageId: String? = null,   // last message ID the user saw (for "new messages" separator)
+    // ── Clear History ──
+    val historyClearedAt: Long = 0L
 ) {
     val timeUntilChatOpens: Long
         get() = (chatOpensAt - System.currentTimeMillis()).coerceAtLeast(0)

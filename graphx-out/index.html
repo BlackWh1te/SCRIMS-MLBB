@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Android Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0a0a12;
+    color: #e0e0e0;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #1a1a2e;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-stats { font-size: 0.9rem; color: #888; }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(46,204,113,0.1);
+    color: #2ecc71;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: #2ecc71;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Section */
+  .section { margin-bottom: 40px; }
+  .section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .section h2::before {
+    content: '';
+    width: 4px; height: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+  }
+
+  /* Build info */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .info-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .info-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .info-value { font-size: 1.4rem; font-weight: 700; color: #fff; }
+  .status-ok { color: #2ecc71; }
+  .status-warn { color: #f39c12; }
+
+  /* Nav cards */
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .nav-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.2s;
+  }
+  .nav-card:hover { background: rgba(255,255,255,0.06); border-color: #667eea; transform: translateY(-2px); }
+  .nav-card.disabled { opacity: 0.4; pointer-events: none; }
+  .nav-card h3 { font-size: 1rem; margin-bottom: 6px; color: #fff; }
+  .nav-card p { font-size: 0.8rem; color: #888; }
+
+  /* Activity timeline */
+  .timeline {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .timeline::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    background: #1a1a2e;
+    top: 0; bottom: 0;
+    left: 50%;
+    margin-left: -1.5px;
+  }
+  .timeline-item {
+    padding: 10px 40px;
+    position: relative;
+    width: 50%;
+  }
+  .timeline-item.left { left: 0; }
+  .timeline-item.right { left: 50%; }
+  .timeline-item::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    right: -8px;
+    background: #667eea;
+    border: 3px solid #0a0a12;
+    top: 20px;
+    border-radius: 50%;
+    z-index: 1;
+  }
+  .timeline-item.right::after { left: -8px; }
+  .timeline-card {
+    padding: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    position: relative;
+  }
+  .timeline-card:hover { border-color: #667eea; }
+  .tl-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .tl-hash {
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #667eea;
+    background: rgba(102,126,234,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .tl-source {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .ai-badge { background: rgba(155,89,182,0.2); color: #9b59b6; }
+  .user-badge { background: rgba(46,204,113,0.2); color: #2ecc71; }
+  .tl-date { font-size: 0.8rem; color: #888; margin-left: auto; }
+  .tl-author { font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+  .tl-msg { font-size: 0.85rem; color: #ccc; margin-bottom: 10px; word-break: break-word; }
+  .tl-files { margin-top: 8px; }
+  .tl-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .tl-file:last-child { border-bottom: none; }
+  .tl-action {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .tl-action.added { background: #2ecc71; }
+  .tl-action.modified { background: #f39c12; }
+  .tl-action.deleted { background: #e74c3c; }
+  .tl-fpath { font-family: monospace; color: #bbb; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .tl-more { color: #888; font-size: 0.75rem; font-style: italic; }
+
+  /* Hot files */
+  .hot-files-list { display: flex; flex-direction: column; gap: 8px; }
+  .hot-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .hot-file-item:hover { border-color: #667eea; }
+  .hot-rank {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .hot-info { flex: 1; }
+  .hot-path { font-family: monospace; font-size: 0.85rem; color: #ccc; }
+  .hot-meta { font-size: 0.75rem; color: #888; margin-top: 2px; }
+
+  /* File tables */
+  .file-table { overflow-x: auto; }
+  .file-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .file-table th {
+    text-align: left;
+    padding: 10px;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .file-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: #ccc;
+    font-family: monospace;
+    font-size: 0.8rem;
+  }
+  .file-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Velocity */
+  .velocity-chart { display: flex; flex-direction: column; gap: 8px; }
+  .velocity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+  }
+  .velocity-date { width: 100px; color: #888; font-family: monospace; font-size: 0.8rem; flex-shrink: 0; }
+  .velocity-bar-wrap {
+    flex: 1;
+    height: 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .velocity-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .velocity-count { width: 30px; text-align: right; color: #aaa; }
+  .velocity-summary {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #aaa;
+    text-align: center;
+  }
+
+  /* Merge commits */
+  .merge-list { display: flex; flex-direction: column; gap: 8px; }
+  .merge-item {
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    font-size: 0.85rem;
+  }
+  .merge-item:hover { border-color: #667eea; }
+  .merge-hash {
+    font-family: monospace;
+    color: #667eea;
+    background: rgba(102,126,234,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+  .merge-author { color: #aaa; margin-left: 8px; }
+  .merge-date { color: #888; margin-left: 8px; font-size: 0.8rem; }
+  .merge-msg { color: #ccc; margin-top: 6px; word-break: break-word; }
+  .merge-parents { color: #666; font-size: 0.75rem; margin-top: 4px; font-family: monospace; }
+
+  /* Git status */
+  .git-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .git-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .git-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .git-value { font-size: 1.3rem; font-weight: 700; color: #fff; }
+  .git-value.branch { color: #667eea; }
+  .staged-yes { color: #f39c12; }
+  .staged-no { color: #2ecc71; }
+  .staged-list {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .staged-list h4 { font-size: 0.9rem; color: #aaa; margin-bottom: 12px; }
+  .staged-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .staged-item:last-child { border-bottom: none; }
+  .staged-action {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    min-width: 60px;
+    text-align: center;
+  }
+  .staged-action.added { background: #2ecc71; color: #fff; }
+  .staged-action.modified { background: #f39c12; color: #fff; }
+  .staged-action.deleted { background: #e74c3c; color: #fff; }
+  .staged-path { flex: 1; font-family: monospace; font-size: 0.8rem; color: #ccc; }
+  .staged-size { color: #666; font-size: 0.75rem; }
+
+  /* Communities */
+  .communities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .community-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s;
+  }
+  .community-card:hover { background: rgba(255,255,255,0.05); border-color: #667eea; }
+  .community-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .community-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .community-name { font-weight: 600; color: #fff; font-size: 0.95rem; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .community-count { font-size: 0.8rem; color: #888; }
+  .community-meta { font-size: 0.8rem; color: #aaa; }
+  .cohesion-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-top: 6px;
+  }
+  .cohesion-high { background: rgba(46,204,113,0.15); color: #2ecc71; }
+  .cohesion-med { background: rgba(241,196,15,0.15); color: #f1c40f; }
+  .cohesion-low { background: rgba(231,76,60,0.15); color: #e74c3c; }
+
+  /* God nodes */
+  .god-nodes-list { display: flex; flex-direction: column; gap: 8px; }
+  .god-node-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .god-node-item:hover { border-color: #667eea; }
+  .god-rank {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+  .god-info { flex: 1; }
+  .god-name { font-weight: 600; color: #fff; font-size: 0.9rem; }
+  .god-degree { font-size: 0.8rem; color: #888; }
+
+  /* Audit trail */
+  .audit-trail {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .audit-item {
+    flex: 1;
+    min-width: 160px;
+    padding: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .audit-value { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+  .audit-value.extracted { color: #2ecc71; }
+  .audit-value.inferred { color: #f39c12; }
+  .audit-value.ambiguous { color: #e74c3c; }
+  .audit-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .audit-pct { font-size: 0.75rem; color: #666; margin-top: 4px; }
+
+  /* Empty state */
+  .empty-state {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 30px;
+    font-size: 0.9rem;
+  }
+
+  /* Polling status */
+  .poll-status {
+    text-align: center;
+    padding: 8px;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 10px;
+  }
+  .poll-status.updating { color: #667eea; }
+  .poll-status.error { color: #e74c3c; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: #666;
+    font-size: 0.85rem;
+    border-top: 1px solid #1a1a2e;
+    margin-top: 40px;
+  }
+  .footer a { color: #667eea; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .timeline::after { left: 20px; }
+    .timeline-item { width: 100%; padding-left: 50px; padding-right: 10px; }
+    .timeline-item.right { left: 0; }
+    .timeline-item::after { left: 12px !important; right: auto !important; }
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .nav-grid { grid-template-columns: 1fr; }
+    .git-status-grid { grid-template-columns: repeat(2, 1fr); }
+    .info-grid { grid-template-columns: repeat(2, 1fr); }
+    .communities-grid { grid-template-columns: 1fr; }
+    .audit-trail { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1 id="page-title">Android Dashboard</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="live-badge"><span class="live-dot"></span>Live</span>
+      <div class="header-stats" id="header-stats">loading...</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Graph Status</h2>
+    <div class="info-grid" id="graph-status-grid"></div>
+    <div class="nav-grid" id="output-nav"></div>
+  </div>
+
+  <div class="section">
+    <h2>Git Status</h2>
+    <div class="git-status-grid" id="git-status-grid"></div>
+    <div id="staged-files"></div>
+  </div>
+
+  <div class="section">
+    <h2>Activity Timeline</h2>
+    <div id="activity-timeline"></div>
+    <div class="poll-status" id="poll-status">Auto-refreshing every 30s...</div>
+  </div>
+
+  <div class="section">
+    <h2>Hot Files (Most Changed)</h2>
+    <div id="hot-files"></div>
+  </div>
+
+  <div class="section">
+    <h2>Change Velocity (Last 7 Days)</h2>
+    <div id="velocity-chart"></div>
+  </div>
+
+  <div class="section">
+    <h2>Recent Merge Commits</h2>
+    <div id="merge-commits"></div>
+  </div>
+
+  <div class="section">
+    <h2>External Files (Untracked)</h2>
+    <div id="external-files"></div>
+  </div>
+
+  <div class="section">
+    <h2>Large Files (&gt;10MB)</h2>
+    <div id="large-files"></div>
+  </div>
+
+  <div class="section">
+    <h2 id="communities-title">Communities</h2>
+    <div class="communities-grid" id="communities-grid"></div>
+  </div>
+
+  <div class="section">
+    <h2>God Nodes (Top Connected)</h2>
+    <div class="god-nodes-list" id="god-nodes"></div>
+  </div>
+
+  <div class="section">
+    <h2>Audit Trail</h2>
+    <div class="audit-trail" id="audit-trail"></div>
+  </div>
+
+  <div class="footer">
+    <p>Generated by <a href="https://pypi.org/project/ai-graphx/" target="_blank">Ai-GraphX</a> &middot; <a href="#" onclick="location.reload();return false;">Refresh Dashboard</a></p>
+  </div>
+</div>
+
+<script>
+// Embedded initial data from graph generation
+const INITIAL_DATA = {"project_name": "Android", "graph": {"nodes": 4939, "edges": 7494, "communities": 315, "last_build": "2026-06-02 02:56", "total_runs": 2, "needs_update": false}, "branch": "git_not_available", "git": {"current_branch": "git_not_available", "total_branches": 0, "untracked_branches": 0, "staged_count": 0, "staged": [], "is_git_repo": true}, "activity": {"commits": [], "merge_commits": [], "hot_files": [], "external_files": [], "large_files": [{"file": "tools\\supabase.exe", "size": 98396160, "size_mb": 93.837890625}, {"file": "app\\build\\outputs\\apk\\debug\\app-debug.apk", "size": 94779634, "size_mb": 90.38890266418457}, {"file": ".gradle\\8.5\\executionHistory\\executionHistory.bin", "size": 86473871, "size_mb": 82.46790981292725}, {"file": ".gradle\\8.13\\executionHistory\\executionHistory.bin", "size": 75435554, "size_mb": 71.94095039367676}, {"file": "app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex", "size": 43098980, "size_mb": 41.10239028930664}], "velocity": {"daily_counts": {}, "total_commits": 0, "average_per_day": 0.0}}, "community_stats": [{"cid": 0, "label": "Community 0", "count": 137, "color": "#4E79A7", "cohesion": 0.01, "top_node": "SupabaseApiService"}, {"cid": 1, "label": "Community 1", "count": 65, "color": "#F28E2B", "cohesion": 0.06, "top_node": ".request()"}, {"cid": 2, "label": "Community 2", "count": 61, "color": "#E15759", "cohesion": 0.05, "top_node": "SecurityUnitTest"}, {"cid": 3, "label": "Community 3", "count": 59, "color": "#76B7B2", "cohesion": 0.05, "top_node": "ProfileDaoAdvancedTest"}, {"cid": 4, "label": "Community 4", "count": 57, "color": "#59A14F", "cohesion": 0.06, "top_node": "user.py"}, {"cid": 5, "label": "Community 5", "count": 54, "color": "#EDC948", "cohesion": 0.06, "top_node": "TournamentPropertyTest"}, {"cid": 6, "label": "Community 6", "count": 51, "color": "#B07AA1", "cohesion": 0.07, "top_node": "AuthNavigation()"}, {"cid": 7, "label": "Community 7", "count": 50, "color": "#FF9DA7", "cohesion": 0.07, "top_node": "TeamApplication"}, {"cid": 8, "label": "Community 8", "count": 50, "color": "#9C755F", "cohesion": 0.11, "top_node": "SupabaseScrimRepository"}, {"cid": 9, "label": "Community 9", "count": 48, "color": "#BAB0AC", "cohesion": 0.08, "top_node": "MessageViewModel"}, {"cid": 10, "label": "Community 10", "count": 48, "color": "#4E79A7", "cohesion": 0.04, "top_node": "AuthorizationUtilsTest"}, {"cid": 11, "label": "Community 11", "count": 47, "color": "#F28E2B", "cohesion": 0.06, "top_node": "TournamentViewModelTest"}], "total_communities": 315, "god_nodes": [{"id": "service_supabaseapiservice_supabaseapiservice", "label": "SupabaseApiService", "degree": 138}, {"id": "model_userprofile_userprofile", "label": "UserProfile", "degree": 76}, {"id": "test_modelunittest_modelunittest", "label": "ModelUnitTest", "degree": 63}, {"id": "test_securityunittest_securityunittest", "label": "SecurityUnitTest", "degree": 59}, {"id": "model_tournamentpropertytest_tournamentpropertytest", "label": "TournamentPropertyTest", "degree": 56}, {"id": "repository_authrepository_authrepository", "label": "AuthRepository", "degree": 50}, {"id": "repository_supabasetournamentrepository_supabasetournamentrepository", "label": "SupabaseTournamentRepository", "degree": 50}, {"id": "viewmodel_tournamentviewmodeltest_tournamentviewmodeltest", "label": "TournamentViewModelTest", "degree": 50}], "audit_trail": [{"type": "EXTRACTED", "count": 6174, "pct": 82}, {"type": "INFERRED", "count": 1320, "pct": 18}, {"type": "AMBIGUOUS", "count": 0, "pct": 0}], "outputs_exist": {"graph.html": true, "GRAPH_TREE.html": false, "wiki": false, "GRAPH_REPORT.md": true, "graph.json": true, "graph.svg": false, "graph.graphml": false}};
+
+// State for live updates
+let currentActivity = null;
+let pollTimer = null;
+
+// --- Utility functions ---
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s);
+  return div.innerHTML;
+}
+
+function fmtDate(isoStr) {
+  if (!isoStr || isoStr === 'N/A') return 'N/A';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d)) return isoStr.slice(0,16);
+    return d.toISOString().slice(0,16).replace('T',' ');
+  } catch(e) { return isoStr.slice(0,16); }
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  } catch(e) { return ''; }
+}
+
+// --- Renderers ---
+function renderGraphStatus() {
+  const g = INITIAL_DATA.graph;
+  const statusClass = g.needs_update ? 'status-warn' : 'status-ok';
+  const statusText = g.needs_update ? 'NEEDS UPDATE' : 'OK';
+  const html = `
+    <div class="info-card"><div class="info-label">Status</div><div class="info-value ${statusClass}">${esc(statusText)}</div></div>
+    <div class="info-card"><div class="info-label">Nodes</div><div class="info-value">${esc(g.nodes)}</div></div>
+    <div class="info-card"><div class="info-label">Edges</div><div class="info-value">${esc(g.edges)}</div></div>
+    <div class="info-card"><div class="info-label">Communities</div><div class="info-value">${esc(g.communities)}</div></div>
+    <div class="info-card"><div class="info-label">Total Runs</div><div class="info-value">${esc(g.total_runs)}</div></div>
+    <div class="info-card"><div class="info-label">Last Build</div><div class="info-value">${esc(g.last_build)}</div></div>
+  `;
+  document.getElementById('graph-status-grid').innerHTML = html;
+  document.getElementById('header-stats').textContent = `${g.nodes} nodes · ${g.edges} edges · ${g.communities} communities · Branch: ${esc(INITIAL_DATA.branch)}`;
+}
+
+function renderOutputNav() {
+  const o = INITIAL_DATA.outputs_exist;
+  const items = [
+    {key:'graph.html', icon:'🕸', title:'Interactive Graph', desc:'Force-directed visualization'},
+    {key:'GRAPH_TREE.html', icon:'🌳', title:'Tree View', desc:'Collapsible directory tree'},
+    {key:'wiki', icon:'📚', title:'Knowledge Wiki', desc:'Wikipedia-style articles'},
+    {key:'GRAPH_REPORT.md', icon:'📋', title:'Audit Report', desc:'God nodes, connections'},
+    {key:'graph.json', icon:'📦', title:'Raw Graph JSON', desc:'Download complete data', dl:true},
+    {key:'graph.svg', icon:'🖼', title:'SVG Export', desc:'Vector graphic', dl:true},
+  ];
+  const html = items.map(item => {
+    const disabled = !o[item.key] ? 'disabled' : '';
+    const dl = item.dl ? 'download' : '';
+    const href = item.key === 'wiki' ? 'wiki/index.md' : item.key;
+    return `<a href="${esc(href)}" class="nav-card ${disabled}" ${dl}><h3>${item.icon} ${esc(item.title)}</h3><p>${esc(item.desc)}</p></a>`;
+  }).join('');
+  document.getElementById('output-nav').innerHTML = html;
+}
+
+function renderGitStatus() {
+  const g = INITIAL_DATA.git;
+  if (!g.is_git_repo) {
+    document.getElementById('git-status-grid').innerHTML = '<p class="empty-state">Not a git repository.</p>';
+    document.getElementById('staged-files').innerHTML = '';
+    return;
+  }
+  const stagedClass = g.staged_count > 0 ? 'staged-yes' : 'staged-no';
+  let html = `
+    <div class="git-card"><div class="git-label">Current Branch</div><div class="git-value branch">${esc(g.current_branch)}</div></div>
+    <div class="git-card"><div class="git-label">Total Branches</div><div class="git-value">${esc(g.total_branches)}</div></div>
+    <div class="git-card"><div class="git-label">Untracked Branches</div><div class="git-value">${esc(g.untracked_branches)}</div></div>
+    <div class="git-card"><div class="git-label">Staged Changes</div><div class="git-value ${stagedClass}">${esc(g.staged_count)}</div></div>
+  `;
+  document.getElementById('git-status-grid').innerHTML = html;
+
+  if (g.staged && g.staged.length > 0) {
+    let stagedHtml = '<div class="staged-list"><h4>Staged Files (Not Committed)</h4>';
+    g.staged.forEach(s => {
+      stagedHtml += `<div class="staged-item"><span class="staged-action ${esc(s.action||'modified')}">${esc((s.action||'modified').toUpperCase())}</span> <span class="staged-path">${esc(s.file)}</span> <span class="staged-size">${Number(s.size||0).toLocaleString()} bytes</span></div>`;
+    });
+    stagedHtml += '</div>';
+    document.getElementById('staged-files').innerHTML = stagedHtml;
+  } else {
+    document.getElementById('staged-files').innerHTML = '';
+  }
+}
+
+function renderActivityTimeline(commits) {
+  if (!commits || commits.length === 0) {
+    document.getElementById('activity-timeline').innerHTML = '<p class="empty-state">No commit history found.</p>';
+    return;
+  }
+  let html = '<div class="timeline">';
+  commits.forEach((commit, i) => {
+    const side = i % 2 === 0 ? 'left' : 'right';
+    const hash = esc(commit.short_hash || (commit.hash||'').slice(0,7) || '?');
+    const author = esc(commit.author || 'Unknown');
+    const date = fmtDate(commit.date);
+    const msg = esc((commit.message||'').slice(0,80));
+    const source = commit.source === 'ai' ? 'ai' : 'user';
+    const badgeClass = source === 'ai' ? 'ai-badge' : 'user-badge';
+    const badgeLabel = source === 'ai' ? 'AI' : 'USER';
+    const files = commit.files_changed || [];
+    let filesHtml = '';
+    files.slice(0,8).forEach(fc => {
+      const action = fc.action || 'modified';
+      filesHtml += `<div class="tl-file"><span class="tl-action ${esc(action)}">${esc(action.charAt(0).toUpperCase())}</span><span class="tl-fpath">${esc(fc.file)}</span></div>`;
+    });
+    if (files.length > 8) {
+      filesHtml += `<div class="tl-file"><span class="tl-more">+${files.length - 8} more files</span></div>`;
+    }
+    html += `
+      <div class="timeline-item ${side}">
+        <div class="timeline-dot"></div>
+        <div class="timeline-card">
+          <div class="tl-header">
+            <span class="tl-hash">${hash}</span>
+            <span class="tl-source ${badgeClass}">${badgeLabel}</span>
+            <span class="tl-date">${date}</span>
+          </div>
+          <div class="tl-author">${author}</div>
+          <div class="tl-msg">${msg}</div>
+          <div class="tl-files">${filesHtml}</div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  document.getElementById('activity-timeline').innerHTML = html;
+}
+
+function renderHotFiles(hotFiles) {
+  if (!hotFiles || hotFiles.length === 0) {
+    document.getElementById('hot-files').innerHTML = '<p class="empty-state">No hot files detected yet.</p>';
+    return;
+  }
+  let html = '<div class="hot-files-list">';
+  hotFiles.forEach(hf => {
+    const fpath = esc(hf.file || '?');
+    const count = hf.commit_count || 0;
+    const last = hf.last_commit || {};
+    const lastHash = esc((last.hash||'').slice(0,7) || '?');
+    const lastDate = fmtDate(last.date);
+    const srcIcon = last.source === 'ai' ? '&#129302;' : '&#128100;';
+    html += `
+      <div class="hot-file-item">
+        <div class="hot-rank">${esc(count)}</div>
+        <div class="hot-info">
+          <div class="hot-path">${fpath}</div>
+          <div class="hot-meta">Last: ${lastHash} &middot; ${lastDate} &middot; ${srcIcon}</div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  document.getElementById('hot-files').innerHTML = html;
+}
+
+function renderVelocity(velocity) {
+  const daily = velocity.daily_counts || {};
+  const entries = Object.entries(daily).sort().reverse().slice(0,14);
+  if (entries.length === 0) {
+    document.getElementById('velocity-chart').innerHTML = '<p class="empty-state">No velocity data available.</p>';
+    return;
+  }
+  const maxCount = Math.max(...entries.map(e => e[1]), 1);
+  let html = '<div class="velocity-chart">';
+  entries.forEach(([date, count]) => {
+    const pct = (count / maxCount * 100).toFixed(0);
+    html += `
+      <div class="velocity-row">
+        <div class="velocity-date">${esc(date)}</div>
+        <div class="velocity-bar-wrap"><div class="velocity-bar" style="width:${pct}%"></div></div>
+        <div class="velocity-count">${esc(count)}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<div class="velocity-summary">Total: ${esc(velocity.total_commits||0)} commits &middot; Avg: ${Number(velocity.average_per_day||0).toFixed(1)}/day</div>`;
+  document.getElementById('velocity-chart').innerHTML = html;
+}
+
+function renderMergeCommits(merges) {
+  if (!merges || merges.length === 0) {
+    document.getElementById('merge-commits').innerHTML = '<p class="empty-state">No merge commits found.</p>';
+    return;
+  }
+  let html = '<div class="merge-list">';
+  merges.forEach(mc => {
+    const hash = esc(mc.hash || '?');
+    const author = esc(mc.author || '?');
+    const date = fmtDate(mc.date);
+    const msg = esc((mc.message||'').slice(0,60));
+    const parents = (mc.parents || []).join(', ');
+    html += `
+      <div class="merge-item">
+        <span class="merge-hash">${hash}</span>
+        <span class="merge-author">${author}</span>
+        <span class="merge-date">${date}</span>
+        <div class="merge-msg">${msg}</div>
+        <div class="merge-parents">merged: ${esc(parents)}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  document.getElementById('merge-commits').innerHTML = html;
+}
+
+function renderExternalFiles(files) {
+  if (!files || files.length === 0) {
+    document.getElementById('external-files').innerHTML = '<p class="empty-state">No external (untracked) files detected.</p>';
+    return;
+  }
+  let html = '<div class="file-table"><table><thead><tr><th>File</th><th>Created</th><th>Modified</th><th>Size</th></tr></thead><tbody>';
+  files.forEach(ef => {
+    const size = Number(ef.size || 0) / (1024*1024);
+    html += `<tr><td>${esc(ef.file||'')}</td><td>${fmtDate(ef.created)}</td><td>${fmtDate(ef.modified)}</td><td>${size.toFixed(2)} MB</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('external-files').innerHTML = html;
+}
+
+function renderLargeFiles(files) {
+  if (!files || files.length === 0) {
+    document.getElementById('large-files').innerHTML = '<p class="empty-state">No large files (&gt;10MB) detected.</p>';
+    return;
+  }
+  let html = '<div class="file-table"><table><thead><tr><th>File</th><th>Size</th></tr></thead><tbody>';
+  files.forEach(lf => {
+    html += `<tr><td>${esc(lf.file||'')}</td><td>${Number(lf.size_mb||0).toFixed(2)} MB</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('large-files').innerHTML = html;
+}
+
+function renderCommunities() {
+  const comms = INITIAL_DATA.community_stats;
+  const total = INITIAL_DATA.total_communities;
+  document.getElementById('communities-title').textContent = `Communities (${total})`;
+  let html = '';
+  comms.forEach(c => {
+    const cohesionClass = c.cohesion >= 0.7 ? 'cohesion-high' : c.cohesion >= 0.4 ? 'cohesion-med' : 'cohesion-low';
+    const cohesionText = c.cohesion ? `Cohesion: ${c.cohesion.toFixed(2)}` : 'Cohesion: N/A';
+    const topNode = esc((c.top_node||'').slice(0,40));
+    const topSuffix = (c.top_node||'').length > 40 ? '...' : '';
+    html += `
+      <div class="community-card">
+        <div class="community-header">
+          <div class="community-dot" style="background:${esc(c.color)}"></div>
+          <div class="community-name">${esc(c.label)}</div>
+          <div class="community-count">${esc(c.count)} nodes</div>
+        </div>
+        <div class="community-meta">Top: ${topNode}${topSuffix}</div>
+        <span class="cohesion-badge ${cohesionClass}">${esc(cohesionText)}</span>
+      </div>
+    `;
+  });
+  if (total > comms.length) {
+    html += `<div class="community-card" style="display:flex;align-items:center;justify-content:center;color:#888;"><div>+${total - comms.length} more communities</div></div>`;
+  }
+  document.getElementById('communities-grid').innerHTML = html;
+}
+
+function renderGodNodes() {
+  const gods = INITIAL_DATA.god_nodes;
+  let html = '';
+  gods.forEach((god, idx) => {
+    html += `
+      <div class="god-node-item">
+        <div class="god-rank">${idx+1}</div>
+        <div class="god-info">
+          <div class="god-name">${esc(god.label || 'Unknown')}</div>
+          <div class="god-degree">${esc(god.degree || 0)} connections</div>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('god-nodes').innerHTML = html;
+}
+
+function renderAuditTrail() {
+  const trail = INITIAL_DATA.audit_trail;
+  let html = '';
+  trail.forEach(a => {
+    html += `
+      <div class="audit-item">
+        <div class="audit-value ${esc(a.type.toLowerCase())}">${esc(a.count)}</div>
+        <div class="audit-label">${esc(a.type)}</div>
+        <div class="audit-pct">${esc(a.pct)}%</div>
+      </div>
+    `;
+  });
+  document.getElementById('audit-trail').innerHTML = html;
+}
+
+// --- Live polling for activity.json ---
+async function fetchActivity() {
+  try {
+    const resp = await fetch('activity.json', { cache: 'no-store' });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function updateActivityFromJson() {
+  const statusEl = document.getElementById('poll-status');
+  statusEl.textContent = 'Checking for updates...';
+  statusEl.className = 'poll-status updating';
+
+  const data = await fetchActivity();
+  if (!data) {
+    statusEl.textContent = 'Live updates paused (refresh page for latest). Run `graphx serve` for live polling.';
+    statusEl.className = 'poll-status error';
+    return;
+  }
+
+  const commits = data.commits || [];
+  // Only update if different from current embedded data
+  if (JSON.stringify(commits) !== JSON.stringify(currentActivity)) {
+    currentActivity = commits;
+    renderActivityTimeline(commits);
+    // Also update related sections if present
+    if (data.hot_files) renderHotFiles(data.hot_files);
+    statusEl.textContent = `Updated ${commits.length} commits from activity.json`;
+    statusEl.className = 'poll-status';
+  } else {
+    statusEl.textContent = 'Up to date. Next check in 30s...';
+    statusEl.className = 'poll-status';
+  }
+}
+
+// --- Main render ---
+function renderAll() {
+  renderGraphStatus();
+  renderOutputNav();
+  renderGitStatus();
+
+  const act = INITIAL_DATA.activity;
+  currentActivity = act.commits;
+  renderActivityTimeline(act.commits);
+  renderHotFiles(act.hot_files);
+  renderVelocity(act.velocity);
+  renderMergeCommits(act.merge_commits);
+  renderExternalFiles(act.external_files);
+  renderLargeFiles(act.large_files);
+
+  renderCommunities();
+  renderGodNodes();
+  renderAuditTrail();
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  renderAll();
+  // Poll for live activity updates every 30 seconds
+  pollTimer = setInterval(updateActivityFromJson, 30000);
+  // First check after 2 seconds (give browser time to settle)
+  setTimeout(updateActivityFromJson, 2000);
+});
+</script>
+</body>
+</html>

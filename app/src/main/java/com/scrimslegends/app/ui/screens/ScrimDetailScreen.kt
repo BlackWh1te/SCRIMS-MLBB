@@ -1,6 +1,7 @@
 package com.scrimslegends.app.ui.screens
 
 import android.net.Uri
+import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -90,7 +91,7 @@ fun ScrimDetailScreen(
 
     // Derive leader-capable teams (teams where current user IS the leader AND has min players)
     val leaderTeams = teams.filter { it.leaderId == currentUserId && it.meetsMinPlayers }
-    val canApply = scrim.status == ScrimStatus.OPEN && leaderTeams.isNotEmpty()
+    val canApply = (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) && leaderTeams.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -299,7 +300,7 @@ fun ScrimDetailScreen(
                         InfoCard(
                             icon = Icons.Default.AccessTime,
                             label = stringResource(R.string.scheduled_time),
-                            value = formatDetailedTime(scrim.scheduledTime)
+                            value = formatDetailedTime(scrim.scheduledTime, scrim.region.timeZoneId, scrim.region.displayName)
                         )
                     }
                 }
@@ -494,7 +495,7 @@ fun ScrimDetailScreen(
                             }
 
                             // ── VISITOR: Has teams but not enough players ──
-                            scrim.status == ScrimStatus.OPEN && teams.any { it.leaderId == currentUserId && !it.meetsMinPlayers } -> {
+                            (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) && teams.any { it.leaderId == currentUserId && !it.meetsMinPlayers } -> {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     GradientButton(
                                         text = stringResource(R.string.need_5_plus_players),
@@ -513,7 +514,7 @@ fun ScrimDetailScreen(
                             }
 
                             // ── VISITOR: Not a leader of any team ──
-                            scrim.status == ScrimStatus.OPEN -> {
+                            (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) -> {
                                 GradientButton(
                                     text = stringResource(R.string.team_leaders_only),
                                     onClick = { },
@@ -694,7 +695,7 @@ private fun HostActions(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         when (scrim.status) {
-            ScrimStatus.OPEN -> {
+            ScrimStatus.OPEN, ScrimStatus.PENDING -> {
                 // Show pending applications
                 val pendingApps = scrim.applications.filter { it.status == ApplicationStatus.PENDING }
                 if (pendingApps.isNotEmpty()) {
@@ -1114,7 +1115,7 @@ private fun ApplicantStatusCard(
 @Composable
 private fun ScrimStatusCard(scrim: Scrim) {
     val (label, color) = when (scrim.status) {
-        ScrimStatus.OPEN -> stringResource(R.string.scrim_status_open) to SuccessGreen
+        ScrimStatus.OPEN, ScrimStatus.PENDING -> stringResource(R.string.scrim_status_open) to SuccessGreen
         ScrimStatus.FILLED -> stringResource(R.string.scrim_status_filled) to WarningOrange
         ScrimStatus.READY_CHECK -> stringResource(R.string.ready_check) to WarningOrange
         ScrimStatus.IN_PROGRESS -> stringResource(R.string.scrim_status_in_progress) to BluePrimary
@@ -1433,11 +1434,10 @@ private fun ChatGateCountdown(timeUntilOpens: Long) {
     var remaining by remember { mutableLongStateOf(timeUntilOpens) }
 
     LaunchedEffect(timeUntilOpens) {
+        remaining = timeUntilOpens
         while (remaining > 0) {
             kotlinx.coroutines.delay(1000)
-            if (remaining > 0) {
-                remaining = (remaining - 1000).coerceAtLeast(0)
-            }
+            remaining = (remaining - 1000).coerceAtLeast(0)
         }
     }
 
@@ -1486,9 +1486,19 @@ private fun ChatGateCountdown(timeUntilOpens: Long) {
     }
 }
 
-fun formatDetailedTime(timestamp: Long): String {
+fun formatDetailedTime(
+    timestamp: Long,
+    regionTimeZoneId: String? = null,
+    regionDisplayName: String? = null
+): String {
+    val tz = if (regionTimeZoneId != null)
+        java.util.TimeZone.getTimeZone(regionTimeZoneId)
+    else
+        java.util.TimeZone.getTimeZone("UTC")
     val sdf = SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+    sdf.timeZone = tz
+    val formatted = sdf.format(Date(timestamp))
+    return if (regionDisplayName != null) "$formatted ($regionDisplayName)" else formatted
 }
 
 // ═════════════════════════════════════════════════════════════════
@@ -1701,9 +1711,7 @@ private fun InProgressSection(
             uploadError = null
             coroutineScope.launch {
                 try {
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val bytes = inputStream?.readBytes()
-                    inputStream?.close()
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     if (bytes != null) {
                         val compressedBytes = com.scrimslegends.app.util.ImageUtils.compressImage(bytes)
                         val path = "screenshots/${scrim.id}_${currentTeamId}_game${gameNum}_${System.currentTimeMillis()}.jpg"
@@ -2353,9 +2361,7 @@ private fun LegacyScreenshotUpload(
             localUploading = true
             coroutineScope.launch {
                 try {
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val bytes = inputStream?.readBytes()
-                    inputStream?.close()
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     if (bytes != null) {
                         val compressedBytes = com.scrimslegends.app.util.ImageUtils.compressImage(bytes)
                         val path = "screenshots/${scrim.id}_${currentTeamId}_${System.currentTimeMillis()}.jpg"
@@ -2369,7 +2375,9 @@ private fun LegacyScreenshotUpload(
                             onUploadScreenshot?.invoke(scrim.id, currentTeamId, url)
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Timber.w("Screenshot upload failed: ${e.message}")
+                }
                 localUploading = false
             }
         }

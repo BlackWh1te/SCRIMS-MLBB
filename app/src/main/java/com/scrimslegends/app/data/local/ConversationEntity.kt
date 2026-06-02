@@ -33,7 +33,8 @@ data class ConversationEntity(
     val teamId: String? = null,
     val isTeamChat: Boolean = false,
     val isPinned: Boolean = false,
-    val groupName: String? = null
+    val groupName: String? = null,
+    val historyClearedAt: Long = 0L
 ) {
     fun toDomainModel() = Conversation(
         id = id,
@@ -64,6 +65,7 @@ data class ConversationEntity(
         teamId = teamId,
         isTeamChat = isTeamChat,
         isPinned = isPinned,
-        groupName = groupName ?: ""
+        groupName = groupName ?: "",
+        historyClearedAt = historyClearedAt
     )
 }

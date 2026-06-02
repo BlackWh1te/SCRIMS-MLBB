@@ -245,8 +245,10 @@ class SupabaseRealtimeClient @Inject constructor() {
             joinChannel(channelName, configs)
         }
 
-        // Collect from the global SharedFlow, filtering for this channel only
-        val collectJob = scope.launch {
+        // Collect from the global SharedFlow, filtering for this channel only.
+        // Use callbackFlow's own scope (not the class scope) so that a disconnect/reconnect
+        // cycle doesn't orphan or kill this collector.
+        val collectJob = launch {
             _events.filter { it.channelName == channelName }.collect { event ->
                 trySend(event)
             }
@@ -368,6 +370,12 @@ class SupabaseRealtimeClient @Inject constructor() {
         val joinRef = channelJoinRefs.getOrPut(channelName) { AtomicLong(0L) }.incrementAndGet()
         val ref = nextRef()
         pendingJoins[ref] = CompletableDeferred()
+
+        // Guard against stuck deferreds if the server never replies.
+        scope.launch {
+            delay(30_000)
+            pendingJoins.remove(ref)?.complete(false)
+        }
 
         val message = gson.toJson(arrayOf(joinRef, ref, channelName, PHOENIX_EVENT_JOIN, payload))
         val sent = ws?.send(message)

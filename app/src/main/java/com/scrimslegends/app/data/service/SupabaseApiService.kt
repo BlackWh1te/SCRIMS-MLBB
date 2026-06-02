@@ -414,7 +414,8 @@ data class ConversationDto(
     @SerializedName("team_id") val teamId: String? = null,
     @SerializedName("is_team_chat") val isTeamChat: Boolean = false,
     @SerializedName("is_pinned") val isPinned: Boolean = false,
-    @SerializedName("group_name") val groupName: String? = null
+    @SerializedName("group_name") val groupName: String? = null,
+    @SerializedName("history_cleared_at") val historyClearedAt: String? = null
 )
 
 /**
@@ -642,6 +643,9 @@ interface SupabaseApiService {
         @Query("skill_level") skillLevel: String? = null,
         @Query("order") order: String = "created_at.desc"
     ): Response<List<ScrimDto>>
+
+    @POST("rpc/clear_conversation_history")
+    suspend fun clearConversationHistory(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
 
     @GET("scrims")
     suspend fun getScrimById(

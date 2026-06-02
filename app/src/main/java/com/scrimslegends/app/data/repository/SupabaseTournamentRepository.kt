@@ -306,7 +306,10 @@ class SupabaseTournamentRepository(
         if (tournament.registrationDeadline > 0 && tournament.registrationDeadline <= now) {
             return Result.failure(Exception("Registration deadline must be in the future"))
         }
-        if (tournament.checkInDeadline > 0 && tournament.checkInDeadline >= regDeadline) {
+        if (checkInDeadline <= now) {
+            return Result.failure(Exception("Check-in deadline must be in the future"))
+        }
+        if (checkInDeadline >= regDeadline) {
             return Result.failure(Exception("Check-in deadline must be before registration deadline"))
         }
 

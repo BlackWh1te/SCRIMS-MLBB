@@ -92,7 +92,7 @@ fun ScrimListScreen(
     }
 
     // Dynamic counts per status
-    val openCount = scrims.count { it.status == ScrimStatus.OPEN }
+    val openCount = scrims.count { it.status == ScrimStatus.OPEN || it.status == ScrimStatus.PENDING }
 
     Box(
         modifier = Modifier
@@ -184,7 +184,7 @@ fun ScrimListScreen(
                             val isActive = selectedStatus == chip.status
                             val count    = when (chip.status) {
                                 null                  -> scrims.size
-                                ScrimStatus.OPEN      -> scrims.count { it.status == ScrimStatus.OPEN }
+                                ScrimStatus.OPEN      -> scrims.count { it.status == ScrimStatus.OPEN || it.status == ScrimStatus.PENDING }
                                 ScrimStatus.FILLED    -> scrims.count { it.status == ScrimStatus.FILLED }
                                 ScrimStatus.IN_PROGRESS -> scrims.count { it.status == ScrimStatus.IN_PROGRESS }
                                 ScrimStatus.COMPLETED -> scrims.count { it.status == ScrimStatus.COMPLETED }
@@ -622,7 +622,7 @@ fun PremiumScrimCard(
     )
 
     val statusColor = when (scrim.status) {
-        ScrimStatus.OPEN        -> SuccessGreen
+        ScrimStatus.OPEN, ScrimStatus.PENDING -> SuccessGreen
         ScrimStatus.FILLED      -> WarningOrange
         ScrimStatus.READY_CHECK -> WarningOrange
         ScrimStatus.IN_PROGRESS -> BluePrimary
@@ -631,7 +631,7 @@ fun PremiumScrimCard(
     }
 
     val statusText = when (scrim.status) {
-        ScrimStatus.OPEN        -> stringResource(R.string.open)
+        ScrimStatus.OPEN, ScrimStatus.PENDING -> stringResource(R.string.open)
         ScrimStatus.FILLED      -> stringResource(R.string.filled)
         ScrimStatus.READY_CHECK -> "Ready"
         ScrimStatus.IN_PROGRESS -> stringResource(R.string.in_progress)
@@ -646,8 +646,8 @@ fun PremiumScrimCard(
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                elevation  = if (scrim.status == ScrimStatus.OPEN) 10.dp else 6.dp,
-                spotColor  = statusColor.copy(alpha = if (scrim.status == ScrimStatus.OPEN) 0.22f else 0.12f),
+                elevation  = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 10.dp else 6.dp,
+                spotColor  = statusColor.copy(alpha = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 0.22f else 0.12f),
                 shape      = RoundedCornerShape(22.dp)
             ),
         colors        = CardDefaults.cardColors(containerColor = SurfaceCard),

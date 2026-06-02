@@ -1,35 +1,31 @@
 {
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\apply_security_fixes.js": {
-    "mtime": 1778657898.8927286,
-    "hash": "af88ada15d582bc74198d9194e9d1e52"
-  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\build.gradle.kts": {
-    "mtime": 1778430413.6587243,
-    "hash": "a0bd4227964040b867c50607e3d4495f"
+    "mtime": 1779918204.6521795,
+    "hash": "823ac598de0570f1744c54c5e680a860"
   },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\generate_translations.py": {
-    "mtime": 1778542679.6189442,
-    "hash": "ba17a31b475927b521391ac9e6cd5acc"
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\clean_strings.py": {
+    "mtime": 1780339054.4668508,
+    "hash": "88fd123a0db26e2dceba3bb0fd5d1689"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\fix_repo.py": {
+    "mtime": 1780339690.4582713,
+    "hash": "65b30b9fee563df93ac78120a4524703"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\gradlew": {
     "mtime": 1778429485.5588841,
     "hash": "f2cc5dea1e5914d55cee1ecf4f8d6038"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\paginate.py": {
+    "mtime": 1780339278.783628,
+    "hash": "e9f313011dd9bffa456ffef9b8359c5e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\paginate2.py": {
+    "mtime": 1780339488.4039688,
+    "hash": "2b980ec0925cadb518b828e1db71e3ca"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\settings.gradle.kts": {
     "mtime": 1778721740.82267,
     "hash": "bb2ccea7336c3913db8bcbf6e45dc0f1"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\setup_database.py": {
-    "mtime": 1778640051.368834,
-    "hash": "5a7b8e535e2707e50c725b7c58894799"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\setup_db.py": {
-    "mtime": 1778640432.349124,
-    "hash": "9777e7f4808260ac3b6de243dbb1cabf"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase_migration.sql": {
-    "mtime": 1778718501.9160206,
-    "hash": "9830bf470bca8b963bf0cd94d618ed7d"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\admin\\next.config.js": {
     "mtime": 1778638441.4031496,
@@ -280,500 +276,1184 @@
     "hash": "e55f9af1b46bea6cd0c39f79bfed068f"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\build.gradle.kts": {
-    "mtime": 1778721938.5849338,
-    "hash": "a5d8f29b76dedb76b5ddd431a1c6a56c"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\MainActivity.kt": {
-    "mtime": 1778716407.0507617,
-    "hash": "cd09bfe3c30f4842b1eef9a9f0910537"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\MLBBScrimApplication.kt": {
-    "mtime": 1778725105.4868786,
-    "hash": "1a5b1076ae30ceac586996ebbc8d35a2"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\local\\MLBBScrimDatabase.kt": {
-    "mtime": 1778717542.335557,
-    "hash": "244619193d62d85601e647fac3e47881"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\local\\ProfileDao.kt": {
-    "mtime": 1778717537.2716806,
-    "hash": "88a9c31a98e37e8c99e8f7cfaf50cf2b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\local\\ProfileEntity.kt": {
-    "mtime": 1778717532.2325351,
-    "hash": "6b792e0032d93a6afd0563e481584376"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\localization\\Language.kt": {
-    "mtime": 1778542378.156263,
-    "hash": "fdc57649e45dd1f94d31506db84ff0b3"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\localization\\LocaleManager.kt": {
-    "mtime": 1778720862.7671566,
-    "hash": "0a5de497ee137c97ed2646d108061a30"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\localization\\TranslationManager.kt": {
-    "mtime": 1778543185.0468776,
-    "hash": "5960ada78b7c21920537d73568bbcdb4"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Achievement.kt": {
-    "mtime": 1778552411.519131,
-    "hash": "5ccecfabb6b815bdd2e69de0bc2b07e2"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\AuthResult.kt": {
-    "mtime": 1778655126.3180573,
-    "hash": "fc4ba56196858a4b03ea080aaf22fdd0"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\LeaderboardEntry.kt": {
-    "mtime": 1778502153.7446127,
-    "hash": "2c4eabc235472c36d7b2c89dddb9666c"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\LfgPost.kt": {
-    "mtime": 1778552731.1378126,
-    "hash": "fc839307e058a6b11d5a154eb762c631"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\MatchResult.kt": {
-    "mtime": 1778710137.4533486,
-    "hash": "bad63e0f04e481fe3afcff2d3477fa5b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Message.kt": {
-    "mtime": 1778554084.7961705,
-    "hash": "8f37a6262b13654078972d36840a0f40"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\NewsArticle.kt": {
-    "mtime": 1778543168.4021304,
-    "hash": "456ec12d8fafb0e9e9e6aa71930b5517"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Notification.kt": {
-    "mtime": 1778510182.6817536,
-    "hash": "750372f43ff1732e0c55cb80dda7b172"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Player.kt": {
-    "mtime": 1778629614.2097306,
-    "hash": "77b98005dae66b74a74596a39b842117"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\RankTier.kt": {
-    "mtime": 1778550301.1359499,
-    "hash": "c7b2e4466ade5022e23d7300229c67c2"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Scrim.kt": {
-    "mtime": 1778629633.5018961,
-    "hash": "9bb1f61a00664cd1e8762d1dfa2af3b5"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\ScrimApplication.kt": {
-    "mtime": 1778554084.7941124,
-    "hash": "a0d747f40754ad7e7e20b4a5d3a9964c"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\ScrimRuleset.kt": {
-    "mtime": 1778552506.146086,
-    "hash": "cda0a716d5f239955f1ddc13ef8b6734"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\Team.kt": {
-    "mtime": 1778554066.3223622,
-    "hash": "e28f159b9d4582d56d3b86b19a4eaf0d"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\TeamInvite.kt": {
-    "mtime": 1778629636.5751688,
-    "hash": "1ed98afffd83e8692687c8b540e96546"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\model\\UserProfile.kt": {
-    "mtime": 1778630781.720193,
-    "hash": "eafec45190aac15a97c3b7bdf8aaf6c6"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\preferences\\AppSettings.kt": {
-    "mtime": 1778593865.6409163,
-    "hash": "3f9a7e9cf8c2b0019134aa599a551752"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\preferences\\OnboardingPreferences.kt": {
-    "mtime": 1778511376.7637475,
-    "hash": "7607034b795096d5fec7b9cfd75ab8d6"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\preferences\\ThemePreferences.kt": {
-    "mtime": 1778441638.7022421,
-    "hash": "03dce01c6c7cad4d4ceee6d26e76ba7d"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\AuthRepository.kt": {
-    "mtime": 1778725017.506215,
-    "hash": "87f7ce787b31e8e9b8aa137095999f71"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\AuthRepositoryInterface.kt": {
-    "mtime": 1778717805.4604232,
-    "hash": "0e6133f575d5234ebcdd2f1c5efeef7e"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\LeaderboardRepository.kt": {
-    "mtime": 1778550379.2086234,
-    "hash": "6885152d2da183ddb2369653c2ee6a33"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\LeaderboardRepositoryInterface.kt": {
-    "mtime": 1778717726.440141,
-    "hash": "839fb4671fcece9ac9da135ebb3a7cd2"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\LfgRepositoryInterface.kt": {
-    "mtime": 1778717605.3856304,
-    "hash": "635aaed32e9c3adbef8407fcc216da70"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\MatchResultRepository.kt": {
-    "mtime": 1778714784.5033567,
-    "hash": "9e64f72924a2533552256af36cae16ce"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\MatchResultRepositoryInterface.kt": {
-    "mtime": 1778713970.662321,
-    "hash": "098c1f49c300718b4dbd5e21626876b9"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\MessageRepository.kt": {
-    "mtime": 1778717459.8413446,
-    "hash": "28d7a51d258472197c400d17e6740105"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\MessageRepositoryInterface.kt": {
-    "mtime": 1778717413.2283113,
-    "hash": "b38bd547c99d594b6705dafbccae447b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\NewsCacheManager.kt": {
-    "mtime": 1778545626.2558136,
-    "hash": "c0881fca8c4fc3d24c236c7117922c7a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\NewsRepository.kt": {
-    "mtime": 1778546306.5077755,
-    "hash": "f5e2429ff3cdffab0f141b0d7f5c2f12"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\NotificationRepository.kt": {
-    "mtime": 1778510182.6840985,
-    "hash": "3cf1cebf4d87ee7ac1a71aec88329b21"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\ScrimRepository.kt": {
-    "mtime": 1778644541.9356992,
-    "hash": "ba3283b3e1d362ba86e917d10d0b393b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\ScrimRepositoryInterface.kt": {
-    "mtime": 1778643989.7997627,
-    "hash": "c56ef21359cd64d734d91b1b460e145f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseAuthRepository.kt": {
-    "mtime": 1778725080.3380585,
-    "hash": "8a7c7c9b468386801666b48375b473e7"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseLeaderboardRepository.kt": {
-    "mtime": 1778717763.30529,
-    "hash": "88468fef02e110c8860704981e5972ec"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseLfgRepository.kt": {
-    "mtime": 1778725086.8382022,
-    "hash": "4b2e3ff40e8ce736d319cd7f8a69e94d"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseMatchResultRepository.kt": {
-    "mtime": 1778719111.0017114,
-    "hash": "165f5c7484dfc98c35ca7856b9840d91"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseScrimRepository.kt": {
-    "mtime": 1778718920.231876,
-    "hash": "9102cc21bf054ffb8f2e7f192cdf460a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\SupabaseTeamRepository.kt": {
-    "mtime": 1778717314.1234083,
-    "hash": "a3a364fbfda8fb8db4c21dd6f7d52690"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\TeamRepository.kt": {
-    "mtime": 1778644522.442639,
-    "hash": "8875b1d86d45b58f7162c773d9572092"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\repository\\TeamRepositoryInterface.kt": {
-    "mtime": 1778644470.073954,
-    "hash": "3804092795d85901b86cfd78efe49526"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\NewsApiService.kt": {
-    "mtime": 1778546299.0309753,
-    "hash": "92a2477a60f2145d4b81b9b35a334715"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\OtpApiService.kt": {
-    "mtime": 1778692944.1100934,
-    "hash": "0318959bf3905dd0d7c65bb0559f1659"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\SupabaseApiService.kt": {
-    "mtime": 1778724981.3366246,
-    "hash": "2062ac3bdd0bd692bf105030a431580f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\SupabaseClient.kt": {
-    "mtime": 1778716801.323294,
-    "hash": "fc5cdd9a692c6e50a1f7a016b24599e6"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\SupabaseStorageUpload.kt": {
-    "mtime": 1778717169.5196452,
-    "hash": "b0447ed37003428b5bf3c19d3448a2c7"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\data\\service\\TwitterApiService.kt": {
-    "mtime": 1778544419.2959087,
-    "hash": "e301dd8f61ce6aae915cd7628decba4b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\security\\SecureStorage.kt": {
-    "mtime": 1778715705.4927893,
-    "hash": "6054b77541d6758eb7928b95e9b2f48f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\security\\SecurityUtils.kt": {
-    "mtime": 1778640954.8533947,
-    "hash": "350d4fe698441c3714ad4fe0fd19d032"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\AchievementBadge.kt": {
-    "mtime": 1778553053.6062396,
-    "hash": "4de02f057f3fb4b8dab2035d1f35ac74"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\BottomNav.kt": {
-    "mtime": 1778703573.0644455,
-    "hash": "6d7ecdd92b1bbab816105ee1d6252837"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\CommonComponents.kt": {
-    "mtime": 1778708175.7821717,
-    "hash": "d4c9d122633736e157f7741619cfa5c0"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\DebouncedSearchBar.kt": {
-    "mtime": 1778533540.5337107,
-    "hash": "820503fb02c8e563e56e9debc4484208"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\LevelUpCelebration.kt": {
-    "mtime": 1778553042.0224018,
-    "hash": "c58db3aec9278bae38afd94f84012149"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\PremiumAnimations.kt": {
-    "mtime": 1778708235.8017871,
-    "hash": "f68ee6c2332ccfe497f4fc472400ac27"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\PremiumIcons.kt": {
-    "mtime": 1778591961.2509882,
-    "hash": "dd1ff3aa1f630ed20c14b8859d4253ca"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\PremiumiOSComponents.kt": {
-    "mtime": 1778693312.5895853,
-    "hash": "72a0749764274992e15ea2f5895f9ef7"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\PullToRefresh.kt": {
-    "mtime": 1778533251.8776712,
-    "hash": "f524b77fb9eed316d4cc3fe39d067ba1"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\RankBadge.kt": {
-    "mtime": 1778554883.5873055,
-    "hash": "fe137632e5933997be1c5cac9d2f7999"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\ReportDialog.kt": {
-    "mtime": 1778553048.7839882,
-    "hash": "68a900a40210300acbd946965c762763"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\Shimmer.kt": {
-    "mtime": 1778587968.2931786,
-    "hash": "33985a45ae71f8b3d87e28bad67b0bd6"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\StarRating.kt": {
-    "mtime": 1778552452.8568559,
-    "hash": "3b3d639bee823ed159d904d4060386b4"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\SwipeToAction.kt": {
-    "mtime": 1778533394.5998657,
-    "hash": "bd5bfb7623e79b173938b4d22cb7a1ee"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\components\\TimeAgo.kt": {
-    "mtime": 1778545723.3543806,
-    "hash": "9f331545aeb8b49404418e4ab19b8707"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\navigation\\AuthNavigation.kt": {
-    "mtime": 1778716903.4450688,
-    "hash": "10becc05fed2821a8d67c6c650501460"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\AchievementsScreen.kt": {
-    "mtime": 1778555850.577614,
-    "hash": "fdd7bfe23466733e9bee9412578d2d9a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\AddPlayerDialog.kt": {
-    "mtime": 1778555850.558247,
-    "hash": "29dd81f7b6f31a6b84531eb29750dd8c"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ChatScreen.kt": {
-    "mtime": 1778593173.1865115,
-    "hash": "007f75c42c4e0aacb33f73227cd2e04a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\CreateScrimScreen.kt": {
-    "mtime": 1778713901.9200876,
-    "hash": "046d952a2676eaecf04e84b6eddd6d47"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\CreateTeamScreen.kt": {
-    "mtime": 1778555850.5750794,
-    "hash": "6e03b6f268769cd59ed9c45818f19dfd"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\HomeScreen.kt": {
-    "mtime": 1778636661.1438653,
-    "hash": "7878d15daa2fcbc76ae95299a89e5231"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\InvitePlayerDialog.kt": {
-    "mtime": 1778592818.4766712,
-    "hash": "c23ae1ad0d3c4aa8f9824d077907e121"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\JoinTeamScreen.kt": {
-    "mtime": 1778555850.5707784,
-    "hash": "52dc690b4e25c94844a9ef5b389b24cd"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\LeaderboardScreen.kt": {
-    "mtime": 1778713896.4745772,
-    "hash": "51cc57afdda3f7f77e1c2b0a1798b6ae"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\LfgBoardScreen.kt": {
-    "mtime": 1778552949.3897684,
-    "hash": "a3bf7978e90697d225ee3fe5175d8776"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\LoginScreen.kt": {
-    "mtime": 1778693312.4509456,
-    "hash": "e5422f6c9426d050739a3222be0bb830"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\MatchHistoryScreen.kt": {
-    "mtime": 1778705868.3146105,
-    "hash": "e81adfc6de5b97da08e024eae84a7d2a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\MatchResultDetailScreen.kt": {
-    "mtime": 1778710239.2185187,
-    "hash": "174df8e6369b29ee0ee1d09fa87b063a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\MatchResultListScreen.kt": {
-    "mtime": 1778705870.9687674,
-    "hash": "07601f1e9641c914732d25e7ccfb217f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\MessageListScreen.kt": {
-    "mtime": 1778705875.173737,
-    "hash": "06bd2a373bdf8ba9c2562f9a6ad7580e"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\NewsScreen.kt": {
-    "mtime": 1778636792.1324058,
-    "hash": "fa848958b4ae8caaad01cae2e85d187b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\NotificationScreen.kt": {
-    "mtime": 1778597233.4353044,
-    "hash": "0798111b286ce6c811a6c1c1a38422fa"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\OnboardingScreen.kt": {
-    "mtime": 1778542969.7489264,
-    "hash": "4eed158ef34c491052ab5dc4df8a1f51"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ProfileScreen.kt": {
-    "mtime": 1778636742.8383493,
-    "hash": "faa4a52382d875ef937190c523b40ed4"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ReportMatchResultScreen.kt": {
-    "mtime": 1778593156.5474882,
-    "hash": "d19f2e97632499a75718021e0cd56980"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ScheduleScreen.kt": {
-    "mtime": 1778631531.021187,
-    "hash": "e7ad5df7b9602019af425dd5db24d019"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ScrimDetailScreen.kt": {
-    "mtime": 1778717510.6170197,
-    "hash": "002ae87cba52780480632fe9e2ec3495"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ScrimListScreen.kt": {
-    "mtime": 1778704797.2260478,
-    "hash": "8694f37704627829b4a92861e00d14f3"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\ScrimRosterScreen.kt": {
-    "mtime": 1778629826.614031,
-    "hash": "5f819c68b917e253b893ee3c61aabc90"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\SettingsScreen.kt": {
-    "mtime": 1778592832.35917,
-    "hash": "6ad7fd6c7052199cfc9e0d937d7bc710"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\SignupScreen.kt": {
-    "mtime": 1778693312.5223944,
-    "hash": "aab71d7c6ed877a27648bacd26a5a988"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\SplashScreen.kt": {
-    "mtime": 1778588494.5560277,
-    "hash": "784070a939e2809cfcc746aa75b32bc7"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\TeamDetailScreen.kt": {
-    "mtime": 1778593145.6816804,
-    "hash": "e29889f344c80371849efa4e2e1b486f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\TeamListScreen.kt": {
-    "mtime": 1778555850.5572221,
-    "hash": "ff91a041cdc3a31c4e4ecc99ca600a90"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\screens\\VerificationScreen.kt": {
-    "mtime": 1778693991.900758,
-    "hash": "6c75e9be2233fb5d33482fbd7b75bc32"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\theme\\Theme.kt": {
-    "mtime": 1778591877.3138175,
-    "hash": "e887d4f5859ce8b2fa61f9f8ae8a0c47"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\theme\\Type.kt": {
-    "mtime": 1778693991.8413513,
-    "hash": "c92d28d42d0cb1d1f1eba619e7cdfb07"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\ui\\utils\\HapticFeedback.kt": {
-    "mtime": 1778543966.1116595,
-    "hash": "8fb7fa55f04307330c079ae3e3be1f2b"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\util\\ImageUtils.kt": {
-    "mtime": 1778717502.1767035,
-    "hash": "7ba0911c3c09d9e48f1e582525208f85"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\AuthViewModel.kt": {
-    "mtime": 1778716630.1427681,
-    "hash": "f30bb3bf9f6efd140965ee995ac1fa77"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\LeaderboardViewModel.kt": {
-    "mtime": 1778717773.5826173,
-    "hash": "54075891aaabbb4d37329a37a854283a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\LfgViewModel.kt": {
-    "mtime": 1778725126.4506068,
-    "hash": "695f2d5525a282a5f620f2af009dbec9"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\MatchResultViewModel.kt": {
-    "mtime": 1778713978.5124683,
-    "hash": "34e0f38b30ce1437122acd5dae704d3f"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\MessageViewModel.kt": {
-    "mtime": 1778725131.5765638,
-    "hash": "960184230c9a3ecf9bbda93636f6e9e1"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\NewsViewModel.kt": {
-    "mtime": 1778546317.976297,
-    "hash": "8e5b31a277e48489c4bc010b478fe48a"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\NotificationViewModel.kt": {
-    "mtime": 1778597180.1745603,
-    "hash": "df5b13bc6e82908c061a900cf38351b3"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\ScrimViewModel.kt": {
-    "mtime": 1778644445.4314451,
-    "hash": "3c1e3d22da752b6b758848042312ec65"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\SettingsViewModel.kt": {
-    "mtime": 1778542401.2765374,
-    "hash": "d89934700c31f7165355bbace2de3226"
-  },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\mlbb\\scrim\\viewmodel\\TeamViewModel.kt": {
-    "mtime": 1778644440.527668,
-    "hash": "78dd0629c804b4aafdd17995373bc835"
+    "mtime": 1780002635.2160058,
+    "hash": "69676c6e8085955d6d24f5fb3248aef6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\MainActivity.kt": {
+    "mtime": 1780000912.7894557,
+    "hash": "b658e83fee2f31aa9f70d6e1868fc479"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ScrimsLegendsApplication.kt": {
+    "mtime": 1780000912.7904537,
+    "hash": "610e0460419248bd45f9f795012584d0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\cache\\ProfileCacheRepository.kt": {
+    "mtime": 1780364356.4832008,
+    "hash": "8786df41ec51a0fd73944de164701716"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\cache\\UnifiedCacheManager.kt": {
+    "mtime": 1780363550.1682136,
+    "hash": "d111ad6c26a3c395d7933074345f2212"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\CacheMetadataDao.kt": {
+    "mtime": 1780000912.5678103,
+    "hash": "20c2e2fec313f9aa8dd1c17817c322a8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\CacheMetadataEntity.kt": {
+    "mtime": 1780000912.5700164,
+    "hash": "d4021783828512496926ab71f5be484b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ConversationDao.kt": {
+    "mtime": 1780227014.8006272,
+    "hash": "fe8516b8a03d0d99256c3ebae79ff3eb"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ConversationEntity.kt": {
+    "mtime": 1780343707.719071,
+    "hash": "d363ab73c728577e0bcb7bc73a2c99b3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\DatabaseMigrations.kt": {
+    "mtime": 1780244956.5823221,
+    "hash": "0e69c30ad9c08697dd82a9fcb4186b57"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\LeaderboardDao.kt": {
+    "mtime": 1780000912.5768032,
+    "hash": "bdaeeef0f93699ac975556346952a7b5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\LeaderboardEntity.kt": {
+    "mtime": 1780000912.5778332,
+    "hash": "d947c5642fbd597b1b96b04941ef13f9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\LfgPostDao.kt": {
+    "mtime": 1780000912.579876,
+    "hash": "01a44086e26272a5645ebc3ca5d25fa6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\LfgPostEntity.kt": {
+    "mtime": 1780000912.5810676,
+    "hash": "e58329b9b9207e57111fb917bc14137f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\MessageDao.kt": {
+    "mtime": 1780230963.4713757,
+    "hash": "489379345d4a2bb655319735e5b09394"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\MessageEntity.kt": {
+    "mtime": 1780230952.2354064,
+    "hash": "a4612db076c1d549777c25e5378c38e8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\NotificationDao.kt": {
+    "mtime": 1780000912.585284,
+    "hash": "bb4a8f7e6a67954857a61bd1b9b33b78"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\NotificationEntity.kt": {
+    "mtime": 1780000912.5863507,
+    "hash": "29b60dbd326a73f705c8909bd234033b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\PendingMessageDao.kt": {
+    "mtime": 1780000912.5874083,
+    "hash": "fe820282cd71bc079f670f56699a73a5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\PendingMessageEntity.kt": {
+    "mtime": 1780231959.7112813,
+    "hash": "74689348c887a4f839c9e3501ea2934f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ProfileDao.kt": {
+    "mtime": 1780000912.5894837,
+    "hash": "5a50be3a39da38033c7d5367c8782a8a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ProfileEntity.kt": {
+    "mtime": 1780000912.591044,
+    "hash": "d6da58a1e9083059c3264d7c83c544b7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ScrimDao.kt": {
+    "mtime": 1780000912.592051,
+    "hash": "c507206f0a7956e91c3c0e98114710d1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ScrimEntity.kt": {
+    "mtime": 1780244948.647057,
+    "hash": "c18b1182961dddd4b70f9a92ec2b096b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\ScrimsLegendsDatabase.kt": {
+    "mtime": 1780244964.0102496,
+    "hash": "17a37682cdee5a160bade1d4b6554032"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\TeamDao.kt": {
+    "mtime": 1780000912.5950608,
+    "hash": "c35e64b7aa5ffd1aa9eac83bf6ca5a25"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\local\\TeamEntity.kt": {
+    "mtime": 1780000912.5961947,
+    "hash": "218aba5733be0b7dec10bdd19aac3985"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\localization\\Language.kt": {
+    "mtime": 1780000912.597261,
+    "hash": "4a1ff9ea58bc951888ab69c27f6e9ef1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\localization\\LocaleManager.kt": {
+    "mtime": 1780000912.5982642,
+    "hash": "587941071da313742d156bd597ca1742"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\localization\\TranslationManager.kt": {
+    "mtime": 1780000912.5992692,
+    "hash": "36b817645aa48b587b03ea961c023e9a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Achievement.kt": {
+    "mtime": 1780000912.6002738,
+    "hash": "4e65a6ec60cc114082aeb80378e43c11"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\AuthResult.kt": {
+    "mtime": 1780000912.6012974,
+    "hash": "c30c302ffa6702b20a3b9127cf67fa4a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\DeliveryStatus.kt": {
+    "mtime": 1780230943.872522,
+    "hash": "89ef2eaeee47d6b95c452283fff26351"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\LeaderboardEntry.kt": {
+    "mtime": 1780000912.6043973,
+    "hash": "6c4494ef31fbbad94e85f54cde5e8809"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\LfgPost.kt": {
+    "mtime": 1780000912.6054008,
+    "hash": "fa31a9a8a8d9e64871d3324073c8f819"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\MatchResult.kt": {
+    "mtime": 1780000912.6064045,
+    "hash": "83deabe0dff73150e8f697ff6b30f65a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Message.kt": {
+    "mtime": 1780343707.7060096,
+    "hash": "87e803619c6fb42325852ba82f5817a9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Notification.kt": {
+    "mtime": 1780240868.4178214,
+    "hash": "4bc55cafb84d9a8a2fa08aadbc07bc6e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Player.kt": {
+    "mtime": 1780000912.6097522,
+    "hash": "542dace8d63567be72e3a55f090edabe"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\RankTier.kt": {
+    "mtime": 1780000912.6097522,
+    "hash": "bc150850a488dd0122ac3db9716bd14c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Scrim.kt": {
+    "mtime": 1780363396.4364364,
+    "hash": "b01fb88a1d3a49183e9cc8490569984c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\ScrimApplication.kt": {
+    "mtime": 1780236401.443565,
+    "hash": "94f6727e1ac1902499d76411e0ed7071"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\ScrimRuleset.kt": {
+    "mtime": 1780245075.9660385,
+    "hash": "f863118ebc1d706a5db1b6c67e92989c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Team.kt": {
+    "mtime": 1780000912.6157897,
+    "hash": "762146bd1ba17cc6fbdcfbbc37df15ab"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\TeamApplication.kt": {
+    "mtime": 1780000912.6163056,
+    "hash": "38c73903ddf880a66559dd400b05b3a1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\TeamInvite.kt": {
+    "mtime": 1780000912.6176093,
+    "hash": "d889b052c538e32e6be5dd4e6b6d8970"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\TeamRating.kt": {
+    "mtime": 1780000912.6186273,
+    "hash": "d4873ecf45182deef01d073ae1626357"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\TeamRole.kt": {
+    "mtime": 1780000912.6196916,
+    "hash": "bb0dcd2211e1b839694b8e7c9dac01d0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\Tournament.kt": {
+    "mtime": 1780000912.6207197,
+    "hash": "5559dffb175f6a06305b517da46ff3b4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\model\\UserProfile.kt": {
+    "mtime": 1780000912.6215594,
+    "hash": "f978f33e69153cf4667920aad72f6f13"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\preferences\\AppSettings.kt": {
+    "mtime": 1780000912.6226094,
+    "hash": "6f860e895519e560f80f8a6d3e3986ec"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\preferences\\OnboardingPreferences.kt": {
+    "mtime": 1780000912.6237738,
+    "hash": "4a1795a0f253a4c4771d5f3e5ed6759e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\preferences\\ThemePreferences.kt": {
+    "mtime": 1780000912.6247869,
+    "hash": "0288417d18acb9682a5d6e385afabdf8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\AuthRepository.kt": {
+    "mtime": 1780364626.513309,
+    "hash": "b7bf59726f587c6ca1c3c403ca9ee44b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\AuthRepositoryInterface.kt": {
+    "mtime": 1780000912.627022,
+    "hash": "351964ba5ae06381fd065c08aaa3b77c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\LeaderboardRepository.kt": {
+    "mtime": 1780000912.6283996,
+    "hash": "7e0c2af770a08cbf1f801124a60207ac"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\LeaderboardRepositoryInterface.kt": {
+    "mtime": 1780000912.629421,
+    "hash": "d7d10938cb14d4c483f6d78fb28b10ca"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\LfgRepositoryInterface.kt": {
+    "mtime": 1780000912.630443,
+    "hash": "dd854d7f51a6129f62140b199f65662a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\MatchResultRepository.kt": {
+    "mtime": 1780000912.6315093,
+    "hash": "dc5899b0e5ea3ea0a7725a89f0a51464"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\MatchResultRepositoryInterface.kt": {
+    "mtime": 1780000912.632753,
+    "hash": "f690ecf2f5966ced3371150a81e482bb"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\MessageRepository.kt": {
+    "mtime": 1780368717.441308,
+    "hash": "4766618d67a37d06046dd5e4fff8e888"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\MessageRepositoryInterface.kt": {
+    "mtime": 1780343745.9537542,
+    "hash": "9f2915278bfb44adde602fed88215ac3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\NotificationRepository.kt": {
+    "mtime": 1780000940.9065711,
+    "hash": "c1a480f3f18eccd4103e83346c41f235"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\ScrimRepository.kt": {
+    "mtime": 1780363509.5801084,
+    "hash": "8b3713ad5562d99bc706d85d2d2cb5d3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\ScrimRepositoryInterface.kt": {
+    "mtime": 1780339278.8747683,
+    "hash": "d646328f77c66b01f3cc77ae7729c7e4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseAuthRepository.kt": {
+    "mtime": 1780364333.0222967,
+    "hash": "48082db2939e8e0a5194b50c32091d95"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseLeaderboardRepository.kt": {
+    "mtime": 1780000912.641495,
+    "hash": "37342c58d2e18f2463a649020815ce97"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseLfgRepository.kt": {
+    "mtime": 1780363295.0780954,
+    "hash": "92ad7b271afa355dd42805bebd64d5a2"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseMatchResultRepository.kt": {
+    "mtime": 1780363344.0786493,
+    "hash": "ce0e82372e1653ec80e5781b271399df"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseMessageRepository.kt": {
+    "mtime": 1780368720.1087773,
+    "hash": "f19867f27e7237b4e42bc7c4e3b1ff60"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseNotificationRepository.kt": {
+    "mtime": 1780364351.0168686,
+    "hash": "b3c0cf45328b4d77f1c3161acb936394"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseScrimRepository.kt": {
+    "mtime": 1780364333.01619,
+    "hash": "710063bc02943886af0303154f76afe9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseTeamRepository.kt": {
+    "mtime": 1780364333.0202816,
+    "hash": "9f1f49827ea12f422a5758ba7fd5f56d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\SupabaseTournamentRepository.kt": {
+    "mtime": 1780363529.1613092,
+    "hash": "cf97621bea10424ce08b8210ee7f9645"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\TeamRepository.kt": {
+    "mtime": 1780000912.6629076,
+    "hash": "824ea87e47ca4c59d9b0577f1755062f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\TeamRepositoryInterface.kt": {
+    "mtime": 1780000912.6639192,
+    "hash": "3181869bca375e18c7c54f35327842bf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\repository\\TournamentRepositoryInterface.kt": {
+    "mtime": 1780000912.664944,
+    "hash": "55b1f98b801e2ab629d9e28c38a5afd8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\ChatConnectionState.kt": {
+    "mtime": 1780000912.6659732,
+    "hash": "21270310c89100386ef9fc65abd2dbec"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\OtpApiService.kt": {
+    "mtime": 1780000912.6670995,
+    "hash": "388ff537a47edb64e1917522801d9620"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\RetryInterceptor.kt": {
+    "mtime": 1780000912.6680956,
+    "hash": "e9c6189c13096acfc4cb81dde96ebd6f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseApiService.kt": {
+    "mtime": 1780343689.1854289,
+    "hash": "94224ec51702d531c2fbee149fbd2cc5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseClient.kt": {
+    "mtime": 1780000912.6710846,
+    "hash": "e22462a5b94db33a26ccf38a168dba58"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseRealtimeClient.kt": {
+    "mtime": 1780363282.4556777,
+    "hash": "0b24ccde4ae5b028aafed823ea692d29"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseStorageUpload.kt": {
+    "mtime": 1780000912.6730778,
+    "hash": "8f6fa3a2edece7bbe1d264a5ac9f3424"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\di\\DatabaseModule.kt": {
+    "mtime": 1780000912.6740751,
+    "hash": "e47155338f9c0facd07d38f6f44f6662"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\di\\RepositoryModule.kt": {
+    "mtime": 1780000912.6750717,
+    "hash": "aecd9292b78772bd3428fe207daaec9e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\di\\WorkerModule.kt": {
+    "mtime": 1780000912.6760683,
+    "hash": "b353de577379aa566626d319bc022cb2"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\domain\\usecases\\DeleteTeamUseCase.kt": {
+    "mtime": 1780000912.677065,
+    "hash": "5e3d2ff41cdcfe8ccfd2ab72e645e510"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\notifications\\LocalNotificationHelper.kt": {
+    "mtime": 1780000912.678061,
+    "hash": "3c7c77d5581c3b70b2e113279c9c82f7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\security\\AuthorizationUtils.kt": {
+    "mtime": 1780191963.262686,
+    "hash": "e9b7b2d8817f25625202ebe3e386fcdd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\security\\SecurePreferences.kt": {
+    "mtime": 1780000912.6790578,
+    "hash": "bd156c3c8a011a2a561e3bbbcba89a3e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\security\\SecureStorage.kt": {
+    "mtime": 1780000912.6800544,
+    "hash": "4a4636b1415e65b3a5c7e43f53e532af"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\security\\SecurityUtils.kt": {
+    "mtime": 1780001112.297921,
+    "hash": "441a086a636e246af719957100deaa5e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\AchievementBadge.kt": {
+    "mtime": 1780000912.682724,
+    "hash": "beea9bedf2a7139c99c0bb382667008f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\BottomNav.kt": {
+    "mtime": 1780000912.683767,
+    "hash": "6c585fe67e393bf07a182de22223d228"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\CommonComponents.kt": {
+    "mtime": 1780000912.6856823,
+    "hash": "ca7fbbf6cc6c67154e2cd958b98869f1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\DebouncedSearchBar.kt": {
+    "mtime": 1780000912.6870265,
+    "hash": "0e3cdaea7f05ee6de3e1c15d69caaf94"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\LevelUpCelebration.kt": {
+    "mtime": 1780000912.6880255,
+    "hash": "e7db1d9dfae3dddf89dd209fcfe78f52"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\PremiumAnimations.kt": {
+    "mtime": 1780000912.690019,
+    "hash": "b8c0fe606e53b41c484aec228ff3090d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\PremiumCaptcha.kt": {
+    "mtime": 1780000912.690019,
+    "hash": "390fa5b0e758d1e7cf693f9385c0f121"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\PremiumIcons.kt": {
+    "mtime": 1780000912.6914055,
+    "hash": "15273b5d61d160508aa57f334d796406"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\PremiumiOSComponents.kt": {
+    "mtime": 1780000912.693684,
+    "hash": "64862e4af4cc949dc3d4cea1aa2e0f85"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\PullToRefresh.kt": {
+    "mtime": 1780000912.6947997,
+    "hash": "dffdbba3392384d6705100070f0e2fab"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\RankBadge.kt": {
+    "mtime": 1780000912.7003484,
+    "hash": "0ac3c4ba22c9e49850d6e7d9fbf9979d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\ReportDialog.kt": {
+    "mtime": 1780000912.7015014,
+    "hash": "f539386a6648951c9ddb814cf88d1a31"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\ResponsiveLayout.kt": {
+    "mtime": 1780000912.7025123,
+    "hash": "734c5bda8ac35411f3c95cb50b1c6d83"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\ScrimCountdown.kt": {
+    "mtime": 1780240955.9329753,
+    "hash": "8211ce84621d5dce868efdcc675689cb"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\Shimmer.kt": {
+    "mtime": 1780000912.7039864,
+    "hash": "5537f3b856255e5ade04a91336324abb"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\StarRating.kt": {
+    "mtime": 1780000912.7051017,
+    "hash": "3e337f2c5cb14a4fc1266d00496bf6c8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\SwipeToAction.kt": {
+    "mtime": 1780000912.7060983,
+    "hash": "c33670e9f5162981a268c1be5084992f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\components\\TimeAgo.kt": {
+    "mtime": 1780000912.7060983,
+    "hash": "f7285ecefeda93a2278e45aead201e26"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\navigation\\AuthNavigation.kt": {
+    "mtime": 1780368738.0490181,
+    "hash": "00432a67833b74c6ba9092bb79fca2f3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\AchievementsScreen.kt": {
+    "mtime": 1780000912.7107184,
+    "hash": "f01a7fe2254a1cd55ebe4f9fb2213f1b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\AddPlayerDialog.kt": {
+    "mtime": 1780000912.7115588,
+    "hash": "6121e6797dbc4f61f772a4da722b4888"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\BannedScreen.kt": {
+    "mtime": 1780000912.7130487,
+    "hash": "c1df84690eb3615ceb684a088d8dc375"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ChatScreen.kt": {
+    "mtime": 1780368735.2934866,
+    "hash": "40c1f57255d51f74cc6424ce5a0a5fbc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\CreateScrimScreen.kt": {
+    "mtime": 1780245727.013118,
+    "hash": "f49e590a0a3f82f18cb1293a34b2f42d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\CreateTeamScreen.kt": {
+    "mtime": 1780000912.7175622,
+    "hash": "d0d0956cc67e249d392bafd04893e56c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\FindTeamsScreen.kt": {
+    "mtime": 1780000912.718581,
+    "hash": "1424f6d11385b55533b54555893eaab7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\HomeScreen.kt": {
+    "mtime": 1780363491.36427,
+    "hash": "5bbe8737d8fdba3d62bd4ffaecc4b325"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\InvitePlayerDialog.kt": {
+    "mtime": 1780000912.7224753,
+    "hash": "e266734a52c3491d2e9914b8c1904de6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\JoinTeamScreen.kt": {
+    "mtime": 1780000912.723794,
+    "hash": "c1e59ec99038ebbf4e446a4659920570"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\LeaderboardScreen.kt": {
+    "mtime": 1780000912.72563,
+    "hash": "813d0824262238bac1e6a87d630593da"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\LfgBoardScreen.kt": {
+    "mtime": 1780000912.7266395,
+    "hash": "89a09e78a31fdf9e4940c51177128bc8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\LoginScreen.kt": {
+    "mtime": 1780000912.727491,
+    "hash": "ea14361b293b593fa46ca349ecef443e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\MatchHistoryScreen.kt": {
+    "mtime": 1780000912.7285087,
+    "hash": "8078b558f178330a40d9336ed17b9180"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\MatchResultDetailScreen.kt": {
+    "mtime": 1780000912.7298505,
+    "hash": "8c7f524e6471926a9fb5933bac1005f1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\MatchResultListScreen.kt": {
+    "mtime": 1780000912.7310135,
+    "hash": "e0c429d8232cdfcf51717f9ab7f24aa8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\MessageListScreen.kt": {
+    "mtime": 1780228693.1551256,
+    "hash": "3d2cde60cb11e26cdf2914dd8d6b72ba"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\NotificationScreen.kt": {
+    "mtime": 1780241144.1454227,
+    "hash": "4173e96698a0b9c2165aba26389484e7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\OnboardingScreen.kt": {
+    "mtime": 1780000912.7351925,
+    "hash": "ea51fae77b06e854138bb895aa946436"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\PlayerFinderScreen.kt": {
+    "mtime": 1780000912.7373714,
+    "hash": "05706fc074e0507f8a18077f54d42e85"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ProfileScreen.kt": {
+    "mtime": 1780000912.7383678,
+    "hash": "60b776863b74754318b62074bb0804db"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ReportMatchResultScreen.kt": {
+    "mtime": 1780000912.7397861,
+    "hash": "d57f0e19650fd9894cba04ae6505c752"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ScheduleScreen.kt": {
+    "mtime": 1780363484.2794204,
+    "hash": "6119fe1cca60bcbe7748c2ba2181d127"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ScrimDetailScreen.kt": {
+    "mtime": 1780363506.7475307,
+    "hash": "f0eb7a680ac4fd7c616b8b9701b28c10"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ScrimListScreen.kt": {
+    "mtime": 1780363502.4624977,
+    "hash": "640437b391331f70ae7a34e1af7cb66e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\ScrimRosterScreen.kt": {
+    "mtime": 1780000912.7488592,
+    "hash": "9fcfc278884a024fbe11733cf49cea20"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\SettingsScreen.kt": {
+    "mtime": 1780000912.7498617,
+    "hash": "456dd8bec43d4b90ae6ac7ba09696a10"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\SignupScreen.kt": {
+    "mtime": 1780000912.7508583,
+    "hash": "9edb32b018dd6c47c29318701abd08c9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\SplashScreen.kt": {
+    "mtime": 1780000912.7519312,
+    "hash": "5ebb4c0ac93b98b0806b9f0272b89fd8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TeamDetailScreen.kt": {
+    "mtime": 1780364492.2849896,
+    "hash": "1d1fa3eed3903b5a82ea3e58b65e5bf5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TeamListScreen.kt": {
+    "mtime": 1780000912.7556634,
+    "hash": "1628cbece918996326eeec8cb5766835"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentCreateScreen.kt": {
+    "mtime": 1780356041.65255,
+    "hash": "a41bb582197d1f837f0f2e6844ac86a1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentDetailScreen.kt": {
+    "mtime": 1780356101.258944,
+    "hash": "2ce3427502e13782e0eb273ac59f1d56"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentEditScreen.kt": {
+    "mtime": 1780000912.7606177,
+    "hash": "32492f310856842a495c6c0b39619227"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentHostManagementScreen.kt": {
+    "mtime": 1780000912.7622821,
+    "hash": "c262ec81890551d61a0c9ff1d2630483"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentHostRequestScreen.kt": {
+    "mtime": 1780000912.7634685,
+    "hash": "006c4171c446c7d7950b2d70acb68a47"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\TournamentListScreen.kt": {
+    "mtime": 1780000912.7676034,
+    "hash": "cb453177a1a6c0749f887989381c4900"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\screens\\VerificationScreen.kt": {
+    "mtime": 1780000912.7688558,
+    "hash": "8efd90bb1d36be12375b7d2230e61a90"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\theme\\Theme.kt": {
+    "mtime": 1780000912.7700214,
+    "hash": "e86700685b470c04b8b82306f9bf1049"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\theme\\Type.kt": {
+    "mtime": 1780000940.8495634,
+    "hash": "f78f6975f09f386ce45c0a3e6d83178f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\ui\\utils\\HapticFeedback.kt": {
+    "mtime": 1780000912.7720594,
+    "hash": "469e8588fb763c02a3607a008a2c1715"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\util\\CalendarIntentHelper.kt": {
+    "mtime": 1780240889.6747048,
+    "hash": "2ef248c44562affe2ee96c44cf08036a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\util\\ContentModerationUtils.kt": {
+    "mtime": 1780000912.7720594,
+    "hash": "af4920e5de974df6ddcea64c4cbb1a03"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\util\\DateUtils.kt": {
+    "mtime": 1780340988.1480927,
+    "hash": "0a0cdc63663149e5537640d70ca83efc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\util\\FreeTierConfig.kt": {
+    "mtime": 1780233952.7753315,
+    "hash": "681ba1e13ed76ea0f2126e52912781c4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\util\\ImageUtils.kt": {
+    "mtime": 1780000912.7747352,
+    "hash": "24170b895b404f6df283c973d32512d3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\AuthViewModel.kt": {
+    "mtime": 1780355922.0882204,
+    "hash": "ae30ee11edb58af2f96d2fedffb108e2"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\LeaderboardViewModel.kt": {
+    "mtime": 1780000912.777086,
+    "hash": "eac2a6dce05a781421060e79e299888f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\LfgViewModel.kt": {
+    "mtime": 1780355951.57075,
+    "hash": "0c762cecc7870f73f2f5c1749278a231"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\MatchResultViewModel.kt": {
+    "mtime": 1780000912.7799368,
+    "hash": "6cce933ccdc877cf4dd7e072aebb3b59"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\MessageViewModel.kt": {
+    "mtime": 1780360794.4291084,
+    "hash": "e2ddace659887304ddb0e44dc43149bc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\NotificationViewModel.kt": {
+    "mtime": 1780355936.3566043,
+    "hash": "a1e5182b748f9b06bed1afd8274ebcee"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\ScrimViewModel.kt": {
+    "mtime": 1780339290.6168945,
+    "hash": "5398e8a15573d1590c0b97d053273d1f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\SettingsViewModel.kt": {
+    "mtime": 1780000912.7841685,
+    "hash": "068e53ab60ded706943909183ce26126"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\TeamViewModel.kt": {
+    "mtime": 1780000912.7851908,
+    "hash": "fd1e4cfd50f4208784c84d82669762e8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\viewmodel\\TournamentViewModel.kt": {
+    "mtime": 1780368798.590583,
+    "hash": "0946f8a21224c30f7eb7043bcd16dce0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\java\\com\\scrimslegends\\app\\worker\\MessageSyncWorker.kt": {
+    "mtime": 1780000912.7875483,
+    "hash": "8d53d080ddaff6a5613676fea7b29266"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\AchievementTest.kt": {
+    "mtime": 1780000912.7921548,
+    "hash": "2a49698e33f1dca0bd3d308d42665494"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\AuthResultTest.kt": {
+    "mtime": 1780000912.7932332,
+    "hash": "422b56984687579ca6e4849664de7734"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\EnumValueTest.kt": {
+    "mtime": 1780000912.7942317,
+    "hash": "cb3c7cfc6393af4338c9b6da003ad9ac"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\LeaderboardEntryTest.kt": {
+    "mtime": 1780000912.7950685,
+    "hash": "c51b7f6dd64604dcd66677f78370a7e8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\LfgPostTest.kt": {
+    "mtime": 1780000912.7960722,
+    "hash": "79a96097c48ff6684746ee26565feada"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\MatchResultTest.kt": {
+    "mtime": 1780000912.79688,
+    "hash": "37e5860247b44ba9fa15efe13fdb9c9f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\MessageTest.kt": {
+    "mtime": 1780000912.7978823,
+    "hash": "2e2a163534e9392c9c03e942c70b443f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\NotificationTest.kt": {
+    "mtime": 1780000912.7978823,
+    "hash": "87a33fdd759673add284a8c2a03bba76"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\PlayerTest.kt": {
+    "mtime": 1780000912.7998326,
+    "hash": "ecd833670e54afe6bb5641e75930c735"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\PointsResultTest.kt": {
+    "mtime": 1780000912.8010342,
+    "hash": "085a1c6b7a69f8567ab4fb83c76e2192"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\RankTierTest.kt": {
+    "mtime": 1780000912.8018503,
+    "hash": "e309d9e0bd71e240a55f4fe097e2f22b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\RegionalRankTest.kt": {
+    "mtime": 1780000912.8031116,
+    "hash": "dda4161b334caaf91e4072a50461ac70"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\ScrimApplicationTest.kt": {
+    "mtime": 1780000912.804116,
+    "hash": "4d1805fc3483f775e321bd9729789122"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\ScrimTest.kt": {
+    "mtime": 1780000912.804116,
+    "hash": "5c9329e6cd5468463e2b69017e753fbd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\TeamInviteTest.kt": {
+    "mtime": 1780000912.805268,
+    "hash": "d01f6987465b0b0a25392274fcec4200"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\TeamRoleExtendedTest.kt": {
+    "mtime": 1780000912.8064177,
+    "hash": "bf3fcdb4ef3a1d8a7fc6be32bf2988c4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\TeamRoleTest.kt": {
+    "mtime": 1780000912.8074143,
+    "hash": "24bf0b5baa00497982044c4fd37272ae"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\TeamTest.kt": {
+    "mtime": 1780000912.808411,
+    "hash": "ef2b02a01050f301fb4d42654243ffb2"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\model\\UserProfileTest.kt": {
+    "mtime": 1780000912.8093238,
+    "hash": "6886a22f300c79fb77c5b30ad3176fb8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\repository\\AuthRepositoryTest.kt": {
+    "mtime": 1780000912.8105133,
+    "hash": "ebd90d13001a89e602efd20a79f3e9d0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\repository\\MatchResultRepositoryTest.kt": {
+    "mtime": 1780000912.811512,
+    "hash": "3852a8950b1bf677273254d9a718f3dd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\repository\\RepositoryInterfaceTest.kt": {
+    "mtime": 1780000912.8125083,
+    "hash": "b2a27e3692c3067a7527181b6a9ee7cf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\repository\\ScrimRepositoryTest.kt": {
+    "mtime": 1780000912.8135054,
+    "hash": "22028c9cd2d1fa2387493ec9d6c38949"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\repository\\TeamRepositoryTest.kt": {
+    "mtime": 1780000912.8145018,
+    "hash": "edfcc56f2cc54392e414d7ef9c15c086"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\service\\RetryInterceptorTest.kt": {
+    "mtime": 1780000912.816218,
+    "hash": "f8128093f6383ccb9ad18601b1bdc17a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseConfigTest.kt": {
+    "mtime": 1780000912.8173556,
+    "hash": "5891bc7be709d8d2599bc99e323be7c1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseSessionTest.kt": {
+    "mtime": 1780000912.818356,
+    "hash": "c6b48a9083826910eeda14c222578fb8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\data\\service\\SupabaseStorageUploadValidationTest.kt": {
+    "mtime": 1780000912.8193524,
+    "hash": "f20c9fc9b9983d47378f444669f9ebd7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\AuthorizationUtilsTest.kt": {
+    "mtime": 1780000912.8204465,
+    "hash": "50e378b94ed36c10f604875e8361c59b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\InputValidationTest.kt": {
+    "mtime": 1780000912.821479,
+    "hash": "36d0c1c4d295bae6a32aff503abc436e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\LogSanitizerTest.kt": {
+    "mtime": 1780000912.822505,
+    "hash": "d702a34dbf1de6d3e0a1dc0bdafa496c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\SecureStorageTest.kt": {
+    "mtime": 1780000912.822505,
+    "hash": "8c8e53a4de6adab3130bfe6ef2db6b28"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\SecurityAuditTest.kt": {
+    "mtime": 1780000912.8243895,
+    "hash": "49bcf48df2ed76008c8f75fb321d70b6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\security\\SecurityUtilsTest.kt": {
+    "mtime": 1780000912.825401,
+    "hash": "957bd18a782d3586275987917d86b635"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\test\\ModelUnitTest.kt": {
+    "mtime": 1780000947.9962335,
+    "hash": "69ed636a12e4767a89769c2625471b1a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\test\\SecurityUnitTest.kt": {
+    "mtime": 1780001000.1929364,
+    "hash": "569c8b7fa0f8ae53a4377cb0fd65aff1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\util\\DateUtilsExtendedTest.kt": {
+    "mtime": 1780000912.829534,
+    "hash": "a69a45ce88ff7f98f680bcd1d4c71484"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\test\\java\\com\\scrimslegends\\app\\util\\DateUtilsTest.kt": {
+    "mtime": 1780000912.8305628,
+    "hash": "c50c5530d769fec3603023c690c2d1c6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\advanced\\ConcurrencyAdvancedTest.kt": {
+    "mtime": 1779864201.5052469,
+    "hash": "a8e684651337485559f6f4bb30bbae25"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\advanced\\FailureInjectionAdvancedTest.kt": {
+    "mtime": 1779864223.0226974,
+    "hash": "d889cddb650efe0314fd80c1288d1094"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\cache\\NewsCacheManagerTest.kt": {
+    "mtime": 1779863884.8090346,
+    "hash": "4e39c7a4be1dc92cd6533001dc53af3a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\cache\\UnifiedCacheManagerTest.kt": {
+    "mtime": 1779863848.3727636,
+    "hash": "598f5df4feb5635e73455f0ebd09b4bd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\CacheMetadataDaoAdvancedTest.kt": {
+    "mtime": 1779864332.222874,
+    "hash": "d67002e504a677cb8872ff86c2c75d34"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\ConversationDaoAdvancedTest.kt": {
+    "mtime": 1779864361.8887963,
+    "hash": "c3de5ba4938f1bba2de1bffcbf7de91b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\DatabaseMigrationsAdvancedTest.kt": {
+    "mtime": 1779864105.1904244,
+    "hash": "6803f07dd0d4f4c39894aac58865253d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\LeaderboardDaoAdvancedTest.kt": {
+    "mtime": 1779864573.925136,
+    "hash": "d97c9b04440bff6ee6731284b2025893"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\LfgPostDaoAdvancedTest.kt": {
+    "mtime": 1779864593.1484547,
+    "hash": "1fa3909f68e5f8ceef4d9cbb60586a46"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\MessageDaoAdvancedTest.kt": {
+    "mtime": 1779864184.1451309,
+    "hash": "da777f8157dc142e3800f849981c4a89"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\NotificationDaoAdvancedTest.kt": {
+    "mtime": 1779864611.2279084,
+    "hash": "75c794ec3b76ec969821f987dfbbc7f3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\database\\ProfileDaoAdvancedTest.kt": {
+    "mtime": 1779864630.2721307,
+    "hash": "fa05ce76b779a20c65c1b01141e8ac1c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\AchievementTest.kt": {
+    "mtime": 1779517781.0238707,
+    "hash": "5d137e535074ac60bb714cb30cdbf37e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\AuthResultTest.kt": {
+    "mtime": 1779518017.3071287,
+    "hash": "458206e1854b71272e58658646856b90"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\EnumValueTest.kt": {
+    "mtime": 1779519096.9720595,
+    "hash": "48db00630218b1ecd5bd0c3eda4a3348"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\LeaderboardEntryTest.kt": {
+    "mtime": 1779517994.1562676,
+    "hash": "4fa86deecfa66b88c9b454c31f25cea0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\LfgPostTest.kt": {
+    "mtime": 1779517817.2754047,
+    "hash": "c6aa50e089c73830ded0db2ff08677a0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\MatchResultTest.kt": {
+    "mtime": 1779517655.1512103,
+    "hash": "b155afabb37235176714c44da6e3008d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\MessageTest.kt": {
+    "mtime": 1779517682.660269,
+    "hash": "7ff32d628e47e9a44034b556d5072496"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\NewsArticleTest.kt": {
+    "mtime": 1779518006.5330255,
+    "hash": "764a56a04007b98ca861c29ef7932131"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\NotificationTest.kt": {
+    "mtime": 1779517731.6285853,
+    "hash": "68c0e3ffea7331209a169fa563fef17c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\PlayerTest.kt": {
+    "mtime": 1779517527.1217527,
+    "hash": "f74e8d0bdec5af47d8401cdb8636c63d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\PointsResultTest.kt": {
+    "mtime": 1779518867.3196602,
+    "hash": "7ad3719cd1dc1475aa5732e5906f37ba"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\RankTierTest.kt": {
+    "mtime": 1779517285.7966835,
+    "hash": "bbca35ecbf609a800847b2ac4418208b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\RegionalRankTest.kt": {
+    "mtime": 1779518001.9783075,
+    "hash": "7f9fc93801f95301b6a7f82546dcc727"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\ScrimApplicationTest.kt": {
+    "mtime": 1779518011.7376468,
+    "hash": "000dc98b68644630a25af9fa16b04517"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\ScrimTest.kt": {
+    "mtime": 1779517608.6771467,
+    "hash": "7413622d8688dd2444ac70bc5036329c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\TeamInviteTest.kt": {
+    "mtime": 1779517983.8979678,
+    "hash": "65edd6d5665a978fc3498bfcab1d4573"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\TeamRoleExtendedTest.kt": {
+    "mtime": 1779519144.2393754,
+    "hash": "8ca583fea7a6e8319153e1e1f1daf5be"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\TeamTest.kt": {
+    "mtime": 1779517362.1670918,
+    "hash": "1aa75152204d79ec82f3aed6d123bdaf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\model\\UserProfileTest.kt": {
+    "mtime": 1779517458.9198556,
+    "hash": "ea1ef3f6d4aaaba635d0ad1cfc0c3879"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\AuthRepositoryTest.kt": {
+    "mtime": 1779518137.143796,
+    "hash": "37a84e56d83ae77a89821c8fd14e9369"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\MatchResultRepositoryTest.kt": {
+    "mtime": 1779864286.0216022,
+    "hash": "9b3c338805e190a111d4017d82f77c6a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\NewsRepositoryQuotaTest.kt": {
+    "mtime": 1779518681.3940978,
+    "hash": "a457698cc1bf63bf5785b2f4749cb27c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\RepositoryInterfaceTest.kt": {
+    "mtime": 1779518929.7027416,
+    "hash": "20849cf9d9738df4cb5a34b85e207384"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\ScrimRepositoryTest.kt": {
+    "mtime": 1779518234.3480299,
+    "hash": "26db2f7857345c6f65dd96ea503fdd80"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\repository\\TeamRepositoryTest.kt": {
+    "mtime": 1779519933.7324803,
+    "hash": "4a90aeb8f2b2e3cefbd2d65b4e3f2cae"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\service\\SupabaseConfigTest.kt": {
+    "mtime": 1779518518.5733154,
+    "hash": "90af6e2b292cdfa5e5647d99ece216f6"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\data\\service\\SupabaseSessionTest.kt": {
+    "mtime": 1779518773.1864054,
+    "hash": "883c0017f8cc2e381f2ef960c0d26539"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\security\\InputValidationTest.kt": {
+    "mtime": 1779518626.343683,
+    "hash": "a367d58b2fb4b32a0d3793e67e18b510"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\security\\NetworkSecurityTest.kt": {
+    "mtime": 1779521481.6284776,
+    "hash": "5c7e9b5e63957e0db8262648db7d86a7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\security\\SecureStorageTest.kt": {
+    "mtime": 1779518056.039489,
+    "hash": "919d99bdbc9f5e7894b617ae71be879a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\security\\SecurityAuditTest.kt": {
+    "mtime": 1779864092.2763667,
+    "hash": "0913efaaec3e3a9275f87c003238d301"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\security\\SecurityUtilsTest.kt": {
+    "mtime": 1779518041.5687954,
+    "hash": "d6987c9c2a8c9e6327f2891b3cb9b70b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\util\\DateUtilsExtendedTest.kt": {
+    "mtime": 1779520107.1533468,
+    "hash": "6c11303cb0aab40dc0cb46af402d5279"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\viewmodel\\AuthViewModelLogicTest.kt": {
+    "mtime": 1779521480.8966436,
+    "hash": "08866d56514dfd60170219de64ac54f4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\viewmodel\\LeaderboardViewModelTest.kt": {
+    "mtime": 1779863378.4465144,
+    "hash": "cafb33cf76e026586ae8b38b0695e8f4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\java\\com\\mlbb\\scrim\\viewmodel\\ScrimViewModelLogicTest.kt": {
+    "mtime": 1779521479.2358186,
+    "hash": "8380b09d0e672e51cc357e1b60cfd319"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\localization\\LocaleManagerTest.kt": {
+    "mtime": 1779863801.588809,
+    "hash": "f434f7b181e3da866d2a485092eb5c25"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\localization\\TranslationManagerTest.kt": {
+    "mtime": 1779863820.5883384,
+    "hash": "a23a96296ba073dc02738893fcce896f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\model\\ScrimRulesetPropertyTest.kt": {
+    "mtime": 1779864489.0486479,
+    "hash": "89094ac856f3f3b8bdf84153297e1950"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\model\\TeamApplicationPropertyTest.kt": {
+    "mtime": 1779864508.9306636,
+    "hash": "6472e897bcd1df0027babf7f415b5ef1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\model\\TeamRatingPropertyTest.kt": {
+    "mtime": 1779864450.7224717,
+    "hash": "30f6c803e0097983baf723d7a6f2ab8b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\model\\TeamRolePropertyTest.kt": {
+    "mtime": 1779864523.6235974,
+    "hash": "e45a78ae518228efd978b67d61113cfb"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\model\\TournamentPropertyTest.kt": {
+    "mtime": 1779864546.721294,
+    "hash": "9f55476f927b858b59498de76f8c915d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\preferences\\ThemePreferencesAdvancedTest.kt": {
+    "mtime": 1779864384.5240755,
+    "hash": "74e5a5ce9566f0ec686889f547673136"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\repository\\LeaderboardRepositoryTest.kt": {
+    "mtime": 1779863909.2889755,
+    "hash": "38366894b602c733223af55fd3e3f433"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\repository\\MessageRepositoryTest.kt": {
+    "mtime": 1779863929.6884978,
+    "hash": "dce297782a1f45883353929e6d9b1653"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\repository\\NotificationRepositoryTest.kt": {
+    "mtime": 1779863943.594487,
+    "hash": "ad6e364a025ca6e117c7d2e09dd1b4fc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\security\\AuthorizationUtilsTest.kt": {
+    "mtime": 1779863560.936996,
+    "hash": "772f29e1da9355e6dc07e1b207301f02"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\security\\SupabaseClientAdvancedTest.kt": {
+    "mtime": 1779864124.4981098,
+    "hash": "2dfc93339d2f847eee9a4cd40d6285cf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\to-app-src-test-java\\com\\mlbb\\scrim\\test\\ModelUnitTest.kt": {
+    "mtime": 1779515972.0419471,
+    "hash": "d2d1e7710e8e620547915fa17712a347"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\to-app-src-test-java\\com\\mlbb\\scrim\\test\\SecurityUnitTest.kt": {
+    "mtime": 1779520334.5481017,
+    "hash": "aada5f92de0fee9a7999f30b7fa1f93f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\util\\DateUtilsTest.kt": {
+    "mtime": 1779863768.4348533,
+    "hash": "adee2dbfe3962d6fd36fad969b65af54"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\util\\ImageUtilsTest.kt": {
+    "mtime": 1779863785.8300283,
+    "hash": "eef670a7eda46d1f22b42c4a7cfd3e69"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\LfgViewModelTest.kt": {
+    "mtime": 1779863501.6413665,
+    "hash": "2192dd7c78e5d87e04de89d6a1589e5e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\MatchResultViewModelTest.kt": {
+    "mtime": 1779863751.9295328,
+    "hash": "d1d60f792cd62f0b1fc360d61dfa3bcd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\MessageViewModelTest.kt": {
+    "mtime": 1779863543.7779193,
+    "hash": "77cb380fda897273e5a8d3d8353a7b1c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\NewsViewModelTest.kt": {
+    "mtime": 1779863733.6042252,
+    "hash": "3a0e97d50575398038a07433f42536f5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\NotificationViewModelTest.kt": {
+    "mtime": 1779863717.038232,
+    "hash": "fbd9ee734594bf4c08339e2280ddda67"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\SettingsViewModelTest.kt": {
+    "mtime": 1779863550.6440268,
+    "hash": "602c3e81d6421faeb3df4d2d3b0e00bf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\TeamViewModelTest.kt": {
+    "mtime": 1779863524.6777997,
+    "hash": "6c328a6f0236d1586b5d2613f5b8a691"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\viewmodel\\TournamentViewModelTest.kt": {
+    "mtime": 1779863638.5328288,
+    "hash": "4517f9e20db7c1fca5cdc93702379d87"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewAPI\\db.js": {
-    "mtime": 1778546243.2801297,
-    "hash": "90c4a2792643b57790493e050dad2591"
+    "mtime": 1778895449.0409799,
+    "hash": "8d84bf73ee5a1f10a5b3d4bda571af56"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewAPI\\news_schema.sql": {
+    "mtime": 1778895447.0307982,
+    "hash": "7568dfcd25883e5d5ab2b964df3a7f90"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewAPI\\scraper.js": {
-    "mtime": 1778546250.8690493,
-    "hash": "f1651182d6be001dec73f0604bf306a4"
+    "mtime": 1778992978.6169555,
+    "hash": "1e1642238cef190e5f8ebb599d66ad48"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewAPI\\server.js": {
-    "mtime": 1778694551.5662677,
-    "hash": "a6873a1bb04bc718179eb482e01aa0eb"
+    "mtime": 1778990730.1922936,
+    "hash": "8aff661ce284573319957a8b7afe3d60"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\db.js": {
+    "mtime": 1779373537.9016802,
+    "hash": "e5f59c15e5a9a3844c5fdae8a8df754f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\news_schema.sql": {
+    "mtime": 1779373389.7890036,
+    "hash": "24b72bf9919d8000ef9cce3d425c6143"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\scraper.js": {
+    "mtime": 1779373222.6158671,
+    "hash": "d83ae9c7ab5606ede8a4b73409c77659"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\server.js": {
+    "mtime": 1779377964.0011218,
+    "hash": "4753a7136615abe341ede6b796ee4265"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\ban_appeals_migration.sql": {
+    "mtime": 1779679405.858471,
+    "hash": "e69d89a9792388ce38d650dfc9ff00c7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\clear_today_scrims_and_applications.sql": {
+    "mtime": 1780235751.6116836,
+    "hash": "f388c9393bd5f23a9c2383d4d5233647"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\consolidated_migration_v2.sql": {
+    "mtime": 1779375165.2210956,
+    "hash": "8a042ae1732c9e3b6b4192499b81cf1c"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\functions.sql": {
     "mtime": 1778425464.3730533,
     "hash": "ef7fb4501a76fd32624df21f9423d775"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\game_id_security_migration.sql": {
+    "mtime": 1778899870.3363857,
+    "hash": "40f245b4f50cf4cdd3f679f492e783d4"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\rls_policies.sql": {
     "mtime": 1778425459.5738447,
     "hash": "4df4e314c2c1866cda0094f04ca1af99"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\schema.sql": {
-    "mtime": 1778720153.0102038,
-    "hash": "38f9e68c2ae36b59127ef79d7cdddf5d"
+    "mtime": 1780233571.9082692,
+    "hash": "62ee2f3db28f12b7ae11655ed3b323b3"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\security_fixes.sql": {
     "mtime": 1778656659.37389,
@@ -783,21 +1463,437 @@
     "mtime": 1778425465.9677005,
     "hash": "92b5d307cd7e01cdcf987292ac67e294"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\supabase_security_fixes.sql": {
+    "mtime": 1778742186.4331455,
+    "hash": "a619021b80b836eb3286f41454a049ac"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\supabase_security_fixes_all.sql": {
+    "mtime": 1778743011.146582,
+    "hash": "2cd705c715c58bcb4e2607030156ced1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\supabase_security_fixes_p1.sql": {
+    "mtime": 1778742869.5045834,
+    "hash": "15656b2054882165ba6b90d2f5d15cb5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\supabase_security_fixes_p2.sql": {
+    "mtime": 1778742617.4251492,
+    "hash": "34138ace541d2da8b4f2c1f6413fe93b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\supabase_security_fixes_p3.sql": {
+    "mtime": 1778742658.610005,
+    "hash": "d5e9c0083d03ca18ab95e2533d15ccc2"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\triggers.sql": {
-    "mtime": 1778425450.1763942,
-    "hash": "9709895818e329cd263a79b2b74ace67"
+    "mtime": 1779918204.656582,
+    "hash": "c796c2ee035c7a48f12d3a5302eb40ed"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\functions\\delete-user\\index.ts": {
+    "mtime": 1779522534.6066692,
+    "hash": "6ef6856eda29f45c73aa0480022f7a32"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260523060001_add_is_open_for_applications.sql": {
+    "mtime": 1779515284.6190886,
+    "hash": "e03d74181fabb5ab0bd59ddcf617347f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260523060002_add_player_stats_columns.sql": {
+    "mtime": 1779522544.2300763,
+    "hash": "af974909d16fe4d858cb80366761e67d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260523060003_add_team_ratings.sql": {
+    "mtime": 1779687644.7523036,
+    "hash": "e14e973a61d2695fa61efc1a90e9994f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260523060004_fix_message_rls_and_conversation_bugs.sql": {
+    "mtime": 1779687687.08665,
+    "hash": "d3142285b44b2b17c001d417f2d65d49"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260524060001_create_conversations_and_fix_messages.sql": {
+    "mtime": 1779687721.518402,
+    "hash": "26adfa1bc1ed947761e437da45276aba"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260525060001_tournament_system.sql": {
+    "mtime": 1779711654.781627,
+    "hash": "0e73c267fc15aa964425407ad23069f1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526060001_fix_tournament_and_lfg_rls.sql": {
+    "mtime": 1779698524.2541273,
+    "hash": "2622b864385d7e070abe8618ee90e805"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526180001_add_team_ratings_rls.sql": {
+    "mtime": 1779809375.5653987,
+    "hash": "d1566cc75642427e91fa2ec6f9774133"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526190001_fix_supabase_linter_warnings.sql": {
+    "mtime": 1779812145.9374952,
+    "hash": "9d320afe9d47c25ab6c96d9f23896656"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526190002_revoke_anon_from_rpc.sql": {
+    "mtime": 1779815599.698334,
+    "hash": "975e0394a4f537f1ae8856d40ae759c9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526190003_fix_notification_columns_and_is_team_leader.sql": {
+    "mtime": 1779816405.750177,
+    "hash": "cb1aec99009e8478ee66da0fadc9adbc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260526190004_remove_unused_vars_in_generate_swiss_pairings.sql": {
+    "mtime": 1779816890.2625642,
+    "hash": "0022e17f48a5a6ee2d94b28c2df457ec"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527060001_fix_conversations_rpc_and_message_visibility.sql": {
+    "mtime": 1779795075.6132605,
+    "hash": "b2984994b0c282832ba4df4e50a9d9d1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527090001_production_messaging_hardening.sql": {
+    "mtime": 1779870138.5693517,
+    "hash": "a1c3a138c9a0ff7b53d7f729ce59cf34"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527090002_temp_inspect_policies.sql": {
+    "mtime": 1779871618.9140325,
+    "hash": "99eccf0dd59a3d908590bb7e66dddccc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527090003_fix_rls_recursion.sql": {
+    "mtime": 1779871674.4331567,
+    "hash": "d5dda9c022ceeb116714b7c35bfca2f3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527090004_revert_temp_inspect.sql": {
+    "mtime": 1779871784.1055899,
+    "hash": "c9edc0e3507bc54326ff77fd805a8673"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527110001_create_user_reports.sql": {
+    "mtime": 1779909441.9093864,
+    "hash": "1d377f6bf6cd9e5a115a8aa4a0750174"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260527120001_add_lfg_posting_ban.sql": {
+    "mtime": 1779907828.4863474,
+    "hash": "ef747a2fae153a0cb8b6653b68d7acc0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260528060001_auto_host_account_trigger.sql": {
+    "mtime": 1779777728.1730063,
+    "hash": "474cb0cc1eba923b9cac902f3d2fb744"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260528220001_rename_mlbb_id_to_game_id.sql": {
+    "mtime": 1780190794.2954905,
+    "hash": "8a261e9d19bb355632417246ed9ea853"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260529060001_add_lfg_extended_columns.sql": {
+    "mtime": 1779794980.4188292,
+    "hash": "3a46a8808b064e257c4e98372c94cfc4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260530060001_backfill_player_stats.sql": {
+    "mtime": 1779799736.1377125,
+    "hash": "849b7f5fb3c68303fa9633198524bb75"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531060001_scrim_notifications_and_lfg_avatar.sql": {
+    "mtime": 1780189414.8505542,
+    "hash": "a119bbde564a80c77c40c8c0f1ae66cd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531060002_backfill_lfg_avatars.sql": {
+    "mtime": 1779825373.5387335,
+    "hash": "1984c24e6cce04b01d717464f249c53b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531060003_fix_messaging_500_and_rls.sql": {
+    "mtime": 1779827228.2408712,
+    "hash": "8fcc1c1c4dea69dbcf2198c4240828fd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531060004_ultimate_messaging_fix.sql": {
+    "mtime": 1780238669.2130747,
+    "hash": "009790f0327533a3ef52fe53e0b461e5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531100001_fix_rls_recursion.sql": {
+    "mtime": 1779872568.742622,
+    "hash": "b7eb0b1f6664e6822347e3d0de5f2455"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531110001_fix_realtime_replica_identity.sql": {
+    "mtime": 1779872581.880086,
+    "hash": "704a1eb7584b278fa9add1748ba9de33"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531120001_diagnose_realtime.sql": {
+    "mtime": 1779876068.8016477,
+    "hash": "88f8a4ee915ccac21805c579289c5de4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531120002_diagnose_publication.sql": {
+    "mtime": 1779876094.191849,
+    "hash": "e7728d5611e832f174ab4975417f7881"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531130001_fix_read_receipts_delivery_status.sql": {
+    "mtime": 1779876168.6421704,
+    "hash": "c9e927909f5ef5463f63537cd866cae5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260531140001_comprehensive_realtime_diagnostic.sql": {
+    "mtime": 1779880483.8338518,
+    "hash": "f8c7d231c73c76d4dc6a804d5f6dcc94"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260601190000_fix_scrim_bugs.sql": {
+    "mtime": 1780341165.6934855,
+    "hash": "c8709440f3eaf5bdee4e69219b62b32c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260602000000_fix_tournament_rejections.sql": {
+    "mtime": 1780355908.733265,
+    "hash": "fc6e024ab22de9f6817e9a116760cf41"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260627060001_comprehensive_security_fix.sql": {
+    "mtime": 1779915603.920092,
+    "hash": "debb72b56fdc1c15d55451b267f43a5c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628060001_enable_rls_message_rate_limits.sql": {
+    "mtime": 1779916365.198697,
+    "hash": "0ea67bf8ee0ff1538bc1ffd2d280d4bf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628070001_team_invite_notifications.sql": {
+    "mtime": 1779918026.8963366,
+    "hash": "b5d384e5338cc52bfc1690320dc7c875"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628080001_chat_media_storage.sql": {
+    "mtime": 1779959180.7183344,
+    "hash": "674996dd45222dff42704dc3d865581f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628090001_add_team_chat_to_conversations.sql": {
+    "mtime": 1779972504.0988636,
+    "hash": "b696a3c43b8adf5bd2c4c8c38ba60c28"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628090002_fix_realtime_publication.sql": {
+    "mtime": 1779972525.1646578,
+    "hash": "120fa299f4cfa3e18d0187e3f1c97c24"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260628090003_message_status_triggers.sql": {
+    "mtime": 1779972103.9581194,
+    "hash": "da2bdf5678ff520f92f0738a789c9455"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260629070001_add_avatar_urls_to_conversations_rpc.sql": {
+    "mtime": 1779972541.7659037,
+    "hash": "bffed0e8bfdf525fd3c2feada1f55c36"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260629080001_resolve_tournament_dispute_rpc.sql": {
+    "mtime": 1779968560.6094763,
+    "hash": "fdfb2cc2abd4e24729fd11ae8cad7f96"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260629100001_recreate_realtime_publication.sql": {
+    "mtime": 1779972792.2088785,
+    "hash": "f6e084218fe36c435cebadc524052720"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260629110001_fix_message_trigger.sql": {
+    "mtime": 1779972967.4473727,
+    "hash": "fd19cc38beb143c96f61b936b067251d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631050001_add_screenshot_per_game_and_bo2.sql": {
+    "mtime": 1780190811.5337653,
+    "hash": "6cf92d54e106888b9a949db86e469f8e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631060001_add_team_name_to_scrims.sql": {
+    "mtime": 1780189248.476109,
+    "hash": "a3fdaf9fa1a87dac1b10e18d032e4315"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631070001_lfg_posts_table.sql": {
+    "mtime": 1780190823.32399,
+    "hash": "e7549dcb253218713b7bfa116015fe42"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631070002_supabase_schema_sync.sql": {
+    "mtime": 1780229168.841223,
+    "hash": "0d9378dce49ffc9d7a33273cc5ae34be"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631080001_approve_scrim_application_atomic.sql": {
+    "mtime": 1780240840.8625567,
+    "hash": "275f6943b0301d7866c6920fcf9e1c33"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631090001_scrim_time_validation.sql": {
+    "mtime": 1780240816.2992868,
+    "hash": "ae08d6bff01e05e211978bb8091a4a94"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631100001_scrim_state_machine_hardering.sql": {
+    "mtime": 1780246736.116221,
+    "hash": "623f5f367c187cd95dd226d90342793d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631110001_scrim_remaining_atomic_fixes.sql": {
+    "mtime": 1780242316.9948645,
+    "hash": "6071df782bccb5e61559d1c560cbad6f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631120001_scrim_game_result_dispute_tracking.sql": {
+    "mtime": 1780246761.1523283,
+    "hash": "9eec05f0f2386f9ed5fd46679b4e7981"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631130001_fix_upload_game_screenshot_race.sql": {
+    "mtime": 1780245040.1088433,
+    "hash": "2a21c1466dcbfe2c5bbe3821f291ba72"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631140001_fix_approve_and_ready_check.sql": {
+    "mtime": 1780247345.457378,
+    "hash": "167a415e3e4125d975f83c01a469012b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631150001_add_manual_cancel_scrim_rpc.sql": {
+    "mtime": 1780247382.609576,
+    "hash": "9c19a8ab2136000d31330aaabc116717"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631160001_drop_old_game_result_status_constraint.sql": {
+    "mtime": 1780247819.9907584,
+    "hash": "5d46c091f4334e0cd6d4db7681dcf9f5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631170001_fix_apply_to_scrim_reapplication.sql": {
+    "mtime": 1780248695.899433,
+    "hash": "f1990def96f3805abccf97454f9b65cf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631180001_fix_complete_scrim_tie_and_atomic_roster.sql": {
+    "mtime": 1780257090.8575623,
+    "hash": "d8739682c77d3aeed573f6cb14efa64d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631190001_change_series_format_rpc.sql": {
+    "mtime": 1780258835.7625427,
+    "hash": "c3d942d9517a7a19f7ffaf536016e451"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260631200001_fix_completed_requires_winner_for_bo2_ties.sql": {
+    "mtime": 1780259535.4652822,
+    "hash": "05ae7497147cd7b960a58eae731dfaf3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260632000000_messaging_audit_fixes.sql": {
+    "mtime": 1780343679.4245088,
+    "hash": "7a5a7e0041ba3e3c0b56a97932679acc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\20260632010000_admin_rpc_fixes.sql": {
+    "mtime": 1780346418.6776242,
+    "hash": "714fd30d591f172c1a90a9e0d583e10f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\lfg_migration.sql": {
+    "mtime": 1778804365.7386575,
+    "hash": "e7549dcb253218713b7bfa116015fe42"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\migrations\\supabase_migration.sql": {
+    "mtime": 1780229173.5414734,
+    "hash": "e3f601b5c1018a89f748a0eda318be56"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\apply_security_fixes.js": {
+    "mtime": 1779915025.4673727,
+    "hash": "da37e280b19867c06924c750066b6748"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\auth-verify.js": {
+    "mtime": 1779915095.9017565,
+    "hash": "8c70f581eb0dbcbcec54515fa53369da"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\backfill_avatars.js": {
+    "mtime": 1779915031.9295943,
+    "hash": "d2f45db64d8f7611e4924daeb2038429"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\fix_compile.py": {
+    "mtime": 1779561830.7447822,
+    "hash": "a6d7194f2e971f287d7c70ae6a1dadb1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\fix_compile2.py": {
+    "mtime": 1779562336.0227864,
+    "hash": "1fbfa9e25a4c91610957fdc009e77cd1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\fix_strings.py": {
+    "mtime": 1779559797.4928207,
+    "hash": "b2d765fc1b35ad442ce70f64d2946342"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\generate_translations.py": {
+    "mtime": 1778542679.6189442,
+    "hash": "ba17a31b475927b521391ac9e6cd5acc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\get_dim.ps1": {
+    "mtime": 1778985036.8847554,
+    "hash": "9d5c4e371f74ebc094b282b5ad7f0c22"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\realtime-raw-test.js": {
+    "mtime": 1779974016.6172223,
+    "hash": "65a6d3bed034448deb604008f813c7d1"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\realtime-verify.js": {
+    "mtime": 1779915095.9032774,
+    "hash": "76b487dd0924741c9a03d5706eb44e4d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\run_lfg_migration.js": {
+    "mtime": 1779915025.469517,
+    "hash": "834f65d2c5855733cfa715aa6f6daa15"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\run_migration.js": {
+    "mtime": 1779915025.468498,
+    "hash": "2ac543a477492a5851f743cf0d16896d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\run_migration.py": {
+    "mtime": 1779915095.9043498,
+    "hash": "1bbdd263e1da0b8801664898807b0558"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\setup_database.py": {
+    "mtime": 1779915095.9055276,
+    "hash": "c70d178a0179df8b72e9d082135bec5d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\setup_db.py": {
+    "mtime": 1779915031.9285784,
+    "hash": "09452eef7bd581c11943e8078ecd598a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\slice_badges.js": {
+    "mtime": 1778903356.822599,
+    "hash": "1d84e7e3a08b61c1250a99a5815a8983"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\slice_badges.py": {
+    "mtime": 1778903309.3164823,
+    "hash": "48f56ca79c85f3eb6efb281d5d568374"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tools\\slice_tiers.ps1": {
+    "mtime": 1778988732.5675397,
+    "hash": "4b1e07a0b8453bce9893d267daa67fd5"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\CHANGELOG.md": {
+    "mtime": 1779983695.4423263,
+    "hash": "9f2f798099cfbeed65e61ceb0e9518f7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\changelogs.md": {
+    "mtime": 1780368894.022872,
+    "hash": "86e5765494e578d1e55f75e6647a14bd"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\CLAUDE.md": {
-    "mtime": 1778425435.783426,
-    "hash": "275415c2a4cb0a947fd6d6da5c5d2252"
+    "mtime": 1779984309.8363192,
+    "hash": "50637747b8affe2d2cc5ac43296707e2"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\DESIGN.md": {
     "mtime": 1778529890.2394378,
     "hash": "ce0a4b7fcc1da323393a5f9a1667ae13"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\E2E_VERIFICATION_REPORT.md": {
+    "mtime": 1779872690.1866536,
+    "hash": "7428d86dbdb928c2d615a542f49abc18"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\global-audit-project.md": {
+    "mtime": 1779836862.8359673,
+    "hash": "c3615b864a08aff0bb48874abbd080e4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\message-audit.md": {
+    "mtime": 1779868721.4683635,
+    "hash": "dc207c3d8975e53c3f132a7c0173ed86"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\message-production-plan.md": {
+    "mtime": 1779869543.7548695,
+    "hash": "8dd5e8e431e03368a338639a1009c241"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\message-verification-report.md": {
+    "mtime": 1779972138.1404185,
+    "hash": "1f36014da9d56df78d9e281c45b44712"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\MIGRATION.md": {
+    "mtime": 1779868120.3990688,
+    "hash": "5f292712200d6d9f422acca0c6a937b0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\OPERATIONAL_VERIFICATION_REPORT.md": {
+    "mtime": 1779872095.7142239,
+    "hash": "72c6c0853083e44151ccf5dd61921125"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\PRIVACY_POLICY.md": {
+    "mtime": 1779988240.8686888,
+    "hash": "e717cc0434c98b589d796f87eb28f07d"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\README.md": {
-    "mtime": 1778425509.8167107,
-    "hash": "10419cbaceccd32bf6599e817b22d3f9"
+    "mtime": 1779972138.1383672,
+    "hash": "4983f4d7fe16a19175e8bbf5bf5250e8"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\REALTIME_DELIVERY_VERIFICATION_REPORT.md": {
+    "mtime": 1779876248.8531895,
+    "hash": "8f3e6012db20160ef785d8a77ddbabcc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\REALTIME_ROOT_CAUSE_REPORT.md": {
+    "mtime": 1779880541.5427222,
+    "hash": "af6b8b7ce55e90c49e71aeab4fed6713"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\TERMS_OF_SERVICE.md": {
+    "mtime": 1779988233.4850242,
+    "hash": "d85277e3370b030fa94b1dc9bd631683"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\TESTING_CHECKLIST_EN.md": {
     "mtime": 1778654774.9684966,
@@ -806,6 +1902,18 @@
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\TESTING_CHECKLIST_RU.md": {
     "mtime": 1778654760.9923553,
     "hash": "786bea9ada7246a456e5e2d5c303785d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\today-work.md": {
+    "mtime": 1779977076.9928732,
+    "hash": "8888443bfb1dfa67c68e84b9a0bf15ef"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\tournamentwork.md": {
+    "mtime": 1779685038.4367554,
+    "hash": "311b682c7bd96d4e561d9b534790e8dc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\vdshost.md": {
+    "mtime": 1779962805.8725746,
+    "hash": "234133ce57bf46c43b4db71b5d61e649"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\API\\api-mobilelegends\\CODE_OF_CONDUCT.md": {
     "mtime": 1778459542.326535,
@@ -883,17 +1991,65 @@
     "mtime": 1778459542.3275273,
     "hash": "4c107ef2d7ce12f9847e9cc8f733f377"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\docs\\view_images.html": {
+    "mtime": 1778985249.2509649,
+    "hash": "b7ef0bf269f023957e21a0bba2a8fe61"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\COVERAGE_REPORT.md": {
+    "mtime": 1779863972.7411885,
+    "hash": "6355546b6d14f7f98e6504c845a26d3c"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\MISSING_TESTS.md": {
+    "mtime": 1779863588.5122974,
+    "hash": "b537829dfb723b8634fed1e5997e5eb9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\MISSING_TEST_MATRIX.md": {
+    "mtime": 1779864077.5135238,
+    "hash": "7dbdf86036efb180825249793bc2a7a3"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\TEST_PLAN.md": {
+    "mtime": 1779863483.449254,
+    "hash": "95b2c30d76785dd87b7baee4007bb388"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\reports\\ADVANCED_TEST_REPORT.md": {
+    "mtime": 1779864241.5071335,
+    "hash": "21d6b03228ed428174fe660555fbac8b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\reports\\COVERAGE_DIFF.md": {
+    "mtime": 1779864256.4869878,
+    "hash": "80281a4aaa2acc89d7ceb1ab41b8ee11"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\reports\\FLAKY_TESTS.md": {
+    "mtime": 1779864286.762152,
+    "hash": "f8c29d11e6d313fa9a52dddca7779425"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\GlobalTest\\reports\\SKIPPED_CLASSES.md": {
+    "mtime": 1779864272.0065386,
+    "hash": "9df5a963d226d2b43d515154b57b35b9"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewAPI\\README.md": {
     "mtime": 1778546503.7448864,
     "hash": "1354a06d3dbb3f1cfdd738e17893a09d"
   },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\screenshot.png": {
-    "mtime": 1778654976.3427513,
-    "hash": "12628a51d94c6c8fd0f72081c93e231d"
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\README.md": {
+    "mtime": 1778546503.7448864,
+    "hash": "1354a06d3dbb3f1cfdd738e17893a09d"
   },
-  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\screenshot_after_fix.png": {
-    "mtime": 1778655505.681242,
-    "hash": "855ed157facf39de9fc45dbd6a9f5fa2"
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\NewsService_Deploy\\render.yaml": {
+    "mtime": 1779377969.0130334,
+    "hash": "fe13fed55b76a684d804fa9faf062bed"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\supabase\\email_template_confirm_signup.html": {
+    "mtime": 1779379119.3225965,
+    "hash": "9e13d41b218074845f89c4f303223a01"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\navbar2.png": {
+    "mtime": 1779985897.2905083,
+    "hash": "8f933a664dae8aae996ef4bd9fe59262"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\navbar_fix.png": {
+    "mtime": 1779985524.348765,
+    "hash": "dfd2a173c360e9a0adfbef6aa6d076a4"
   },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\API\\api-mobilelegends\\images\\blog\\landing-page-v3.2.2.webp": {
     "mtime": 1778459542.3454442,
@@ -935,6 +2091,66 @@
     "mtime": 1778459542.3474092,
     "hash": "c0bc817d72f5007d4a0042995f49a88d"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_assassin_master.png": {
+    "mtime": 1779374350.3010519,
+    "hash": "f3cd2a19dc11c49495eaf74194dfe23a"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_first_scrim.png": {
+    "mtime": 1779374350.3024783,
+    "hash": "84e6ff360d979f26abb905336915b6c4"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_five_star.png": {
+    "mtime": 1779374350.3024783,
+    "hash": "4daf642b782ee09f9d9606631fe521cf"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_flawless_victory.png": {
+    "mtime": 1779374350.3035038,
+    "hash": "d0e680fb25e1e006df00ee40efcf1f44"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_legend_win.png": {
+    "mtime": 1779374350.3054006,
+    "hash": "2e64ea294c992852ac65ff3123a9f740"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_mythic_reached.png": {
+    "mtime": 1779374350.3064108,
+    "hash": "f0bcd76e30d8b5efdaff64fa986f4e3e"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_night_owl.png": {
+    "mtime": 1779374350.3064108,
+    "hash": "0e4ac1c6e4495e91a8c4f1f62ee2afb7"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_rated_10.png": {
+    "mtime": 1779374350.3074093,
+    "hash": "bf3d78940835dfb3673c47f4f4a0eb32"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_regional_top.png": {
+    "mtime": 1779374350.3084059,
+    "hash": "8bfb0617d37bbc35a32f3ee46c147118"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_roamer_master.png": {
+    "mtime": 1779374350.3094027,
+    "hash": "1cb8d232ee4e91d7cf6dcabf4e277623"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_scrim_host_10.png": {
+    "mtime": 1779374350.3103993,
+    "hash": "3ec9c61390f802320ef38ea4e2e48112"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_team_creator.png": {
+    "mtime": 1779374350.3113956,
+    "hash": "6954ecd747c7aa9fd364c8154a7e4c5f"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_veteran_100.png": {
+    "mtime": 1779374350.3127542,
+    "hash": "08d889e27f3fe160a143fb172b2141bd"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_win_streak_10.png": {
+    "mtime": 1779374350.3142595,
+    "hash": "bef5653a6b977604611db7bc97a0fac2"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\badge_win_streak_5.png": {
+    "mtime": 1779374350.3152416,
+    "hash": "7ac2de608309bac850ad400595aea9f9"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\bronze.png": {
     "mtime": 1778554682.3546014,
     "hash": "014fa2b943ddf7f3e2a7d331c5c818de"
@@ -955,8 +2171,68 @@
     "mtime": 1778554682.394166,
     "hash": "5e3d0726ac2082208feddb85ecbfe8e6"
   },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\logo.png": {
+    "mtime": 1779374350.3202643,
+    "hash": "55ea7daf1daa2efb7fc8558a2d6eefa9"
+  },
   "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\silver.png": {
     "mtime": 1778554682.3614862,
     "hash": "a10b22fe38fb3f5fbbe1a8e8edc24b88"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_bronze.png": {
+    "mtime": 1779374350.3212893,
+    "hash": "484a0261f013e86d5c8c2a457230809b"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_epic.png": {
+    "mtime": 1779374350.3212893,
+    "hash": "9b47f43a94bc77155a0b0aec4e906818"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_gold.png": {
+    "mtime": 1779374350.3223033,
+    "hash": "ad9ede23cbb235f97e8225f1205cbedc"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_grandmaster.png": {
+    "mtime": 1779374350.3223033,
+    "hash": "a931c18a5b6536caba79c112c83a3805"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_legend.png": {
+    "mtime": 1779374350.3233306,
+    "hash": "354c413dc52dc7dbac77fd2a774c87b0"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_mythic.png": {
+    "mtime": 1779374350.3233306,
+    "hash": "fe1e9b1767da297d9470fd933122f97d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable\\tier_silver.png": {
+    "mtime": 1779374350.3233306,
+    "hash": "5d53f8c5b05e7fea5a35125868bc4853"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\app\\src\\main\\res\\drawable-nodpi\\app_logo_original.png": {
+    "mtime": 1778903215.6742525,
+    "hash": "55ea7daf1daa2efb7fc8558a2d6eefa9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\assets\\achivments-jukebox-bg-removed.png": {
+    "mtime": 1778903215.665385,
+    "hash": "b62b2947408e3ed87b78ae92c95fbc56"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\assets\\LOGO-jukebox-bg-removed.png": {
+    "mtime": 1778903215.6742525,
+    "hash": "55ea7daf1daa2efb7fc8558a2d6eefa9"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\assets\\teirs-removebg-preview.png": {
+    "mtime": 1778981591.7990549,
+    "hash": "fd84c26516caca8e1884789a9fbd9820"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\assets\\teirs.png": {
+    "mtime": 1778898973.6630166,
+    "hash": "eb8026ccc63758d1ec320c48b22ffd60"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\docs\\screenshots\\screenshot.png": {
+    "mtime": 1778654976.3427513,
+    "hash": "12628a51d94c6c8fd0f72081c93e231d"
+  },
+  "C:\\Users\\Shukhrat\\Desktop\\New folder\\git\\Android\\docs\\screenshots\\screenshot_after_fix.png": {
+    "mtime": 1778655505.681242,
+    "hash": "855ed157facf39de9fc45dbd6a9f5fa2"
   }
 }

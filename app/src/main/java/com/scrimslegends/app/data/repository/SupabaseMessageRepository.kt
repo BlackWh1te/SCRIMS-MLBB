@@ -81,12 +81,10 @@ class SupabaseMessageRepository(
 
     // ── Concurrency guards ──
     // Per-conversation send locks — prevents cross-conversation serialization
-    private val sendLocks = mutableMapOf<String, Mutex>()
+    private val sendLocks = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
 
     private fun getSendMutex(conversationId: String): Mutex {
-        return synchronized(sendLocks) {
-            sendLocks.getOrPut(conversationId) { Mutex() }
-        }
+        return sendLocks.computeIfAbsent(conversationId) { Mutex() }
     }
     private val cacheMutex = Mutex()
     private val activeSubscriptions = Collections.synchronizedSet(HashSet<String>())
@@ -178,8 +176,8 @@ class SupabaseMessageRepository(
                 memoryTtlMs = CONV_MEMORY_TTL,
                 roomTtlMs = CONV_ROOM_TTL,
                 roomLoader = {
-                    val cached = conversationDao.getConversationsForUser(userId).first()
-                    if (cached.isNotEmpty()) cached.map { it.toDomainModel() } else null
+                    val cached = conversationDao.getConversationsForUser(userId).firstOrNull()
+                    cached?.map { it.toDomainModel() }
                 },
                 networkLoader = {
                     val response = api.getConversationsForUserRpc(mapOf("p_user_id" to userId))
@@ -201,8 +199,8 @@ class SupabaseMessageRepository(
             }
         } catch (e: Exception) {
             try {
-                val cached = conversationDao.getConversationsForUser(userId).first()
-                if (cached.isNotEmpty()) {
+                val cached = conversationDao.getConversationsForUser(userId).firstOrNull()
+                if (!cached.isNullOrEmpty()) {
                     emit(Result.success(cached.map { it.toDomainModel() }))
                 } else {
                     emit(Result.failure(e))
@@ -242,13 +240,13 @@ class SupabaseMessageRepository(
             }
 
             try {
-                val roomConv = conversationDao.getConversationById(conversationId).first()
+                val roomConv = conversationDao.getConversationById(conversationId).firstOrNull()
                 if (roomConv != null) {
                     val domainConv = roomConv.toDomainModel()
                     val newCacheEntry = CachedConversation(domainConv, System.currentTimeMillis())
                     cacheMutex.withLock { conversationLookupCache[conversationId] = newCacheEntry }
                     val roomMessages = try {
-                        messageDao.getMessagesForConversation(conversationId).first().map { it.toDomainModel() }
+                        messageDao.getMessagesForConversation(conversationId).firstOrNull()?.map { it.toDomainModel() } ?: emptyList()
                     } catch (_: Exception) { emptyList() }
 
                     val roomMessagesFresh = roomMessages.isNotEmpty() &&
@@ -306,9 +304,9 @@ class SupabaseMessageRepository(
             }
         } catch (e: Exception) {
             try {
-                val roomConv = conversationDao.getConversationById(conversationId).first()
+                val roomConv = conversationDao.getConversationById(conversationId).firstOrNull()
                 if (roomConv != null) {
-                    val roomMessages = messageDao.getMessagesForConversation(conversationId).first().map { it.toDomainModel() }
+                    val roomMessages = messageDao.getMessagesForConversation(conversationId).firstOrNull()?.map { it.toDomainModel() } ?: emptyList()
                     emit(Result.success(roomConv.toDomainModel().copy(messages = roomMessages)))
                 } else {
                     emit(Result.failure(e))
@@ -857,7 +855,7 @@ class SupabaseMessageRepository(
 
         // Phase 1: Emit cached Room messages for instant display
         try {
-            val cached = messageDao.getMessagesForConversation(conversationId).first()
+            val cached = messageDao.getMessagesForConversation(conversationId).firstOrNull() ?: emptyList()
             cached.forEach { entity ->
                 cachedIds.add(entity.id)
                 emit(entity.toDomainModel())
@@ -983,7 +981,7 @@ class SupabaseMessageRepository(
             }
 
             try {
-                val roomConvs = conversationDao.getConversationsForUser(senderId).first()
+                val roomConvs = conversationDao.getConversationsForUser(senderId).firstOrNull() ?: emptyList()
                 val existing = roomConvs.find { entity ->
                     entity.scrimId.isNullOrEmpty() &&
                     ((entity.participantAId == senderId && entity.participantBId == recipientId) ||
@@ -1031,7 +1029,7 @@ class SupabaseMessageRepository(
             if (createResponse.isSuccessful) {
                 val body = createResponse.body()
                 if (!body.isNullOrEmpty()) {
-                    val created = mapDtoToConversation(body.first())
+                    val created = mapDtoToConversation(body.firstOrNull() ?: run { emit(Result.failure(Exception("Created conversation returned empty body"))); return@flow })
                     cacheConversation(created)
                     conversationDao.insertConversation(mapConversationToEntity(created))
                     cacheManager.invalidateByPrefix(CACHE_KEY_CONVERSATIONS_PREFIX)

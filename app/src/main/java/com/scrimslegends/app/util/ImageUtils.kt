@@ -65,15 +65,14 @@ object ImageUtils {
 
             // Compress as JPEG
             val out = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
-            
-            val result = out.toByteArray()
-            
-            // Cleanup
-            if (scaledBitmap != bitmap) scaledBitmap.recycle()
-            bitmap.recycle()
-            
-            return result
+            try {
+                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                return out.toByteArray()
+            } finally {
+                out.close()
+                if (scaledBitmap != bitmap) scaledBitmap.recycle()
+                bitmap.recycle()
+            }
         } catch (e: Exception) {
             Timber.e(e, "Compression failed, returning original")
             return bytes

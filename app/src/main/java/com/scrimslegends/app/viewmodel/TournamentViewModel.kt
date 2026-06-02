@@ -503,6 +503,7 @@ class TournamentViewModel @Inject constructor(
                     loadTournamentMatches(tournamentId)
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Timber.w("Tournament matches realtime error: ${e.message}")
             }
         }
@@ -520,6 +521,7 @@ class TournamentViewModel @Inject constructor(
                     loadTournamentTeams(tournamentId)
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Timber.w("Tournament teams realtime error: ${e.message}")
             }
         }

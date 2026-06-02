@@ -136,6 +136,7 @@ class AuthViewModel @Inject constructor(
                     try {
                         authRepository.getUserProfile()
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         Timber.e(e, "Failed to load profile during init")
                         null
                     }
@@ -147,6 +148,7 @@ class AuthViewModel @Inject constructor(
                     try {
                         authRepository.updateLocationAndLastSeen()
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         Timber.w(e, "Silent location update failure")
                     }
                 }
@@ -155,6 +157,7 @@ class AuthViewModel @Inject constructor(
                 _userProfile.value = null
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Timber.e(e, "Critical init failure")
             _isLoggedIn.value = false
         } finally {
@@ -313,6 +316,10 @@ class AuthViewModel @Inject constructor(
                     _isLoggedIn.value = false
                     _userProfile.value = null
                     pendingVerificationStartedAtMs = null
+                    pendingEmail = ""
+                    pendingPassword = ""
+                    pendingUsername = ""
+                    pendingInGameId = ""
                     // Reset authState to Idle (NOT Success) to prevent
                     // the Login screen's LaunchedEffect from navigating back to Home
                     _authState.value = AuthResult.Idle
@@ -395,6 +402,7 @@ class AuthViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _authState.value = AuthResult.Error("Upload failed: ${e.message}")
             }
         }

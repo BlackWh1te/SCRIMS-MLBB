@@ -58,6 +58,11 @@ interface MessageRepositoryInterface {
     suspend fun deleteMessage(messageId: String): Result<Unit>
 
     /**
+     * Clears the chat history for the current user.
+     */
+    suspend fun clearChatHistory(conversationId: String): Result<Unit>
+
+    /**
      * Load older messages for pagination (before the given timestamp).
      * Returns messages older than `beforeTimestamp`, limited to `limit` count.
      */

@@ -141,53 +141,57 @@ class UnifiedCacheManager(private val metadataDao: CacheMetadataDao) {
         roomSaver: suspend (T) -> Unit,
         forceRefresh: Boolean = false
     ): kotlinx.coroutines.flow.Flow<T> = kotlinx.coroutines.flow.flow {
-        var needNetworkFetch = true
+        // Prevent thundering herd: only one coroutine fetches per key
+        val mutex = fetchLocks.getOrPut(key) { Mutex() }
+        mutex.withLock {
+            var needNetworkFetch = true
 
-        // Try L1 first
-        val memEntry = memoryCache[key]
-        if (memEntry != null) {
-            emit(memEntry.data as T)
-            if (memEntry.isValid() && !forceRefresh) {
-                needNetworkFetch = false
+            // Try L1 first
+            val memEntry = memoryCache[key]
+            if (memEntry != null) {
+                emit(memEntry.data as T)
+                if (memEntry.isValid() && !forceRefresh) {
+                    needNetworkFetch = false
+                }
             }
-        }
 
-        // Try L2
-        if (needNetworkFetch) {
-            val metadata = metadataDao.get(key)
-            if (metadata != null) {
-                val roomData = roomLoader()
-                if (roomData != null) {
-                    val isStillValid = System.currentTimeMillis() < metadata.expiresAt
-                    if (memEntry == null || forceRefresh) {
-                        // Emit Room data if we didn't emit memory data
-                        emit(roomData)
-                    }
-                    if (isStillValid && !forceRefresh) {
-                        needNetworkFetch = false
-                        memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
+            // Try L2
+            if (needNetworkFetch) {
+                val metadata = metadataDao.get(key)
+                if (metadata != null) {
+                    val roomData = roomLoader()
+                    if (roomData != null) {
+                        val isStillValid = System.currentTimeMillis() < metadata.expiresAt
+                        if (memEntry == null || forceRefresh) {
+                            // Emit Room data if we didn't emit memory data
+                            emit(roomData)
+                        }
+                        if (isStillValid && !forceRefresh) {
+                            needNetworkFetch = false
+                            memoryCache[key] = MemoryEntry(roomData as Any, System.currentTimeMillis(), memoryTtlMs)
+                        }
                     }
                 }
             }
-        }
 
-        // Network Fetch
-        if (needNetworkFetch) {
-            try {
-                val freshData = networkLoader()
-                memoryCache[key] = MemoryEntry(freshData as Any, System.currentTimeMillis(), memoryTtlMs)
-                roomSaver(freshData)
-                metadataDao.set(CacheMetadataEntity(
-                    cacheKey = key,
-                    lastFetched = System.currentTimeMillis(),
-                    expiresAt = System.currentTimeMillis() + roomTtlMs
-                ))
-                emit(freshData)
-            } catch (e: Exception) {
-                Timber.w(TAG, "Network fetch failed for [$key]", e)
-                // If we haven't emitted anything at all, throw the error
-                if (memoryCache[key] == null && metadataDao.get(key) == null) {
-                    throw e
+            // Network Fetch
+            if (needNetworkFetch) {
+                try {
+                    val freshData = networkLoader()
+                    memoryCache[key] = MemoryEntry(freshData as Any, System.currentTimeMillis(), memoryTtlMs)
+                    roomSaver(freshData)
+                    metadataDao.set(CacheMetadataEntity(
+                        cacheKey = key,
+                        lastFetched = System.currentTimeMillis(),
+                        expiresAt = System.currentTimeMillis() + roomTtlMs
+                    ))
+                    emit(freshData)
+                } catch (e: Exception) {
+                    Timber.w(TAG, "Network fetch failed for [$key]", e)
+                    // If we haven't emitted anything at all, throw the error
+                    if (memoryCache[key] == null && metadataDao.get(key) == null) {
+                        throw e
+                    }
                 }
             }
         }

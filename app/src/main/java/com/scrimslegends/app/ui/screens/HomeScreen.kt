@@ -258,8 +258,11 @@ fun HomeScreen(
                 val isHost = scrim.teamId in userTeamIds
                 val isOpponent = scrim.opponentTeamId in userTeamIds
                 when {
-                    isHost -> scrim.status != com.scrimslegends.app.data.model.ScrimStatus.OPEN &&
-                              scrim.status != com.scrimslegends.app.data.model.ScrimStatus.CANCELLED
+                    isHost -> scrim.status !in setOf(
+                        com.scrimslegends.app.data.model.ScrimStatus.OPEN,
+                        com.scrimslegends.app.data.model.ScrimStatus.PENDING,
+                        com.scrimslegends.app.data.model.ScrimStatus.CANCELLED
+                    )
                     isOpponent -> true
                     else -> false
                 }
