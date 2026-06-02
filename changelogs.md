@@ -8,6 +8,45 @@
 
 ---
 
+## 2026-06-02 07:50 +04:00 — Audit follow-up: crash/concurrency/memory fixes + compile fixes
+
+### Commits
+- `0c4eace` — fix(audit): resolve crash, concurrency, memory, and security issues across Android app
+
+### Crash Prevention
+- **SupabaseMessageRepository.kt** — Replaced all Room DAO `Flow.first()` calls with `firstOrNull()` to prevent `NoSuchElementException` crashes when local tables are empty.
+- **ScrimDetailScreen.kt** — Wrapped `openInputStream()` in `.use{}` for both game screenshot upload and local screenshot upload, preventing file descriptor leaks.
+- **ImageUtils.kt** — Wrapped `ByteArrayOutputStream` in `try-finally` with `.close()` and moved bitmap `.recycle()` into the `finally` block.
+- **AuthViewModel.kt, MessageViewModel.kt, TournamentViewModel.kt** — Added `if (e is CancellationException) throw e` to catch blocks so coroutine cancellation is never swallowed.
+
+### Concurrency & Memory
+- **SupabaseMessageRepository.kt** — Replaced `mutableMapOf<String, Mutex>()` with `ConcurrentHashMap` using `computeIfAbsent` for thread-safe per-chat mutex caching.
+- **SupabaseMatchResultRepository.kt** — Wrapped `LinkedHashMap` team name cache in `Collections.synchronizedMap()`.
+- **ChatScreen.kt & ScrimDetailScreen.kt** — Fixed countdown `LaunchedEffect` to reset `remaining = timeUntilOpens` at effect start, preventing concurrent loop races.
+
+### Silent Error Swallowing
+- Added `Timber.w` logging to 9 empty catch blocks across the data layer:
+  - `SupabaseScrimRepository.kt` (2), `SupabaseTeamRepository.kt` (2), `SupabaseAuthRepository.kt` (1)
+  - `ProfileCacheRepository.kt` (3), `SupabaseNotificationRepository.kt` (1)
+- Added `Timber` logging to empty UI catch blocks in `ScrimDetailScreen`, `TournamentDetailScreen`, `PlayerFinderScreen`, `TeamViewModel`.
+
+### Security & Auth
+- **SupabaseClient.kt** — Redacted hardcoded Supabase URL in code comment.
+- **AuthNavigation.kt** — Wrapped Flow collection in `repeatOnLifecycle(Lifecycle.State.STARTED)` to prevent memory leaks from collecting outside the started state.
+
+### Pre-existing Compile Fixes
+- **AuthRepository.kt** — Fixed ~30 usage sites where incomplete `AtomicReference` migration caused compilation errors (direct assignments → `.set()`, direct reads → `.get()`).
+- **TeamDetailScreen.kt** — Added missing closing `}` for the `Manage` tab `if` block from an uncommitted prior diff.
+- **MessageRepository.kt** — Added missing `clearChatHistory()` implementation required by `MessageRepositoryInterface`.
+- **SupabaseMessageRepository.kt** — Added missing `kotlinx.coroutines.cancel` and `kotlinx.coroutines.flow.firstOrNull` imports.
+- **ChatScreen.kt + AuthNavigation.kt** — Replaced direct `viewModel.clearChatHistory` call with a proper `onClearChatHistory` callback parameter, wired in `AuthNavigation` to `messageViewModel.clearChatHistory()`.
+- **TournamentViewModel.kt** — Fixed `String?` vs `String` type mismatch on `pendingLogoMime` with `?: "image/jpeg"` fallback.
+
+### Result
+Build now compiles with **0 errors** (warnings remain).
+
+---
+
 ## 2026-06-01 21:30 [Session: Codebase Cleanup + Pagination + FCM Prep]
 
 ### Commits
