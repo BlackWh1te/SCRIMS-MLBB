@@ -385,7 +385,31 @@ class SupabaseScrimRepository(
                 return@flow
             }
             invalidateScrimCaches()
-            getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after apply") }) }
+            getScrimById(scrimId).collect { result ->
+                result.onSuccess { scrim ->
+                    if (scrim != null) {
+                        // Best-effort: notify host leader directly (fallback when DB trigger is missing)
+                        try {
+                            val teamResp = api.getTeamById(PostgrestFilter.eq(scrim.teamId))
+                            val hostLeaderId = teamResp.body()?.firstOrNull()?.leaderId
+                            if (!hostLeaderId.isNullOrBlank()) {
+                                api.createNotification(
+                                    NotificationDto(
+                                        userId = hostLeaderId,
+                                        type = "SCRIM_APPLICATION_NEW",
+                                        title = "New Scrim Application",
+                                        message = "Team ${application.applicantTeamName} applied to your scrim!",
+                                        actionId = scrimId
+                                    )
+                                )
+                            }
+                        } catch (e: Exception) {
+                            Timber.w("ScrimRepo", "Failed to send apply notification: ${e.message}")
+                        }
+                    }
+                    emit(Result.success(scrim ?: throw Exception("Scrim not found after apply")))
+                }.onFailure { emit(Result.failure(it)) }
+            }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
