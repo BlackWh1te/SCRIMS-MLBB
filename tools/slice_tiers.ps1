@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Drawing
 
-$tiersPath = "C:\Users\Shukhrat\Desktop\New folder\git\Android\teirs-removebg-preview.png"
+$tiersPath = "C:\Users\Shukhrat\Desktop\New folder\git\Android\Adobe Express - file.png"
 $outDir = "C:\Users\Shukhrat\Desktop\New folder\git\Android\app\src\main\res\drawable"
 
 $img = [System.Drawing.Image]::FromFile($tiersPath)
