@@ -8,6 +8,50 @@
 
 ---
 
+## 2026-06-03 12:40 +04:00 — feat(assets): replace tier badge images with new Adobe Express designs
+
+### Commits
+- `85d2e79` — feat(assets): replace tier badge images with new Adobe Express designs
+
+### Problem
+User created new tier badge artwork in Adobe Express and wanted to replace the old tier images throughout the app.
+
+### Fix
+- Sliced `Adobe Express - file.png` (1536x1024, 4x2 grid) into 7 individual tier PNGs:
+  - `tier_bronze.png`, `tier_silver.png`, `tier_gold.png`, `tier_grandmaster.png`
+  - `tier_epic.png`, `tier_legend.png`, `tier_mythic.png`
+- Replaced all existing files in `app/src/main/res/drawable/`.
+- Updated `tools/slice_tiers.ps1` to reference the new source image for future re-slicing.
+
+### Result
+Build compiles with **0 errors**.
+
+---
+
+## 2026-06-03 07:32 +04:00 — Change: scrim approval opens chat immediately and accepted matchups can be reopened
+
+### Commits
+- Not committed in this session.
+
+### Problem
+Scrim approval still behaved like a scheduled chat gate: leaders could approve an application, but the conversation was treated as locked until close to match time. That blocked teams from coordinating early, moving the match, or cancelling and choosing another applicant before the scheduled time.
+
+### Fix
+- Removed the scrim two-hour chat gate from the Android scrim model and detail UI. Approved scrims now show chat immediately when a conversation exists.
+- Added host actions on accepted scrims:
+  - `Start Early` starts ready check immediately after both teams have exactly 5 active roster players.
+  - `Change Opponent` cancels only the accepted matchup and reopens the same scrim post.
+- Kept non-selected pending applications as fallback choices after approval.
+- Rejected only the previously accepted application when reopening an accepted matchup; that team must re-apply before the approve button appears again.
+- Added Supabase migration `20260633030000_scrim_reopen_and_start_early.sql` to update `approve_scrim_application`, `transition_to_ready_check`, and `cancel_scrim` with the new server-side behavior.
+- Confirmed points logic continues to use only active scrim roster players; substitutes receive no point change.
+
+### Verification
+- `.\gradlew.bat assembleDebug` — passed.
+- `.\gradlew.bat :app:testDebugUnitTest --tests com.scrimslegends.app.data.model.ScrimTest --tests com.scrimslegends.app.data.repository.ScrimRepositoryTest --tests com.scrimslegends.app.test.ModelUnitTest --tests com.scrimslegends.app.security.InputValidationTest` — passed.
+
+---
+
 ## 2026-06-03 00:50 +04:00 — Fix: newly created scrims not appearing in scrim list
 
 ### Commits
