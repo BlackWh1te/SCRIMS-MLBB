@@ -8,6 +8,28 @@
 
 ---
 
+## 2026-06-03 00:50 +04:00 — Fix: newly created scrims not appearing in scrim list
+
+### Commits
+- `2539bc5` — fix(scrim): refresh scrim list from page 0 after mutations
+
+### Problem
+User reported: "I press Create scrim but when I open scrims I don't see anything."
+
+### Root cause
+`ScrimViewModel` called `loadScrims()` (default `isRefresh = false`) after every mutation (create, update, delete, apply, approve, etc.). This had two failure modes:
+
+1. **isLastPage gate**: If the user had previously scrolled to the bottom and `isLastPage` became `true`, `loadScrims()` returned immediately without fetching anything. The new scrim never got loaded.
+2. **Wrong page**: `loadScrims()` loads `currentPage`, which is incremented after each successful fetch. After `init` loads page 0, `currentPage` becomes 1. So post-create `loadScrims()` fetched page 1, not page 0. The newly created scrim (newest, therefore on page 0) was never fetched into `_scrimMap`.
+
+### Fix
+Changed **all 19** `loadScrims()` calls in `ScrimViewModel.kt` to `loadScrims(isRefresh = true)`. This resets pagination to page 0 and clears `_scrimMap` before fetching, guaranteeing the mutated data is visible.
+
+### Result
+Build compiles with **0 errors**.
+
+---
+
 ## 2026-06-02 08:50 +04:00 — Audit: fix 10 bugs across Android app
 
 ### Commits
