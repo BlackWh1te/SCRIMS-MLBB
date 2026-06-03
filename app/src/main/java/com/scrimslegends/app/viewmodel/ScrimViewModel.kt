@@ -68,7 +68,7 @@ class ScrimViewModel @Inject constructor(
     private val pageSize = 20
 
     init {
-        loadScrims()
+        loadScrims(isRefresh = true)
     }
 
     fun loadScrims(isRefresh: Boolean = false) {
@@ -224,7 +224,7 @@ class ScrimViewModel @Inject constructor(
                             .collect { }
                     }
                     _selectedScrim.value = scrim
-                    loadScrims() // Refresh the list
+                    loadScrims(isRefresh = true) // Refresh the list
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -242,7 +242,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.updateScrim(scrim).collect { result ->
                 result.onSuccess { updatedScrim ->
                     _selectedScrim.value = updatedScrim
-                    loadScrims() // Refresh the list
+                    loadScrims(isRefresh = true) // Refresh the list
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -260,7 +260,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.deleteScrim(id).collect { result ->
                 result.onSuccess {
                     _selectedScrim.value = null
-                    loadScrims() // Refresh the list
+                    loadScrims(isRefresh = true) // Refresh the list
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -279,7 +279,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.cancelScrim(scrimId, reason, cancelledBy).collect { result ->
                 result.onSuccess {
                     // Refresh to pick up the cancelled scrim from the server
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _selectedScrim.value = _scrims.value.find { it.id == scrimId }
                     _isLoading.value = false
                 }.onFailure { exception ->
@@ -324,7 +324,7 @@ class ScrimViewModel @Inject constructor(
                             put(scrimId, selectedPlayerIds)
                         }
                     }
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -344,7 +344,7 @@ class ScrimViewModel @Inject constructor(
                 .collect { result ->
                     result.onSuccess { scrim ->
                         _selectedScrim.value = scrim
-                        loadScrims()
+                        loadScrims(isRefresh = true)
                         _isLoading.value = false
                     }.onFailure { exception ->
                         _error.value = exception.message
@@ -363,7 +363,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.rejectApplication(scrimId, applicationId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -382,7 +382,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.cancelApplication(scrimId, applicationId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -409,7 +409,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.setScrimRoster(scrimId, teamId, roster).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -444,7 +444,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.transitionToReadyCheck(scrimId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -463,7 +463,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.markReady(scrimId, teamId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -486,7 +486,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.uploadScreenshot(scrimId, teamId, screenshotUrl).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -505,7 +505,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.uploadGameScreenshot(scrimId, teamId, gameNumber, screenshotUrl).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -524,7 +524,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.selectGameWinner(scrimId, gameNumber, winnerTeamId).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -543,7 +543,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.changeSeriesFormat(scrimId, newBestOf).collect { result ->
                 result.onSuccess { scrim ->
                     _selectedScrim.value = scrim
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -568,7 +568,7 @@ class ScrimViewModel @Inject constructor(
                     _selectedScrim.value = scrim
                     // Calculate points (no points change for ties)
                     _pointsResult.value = scrimRepository.calculatePointsChanges(scrim)
-                    loadScrims()
+                    loadScrims(isRefresh = true)
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
@@ -595,7 +595,7 @@ class ScrimViewModel @Inject constructor(
                     result.onSuccess { scrim ->
                         _selectedScrim.value = scrim
                         _pointsResult.value = scrimRepository.calculatePointsChanges(scrim)
-                        loadScrims()
+                        loadScrims(isRefresh = true)
                         _isLoading.value = false
                     }.onFailure { exception ->
                         _error.value = exception.message
@@ -620,7 +620,7 @@ class ScrimViewModel @Inject constructor(
                     overdueScrims.forEach { scrim ->
                         scrimRepository.createAutoCancelledRecord(scrim.id).collect { cancelResult ->
                             cancelResult.onSuccess {
-                                loadScrims()
+                                loadScrims(isRefresh = true)
                             }.onFailure { exception ->
                                 _error.value = "Failed to auto-cancel overdue scrim: ${exception.message}"
                             }
