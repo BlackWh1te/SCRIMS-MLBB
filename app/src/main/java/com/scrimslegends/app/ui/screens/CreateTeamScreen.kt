@@ -53,6 +53,11 @@ fun CreateTeamScreen(
     var selectedLogoUri by remember { mutableStateOf<Uri?>(null) }
     var localError by remember { mutableStateOf("") }
     val displayedError = localError.takeIf { it.isNotEmpty() } ?: errorMessage ?: ""
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     val logoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -73,7 +78,7 @@ fun CreateTeamScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = HeroGradientBrush)
+            .background(brush = heroGradientBrush())
     ) {
         Column(
             modifier = Modifier
@@ -97,7 +102,7 @@ fun CreateTeamScreen(
                     )
                     Text(
                         text = stringResource(R.string.create_team),
-                        style = iOSTitle2.copy(color = TextPrimary)
+                        style = iOSTitle2.copy(color = appTextPrimary)
                     )
                     Spacer(modifier = Modifier.width(44.dp))
                 }
@@ -175,7 +180,7 @@ fun CreateTeamScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        colors = CardDefaults.cardColors(containerColor = appSurface),
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Column(
@@ -196,18 +201,18 @@ fun CreateTeamScreen(
                             OutlinedTextField(
                                 value = teamName,
                                 onValueChange = { teamName = it; localError = "" },
-                                label = { Text("Team Name *", color = TextSecondary) },
+                                label = { Text("Team Name *", color = appTextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = GoldPrimary,
-                                    unfocusedBorderColor = White.copy(alpha = 0.2f),
+                                    unfocusedBorderColor = appBorder,
                                     focusedLabelColor = GoldPrimary,
-                                    unfocusedLabelColor = TextTertiary,
+                                    unfocusedLabelColor = appTextSecondary,
                                     cursorColor = GoldPrimary,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary,
-                                    focusedContainerColor = DarkNavy,
-                                    unfocusedContainerColor = DarkNavy
+                                    focusedTextColor = appTextPrimary,
+                                    unfocusedTextColor = appTextPrimary,
+                                    focusedContainerColor = appElevatedSurface,
+                                    unfocusedContainerColor = appElevatedSurface
                                 ),
                                 shape = RoundedCornerShape(14.dp),
                                 singleLine = true,
@@ -221,18 +226,19 @@ fun CreateTeamScreen(
                             OutlinedTextField(
                                 value = teamDescription,
                                 onValueChange = { teamDescription = it },
-                                label = { Text("Description (optional)", color = TextSecondary) },
-                                modifier = Modifier.fillMaxWidth().height(100.dp),
+                                label = { Text("Description (optional)", color = appTextSecondary) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = BluePrimary,
-                                    unfocusedBorderColor = White.copy(alpha = 0.2f),
+                                    unfocusedBorderColor = appBorder,
                                     focusedLabelColor = BluePrimary,
-                                    unfocusedLabelColor = TextTertiary,
+                                    unfocusedLabelColor = appTextSecondary,
                                     cursorColor = BluePrimary,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary,
-                                    focusedContainerColor = DarkNavy,
-                                    unfocusedContainerColor = DarkNavy
+                                    focusedTextColor = appTextPrimary,
+                                    unfocusedTextColor = appTextPrimary,
+                                    focusedContainerColor = appElevatedSurface,
+                                    unfocusedContainerColor = appElevatedSurface
                                 ),
                                 shape = RoundedCornerShape(14.dp),
                                 maxLines = 3,
@@ -254,11 +260,11 @@ fun CreateTeamScreen(
                                     Column {
                                         Text(
                                             "Open for applications",
-                                            style = iOSBody.copy(color = TextPrimary, fontWeight = FontWeight.Medium)
+                                            style = iOSBody.copy(color = appTextPrimary, fontWeight = FontWeight.Medium)
                                         )
                                         Text(
                                             "Let players find and apply to join",
-                                            style = iOSCaption2.copy(color = TextSecondary)
+                                            style = iOSCaption2.copy(color = appTextSecondary)
                                         )
                                     }
                                 }
@@ -269,7 +275,7 @@ fun CreateTeamScreen(
                                         checkedThumbColor = White,
                                         checkedTrackColor = SuccessGreen,
                                         uncheckedThumbColor = White,
-                                        uncheckedTrackColor = White.copy(alpha = 0.3f)
+                                        uncheckedTrackColor = appElevatedSurface
                                     )
                                 )
                             }
@@ -299,7 +305,7 @@ fun CreateTeamScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        colors = CardDefaults.cardColors(containerColor = appSurface),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -315,7 +321,7 @@ fun CreateTeamScreen(
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     stringResource(R.string.team_requirements),
-                                    style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    style = MaterialTheme.typography.titleMedium.copy(color = appTextPrimary, fontWeight = FontWeight.SemiBold)
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
@@ -330,9 +336,9 @@ fun CreateTeamScreen(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(icon, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                                    Icon(icon, null, tint = appTextSecondary, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(10.dp))
-                                    Text(text, style = iOSCallout.copy(color = TextSecondary))
+                                    Text(text, style = iOSCallout.copy(color = appTextSecondary))
                                 }
                             }
                         }

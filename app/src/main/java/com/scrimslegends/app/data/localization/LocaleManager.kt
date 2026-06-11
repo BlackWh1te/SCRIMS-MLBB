@@ -9,7 +9,7 @@ import java.util.Locale
 object LocaleManager {
 
     fun setLocale(context: Context, languageCode: String): Context {
-        val locale = Locale(languageCode)
+        val locale = Locale("en")
         Locale.setDefault(locale)
 
         // P3-4 FIX: minSdk is 24 (N), so we can use LocaleList directly without version checks.

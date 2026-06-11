@@ -9,6 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -54,6 +56,8 @@ fun HomeScreen(
     onNavigateToScrimDetail: (String) -> Unit = {},
     onNavigateToTeamDetail: (String) -> Unit = {},
     onNavigateToTournamentList: () -> Unit = {},
+    onNavigateToJoinTeam: () -> Unit = {},
+    onJoinDiscord: () -> Unit = {},
     scrims: List<com.scrimslegends.app.data.model.Scrim> = emptyList(),
     teams: List<com.scrimslegends.app.data.model.Team> = emptyList(),
     notificationCount: Int = 0,
@@ -98,7 +102,7 @@ fun HomeScreen(
                         Text(
                             text  = greeting,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color         = TextSecondary,
+                                color         = appTextSecondaryColor(),
                                 letterSpacing = 0.sp
                             )
                         )
@@ -106,8 +110,19 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text  = userProfile?.username ?: stringResource(R.string.player_default),
-                                style = iOSTitle1.copy(color = TextPrimary)
+                                style = iOSTitle1.copy(color = appTextPrimaryColor())
                             )
+                            if (userProfile?.shortId?.isNotBlank() == true) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "ID: ${userProfile.shortId}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = GoldPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
                             if (isTournamentHost) {
                                 Spacer(Modifier.width(8.dp))
                                 Box(
@@ -146,15 +161,15 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(46.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(SurfaceOverlay)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                .background(appElevatedSurfaceColor())
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(14.dp))
                                 .clickable { onNavigateToNotifications() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector        = Icons.Default.Notifications,
                                 contentDescription = stringResource(R.string.notifications),
-                                tint               = if (notificationCount > 0) GoldPrimary else TextSecondary,
+                                tint               = if (notificationCount > 0) GoldPrimary else appTextSecondaryColor(),
                                 modifier           = Modifier.size(22.dp)
                             )
                         }
@@ -185,7 +200,20 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(14.dp))
+
+            AnimatedEntrance(delayMillis = 105) {
+                ScrimIntroCard(
+                    hasTeam = teams.isNotEmpty(),
+                    onFindScrim = onNavigateToSchedule,
+                    onCreateScrim = onNavigateToCreateScrim,
+                    onFindTeam = onNavigateToJoinTeam,
+                    onCreateTeam = onNavigateToCreateTeam,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
 
             // ── My Teams ────────────────────────────────────────
             if (teams.isNotEmpty()) {
@@ -213,7 +241,7 @@ fun HomeScreen(
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 stringResource(R.string.my_teams),
-                                style = iOSTitle3.copy(color = TextPrimary)
+                                style = iOSTitle3.copy(color = appTextPrimaryColor())
                             )
                         }
                         TextButton(onClick = onNavigateToCreateTeam) {
@@ -231,13 +259,12 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
 
                 AnimatedEntrance(delayMillis = 150) {
-                    Row(
-                        modifier = Modifier
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp),
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        teams.take(5).forEach { team ->
+                        items(teams.take(5)) { team ->
                             TeamHomeCard(
                                 team  = team,
                                 onClick = { onNavigateToTeamDetail(team.id) }
@@ -247,25 +274,77 @@ fun HomeScreen(
                 }
 
                 Spacer(Modifier.height(24.dp))
+            } else {
+                AnimatedEntrance(delayMillis = 135) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(SuccessGreen.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Groups, null,
+                                        tint     = SuccessGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    stringResource(R.string.my_teams),
+                                    style = iOSTitle3.copy(color = appTextPrimaryColor())
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(appSurfaceColor())
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
+                                .clickable { onNavigateToCreateTeam() }
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.GroupAdd, contentDescription = null, tint = appTextSecondaryColor(), modifier = Modifier.size(32.dp))
+                                Spacer(Modifier.height(8.dp))
+                                Text(stringResource(R.string.home_no_team_title), style = MaterialTheme.typography.bodyMedium.copy(color = appTextSecondaryColor(), fontWeight = FontWeight.Medium))
+                                Spacer(Modifier.height(4.dp))
+                                Text(stringResource(R.string.home_no_team_subtitle), style = MaterialTheme.typography.labelSmall.copy(color = BluePrimary, fontWeight = FontWeight.Bold))
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
             }
 
             // ── Upcoming Scrims ─────────────────────────────────
-            // Only show scrims the user is actively involved in:
-            // - Host: scrim has an accepted opponent (status != OPEN)
+            // - Host: user's team created the scrim
             // - Opponent: user's team was accepted (opponentTeamId matches)
             val userTeamIds = teams.map { it.id }.toSet()
             val upcomingScrims = scrims.filter { scrim ->
                 val isHost = scrim.teamId in userTeamIds
                 val isOpponent = scrim.opponentTeamId in userTeamIds
-                when {
-                    isHost -> scrim.status !in setOf(
-                        com.scrimslegends.app.data.model.ScrimStatus.OPEN,
-                        com.scrimslegends.app.data.model.ScrimStatus.PENDING,
-                        com.scrimslegends.app.data.model.ScrimStatus.CANCELLED
-                    )
-                    isOpponent -> true
-                    else -> false
+
+                if (scrim.status == com.scrimslegends.app.data.model.ScrimStatus.COMPLETED ||
+                    scrim.status == com.scrimslegends.app.data.model.ScrimStatus.CANCELLED) {
+                    return@filter false
                 }
+
+                isHost || isOpponent
             }.sortedBy { it.scheduledTime }.take(5)
 
             if (upcomingScrims.isNotEmpty()) {
@@ -293,7 +372,7 @@ fun HomeScreen(
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 stringResource(R.string.upcoming_scrims),
-                                style = iOSTitle3.copy(color = TextPrimary)
+                                style = iOSTitle3.copy(color = appTextPrimaryColor())
                             )
                             Spacer(Modifier.width(8.dp))
                             LivePulseDot(color = SuccessGreen)
@@ -313,14 +392,12 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
 
                 AnimatedEntrance(delayMillis = 180) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp),
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        upcomingScrims.forEach { scrim ->
+                        items(upcomingScrims) { scrim ->
                             ScrimCarouselCard(
                                 scrim   = scrim,
                                 onClick = { onNavigateToScrimDetail(scrim.id) }
@@ -329,14 +406,77 @@ fun HomeScreen(
                     }
                 }
                 Spacer(Modifier.height(24.dp))
+            } else {
+                AnimatedEntrance(delayMillis = 140) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(BluePrimary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.CalendarMonth, null,
+                                        tint     = BluePrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(10.dp))
+                            Text(
+                                stringResource(R.string.upcoming_scrims),
+                                style = iOSTitle3.copy(color = appTextPrimaryColor())
+                            )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(appSurfaceColor())
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
+                                .clickable { onNavigateToSchedule() }
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.EventBusy, contentDescription = null, tint = appTextSecondaryColor(), modifier = Modifier.size(32.dp))
+                                Spacer(Modifier.height(8.dp))
+                                Text(stringResource(R.string.home_no_scrims_title), style = MaterialTheme.typography.bodyMedium.copy(color = appTextSecondaryColor(), fontWeight = FontWeight.Medium))
+                                Spacer(Modifier.height(4.dp))
+                                Text(stringResource(R.string.home_no_scrims_subtitle), style = MaterialTheme.typography.labelSmall.copy(color = BluePrimary, fontWeight = FontWeight.Bold))
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
             }
 
             // ── Quick Actions Label ─────────────────────────────
+            AnimatedEntrance(delayMillis = 190) {
+                HowScrimsWorkCard(
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
             AnimatedEntrance(delayMillis = 200) {
                 Text(
                     stringResource(R.string.quick_actions),
                     style    = iOSCaption1.copy(
-                        color         = TextSecondary,
+                        color         = appTextSecondaryColor(),
                         fontWeight    = FontWeight.SemiBold,
                         letterSpacing = 0.8.sp
                     ),
@@ -464,6 +604,34 @@ fun HomeScreen(
                 }
             }
 
+            Spacer(Modifier.height(10.dp))
+
+            AnimatedEntrance(delayMillis = 340) {
+                Row(
+                    modifier              = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    HomeActionCard(
+                        icon     = Icons.Default.Search,
+                        title    = stringResource(R.string.join_team),
+                        subtitle = stringResource(R.string.join_team_sub),
+                        gradient = listOf(Color(0xFF9C27B0), Color(0xFFE040FB)),
+                        onClick  = onNavigateToJoinTeam,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HomeActionCard(
+                        icon     = Icons.Default.Chat,
+                        title    = stringResource(R.string.join_discord),
+                        subtitle = stringResource(R.string.join_discord_sub),
+                        gradient = listOf(Color(0xFF5865F2), Color(0xFF7289DA)),
+                        onClick  = onJoinDiscord,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
 
             // Bottom padding for nav bar
@@ -476,6 +644,204 @@ fun HomeScreen(
 // ── Stat Card ───────────────────────────────────────────────
 
 @Composable
+private fun ScrimIntroCard(
+    hasTeam: Boolean,
+    onFindScrim: () -> Unit,
+    onCreateScrim: () -> Unit,
+    onFindTeam: () -> Unit,
+    onCreateTeam: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showHelp by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        BluePrimary.copy(alpha = 0.28f),
+                        appSurfaceColor(),
+                        GoldPrimary.copy(alpha = 0.10f)
+                    )
+                )
+            )
+            .border(1.dp, BluePrimary.copy(alpha = 0.28f), RoundedCornerShape(22.dp))
+            .padding(18.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.home_scrims_title),
+                            style = iOSTitle2.copy(color = appTextPrimaryColor())
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.HelpOutline,
+                            contentDescription = stringResource(R.string.what_is_scrim_title),
+                            tint = BluePrimary,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { showHelp = true }
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.home_scrims_subtitle),
+                        style = iOSBody.copy(color = appTextSecondaryColor())
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ScrimIntroButton(
+                    text = stringResource(R.string.find_scrim_action),
+                    icon = Icons.Default.Search,
+                    color = BluePrimary,
+                    onClick = onFindScrim,
+                    modifier = Modifier.weight(1f)
+                )
+                ScrimIntroButton(
+                    text = stringResource(R.string.create_scrim_action),
+                    icon = Icons.Default.Add,
+                    color = GoldPrimary,
+                    onClick = onCreateScrim,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ScrimIntroButton(
+                    text = if (hasTeam) stringResource(R.string.find_team_action) else stringResource(R.string.start_find_team_action),
+                    icon = Icons.Default.Groups,
+                    color = SuccessGreen,
+                    onClick = onFindTeam,
+                    modifier = Modifier.weight(1f)
+                )
+                ScrimIntroButton(
+                    text = stringResource(R.string.create_team_action),
+                    icon = Icons.Default.GroupAdd,
+                    color = WarningOrange,
+                    onClick = onCreateTeam,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+
+    if (showHelp) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            containerColor = appSurfaceColor(),
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text(
+                    text = stringResource(R.string.what_is_scrim_title),
+                    color = appTextPrimaryColor(),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.what_is_scrim_body),
+                    color = appTextSecondaryColor(),
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showHelp = false }) {
+                    Text(stringResource(R.string.ok), color = BluePrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ScrimIntroButton(
+    text: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(46.dp)
+            .clip(RoundedCornerShape(13.dp))
+            .background(color.copy(alpha = 0.14f))
+            .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(13.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = text,
+                color = appTextPrimaryColor(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun HowScrimsWorkCard(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(appSurfaceColor())
+            .border(1.dp, appBorderColor(), RoundedCornerShape(18.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.how_scrims_work_title),
+            style = iOSTitle3.copy(color = appTextPrimaryColor())
+        )
+        Spacer(Modifier.height(12.dp))
+        HowScrimsWorkStep("1", stringResource(R.string.how_scrims_work_step_team))
+        Spacer(Modifier.height(8.dp))
+        HowScrimsWorkStep("2", stringResource(R.string.how_scrims_work_step_apply))
+        Spacer(Modifier.height(8.dp))
+        HowScrimsWorkStep("3", stringResource(R.string.how_scrims_work_step_results))
+    }
+}
+
+@Composable
+private fun HowScrimsWorkStep(
+    number: String,
+    text: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(BluePrimary.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(number, color = BluePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(text, color = appTextSecondaryColor(), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
 private fun HomeStatCard(
     icon    : ImageVector,
     label   : String,
@@ -486,8 +852,8 @@ private fun HomeStatCard(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .background(appSurfaceColor())
+            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
             .padding(vertical = 16.dp, horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -506,13 +872,13 @@ private fun HomeStatCard(
             Spacer(Modifier.height(8.dp))
             Text(
                 value,
-                style = PremiumStatsM.copy(fontSize = 18.sp, color = TextPrimary),
+                style = PremiumStatsM.copy(fontSize = 18.sp, color = appTextPrimaryColor()),
                 maxLines = 1
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 label,
-                style = iOSCaption2.copy(color = TextSecondary),
+                style = iOSCaption2.copy(color = appTextSecondaryColor()),
                 maxLines = 1
             )
         }
@@ -533,8 +899,8 @@ private fun HomeActionCard(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .background(appSurfaceColor())
+            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 16.dp),
         contentAlignment = Alignment.CenterStart
@@ -553,8 +919,8 @@ private fun HomeActionCard(
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title,    style = iOSHeadline.copy(color = TextPrimary), maxLines = 1)
-                Text(subtitle, style = iOSCaption1.copy(color = TextSecondary), maxLines = 1)
+                Text(title,    style = iOSHeadline.copy(color = appTextPrimaryColor()), maxLines = 1)
+                Text(subtitle, style = iOSCaption1.copy(color = appTextSecondaryColor()), maxLines = 1)
             }
         }
     }
@@ -567,7 +933,7 @@ private fun PlayerRankCard(
     userProfile: com.scrimslegends.app.data.model.UserProfile?,
     modifier   : Modifier = Modifier
 ) {
-    val tier          = userProfile?.currentTier ?: com.scrimslegends.app.data.model.RankTier.BRONZE
+    val tier          = userProfile?.currentTier ?: com.scrimslegends.app.data.model.RankTier.WARRIOR
     val tierColor     = tier.tierColor
     val tierGrad      = tier.badgeGradient
     val xp            = userProfile?.xp ?: 0
@@ -589,8 +955,8 @@ private fun PlayerRankCard(
                 brush = Brush.linearGradient(
                     colors = listOf(
                         tierColor.copy(alpha = 0.18f),
-                        SurfaceCard,
-                        SurfaceCard.copy(alpha = 0.95f)
+                        appSurfaceColor(),
+                        appSurfaceColor().copy(alpha = 0.95f)
                     )
                 )
             )
@@ -619,7 +985,7 @@ private fun PlayerRankCard(
                             "$xp XP  •  $xpToNext to $nextTierName"
                         else
                             "$xp XP  •  Max Tier!",
-                        style = iOSCaption1.copy(color = TextSecondary)
+                        style = iOSCaption1.copy(color = appTextSecondaryColor())
                     )
                 }
                 // Win-rate pill
@@ -638,7 +1004,7 @@ private fun PlayerRankCard(
                         Text(
                             text  = "WIN RATE",
                             style = iOSCaption2.copy(
-                                color         = TextSecondary,
+                                color         = appTextSecondaryColor(),
                                 letterSpacing = 0.5.sp
                             )
                         )
@@ -654,7 +1020,7 @@ private fun PlayerRankCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(SurfaceOverlay)
+                    .background(appElevatedSurfaceColor())
             ) {
                 // Fill
                 Box(
@@ -702,6 +1068,12 @@ private fun PlayerRankCard(
                     modifier = Modifier.weight(1f)
                 )
                 HeroStatPill(
+                    label    = "Losses",
+                    value    = (userProfile?.losses ?: 0).toString(),
+                    color    = ErrorRed,
+                    modifier = Modifier.weight(1f)
+                )
+                HeroStatPill(
                     label    = "Points",
                     value    = userProfile?.ptsDisplay ?: "0",
                     color    = GoldPrimary,
@@ -735,7 +1107,7 @@ private fun HeroStatPill(
             Spacer(Modifier.height(2.dp))
             Text(
                 text     = label,
-                style    = iOSCaption2.copy(color = TextSecondary),
+                style    = iOSCaption2.copy(color = appTextSecondaryColor()),
                 maxLines = 1
             )
         }
@@ -749,7 +1121,7 @@ private fun XpProgressCard(
     userProfile: com.scrimslegends.app.data.model.UserProfile?,
     modifier   : Modifier = Modifier
 ) {
-    val tier      = userProfile?.currentTier ?: com.scrimslegends.app.data.model.RankTier.BRONZE
+    val tier      = userProfile?.currentTier ?: com.scrimslegends.app.data.model.RankTier.WARRIOR
     val xp        = userProfile?.xp ?: 0
     val progress  = userProfile?.xpProgress ?: 0f
     val xpToNext  = userProfile?.xpToNext ?: 0
@@ -768,7 +1140,7 @@ private fun XpProgressCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceCard)
+            .background(appSurfaceColor())
             .border(1.dp, tierColor.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
             .padding(18.dp)
     ) {
@@ -792,7 +1164,7 @@ private fun XpProgressCard(
                         )
                         Text(
                             "$xp XP total",
-                            style = iOSCaption2.copy(color = TextSecondary)
+                            style = iOSCaption2.copy(color = appTextSecondaryColor())
                         )
                     }
                 }
@@ -810,7 +1182,7 @@ private fun XpProgressCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(SurfaceOverlay)
+                    .background(appElevatedSurfaceColor())
             ) {
                 Box(
                     modifier = Modifier
@@ -825,7 +1197,7 @@ private fun XpProgressCard(
 
             Text(
                 if (xpToNext > 0) "$xpToNext XP to $nextTier" else "🏆 Max tier reached!",
-                style = iOSCaption1.copy(color = TextSecondary)
+                style = iOSCaption1.copy(color = appTextSecondaryColor())
             )
         }
     }
@@ -851,7 +1223,7 @@ private fun ScrimCarouselCard(
             .clip(RoundedCornerShape(18.dp))
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(statusColor.copy(alpha = 0.10f), SurfaceCard)
+                    colors = listOf(statusColor.copy(alpha = 0.10f), appSurfaceColor())
                 )
             )
             .border(1.dp, statusColor.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
@@ -896,7 +1268,7 @@ private fun ScrimCarouselCard(
 
             Text(
                 scrim.teamName,
-                style    = iOSHeadline.copy(color = TextPrimary),
+                style    = iOSHeadline.copy(color = appTextPrimaryColor()),
                 maxLines = 1
             )
 
@@ -906,7 +1278,7 @@ private fun ScrimCarouselCard(
             ScrimCountdown(
                 targetTime = scrim.scheduledTime,
                 style = iOSCaption1,
-                baseColor = TextSecondary
+                baseColor = appTextSecondaryColor()
             )
 
             Spacer(Modifier.height(4.dp))
@@ -917,9 +1289,9 @@ private fun ScrimCarouselCard(
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.SportsEsports, null, tint = TextSecondary, modifier = Modifier.size(13.dp))
+                    Icon(Icons.Default.SportsEsports, null, tint = appTextSecondaryColor(), modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(scrim.gameMode.displayName, style = iOSCaption1.copy(color = TextSecondary))
+                    Text(scrim.gameMode.displayName, style = iOSCaption1.copy(color = appTextSecondaryColor()))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.People, null, tint = statusColor.copy(alpha = 0.8f), modifier = Modifier.size(13.dp))
@@ -950,7 +1322,7 @@ private fun TeamHomeCard(
         modifier = Modifier
             .width(210.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(SurfaceCard)
+            .background(appSurfaceColor())
             .border(1.dp, statusColor.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .padding(14.dp)
@@ -982,7 +1354,7 @@ private fun TeamHomeCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         team.name,
-                        style    = iOSHeadline.copy(color = TextPrimary),
+                        style    = iOSHeadline.copy(color = appTextPrimaryColor()),
                         maxLines = 1
                     )
                     Box(
@@ -1011,7 +1383,7 @@ private fun TeamHomeCard(
                     Spacer(Modifier.width(4.dp))
                     Text(
                         "${team.players.size}/${team.maxPlayers}",
-                        style = iOSCaption1.copy(color = TextSecondary)
+                        style = iOSCaption1.copy(color = appTextSecondaryColor())
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -48,6 +48,10 @@ fun TeamListScreen(
     onNavigateToTeamDetail: (com.scrimslegends.app.data.model.Team) -> Unit,
     onRefresh: () -> Unit = {}
 ) {
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -71,7 +75,7 @@ fun TeamListScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = appTextPrimary
                         )
                     )
 
@@ -80,16 +84,16 @@ fun TeamListScreen(
                         IconButton(
                             onClick = onRefresh,
                             modifier = Modifier
-                                .size(44.dp)
-                                .background(
-                                    color = White.copy(alpha = 0.1f),
+                            .size(44.dp)
+                            .background(
+                                    color = appElevatedSurface,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = stringResource(R.string.refresh),
-                                tint = LightGray,
+                                tint = appTextSecondary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -189,10 +193,8 @@ fun TeamListScreen(
                     }
                     else -> {
                         LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 20.dp),
-                            contentPadding = PaddingValues(vertical = 20.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 120.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             itemsIndexed(teams) { index, team ->
@@ -220,6 +222,9 @@ fun TeamCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val context = LocalContext.current
+    val appSurface = appSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
 
     LaunchedEffect(isPressed) {
         if (isPressed) {
@@ -245,7 +250,7 @@ fun TeamCard(
                 scaleX = scale
                 scaleY = scale
             },
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+        colors = CardDefaults.cardColors(containerColor = appSurface),
         shape = RoundedCornerShape(16.dp),
         onClick = onClick,
         interactionSource = interactionSource
@@ -281,7 +286,7 @@ fun TeamCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = White
+                        color = appTextPrimary
                     )
                 )
 
@@ -291,7 +296,7 @@ fun TeamCard(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = stringResource(R.string.players),
-                        tint = LightGray,
+                        tint = appTextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -299,7 +304,7 @@ fun TeamCard(
                         text = stringResource(R.string.players_count, team.players.size, team.maxPlayers),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 14.sp,
-                            color = LightGray
+                            color = appTextSecondary
                         )
                     )
                 }
@@ -309,7 +314,7 @@ fun TeamCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = stringResource(R.string.view_team),
-                tint = LightGray.copy(alpha = 0.5f),
+                tint = appTextSecondary.copy(alpha = 0.75f),
                 modifier = Modifier.size(20.dp)
             )
         }

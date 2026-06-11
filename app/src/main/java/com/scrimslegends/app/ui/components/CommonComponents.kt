@@ -280,23 +280,25 @@ fun GhostButton(
 fun iOSGlassCard(
     modifier: Modifier = Modifier,
     shape: androidx.compose.ui.graphics.Shape = iOSCardShape,
-    borderColor: Color? = GlassBorder,
-    backgroundColor: Color = SurfaceGlass,
+    borderColor: Color? = null,
+    backgroundColor: Color? = null,
     content: @Composable () -> Unit
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val resolvedBorderColor = borderColor ?: appBorderColor()
+    val resolvedBackgroundColor = backgroundColor ?: appSurfaceColor()
 
     Card(
         modifier = modifier
             .drawWithContent {
                 drawContent()
-                if (borderColor != null) {
+                if (resolvedBorderColor != Color.Transparent) {
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
                             isAntiAlias = true
                             style = android.graphics.Paint.Style.STROKE
                             strokeWidth = with(density) { 0.5.dp.toPx() }
-                            color = borderColor.toArgb()
+                            color = resolvedBorderColor.toArgb()
                             maskFilter = android.graphics.BlurMaskFilter(
                                 with(density) { 1.dp.toPx() },
                                 android.graphics.BlurMaskFilter.Blur.NORMAL
@@ -318,7 +320,7 @@ fun iOSGlassCard(
                 spotShadowColor = ShadowMedium
                 ambientShadowColor = ShadowLight
             },
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        colors = CardDefaults.cardColors(containerColor = resolvedBackgroundColor),
         shape = shape,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -343,7 +345,7 @@ fun iOSElevatedCard(
                 spotShadowColor = ShadowMedium
                 ambientShadowColor = ShadowLight
             },
-        colors = CardDefaults.cardColors(containerColor = SurfaceElevated),
+        colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
         shape = shape,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -398,7 +400,7 @@ fun GlowCard(
                 spotShadowColor = glowColor
                 ambientShadowColor = glowColor.copy(alpha = 0.3f)
             },
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+        colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
         shape = shape
     ) {
         content()
@@ -451,13 +453,13 @@ fun iOSChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (selected) iOSBlue else GlassLight,
+        targetValue = if (selected) iOSBlue else appElevatedSurfaceColor(),
         animationSpec = tween(200),
         label = "chipBg"
     )
 
     val textColor by animateColorAsState(
-        targetValue = if (selected) White else MidGray,
+        targetValue = if (selected) White else appTextSecondaryColor(),
         animationSpec = tween(200),
         label = "chipText"
     )
@@ -470,7 +472,7 @@ fun iOSChip(
         border = if (!selected) {
             androidx.compose.foundation.BorderStroke(
                 1.dp,
-                GlassBorder
+                appBorderColor()
             )
         } else null
     ) {
@@ -892,23 +894,27 @@ fun iOSLargeTitleHeader(
 fun GlassBackButton(
     onClick : () -> Unit,
     modifier: Modifier = Modifier,
-    tint    : Color = TextPrimary
+    tint    : Color? = null
 ) {
+    val iconTint = tint ?: appTextPrimaryColor()
+    val backgroundColor = appElevatedSurfaceColor()
+    val borderColor = appBorderColor()
+
     Box(
         modifier = modifier
             .size(44.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceOverlay)
+            .background(backgroundColor)
             .drawWithContent {
                 drawContent()
                 drawLine(
-                    brush       = SolidColor(GlassBorder),
+                    brush       = SolidColor(borderColor),
                     start       = Offset(0f, 0f),
                     end         = Offset(size.width, 0f),
                     strokeWidth = 1f
                 )
                 drawLine(
-                    brush       = SolidColor(GlassBorder),
+                    brush       = SolidColor(borderColor),
                     start       = Offset(0f, 0f),
                     end         = Offset(0f, size.height),
                     strokeWidth = 1f
@@ -932,7 +938,7 @@ fun GlassBackButton(
         Icon(
             imageVector        = Icons.Default.ArrowBack,
             contentDescription = "Back",
-            tint               = tint,
+            tint               = iconTint,
             modifier           = Modifier.size(20.dp)
         )
     }

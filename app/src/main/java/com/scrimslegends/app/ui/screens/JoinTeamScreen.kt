@@ -31,14 +31,21 @@ import com.scrimslegends.app.ui.components.GradientButton
 @Composable
 fun JoinTeamScreen(
     onNavigateBack: () -> Unit,
-    onJoinTeam: (String) -> Unit = {}
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    requestSent: Boolean = false,
+    onJoinTeam: (String) -> Unit = {},
+    onDismissError: () -> Unit = {}
 ) {
     var inviteCode by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    var success by remember { mutableStateOf(false) }
 
     val enterValidCodeError = stringResource(R.string.enter_valid_invite_code)
+    var localError by remember { mutableStateOf("") }
+    val appSurface = appSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
 
     Box(
         modifier = Modifier
@@ -67,7 +74,7 @@ fun JoinTeamScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = appTextPrimary
                         )
                     )
 
@@ -116,7 +123,7 @@ fun JoinTeamScreen(
                         text = stringResource(R.string.join_a_team),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = White,
+                        color = appTextPrimary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -127,14 +134,14 @@ fun JoinTeamScreen(
                     Text(
                         text = stringResource(R.string.invite_code_hint),
                         fontSize = 14.sp,
-                        color = LightGray,
+                        color = appTextSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                if (!success) {
+                if (!requestSent) {
                     AnimatedEntrance(delayMillis = 250) {
                         Card(
                             modifier = Modifier
@@ -144,7 +151,7 @@ fun JoinTeamScreen(
                                     spotColor = Color.Black.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(20.dp)
                                 ),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                            colors = CardDefaults.cardColors(containerColor = appSurface),
                             shape = RoundedCornerShape(20.dp)
                         ) {
                             Column(
@@ -155,33 +162,36 @@ fun JoinTeamScreen(
                                 OutlinedTextField(
                                     value = inviteCode,
                                     onValueChange = {
-                                        inviteCode = it.uppercase()
-                                        errorMessage = ""
+                                        inviteCode = it.uppercase().filter { ch -> ch.isLetterOrDigit() || ch == '-' }.take(24)
+                                        localError = ""
+                                        onDismissError()
                                     },
                                     label = { Text(stringResource(R.string.invite_code)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = GoldPrimary,
-                                        unfocusedBorderColor = White.copy(alpha = 0.3f),
+                                        unfocusedBorderColor = appBorder,
                                         focusedLabelColor = GoldPrimary,
-                                        unfocusedLabelColor = White.copy(alpha = 0.7f),
+                                        unfocusedLabelColor = appTextSecondary,
                                         cursorColor = GoldPrimary,
-                                        focusedTextColor = White,
-                                        unfocusedTextColor = White
+                                        focusedTextColor = appTextPrimary,
+                                        unfocusedTextColor = appTextPrimary,
+                                        focusedContainerColor = appElevatedSurface,
+                                        unfocusedContainerColor = appElevatedSurface
                                     ),
                                     shape = RoundedCornerShape(12.dp),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                                     singleLine = true,
-                                    placeholder = { Text(stringResource(R.string.invite_code_placeholder), color = MidGray) }
+                                    placeholder = { Text(stringResource(R.string.invite_code_placeholder), color = appTextSecondary) }
                                 )
 
                                 AnimatedVisibility(
-                                    visible = errorMessage.isNotEmpty(),
+                                    visible = localError.isNotEmpty() || !errorMessage.isNullOrBlank(),
                                     enter = fadeIn() + expandVertically(),
                                     exit = fadeOut() + shrinkVertically()
                                 ) {
                                     Text(
-                                        text = errorMessage,
+                                        text = localError.ifBlank { errorMessage.orEmpty() },
                                         color = ErrorRed,
                                         fontSize = 13.sp,
                                         modifier = Modifier.padding(top = 12.dp)
@@ -194,14 +204,10 @@ fun JoinTeamScreen(
                                     text = if (isLoading) stringResource(R.string.joining) else stringResource(R.string.join_team_btn),
                                     onClick = {
                                         if (inviteCode.isBlank() || inviteCode.length < 6) {
-                                            errorMessage = enterValidCodeError
+                                            localError = enterValidCodeError
                                             return@GradientButton
                                         }
-                                        isLoading = true
                                         onJoinTeam(inviteCode)
-                                        // Mock success for demo
-                                        success = true
-                                        isLoading = false
                                     },
                                     isLoading = isLoading,
                                     gradient = BlueGradient
@@ -238,16 +244,16 @@ fun JoinTeamScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = stringResource(R.string.welcome_to_team),
+                                    text = "Request sent",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = SuccessGreen
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = stringResource(R.string.joined_team_success),
+                                    text = "Your join request is pending. The team leader can approve or reject it from Team Details.",
                                     fontSize = 14.sp,
-                                    color = LightGray,
+                                    color = appTextSecondary,
                                     textAlign = TextAlign.Center
                                 )
                                 Spacer(modifier = Modifier.height(20.dp))

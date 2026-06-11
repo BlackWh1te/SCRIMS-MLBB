@@ -59,7 +59,8 @@ fun PlayerFinderScreen(
     onCreatePost: (LfgPost) -> Unit,
     onDeletePost: (String) -> Unit,
     onMessagePlayer: (LfgPost) -> Unit,
-    onInvitePlayer: (LfgPost) -> Unit = {},
+    onInvitePlayer: ((LfgPost) -> Unit)? = null,
+    onJoinDiscord: ((String) -> Unit)? = null,
     onViewCountIncrement: (String) -> Unit = {},
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
@@ -70,9 +71,16 @@ fun PlayerFinderScreen(
     onDismissMessageError: () -> Unit = {}
 ) {
     var showCreateSheet by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedRoleFilter by remember { mutableStateOf<GameRole?>(null) }
     var selectedCityFilter by remember { mutableStateOf<String?>(null) }
     var showScreenshotDialog by remember { mutableStateOf<String?>(null) }
+
+    // New Advanced Filter States
+    var searchQuery by remember { mutableStateOf("") }
+    var useMicOnly by remember { mutableStateOf(false) }
+    var selectedRankFilter by remember { mutableStateOf<String?>(null) }
+    var selectedSort by remember { mutableStateOf(PlayerSortOption.NEWEST) }
 
     val myPost = posts.find { it.playerId == currentUserId }
     val isTeamLeader = myTeams.isNotEmpty()
@@ -81,10 +89,43 @@ fun PlayerFinderScreen(
         posts.map { it.city }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
-    val filteredPosts = posts.filter { post ->
-        (selectedRoleFilter == null || post.role == selectedRoleFilter) &&
-        (selectedCityFilter == null || post.city == selectedCityFilter)
+    val ranks = remember(posts) {
+        posts.map { it.rank }.filter { it.isNotBlank() }.distinct().sorted()
     }
+
+    val filteredPosts = remember(posts, selectedRoleFilter, selectedCityFilter, searchQuery, useMicOnly, selectedRankFilter, selectedSort) {
+        posts.filter { post ->
+            val matchesRole = selectedRoleFilter == null || post.role == selectedRoleFilter
+            val matchesCity = selectedCityFilter == null || post.city == selectedCityFilter
+            val matchesMic = !useMicOnly || post.useMic
+            val matchesRank = selectedRankFilter == null || post.rank == selectedRankFilter
+            val matchesSearch = searchQuery.isBlank() ||
+                post.playerName.contains(searchQuery, ignoreCase = true) ||
+                post.inGameId.contains(searchQuery, ignoreCase = true)
+            matchesRole && matchesCity && matchesMic && matchesRank && matchesSearch
+        }.let { list ->
+            when (selectedSort) {
+                PlayerSortOption.NEWEST -> list.sortedByDescending { it.createdAt }
+                PlayerSortOption.WIN_RATE -> list.sortedByDescending {
+                    it.winRate.replace("%", "").toFloatOrNull() ?: 0f
+                }
+                PlayerSortOption.POINTS -> list.sortedByDescending { it.pts }
+                PlayerSortOption.MOST_VIEWED -> list.sortedByDescending { it.viewCount }
+            }
+        }
+    }
+    val activeFilterCount = listOf(
+        selectedRoleFilter != null,
+        selectedCityFilter != null,
+        selectedRankFilter != null,
+        searchQuery.isNotBlank(),
+        useMicOnly
+    ).count { it }
+    val livePostCount = remember(posts) {
+        val oneHourAgo = System.currentTimeMillis() - 3600_000
+        posts.count { it.createdAt >= oneHourAgo }
+    }
+    val canClearFilters = activeFilterCount > 0
 
     Box(
         modifier = Modifier
@@ -99,99 +140,192 @@ fun PlayerFinderScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .padding(top = 20.dp, bottom = 8.dp)
+                        .padding(top = 18.dp, bottom = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.player_finder_title),
-                                fontSize = 28.sp,
+                                fontSize = 27.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = White
+                                color = appTextPrimaryColor()
                             )
                             Text(
                                 text = if (isTeamLeader) stringResource(R.string.recruit_players)
                                     else stringResource(R.string.post_stats_discovered),
                                 fontSize = 13.sp,
-                                color = LightGray.copy(alpha = 0.7f)
+                                color = appTextSecondaryColor()
                             )
                         }
 
-                        if (myPost == null) {
-                            IconButton(
-                                onClick = { showCreateSheet = true },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        brush = Brush.linearGradient(BlueGradient),
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.content_desc_post), tint = White, modifier = Modifier.size(24.dp))
-                            }
-                        } else {
-                            IconButton(
-                                onClick = { onDeletePost(myPost.id) },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(ErrorRed.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_remove_post), tint = ErrorRed, modifier = Modifier.size(22.dp))
-                            }
-                        }
+                        PlayerFinderPrimaryAction(
+                            hasPost = myPost != null,
+                            onPost = { showCreateSheet = true },
+                            onDelete = { showDeleteDialog = true }
+                        )
                     }
 
                     if (myPost != null) {
-                        Spacer(Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(SuccessGreen.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                                .border(1.dp, SuccessGreen.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(SuccessGreen, CircleShape)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.your_post_is_live),
-                                        color = SuccessGreen,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    val twentyFourHoursAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
-                                    if (myPost.createdAt > twentyFourHoursAgo) {
-                                        Text(
-                                            text = stringResource(R.string.lfg_post_limit_reached),
-                                            color = LightGray.copy(alpha = 0.7f),
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        LivePostBanner()
                     }
                 }
             }
 
-            // ── Filters ─────────────────────────────────────────
+            AnimatedEntrance(delayMillis = 60) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(appSurfaceColor())
+                        .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    FinderStatPill(
+                        icon = Icons.Default.Groups,
+                        value = posts.size.toString(),
+                        label = "players",
+                        tint = BluePrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    FinderStatPill(
+                        icon = Icons.Default.Bolt,
+                        value = livePostCount.toString(),
+                        label = "live",
+                        tint = SuccessGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    FinderStatPill(
+                        icon = Icons.Default.FilterList,
+                        value = filteredPosts.size.toString(),
+                        label = "shown",
+                        tint = GoldPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            var isFilterExpanded by remember { mutableStateOf(true) }
+            // ── Advanced Search & Filters ─────────────────────────────────────────
             AnimatedEntrance(delayMillis = 80) {
                 Column {
-                    // Role filter
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isFilterExpanded = !isFilterExpanded }
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.filters_and_search), color = appTextPrimaryColor(), fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            if (activeFilterCount > 0) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "$activeFilterCount active",
+                                    color = BluePrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (canClearFilters) {
+                                TextButton(
+                                    onClick = {
+                                        searchQuery = ""
+                                        useMicOnly = false
+                                        selectedRoleFilter = null
+                                        selectedCityFilter = null
+                                        selectedRankFilter = null
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                ) {
+                                    Text("Reset", color = BluePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Icon(
+                                imageVector = if (isFilterExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Toggle Filters",
+                                tint = appTextSecondaryColor()
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = isFilterExpanded) {
+                        Column {
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        placeholder = { Text("Search name or MLBB ID", color = appTextSecondaryColor()) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = appTextSecondaryColor()) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Clear, null, tint = appTextSecondaryColor())
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = appSurfaceColor(),
+                            unfocusedContainerColor = appSurfaceColor(),
+                            focusedBorderColor = BluePrimary,
+                            unfocusedBorderColor = appBorderColor(),
+                            focusedTextColor = appTextPrimaryColor(),
+                            unfocusedTextColor = appTextPrimaryColor()
+                        ),
+                        singleLine = true
+                    )
+
+                    // Sort Options
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        item {
+                            Icon(Icons.AutoMirrored.Filled.Sort, null, tint = appTextSecondaryColor(), modifier = Modifier.padding(end = 4.dp))
+                        }
+                        items(PlayerSortOption.values()) { sortOption ->
+                            iOSChip(
+                                text = sortOption.displayName,
+                                selected = selectedSort == sortOption,
+                                onClick = { selectedSort = sortOption }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Role filter & Mic
                     LazyRow(
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        item {
+                            iOSChip(
+                                text = "Mic ready",
+                                selected = useMicOnly,
+                                onClick = { useMicOnly = !useMicOnly },
+                                icon = Icons.Default.Mic
+                            )
+                        }
+                        item {
+                            Spacer(Modifier.width(8.dp))
+                        }
                         item {
                             iOSChip(
                                 text = stringResource(R.string.all_roles),
@@ -205,6 +339,31 @@ fun PlayerFinderScreen(
                                 selected = selectedRoleFilter == role,
                                 onClick = { selectedRoleFilter = if (selectedRoleFilter == role) null else role }
                             )
+                        }
+                    }
+
+                    // Rank filter
+                    if (ranks.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                iOSChip(
+                                    text = "All Ranks",
+                                    selected = selectedRankFilter == null,
+                                    onClick = { selectedRankFilter = null }
+                                )
+                            }
+                            items(ranks) { rank ->
+                                iOSChip(
+                                    text = rank,
+                                    selected = selectedRankFilter == rank,
+                                    onClick = { selectedRankFilter = if (selectedRankFilter == rank) null else rank }
+                                )
+                            }
                         }
                     }
 
@@ -234,6 +393,8 @@ fun PlayerFinderScreen(
                     }
                 }
             }
+        }
+    }
 
             Spacer(Modifier.height(12.dp))
 
@@ -247,18 +408,36 @@ fun PlayerFinderScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = GoldPrimary)
                     }
+                } else if (error != null && posts.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.ErrorOutline, null, tint = ErrorRed, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text(stringResource(R.string.error_loading_data), color = appTextPrimaryColor(), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(error, color = appTextSecondaryColor(), fontSize = 13.sp, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(16.dp))
+                            OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = BluePrimary) }
+                        }
+                    }
                 } else if (filteredPosts.isEmpty()) {
                     EmptyPlayerFinderState(
                         isTeamLeader = isTeamLeader,
-                        hasFilters = selectedRoleFilter != null || selectedCityFilter != null,
+                        hasFilters = canClearFilters,
                         onPost = { showCreateSheet = true },
-                        onClearFilters = { selectedRoleFilter = null; selectedCityFilter = null }
+                        onClearFilters = {
+                            searchQuery = ""
+                            useMicOnly = false
+                            selectedRoleFilter = null
+                            selectedCityFilter = null
+                            selectedRankFilter = null
+                        }
                     )
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredPosts, key = { it.id }) { post ->
                             AnimatedEntrance(delayMillis = 0) {
@@ -267,7 +446,8 @@ fun PlayerFinderScreen(
                                     isTeamLeader = isTeamLeader,
                                     isMyPost = post.playerId == currentUserId,
                                     onMessage = { onMessagePlayer(post) },
-                                    onInvite = { onInvitePlayer(post) },
+                                    onInvite = { onInvitePlayer?.invoke(post) },
+                                    onJoinDiscord = { url -> onJoinDiscord?.invoke(url) },
                                     onScreenshotClick = { url -> showScreenshotDialog = url },
                                     onExpanded = { onViewCountIncrement(post.id) }
                                 )
@@ -299,8 +479,27 @@ fun PlayerFinderScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showScreenshotDialog = null }) {
-                        Text(stringResource(R.string.close), color = White)
+                        Text(stringResource(R.string.close), color = appTextPrimaryColor())
                     }
+                }
+            )
+        }
+
+        // ── Delete Confirmation Dialog ────────────────────────
+        if (showDeleteDialog && myPost != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                containerColor = appSurfaceColor(),
+                title = { Text(stringResource(R.string.delete_post_title), color = appTextPrimaryColor()) },
+                text = { Text(stringResource(R.string.delete_post_confirmation), color = appTextSecondaryColor()) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDeletePost(myPost.id)
+                        showDeleteDialog = false
+                    }) { Text(stringResource(R.string.delete_action), color = ErrorRed) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel), color = MidGray) }
                 }
             )
         }
@@ -338,7 +537,7 @@ fun PlayerFinderScreen(
         ErrorSnackbar(
             error = messageError,
             onDismiss = onDismissMessageError,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars)
         )
     }
 }
@@ -346,6 +545,108 @@ fun PlayerFinderScreen(
 // ────────────────────────────────────────────────────────────
 // Player Card — Premium Redesign
 // ────────────────────────────────────────────────────────────
+
+@Composable
+private fun PlayerFinderPrimaryAction(
+    hasPost: Boolean,
+    onPost: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = Modifier
+            .height(44.dp)
+            .clip(shape)
+            .background(
+                brush = if (hasPost) Brush.horizontalGradient(listOf(ErrorRed.copy(alpha = 0.22f), ErrorRed.copy(alpha = 0.10f)))
+                else Brush.horizontalGradient(BlueGradient),
+                shape = shape
+            )
+            .border(
+                width = 1.dp,
+                color = if (hasPost) ErrorRed.copy(alpha = 0.35f) else BluePrimary.copy(alpha = 0.45f),
+                shape = shape
+            )
+            .clickable { if (hasPost) onDelete() else onPost() }
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = if (hasPost) Icons.Default.Delete else Icons.Default.Add,
+                contentDescription = if (hasPost) "Remove post" else "Create post",
+                tint = if (hasPost) ErrorRed else White,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = if (hasPost) "Remove" else "Post",
+                color = if (hasPost) ErrorRed else White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun LivePostBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(SuccessGreen.copy(alpha = 0.11f))
+            .border(1.dp, SuccessGreen.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(SuccessGreen, CircleShape)
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.your_post_is_live),
+                color = SuccessGreen,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = stringResource(R.string.lfg_post_limit_reached),
+                color = appTextSecondaryColor(),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun FinderStatPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(tint.copy(alpha = 0.10f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.width(7.dp))
+        Column {
+            Text(value, color = appTextPrimaryColor(), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = appTextSecondaryColor(), fontSize = 10.sp, maxLines = 1)
+        }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -355,6 +656,7 @@ private fun PlayerCard(
     isMyPost: Boolean = false,
     onMessage: () -> Unit,
     onInvite: () -> Unit,
+    onJoinDiscord: (String) -> Unit,
     onScreenshotClick: (String) -> Unit,
     onExpanded: () -> Unit = {}
 ) {
@@ -377,31 +679,37 @@ private fun PlayerCard(
     val timeAgo = remember(post.createdAt) {
         val diff = System.currentTimeMillis() - post.createdAt
         when {
+            diff <= 0 -> "Just now"
             diff < 60_000 -> "Just now"
             diff < 3600_000 -> "${diff / 60_000}m ago"
             diff < 86400_000 -> "${diff / 3600_000}h ago"
             else -> "${diff / 86400_000}d ago"
         }
     }
-    
+
     // Online status indicator based on recent post time (< 1 hr)
     val isOnline = System.currentTimeMillis() - post.createdAt < 3600_000
+
+    var hasViewed by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(SurfaceCard)
+            .clip(RoundedCornerShape(18.dp))
+            .background(appSurfaceColor())
             .border(
                 width = 1.dp,
                 color = roleColor.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(18.dp)
             )
             .clickable {
                 val wasExpanded = expanded
                 expanded = !expanded
                 // Increment view count when expanding for the first time
-                if (!wasExpanded && expanded) onExpanded()
+                if (!wasExpanded && expanded && !hasViewed) {
+                    hasViewed = true
+                    onExpanded()
+                }
             }
     ) {
         Column {
@@ -412,8 +720,8 @@ private fun PlayerCard(
                     .height(6.dp)
                     .background(Brush.horizontalGradient(listOf(roleColor, roleColor.copy(alpha = 0.5f))))
             )
-            
-            Column(modifier = Modifier.padding(18.dp)) {
+
+            Column(modifier = Modifier.padding(16.dp)) {
 
                 // ── Top Row: Avatar + Name + Stats ────────────────
                 Row(
@@ -454,7 +762,7 @@ private fun PlayerCard(
                                     .offset(x = (-2).dp, y = (-2).dp)
                                     .clip(CircleShape)
                                     .background(SuccessGreen)
-                                    .border(2.dp, SurfaceCard, CircleShape)
+                                    .border(2.dp, appSurfaceColor(), CircleShape)
                             )
                         }
                     }
@@ -465,7 +773,7 @@ private fun PlayerCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = post.playerName,
-                                style = iOSHeadline.copy(color = TextPrimary),
+                                style = iOSHeadline.copy(color = appTextPrimaryColor()),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
@@ -532,7 +840,7 @@ private fun PlayerCard(
             if (post.totalMatches > 0 || post.winRate.isNotBlank() || post.rankedWinRate.isNotBlank()) {
                 Spacer(Modifier.height(12.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (post.totalMatches > 0) {
@@ -541,7 +849,7 @@ private fun PlayerCard(
                             label = stringResource(R.string.games),
                             value = post.totalMatches.toString(),
                             color = BluePrimary,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
                     if (post.winRate.isNotBlank()) {
@@ -550,7 +858,7 @@ private fun PlayerCard(
                             label = stringResource(R.string.win_rate_abbrev),
                             value = post.winRate,
                             color = SuccessGreen,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
                     if (post.rankedWinRate.isNotBlank()) {
@@ -559,49 +867,51 @@ private fun PlayerCard(
                             label = stringResource(R.string.ranked_wr),
                             value = post.rankedWinRate,
                             color = GoldPrimary,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
                 }
             }
 
             // ── Actions (Message & Invite) ────────────────────
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onMessage,
-                    modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
-                    contentPadding = PaddingValues(0.dp)
+            if (!isMyPost) {
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.message_action), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                if (isTeamLeader) {
-                    Button(
-                        onClick = onInvite,
+                    OutlinedButton(
+                        onClick = onMessage,
                         modifier = Modifier.weight(1f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Brush.horizontalGradient(SuccessGradient), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
+                        Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.message_action), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    if (isTeamLeader) {
+                        Button(
+                            onClick = onInvite,
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            contentPadding = PaddingValues(0.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Brush.horizontalGradient(SuccessGradient), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -615,31 +925,35 @@ private fun PlayerCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // View count badge
-                if (post.viewCount > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .background(BluePrimary.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
-                            .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Visibility,
-                            contentDescription = stringResource(R.string.views),
-                            tint = BluePrimary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = post.viewCount.toString(),
-                            color = BluePrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(BluePrimary.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+                        .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Visibility,
+                        contentDescription = stringResource(R.string.views),
+                        tint = BluePrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = post.viewCount.toString(),
+                        color = BluePrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = if (expanded) "Hide profile" else "View profile",
+                    color = TextTertiary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.width(4.dp))
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = if (expanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
@@ -659,7 +973,7 @@ private fun PlayerCard(
                     if (post.wins > 0 || post.losses > 0 || post.pts != 0) {
                         Spacer(Modifier.height(10.dp))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             StatBadge(
@@ -667,7 +981,7 @@ private fun PlayerCard(
                                 label = stringResource(R.string.wins_label),
                                 value = post.wins.toString(),
                                 color = SuccessGreen,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).fillMaxHeight()
                             )
                             StatBadge(
                                 icon = Icons.Default.Close,
@@ -692,18 +1006,18 @@ private fun PlayerCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .background(SurfaceOverlay, RoundedCornerShape(10.dp))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                        .background(appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
+                        .border(1.dp, appBorderColor(), RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         Icons.Default.Tag, null,
-                        tint = TextSecondary, modifier = Modifier.size(14.dp)
+                        tint = appTextSecondaryColor(), modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = stringResource(R.string.in_game_id_label, post.inGameId),
-                        color = TextSecondary,
+                        color = appTextSecondaryColor(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -768,7 +1082,7 @@ private fun PlayerCard(
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = displayBio,
-                    style = iOSFootnote.copy(color = TextSecondary),
+                    style = iOSFootnote.copy(color = appTextSecondaryColor()),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -785,7 +1099,7 @@ private fun PlayerCard(
                         TagPill(tag)
                     }
                 }
-            }
+            } // end Playstyle Tags
 
             // ── Social Links ─────────────────────────────────────
             if (post.discord.isNotBlank() || post.telegram.isNotBlank() || post.vk.isNotBlank() || post.facebook.isNotBlank()) {
@@ -794,10 +1108,29 @@ private fun PlayerCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (post.discord.isNotBlank()) SocialIconBadge("Discord", Color(0xFF5865F2))
-                    if (post.telegram.isNotBlank()) SocialIconBadge("TG", Color(0xFF0088CC))
-                    if (post.vk.isNotBlank()) SocialIconBadge("VK", Color(0xFF0077FF))
-                    if (post.facebook.isNotBlank()) SocialIconBadge("FB", Color(0xFF1877F2))
+                    if (post.discord.isNotBlank()) SocialIconBadge("Discord", Color(0xFF5865F2)) { onJoinDiscord(post.discord) }
+                    if (post.telegram.isNotBlank()) SocialIconBadge("TG", Color(0xFF0088CC)) {}
+                    if (post.vk.isNotBlank()) SocialIconBadge("VK", Color(0xFF0077FF)) {}
+                    if (post.facebook.isNotBlank()) SocialIconBadge("FB", Color(0xFF1877F2)) {}
+                }
+            }
+
+            // ── Quick Actions ─────────────────────────────────────
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isTeamLeader && !isMyPost) {
+                    Button(
+                        onClick = { onInvite() },
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                    ) {
+                        Icon(Icons.Default.GroupAdd, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.invite), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -831,15 +1164,22 @@ private fun StatBadge(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .background(SurfaceOverlay, RoundedCornerShape(10.dp))
-            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+            .background(appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
+            .border(1.dp, appBorderColor(), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Column {
-            Text(label, color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-            Text(value, color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = label,
+                color = appTextSecondaryColor(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(value, color = appTextPrimaryColor(), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -873,11 +1213,12 @@ private fun TagPill(tag: String) {
 }
 
 @Composable
-private fun SocialIconBadge(label: String, color: Color) {
+private fun SocialIconBadge(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .background(color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
             .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+            .clickable { onClick() }
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -912,6 +1253,7 @@ private fun CreatePostSheet(
     var city by remember { mutableStateOf("") }
     var screenshotUri by remember { mutableStateOf<Uri?>(null) }
     var isUploading by remember { mutableStateOf(false) }
+    var uploadError by remember { mutableStateOf<String?>(null) }
 
     var discord by remember { mutableStateOf("") }
     var telegram by remember { mutableStateOf("") }
@@ -923,6 +1265,23 @@ private fun CreatePostSheet(
 
     val cities = listOf("MSK", "SPB", "KRD", "EKB", "KZN", "NSK", "UFA", "VVO", "OTHER")
 
+    fun validateRequiredFields(): String? {
+        val totalMatchesValue = totalMatches.toIntOrNull()
+        return when {
+            currentUserProfile?.id.isNullOrBlank() -> "Profile is still loading. Try again in a moment."
+            currentUserProfile?.username.isNullOrBlank() -> "Username is required before posting."
+            city.isBlank() -> "Select your city before posting."
+            inGameId.isBlank() -> "In-game ID is required."
+            totalMatchesValue == null || totalMatchesValue <= 0 -> "Total games must be greater than 0."
+            winRate.isBlank() -> "Win rate is required."
+            rankedWinRate.isBlank() -> "Ranked win rate is required."
+            rank.isBlank() -> "Current rank is required."
+            heroesInput.split(",").none { it.trim().isNotEmpty() } -> "Add at least one main hero."
+            bio.isBlank() -> "Bio/message is required."
+            else -> null
+        }
+    }
+
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri -> screenshotUri = uri }
@@ -932,7 +1291,7 @@ private fun CreatePostSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkSurface,
+        containerColor = appSurfaceColor(),
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -950,8 +1309,8 @@ private fun CreatePostSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
-            Text(stringResource(R.string.create_player_post), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = White)
-            Text(stringResource(R.string.show_off_stats), fontSize = 13.sp, color = LightGray.copy(alpha = 0.6f))
+            Text(stringResource(R.string.create_player_post), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = appTextPrimaryColor())
+            Text(stringResource(R.string.show_off_stats), fontSize = 13.sp, color = appTextSecondaryColor())
             Spacer(Modifier.height(24.dp))
 
             // ── Role ──
@@ -962,12 +1321,12 @@ private fun CreatePostSheet(
                     val selected = selectedRole == role
                     Box(
                         modifier = Modifier
-                            .background(if (selected) rc.copy(alpha = 0.25f) else White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))
-                            .border(1.dp, if (selected) rc else White.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+                            .background(if (selected) rc.copy(alpha = 0.25f) else appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
+                            .border(1.dp, if (selected) rc else appBorderColor(), RoundedCornerShape(10.dp))
                             .clickable { selectedRole = role }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text(role.displayName, color = if (selected) rc else LightGray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(role.displayName, color = if (selected) rc else appTextSecondaryColor(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -981,12 +1340,12 @@ private fun CreatePostSheet(
                     val selected = city == c
                     Box(
                         modifier = Modifier
-                            .background(if (selected) BluePrimary.copy(alpha = 0.25f) else White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))
-                            .border(1.dp, if (selected) BluePrimary else White.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+                            .background(if (selected) BluePrimary.copy(alpha = 0.25f) else appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
+                            .border(1.dp, if (selected) BluePrimary else appBorderColor(), RoundedCornerShape(10.dp))
                             .clickable { city = c }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text(c, color = if (selected) BluePrimary else LightGray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(c, color = if (selected) BluePrimary else appTextSecondaryColor(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -998,16 +1357,16 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = inGameId,
                 onValueChange = { inGameId = it },
-                placeholder = { Text(stringResource(R.string.your_game_id), color = DimGray) },
+                placeholder = { Text(stringResource(R.string.your_game_id), color = appTextSecondaryColor()) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Tag, null, tint = TextSecondary) },
+                leadingIcon = { Icon(Icons.Default.Tag, null, tint = appTextSecondaryColor()) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GoldPrimary,
-                    unfocusedBorderColor = White.copy(alpha = 0.2f),
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    unfocusedBorderColor = appBorderColor(),
+                    focusedTextColor = appTextPrimaryColor(),
+                    unfocusedTextColor = appTextPrimaryColor(),
                     cursorColor = GoldPrimary
                 )
             )
@@ -1023,16 +1382,16 @@ private fun CreatePostSheet(
                 OutlinedTextField(
                     value = totalMatches,
                     onValueChange = { totalMatches = it.filter { c -> c.isDigit() } },
-                    label = { Text(stringResource(R.string.total_games), color = TextSecondary) },
+                    label = { Text(stringResource(R.string.total_games), color = appTextSecondaryColor()) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.2f),
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
+                        unfocusedBorderColor = appBorderColor(),
+                        focusedTextColor = appTextPrimaryColor(),
+                        unfocusedTextColor = appTextPrimaryColor(),
                         focusedLabelColor = BluePrimary,
                         cursorColor = BluePrimary
                     )
@@ -1040,16 +1399,16 @@ private fun CreatePostSheet(
                 OutlinedTextField(
                     value = winRate,
                     onValueChange = { winRate = it },
-                    label = { Text(stringResource(R.string.win_rate_percent), color = TextSecondary) },
+                    label = { Text(stringResource(R.string.win_rate_percent), color = appTextSecondaryColor()) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.win_rate_example), color = DimGray) },
+                    placeholder = { Text(stringResource(R.string.win_rate_example), color = appTextSecondaryColor()) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SuccessGreen,
-                        unfocusedBorderColor = White.copy(alpha = 0.2f),
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
+                        unfocusedBorderColor = appBorderColor(),
+                        focusedTextColor = appTextPrimaryColor(),
+                        unfocusedTextColor = appTextPrimaryColor(),
                         focusedLabelColor = SuccessGreen,
                         cursorColor = SuccessGreen
                     )
@@ -1059,16 +1418,16 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = rankedWinRate,
                 onValueChange = { rankedWinRate = it },
-                label = { Text(stringResource(R.string.ranked_win_rate_percent), color = TextSecondary) },
-                placeholder = { Text(stringResource(R.string.ranked_win_rate_example), color = DimGray) },
+                label = { Text(stringResource(R.string.ranked_win_rate_percent), color = appTextSecondaryColor()) },
+                placeholder = { Text(stringResource(R.string.ranked_win_rate_example), color = appTextSecondaryColor()) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GoldPrimary,
-                    unfocusedBorderColor = White.copy(alpha = 0.2f),
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    unfocusedBorderColor = appBorderColor(),
+                    focusedTextColor = appTextPrimaryColor(),
+                    unfocusedTextColor = appTextPrimaryColor(),
                     focusedLabelColor = GoldPrimary,
                     cursorColor = GoldPrimary
                 )
@@ -1081,16 +1440,16 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = rank,
                 onValueChange = { rank = it },
-                placeholder = { Text(stringResource(R.string.rank_example), color = DimGray) },
+                placeholder = { Text(stringResource(R.string.rank_example), color = appTextSecondaryColor()) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GoldPrimary,
-                    unfocusedBorderColor = White.copy(alpha = 0.2f),
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    unfocusedBorderColor = appBorderColor(),
+                    focusedTextColor = appTextPrimaryColor(),
+                    unfocusedTextColor = appTextPrimaryColor(),
                     cursorColor = GoldPrimary
                 )
             )
@@ -1102,16 +1461,16 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = heroesInput,
                 onValueChange = { heroesInput = it },
-                placeholder = { Text(stringResource(R.string.hero_examples), color = DimGray) },
+                placeholder = { Text(stringResource(R.string.hero_examples), color = appTextSecondaryColor()) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Default.Star, null, tint = GoldPrimary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GoldPrimary,
-                    unfocusedBorderColor = White.copy(alpha = 0.2f),
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    unfocusedBorderColor = appBorderColor(),
+                    focusedTextColor = appTextPrimaryColor(),
+                    unfocusedTextColor = appTextPrimaryColor(),
                     cursorColor = GoldPrimary
                 )
             )
@@ -1151,15 +1510,15 @@ private fun CreatePostSheet(
                         .fillMaxWidth()
                         .height(100.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceOverlay)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                        .background(appElevatedSurfaceColor())
+                        .border(1.dp, appBorderColor(), RoundedCornerShape(14.dp))
                         .clickable { imagePicker.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Image, null, tint = BluePrimary, modifier = Modifier.size(32.dp))
                         Spacer(Modifier.height(6.dp))
-                        Text(stringResource(R.string.tap_upload_screenshot), color = TextSecondary, fontSize = 13.sp)
+                        Text(stringResource(R.string.tap_upload_screenshot), color = appTextSecondaryColor(), fontSize = 13.sp)
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -1183,7 +1542,7 @@ private fun CreatePostSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Mic, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.use_microphone), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = White)
+                    Text(stringResource(R.string.use_microphone), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = appTextPrimaryColor())
                 }
                 Switch(
                     checked = useMic,
@@ -1191,8 +1550,8 @@ private fun CreatePostSheet(
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = White,
                         checkedTrackColor = BluePrimary,
-                        uncheckedThumbColor = LightGray,
-                        uncheckedTrackColor = White.copy(alpha = 0.1f)
+                        uncheckedThumbColor = appTextSecondaryColor(),
+                        uncheckedTrackColor = appElevatedSurfaceColor()
                     )
                 )
             }
@@ -1210,12 +1569,12 @@ private fun CreatePostSheet(
                     val selected = selectedTags.contains(tag)
                     Box(
                         modifier = Modifier
-                            .background(if (selected) PurplePrimary.copy(alpha = 0.3f) else White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
-                            .border(1.dp, if (selected) PurplePrimary else White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .background(if (selected) PurplePrimary.copy(alpha = 0.3f) else appElevatedSurfaceColor(), RoundedCornerShape(8.dp))
+                            .border(1.dp, if (selected) PurplePrimary else appBorderColor(), RoundedCornerShape(8.dp))
                             .clickable { selectedTags = if (selected) selectedTags - tag else selectedTags + tag }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(tag, color = if (selected) PurplePrimary else LightGray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(tag, color = if (selected) PurplePrimary else appTextSecondaryColor(), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -1240,15 +1599,15 @@ private fun CreatePostSheet(
             OutlinedTextField(
                 value = bio,
                 onValueChange = { if (it.length <= 200) bio = it },
-                placeholder = { Text(stringResource(R.string.tell_about_yourself), color = DimGray) },
+                placeholder = { Text(stringResource(R.string.tell_about_yourself), color = appTextSecondaryColor()) },
                 modifier = Modifier.fillMaxWidth().height(100.dp),
                 maxLines = 4,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BluePrimary,
-                    unfocusedBorderColor = White.copy(alpha = 0.2f),
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    unfocusedBorderColor = appBorderColor(),
+                    focusedTextColor = appTextPrimaryColor(),
+                    unfocusedTextColor = appTextPrimaryColor(),
                     cursorColor = BluePrimary
                 )
             )
@@ -1256,9 +1615,18 @@ private fun CreatePostSheet(
             Spacer(Modifier.height(28.dp))
 
             Button(
-                onClick = {
+                onClick = submit@{
+                    val validationError = validateRequiredFields()
+                    if (validationError != null) {
+                        uploadError = validationError
+                        return@submit
+                    }
+
                     scope.launch {
+                        uploadError = null
                         var screenshotUrl = ""
+                        var uploadSuccess = true
+
                         screenshotUri?.let { uri ->
                             isUploading = true
                             try {
@@ -1272,12 +1640,19 @@ private fun CreatePostSheet(
                                         contentType = "image/jpeg"
                                     )
                                     result.onSuccess { url -> screenshotUrl = url }
+                                    result.onFailure {
+                                        uploadSuccess = false
+                                        uploadError = "Upload failed: ${it.message}"
+                                    }
                                 }
                             } catch (e: Exception) {
-                                Timber.w("Screenshot upload failed: ${e.message}")
+                                uploadSuccess = false
+                                uploadError = "Upload failed: ${e.message}"
                             }
                             isUploading = false
                         }
+
+                        if (!uploadSuccess) return@launch
 
                         val heroes = heroesInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(3)
                         onSubmit(
@@ -1288,22 +1663,22 @@ private fun CreatePostSheet(
                                 role = selectedRole,
                                 region = selectedRegion,
                                 skillLevel = selectedSkill,
-                                message = bio,
+                                message = bio.trim(),
                                 mainHeroes = heroes,
-                                bio = bio,
-                                rank = rank,
+                                bio = bio.trim(),
+                                rank = rank.trim(),
                                 totalMatches = totalMatches.toIntOrNull() ?: 0,
-                                winRate = winRate,
-                                rankedWinRate = rankedWinRate,
-                                inGameId = inGameId,
+                                winRate = winRate.trim(),
+                                rankedWinRate = rankedWinRate.trim(),
+                                inGameId = inGameId.trim(),
                                 city = city,
                                 screenshotUrl = screenshotUrl,
                                 useMic = useMic,
                                 playstyleTags = selectedTags.toList(),
-                                discord = discord,
-                                telegram = telegram,
-                                vk = vk,
-                                facebook = facebook,
+                                discord = discord.trim(),
+                                telegram = telegram.trim(),
+                                vk = vk.trim(),
+                                facebook = facebook.trim(),
                                 avatarUrl = currentUserProfile?.avatarUrl,
                                 createdAt = System.currentTimeMillis()
                             )
@@ -1329,13 +1704,23 @@ private fun CreatePostSheet(
                     }
                 }
             }
+
+            if (uploadError != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = uploadError!!,
+                    color = ErrorRed,
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = White)
+    Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = appTextPrimaryColor())
     Spacer(Modifier.height(8.dp))
 }
 
@@ -1349,16 +1734,16 @@ private fun SocialInputField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(label, color = DimGray, fontSize = 13.sp) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = LightGray.copy(alpha = 0.5f), modifier = Modifier.size(18.dp)) },
+        placeholder = { Text(label, color = appTextSecondaryColor(), fontSize = 13.sp) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = appTextSecondaryColor(), modifier = Modifier.size(18.dp)) },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = BluePrimary.copy(alpha = 0.5f),
-            unfocusedBorderColor = White.copy(alpha = 0.1f),
-            focusedTextColor = White,
-            unfocusedTextColor = White
+            unfocusedBorderColor = appBorderColor(),
+            focusedTextColor = appTextPrimaryColor(),
+            unfocusedTextColor = appTextPrimaryColor()
         )
     )
 }
@@ -1389,25 +1774,25 @@ private fun EmptyPlayerFinderState(
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                text = if (hasFilters) "No matching players" else "No solo players active",
+                text = if (hasFilters) stringResource(R.string.no_matching_players) else stringResource(R.string.no_solo_players_active),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = White,
+                color = appTextPrimaryColor(),
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = if (hasFilters) "Try resetting filters to find more players."
-                    else if (isTeamLeader) "Solo players will appear here once they post their info."
-                    else "Be the first to post your stats and get discovered by team leaders!",
+                text = if (hasFilters) stringResource(R.string.no_matching_players_hint)
+                    else if (isTeamLeader) stringResource(R.string.no_solo_players_team_leader_hint)
+                    else stringResource(R.string.no_solo_players_solo_hint),
                 fontSize = 14.sp,
-                color = LightGray.copy(alpha = 0.6f),
+                color = appTextSecondaryColor(),
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(24.dp))
             if (hasFilters) {
                 TextButton(onClick = onClearFilters) {
-                    Text("Reset Filters", color = BluePrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.reset_filters), color = BluePrimary, fontWeight = FontWeight.SemiBold)
                 }
             } else if (!isTeamLeader) {
                 Button(
@@ -1416,7 +1801,7 @@ private fun EmptyPlayerFinderState(
                     colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
                     modifier = Modifier.height(48.dp)
                 ) {
-                    Text("Create Post", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.create_post), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -1424,7 +1809,7 @@ private fun EmptyPlayerFinderState(
 }
 
 // ── Role Color Helper ──
-private fun roleColor(role: GameRole): Color = when (role) {
+internal fun roleColor(role: GameRole): Color = when (role) {
     GameRole.TANK -> Color(0xFF4CAF50)
     GameRole.FIGHTER -> Color(0xFFFF9800)
     GameRole.ASSASSIN -> Color(0xFFF44336)
@@ -1443,7 +1828,7 @@ fun TeamSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = appSurfaceColor(),
         shape = RoundedCornerShape(20.dp),
         title = {
             Column {
@@ -1452,14 +1837,14 @@ fun TeamSelectionDialog(
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = White
+                        color = appTextPrimaryColor()
                     )
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Select which team to invite them to",
                     fontSize = 13.sp,
-                    color = LightGray
+                    color = appTextSecondaryColor()
                 )
             }
         },
@@ -1495,7 +1880,7 @@ fun TeamSelectionDialog(
                         Surface(
                             onClick = { onTeamSelected(team) },
                             shape = RoundedCornerShape(14.dp),
-                            color = White.copy(alpha = 0.05f),
+                            color = appElevatedSurfaceColor(),
                             border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.2f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -1534,7 +1919,7 @@ fun TeamSelectionDialog(
                                         text = team.name,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                        color = appTextPrimaryColor()
                                     )
                                     Text(
                                         text = "${team.currentPlayerCount}/${team.maxPlayers} members",
@@ -1557,8 +1942,15 @@ fun TeamSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = LightGray)
+                Text("Cancel", color = appTextSecondaryColor())
             }
         }
     )
+}
+
+enum class PlayerSortOption(val displayName: String) {
+    NEWEST("Newest"),
+    WIN_RATE("Win Rate"),
+    POINTS("Points"),
+    MOST_VIEWED("Most Viewed")
 }

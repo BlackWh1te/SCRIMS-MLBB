@@ -45,6 +45,11 @@ fun FindTeamsScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var appliedTeamId by remember { mutableStateOf<String?>(null) }
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     val filteredTeams = teams.filter {
         it.name.contains(searchQuery, ignoreCase = true)
@@ -78,7 +83,7 @@ fun FindTeamsScreen(
                     GlassBackButton(onClick = onNavigateBack)
                     Text(
                         text = stringResource(R.string.find_teams_title),
-                        style = iOSTitle2.copy(color = TextPrimary)
+                        style = iOSTitle2.copy(color = appTextPrimary)
                     )
                     Spacer(modifier = Modifier.width(44.dp))
                 }
@@ -89,21 +94,21 @@ fun FindTeamsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.search_teams_hint), color = TextTertiary) },
+                    placeholder = { Text(stringResource(R.string.search_teams_hint), color = appTextSecondary) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
                     singleLine = true,
                     leadingIcon = {
-                        Icon(Icons.Default.Search, null, tint = TextSecondary)
+                        Icon(Icons.Default.Search, null, tint = appTextSecondary)
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.2f),
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = SurfaceCard,
-                        unfocusedContainerColor = SurfaceCard
+                        unfocusedBorderColor = appBorder,
+                        focusedTextColor = appTextPrimary,
+                        unfocusedTextColor = appTextPrimary,
+                        focusedContainerColor = appSurface,
+                        unfocusedContainerColor = appSurface
                     ),
                     shape = RoundedCornerShape(14.dp)
                 )
@@ -127,7 +132,7 @@ fun FindTeamsScreen(
                         EmptyState(
                             icon = Icons.Default.GroupAdd,
                             title = if (searchQuery.isEmpty()) stringResource(R.string.no_open_teams_yet) else stringResource(R.string.no_teams_found),
-                            subtitle = if (searchQuery.isEmpty()) stringResource(R.string.teams_will_appear_here) else stringResource(R.string.try_different_search_term),
+                            subtitle = if (searchQuery.isEmpty()) stringResource(R.string.no_open_teams_explainer) else stringResource(R.string.try_different_search_term),
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -173,12 +178,16 @@ private fun OpenTeamCard(
     onClick: () -> Unit,
     isApplying: Boolean
 ) {
+    val appSurface = appSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.15f))
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        colors = CardDefaults.cardColors(containerColor = appSurface),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
@@ -195,7 +204,7 @@ private fun OpenTeamCard(
                     Text(
                         text = team.name,
                         style = iOSBody.copy(
-                            color = TextPrimary,
+                            color = appTextPrimary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         )
@@ -205,13 +214,13 @@ private fun OpenTeamCard(
                         Icon(
                             Icons.Default.People,
                             null,
-                            tint = TextSecondary,
+                            tint = appTextSecondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             stringResource(R.string.players_fraction, team.currentPlayerCount, team.maxPlayers),
-                            style = iOSCaption2.copy(color = TextSecondary)
+                            style = iOSCaption2.copy(color = appTextSecondary)
                         )
                     }
                 }

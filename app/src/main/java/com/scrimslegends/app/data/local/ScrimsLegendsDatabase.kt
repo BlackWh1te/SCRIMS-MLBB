@@ -18,9 +18,11 @@ import com.scrimslegends.app.BuildConfig
         ScrimEntity::class,
         LeaderboardEntity::class,
         LfgPostEntity::class,
-        NotificationEntity::class
+        NotificationEntity::class,
+        MatchResultEntity::class,
+        TournamentEntity::class
     ],
-    version = 17,
+    version = 19,
     // exportSchema = true so Room generates schema JSON files under app/schemas/.
     // Commit these files to version control to validate that all migration paths are
     // correct in CI and to prevent accidental data loss from missing migrations.
@@ -40,6 +42,8 @@ abstract class ScrimsLegendsDatabase : RoomDatabase() {
     abstract fun leaderboardDao(): LeaderboardDao
     abstract fun lfgPostDao(): LfgPostDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun matchResultDao(): MatchResultDao
+    abstract fun tournamentDao(): TournamentDao
 
     companion object {
         @Volatile
@@ -52,7 +56,7 @@ abstract class ScrimsLegendsDatabase : RoomDatabase() {
                     ScrimsLegendsDatabase::class.java,
                     "scrims_legends_database"
                 )
-                .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
 
                 // fallbackToDestructiveMigration() silently wipes the entire local
                 // database (messages, conversations, notifications, cached profiles)

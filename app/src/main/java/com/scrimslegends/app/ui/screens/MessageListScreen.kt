@@ -81,6 +81,11 @@ fun MessageListScreen(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     // Filtered conversations
     val filteredConversations = remember(conversations, searchQuery, activeFilter) {
@@ -91,10 +96,24 @@ fun MessageListScreen(
         }
         list
     }
-    val visibleTeamConversations = remember(teamConversations, searchQuery, currentUserId) {
-        if (searchQuery.isBlank()) teamConversations
-        else teamConversations.filter { conversationMatchesSearch(it, currentUserId, searchQuery) }
+    val visibleTeamConversations = remember(teamConversations, searchQuery, activeFilter, currentUserId) {
+        var list = teamConversations
+        if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }
+        if (searchQuery.isNotBlank()) {
+            list = list.filter { conversationMatchesSearch(it, currentUserId, searchQuery) }
+        }
+        list
     }
+    val scrimConversations = remember(filteredConversations) {
+        filteredConversations.filter { it.scrimId != null }
+    }
+    val directConversations = remember(filteredConversations) {
+        filteredConversations.filter { it.scrimId == null }
+    }
+    val pinnedScrimConversations = scrimConversations.filter { it.isPinned }
+    val regularScrimConversations = scrimConversations.filterNot { it.isPinned }
+    val pinnedDirectConversations = directConversations.filter { it.isPinned }
+    val regularDirectConversations = directConversations.filterNot { it.isPinned }
 
     Box(
         modifier = Modifier
@@ -109,10 +128,10 @@ fun MessageListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .background(DarkNavy.copy(alpha = 0.75f))
+                        .background(appSurface.copy(alpha = 0.98f))
                         .drawBehind {
                             drawLine(
-                                color       = GlassBorder,
+                                color       = appBorder,
                                 start       = Offset(0f, size.height),
                                 end         = Offset(size.width, size.height),
                                 strokeWidth = 1f
@@ -138,7 +157,7 @@ fun MessageListScreen(
                             Text(
                                 text  = stringResource(R.string.messages),
                                 style = iOSTitle3.copy(
-                                    color      = TextPrimary,
+                                    color      = appTextPrimary,
                                     fontWeight = FontWeight.Bold
                                 )
                             )
@@ -174,11 +193,11 @@ fun MessageListScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     if (isSearchActive) GoldPrimary.copy(alpha = 0.15f)
-                                    else SurfaceOverlay
+                                    else appElevatedSurface
                                 )
                                 .border(
                                     1.dp,
-                                    if (isSearchActive) GoldPrimary.copy(alpha = 0.4f) else GlassBorder,
+                                    if (isSearchActive) GoldPrimary.copy(alpha = 0.4f) else appBorder,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
@@ -192,7 +211,7 @@ fun MessageListScreen(
                         ) {
                             Icon(
                                 Icons.Default.Search, null,
-                                tint     = if (isSearchActive) GoldPrimary else TextSecondary,
+                                tint     = if (isSearchActive) GoldPrimary else appTextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -219,14 +238,14 @@ fun MessageListScreen(
                                 placeholder   = {
                                     Text(
                                         "Search conversations…",
-                                        color    = TextTertiary,
+                                        color    = appTextSecondary,
                                         fontSize = 14.sp
                                     )
                                 },
                                 leadingIcon   = {
                                     Icon(
                                         Icons.Default.Search, null,
-                                        tint     = TextTertiary,
+                                        tint     = appTextSecondary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
@@ -235,7 +254,7 @@ fun MessageListScreen(
                                         IconButton(onClick = { searchQuery = "" }) {
                                             Icon(
                                                 Icons.Default.Clear, null,
-                                                tint     = TextTertiary,
+                                                tint     = appTextSecondary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -247,11 +266,11 @@ fun MessageListScreen(
                                     .height(48.dp),
                                 colors        = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
-                                    unfocusedBorderColor    = GlassBorder,
-                                    focusedContainerColor   = SurfaceOverlay,
-                                    unfocusedContainerColor = SurfaceOverlay,
-                                    focusedTextColor        = TextPrimary,
-                                    unfocusedTextColor      = TextPrimary,
+                                    unfocusedBorderColor    = appBorder,
+                                    focusedContainerColor   = appElevatedSurface,
+                                    unfocusedContainerColor = appElevatedSurface,
+                                    focusedTextColor        = appTextPrimary,
+                                    unfocusedTextColor      = appTextPrimary,
                                     cursorColor             = GoldPrimary
                                 ),
                                 shape         = RoundedCornerShape(14.dp),
@@ -287,11 +306,11 @@ fun MessageListScreen(
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(
                                             if (isActive) GoldPrimary.copy(alpha = 0.18f)
-                                            else SurfaceOverlay.copy(alpha = 0.6f)
+                                            else appElevatedSurface
                                         )
                                         .border(
                                             1.dp,
-                                            if (isActive) GoldPrimary.copy(alpha = 0.45f) else GlassBorder,
+                                            if (isActive) GoldPrimary.copy(alpha = 0.45f) else appBorder,
                                             RoundedCornerShape(20.dp)
                                         )
                                         .clickable { activeFilter = filter }
@@ -302,7 +321,7 @@ fun MessageListScreen(
                                         text       = tabLabel,
                                         fontSize   = 12.sp,
                                         fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                                        color      = if (isActive) GoldPrimary else TextSecondary
+                                        color      = if (isActive) GoldPrimary else appTextSecondary
                                     )
                                 }
                             }
@@ -329,7 +348,7 @@ fun MessageListScreen(
                                 Spacer(Modifier.height(16.dp))
                                 Text(
                                     "Loading conversations…",
-                                    color    = TextTertiary,
+                                    color    = appTextSecondary,
                                     fontSize = 13.sp
                                 )
                             }
@@ -373,11 +392,74 @@ fun MessageListScreen(
                                 }
                             }
 
+                            if (pinnedScrimConversations.isNotEmpty()) {
+                                item(key = "header_pinned_scrims") {
+                                    SectionHeader(title = "Pinned Scrims")
+                                }
+                                itemsIndexed(
+                                    pinnedScrimConversations,
+                                    key = { _, c -> "pinned_${c.id}" }
+                                ) { index, conversation ->
+                                    AnimatedEntrance(delayMillis = index * 40) {
+                                        ConversationCard(
+                                            conversation  = conversation,
+                                            currentUserId = currentUserId,
+                                            onClick       = { onNavigateToChat(conversation) },
+                                            onReport      = { userId, username ->
+                                                reportTarget = Pair(userId, username)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (regularScrimConversations.isNotEmpty()) {
+                                item(key = "header_scrim_chats") {
+                                    SectionHeader(title = "Scrim Chats")
+                                }
+                                itemsIndexed(
+                                    regularScrimConversations,
+                                    key = { _, c -> "scrim_${c.id}" }
+                                ) { index, conversation ->
+                                    AnimatedEntrance(delayMillis = index * 40) {
+                                        ConversationCard(
+                                            conversation  = conversation,
+                                            currentUserId = currentUserId,
+                                            onClick       = { onNavigateToChat(conversation) },
+                                            onReport      = { userId, username ->
+                                                reportTarget = Pair(userId, username)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (pinnedDirectConversations.isNotEmpty()) {
+                                item(key = "header_pinned_chats") {
+                                    SectionHeader(title = "Pinned Chats")
+                                }
+                                itemsIndexed(
+                                    pinnedDirectConversations,
+                                    key = { _, c -> "pinned_dm_${c.id}" }
+                                ) { index, conversation ->
+                                    AnimatedEntrance(delayMillis = index * 40) {
+                                        ConversationCard(
+                                            conversation  = conversation,
+                                            currentUserId = currentUserId,
+                                            onClick       = { onNavigateToChat(conversation) },
+                                            onReport      = { userId, username ->
+                                                reportTarget = Pair(userId, username)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             // ── Section: Today ──
-                            val todayConvs = filteredConversations.filter {
+                            val todayConvs = regularDirectConversations.filter {
                                 isToday(it.lastMessageTime)
                             }
-                            val olderConvs = filteredConversations.filter {
+                            val olderConvs = regularDirectConversations.filter {
                                 !isToday(it.lastMessageTime)
                             }
 
@@ -453,6 +535,8 @@ fun MessageListScreen(
 
 @Composable
 private fun SectionHeader(title: String) {
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
     Row(
         modifier          = Modifier
             .fillMaxWidth()
@@ -463,7 +547,7 @@ private fun SectionHeader(title: String) {
             text       = title,
             fontSize   = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color      = TextTertiary,
+            color      = appTextSecondary,
             letterSpacing = 0.8.sp
         )
         Spacer(Modifier.width(8.dp))
@@ -471,7 +555,7 @@ private fun SectionHeader(title: String) {
             modifier = Modifier
                 .weight(1f)
                 .height(1.dp)
-                .background(GlassBorder)
+                .background(appBorder)
         )
     }
 }
@@ -497,6 +581,12 @@ private fun ConversationCard(
     val otherTeam      = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
     val otherAvatarUrl = if (isCurrentUserParticipantA) conversation.participantBAvatarUrl else conversation.participantAAvatarUrl
     val hasUnread = conversation.unreadCount > 0
+    val isScrimChat = conversation.scrimId != null
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     // Stable gradient per name
     val avatarColors = remember(otherName) {
@@ -511,7 +601,7 @@ private fun ConversationCard(
     }
 
     val cardBg by animateColorAsState(
-        targetValue   = if (hasUnread) SurfaceCard else SurfaceCard.copy(alpha = 0.65f),
+        targetValue   = if (hasUnread) appSurface else appSurface.copy(alpha = 0.92f),
         animationSpec = tween(200),
         label         = "cardBg"
     )
@@ -523,7 +613,7 @@ private fun ConversationCard(
             .background(cardBg)
             .border(
                 width  = if (hasUnread) 1.dp else 0.5.dp,
-                color  = if (hasUnread) GoldPrimary.copy(alpha = 0.22f) else GlassBorder,
+                color  = if (hasUnread) GoldPrimary.copy(alpha = 0.35f) else appBorder,
                 shape  = RoundedCornerShape(18.dp)
             )
             .combinedClickable(
@@ -613,13 +703,13 @@ private fun ConversationCard(
                     modifier = Modifier
                         .size(13.dp)
                         .align(Alignment.BottomEnd)
-                        .background(DarkNavy, CircleShape)
+                        .background(appSurface, CircleShape)
                         .padding(2.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(DimGray, CircleShape)
+                            .background(appTextSecondary.copy(alpha = 0.7f), CircleShape)
                     )
                 }
             }
@@ -637,16 +727,34 @@ private fun ConversationCard(
                         text     = otherName,
                         fontSize = 15.sp,
                         fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
-                        color    = TextPrimary,
+                        color    = appTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(Modifier.width(6.dp))
+                    if (conversation.isPinned) {
+                        Icon(
+                            imageVector = Icons.Default.Bookmark,
+                            contentDescription = null,
+                            tint = GoldPrimary.copy(alpha = 0.55f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    if (isScrimChat) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = null,
+                            tint = GoldPrimary.copy(alpha = 0.8f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
                     Text(
                         text  = formatMessageTime(conversation.lastMessageTime),
                         fontSize   = 11.sp,
-                        color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else TextTertiary,
+                        color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else appTextSecondary,
                         fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
@@ -674,7 +782,7 @@ private fun ConversationCard(
                     Text(
                         text     = conversation.lastMessage,
                         fontSize = 13.sp,
-                        color    = if (hasUnread) LightGray else TextSecondary,
+                        color    = if (hasUnread) appTextPrimary else appTextSecondary,
                         fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -719,19 +827,16 @@ private fun TeamChatCard(
     val displayName = conversation.groupName.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.team_chat_default_name)
     val memberCount = conversation.participantCount
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF1A2340).copy(alpha = 0.90f),
-                        Color(0xFF0F1B2E).copy(alpha = 0.95f)
-                    )
-                )
-            )
+            .background(appSurface)
             .border(
                 width = 1.5.dp,
                 brush = Brush.horizontalGradient(GoldGradient),
@@ -814,7 +919,7 @@ private fun TeamChatCard(
                             text       = displayName,
                             fontSize   = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = TextPrimary,
+                            color      = appTextPrimary,
                             maxLines   = 1,
                             overflow   = TextOverflow.Ellipsis,
                             modifier   = Modifier.weight(1f, fill = false)
@@ -844,7 +949,7 @@ private fun TeamChatCard(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .background(
-                                    SurfaceOverlay.copy(alpha = 0.7f),
+                                    appElevatedSurface,
                                     RoundedCornerShape(4.dp)
                                 )
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -852,7 +957,7 @@ private fun TeamChatCard(
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = TextTertiary,
+                                tint = appTextSecondary,
                                 modifier = Modifier.size(10.dp)
                             )
                             Spacer(Modifier.width(2.dp))
@@ -860,7 +965,7 @@ private fun TeamChatCard(
                                 text       = memberCount.toString(),
                                 fontSize   = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color      = TextSecondary
+                                color      = appTextSecondary
                             )
                         }
                     }
@@ -876,7 +981,7 @@ private fun TeamChatCard(
                         Text(
                             text       = formatMessageTime(conversation.lastMessageTime),
                             fontSize   = 11.sp,
-                            color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else TextTertiary,
+                            color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else appTextSecondary,
                             fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
@@ -894,7 +999,7 @@ private fun TeamChatCard(
                             stringResource(R.string.team_chat_placeholder)
                         },
                         fontSize = 13.sp,
-                        color    = if (hasUnread) LightGray else TextSecondary,
+                        color    = if (hasUnread) appTextPrimary else appTextSecondary,
                         fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

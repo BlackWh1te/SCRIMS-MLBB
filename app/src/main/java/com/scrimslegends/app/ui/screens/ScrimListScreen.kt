@@ -77,16 +77,21 @@ fun ScrimListScreen(
     var selectedSkillLevel by remember { mutableStateOf<SkillLevel?>(null) }
     var selectedStatus     by remember { mutableStateOf<ScrimStatus?>(null) }
     var showFilters        by remember { mutableStateOf(false) }
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     // Status chips — drives top filter row
-    val statusChips = remember {
+    val statusChips = remember(appTextSecondary) {
         listOf(
             StatusChip("All",         null,                    GoldPrimary),
             StatusChip("Open",        ScrimStatus.OPEN,        SuccessGreen),
             StatusChip("Filled",      ScrimStatus.FILLED,      WarningOrange),
             StatusChip("Ready",       ScrimStatus.READY_CHECK, WarningOrange),
             StatusChip("In Progress", ScrimStatus.IN_PROGRESS, BluePrimary),
-            StatusChip("Completed",   ScrimStatus.COMPLETED,   LightGray),
+            StatusChip("Completed",   ScrimStatus.COMPLETED,   appTextSecondary),
             StatusChip("Cancelled",   ScrimStatus.CANCELLED,   ErrorRed)
         )
     }
@@ -107,10 +112,10 @@ fun ScrimListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .background(DarkNavy.copy(alpha = 0.65f))
+                        .background(appSurface.copy(alpha = 0.98f))
                         .drawBehind {
                             drawLine(
-                                color       = GlassBorder,
+                                color       = appBorder,
                                 start       = Offset(0f, size.height),
                                 end         = Offset(size.width, size.height),
                                 strokeWidth = 1f
@@ -136,7 +141,7 @@ fun ScrimListScreen(
                                 text       = stringResource(R.string.scrims),
                                 fontSize   = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = TextPrimary
+                                color      = appTextPrimary
                             )
                             if (openCount > 0) {
                                 Text(
@@ -150,15 +155,15 @@ fun ScrimListScreen(
                         // Filter toggle
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     if (showFilters) GoldPrimary.copy(alpha = 0.15f)
-                                    else SurfaceOverlay
+                                    else appElevatedSurface
                                 )
                                 .border(
                                     1.dp,
-                                    if (showFilters) GoldPrimary.copy(alpha = 0.4f) else GlassBorder,
+                                    if (showFilters) GoldPrimary.copy(alpha = 0.4f) else appBorder,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable { showFilters = !showFilters },
@@ -166,7 +171,7 @@ fun ScrimListScreen(
                         ) {
                             Icon(
                                 Icons.Default.Tune, null,
-                                tint     = if (showFilters) GoldPrimary else TextSecondary,
+                                tint     = if (showFilters) GoldPrimary else appTextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -196,11 +201,11 @@ fun ScrimListScreen(
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         if (isActive) chip.color.copy(alpha = 0.20f)
-                                        else SurfaceOverlay.copy(alpha = 0.55f)
+                                        else appElevatedSurface
                                     )
                                     .border(
                                         1.dp,
-                                        if (isActive) chip.color.copy(alpha = 0.55f) else GlassBorder,
+                                        if (isActive) chip.color.copy(alpha = 0.55f) else appBorder,
                                         RoundedCornerShape(20.dp)
                                     )
                                     .clickable {
@@ -230,14 +235,14 @@ fun ScrimListScreen(
                                         text       = chip.label,
                                         fontSize   = 12.sp,
                                         fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                                        color      = if (isActive) chip.color else TextSecondary
+                                        color      = if (isActive) chip.color else appTextSecondary
                                     )
                                     if (count > 0) {
                                         Text(
                                             text     = "($count)",
                                             fontSize = 11.sp,
                                             color    = if (isActive) chip.color.copy(alpha = 0.7f)
-                                            else TextTertiary
+                                            else appTextSecondary.copy(alpha = 0.8f)
                                         )
                                     }
                                 }
@@ -257,9 +262,9 @@ fun ScrimListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 8.dp),
-                    colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    colors    = CardDefaults.cardColors(containerColor = appSurface),
                     shape     = RoundedCornerShape(20.dp),
-                    border    = BorderStroke(1.dp, GlassBorder)
+                    border    = BorderStroke(1.dp, appBorder)
                 ) {
                     Column(
                         modifier = Modifier
@@ -276,14 +281,14 @@ fun ScrimListScreen(
                             placeholder   = {
                                 Text(
                                     stringResource(R.string.search_teams),
-                                    color    = TextTertiary,
+                                    color    = appTextSecondary,
                                     fontSize = 14.sp
                                 )
                             },
                             leadingIcon   = {
                                 Icon(
                                     Icons.Default.Search, null,
-                                    tint     = TextTertiary,
+                                    tint     = appTextSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             },
@@ -293,18 +298,18 @@ fun ScrimListScreen(
                                         searchQuery = ""
                                         onSearch("", selectedGameMode, selectedRegion, selectedSkillLevel, selectedStatus)
                                     }) {
-                                        Icon(Icons.Default.Clear, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Clear, null, tint = appTextSecondary, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             } else null,
                             modifier      = Modifier.fillMaxWidth().height(50.dp),
                             colors        = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
-                                unfocusedBorderColor    = GlassBorder,
-                                focusedContainerColor   = SurfaceOverlay,
-                                unfocusedContainerColor = SurfaceOverlay,
-                                focusedTextColor        = TextPrimary,
-                                unfocusedTextColor      = TextPrimary,
+                                unfocusedBorderColor    = appBorder,
+                                focusedContainerColor   = appElevatedSurface,
+                                unfocusedContainerColor = appElevatedSurface,
+                                focusedTextColor        = appTextPrimary,
+                                unfocusedTextColor      = appTextPrimary,
                                 cursorColor             = GoldPrimary
                             ),
                             shape         = RoundedCornerShape(14.dp),
@@ -438,7 +443,7 @@ fun ScrimListScreen(
                                 "No ${selectedStatus!!.name.lowercase()} scrims"
                             else
                                 stringResource(R.string.no_scrims_found),
-                            subtitle = stringResource(R.string.be_first_to_post_scrim),
+                            subtitle = stringResource(R.string.no_scrims_found_explainer),
                             modifier = Modifier.fillMaxSize(),
                             action   = {}
                         )
@@ -450,7 +455,7 @@ fun ScrimListScreen(
                                 androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
                                     .collect { lastIndex ->
                                         // Only load more if no backend filters are active, otherwise it wipes search results
-                                        val hasBackendFilters = selectedGameMode != null || selectedRegion != null || 
+                                        val hasBackendFilters = selectedGameMode != null || selectedRegion != null ||
                                                 selectedSkillLevel != null || searchQuery.isNotBlank()
                                         if (!hasBackendFilters && lastIndex != null && lastIndex >= displayScrims.size - 3) {
                                             onLoadMore()
@@ -519,7 +524,7 @@ private fun FilterSectionLabel(text: String) {
         text       = text,
         fontSize   = 11.sp,
         fontWeight = FontWeight.SemiBold,
-        color      = TextTertiary,
+        color      = appTextSecondaryColor(),
         letterSpacing = 0.6.sp
     )
 }
@@ -533,16 +538,19 @@ private fun CompactFilterChip(
     color   : Color,
     onClick : () -> Unit
 ) {
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(
                 if (selected) color.copy(alpha = 0.22f)
-                else SurfaceOverlay.copy(alpha = 0.5f)
+                else appElevatedSurface
             )
             .border(
                 1.dp,
-                if (selected) color.copy(alpha = 0.5f) else GlassBorder,
+                if (selected) color.copy(alpha = 0.5f) else appBorder,
                 RoundedCornerShape(20.dp)
             )
             .clickable { onClick() }
@@ -553,7 +561,7 @@ private fun CompactFilterChip(
             text       = label,
             fontSize   = 12.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color      = if (selected) color else TextSecondary
+            color      = if (selected) color else appTextSecondary
         )
     }
 }
@@ -626,7 +634,7 @@ fun PremiumScrimCard(
         ScrimStatus.FILLED      -> WarningOrange
         ScrimStatus.READY_CHECK -> WarningOrange
         ScrimStatus.IN_PROGRESS -> BluePrimary
-        ScrimStatus.COMPLETED   -> LightGray
+        ScrimStatus.COMPLETED   -> appTextSecondaryColor()
         ScrimStatus.CANCELLED   -> ErrorRed
     }
 
@@ -640,6 +648,10 @@ fun PremiumScrimCard(
     }
 
     val playerRatio = (scrim.currentPlayers.toFloat() / scrim.maxPlayers.toFloat()).coerceIn(0f, 1f)
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
 
     Card(
         modifier = Modifier
@@ -649,8 +661,9 @@ fun PremiumScrimCard(
                 elevation  = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 10.dp else 6.dp,
                 spotColor  = statusColor.copy(alpha = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 0.22f else 0.12f),
                 shape      = RoundedCornerShape(22.dp)
-            ),
-        colors        = CardDefaults.cardColors(containerColor = SurfaceCard),
+            )
+            .animateContentSize(),
+        colors        = CardDefaults.cardColors(containerColor = appSurface),
         shape         = RoundedCornerShape(22.dp),
         onClick       = onClick,
         interactionSource = interactionSource
@@ -694,7 +707,7 @@ fun PremiumScrimCard(
                                 text       = scrim.teamName,
                                 fontSize   = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = TextPrimary,
+                                color      = appTextPrimary,
                                 maxLines   = 1,
                                 overflow   = TextOverflow.Ellipsis
                             )
@@ -738,7 +751,7 @@ fun PremiumScrimCard(
                     Text(
                         text     = scrim.description,
                         fontSize = 13.sp,
-                        color    = TextSecondary,
+                        color    = appTextSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -767,7 +780,7 @@ fun PremiumScrimCard(
                                 .width(52.dp)
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(White.copy(alpha = 0.09f))
+                                .background(appElevatedSurface)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -780,7 +793,7 @@ fun PremiumScrimCard(
                         Text(
                             text     = "${scrim.currentPlayers}/${scrim.maxPlayers}",
                             fontSize = 12.sp,
-                            color    = LightGray,
+                            color    = appTextSecondary,
                             fontWeight = FontWeight.Medium
                         )
                     }

@@ -47,6 +47,9 @@ fun NotificationScreen(
     onRefresh: () -> Unit = {},
     onDismissError: () -> Unit = {}
 ) {
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -69,7 +72,7 @@ fun NotificationScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = appTextPrimary
                         )
                     )
 
@@ -114,7 +117,7 @@ fun NotificationScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = error,
-                                    color = White,
+                                    color = appTextPrimary,
                                     fontSize = 13.sp
                                 )
                             }
@@ -125,7 +128,7 @@ fun NotificationScreen(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = stringResource(R.string.dismiss),
-                                    tint = White,
+                                    tint = appTextSecondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -157,18 +160,18 @@ fun NotificationScreen(
                             Icon(
                                 imageVector = Icons.Default.NotificationsNone,
                                 contentDescription = null,
-                                tint = LightGray.copy(alpha = 0.4f),
+                                tint = appTextSecondary.copy(alpha = 0.55f),
                                 modifier = Modifier.size(72.dp)
                             )
                             Spacer(modifier = Modifier.height(20.dp))
                             Text(
                                 text = stringResource(R.string.no_notifications),
-                                style = iOSTitle3.copy(color = White)
+                                style = iOSTitle3.copy(color = appTextPrimary)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = stringResource(R.string.notifications_hint),
-                                style = iOSFootnote.copy(color = MidGray),
+                                style = iOSFootnote.copy(color = appTextSecondary),
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -247,7 +250,7 @@ private fun NotificationRow(
             Triple(Icons.Default.ChatBubble,    Purple,        Purple.copy(alpha = 0.12f))
         // ── System / Progress ────────────────────────────────────────────
         NotificationType.SYSTEM ->
-            Triple(Icons.Default.Info,          LightGray,     White.copy(alpha = 0.08f))
+            Triple(Icons.Default.Info,          appTextSecondaryColor(),     appElevatedSurfaceColor())
         NotificationType.XP_GAIN ->
             Triple(Icons.Default.TrendingUp,    WarningOrange, WarningOrange.copy(alpha = 0.12f))
         NotificationType.TIER_UP ->
@@ -287,6 +290,10 @@ private fun NotificationRow(
         NotificationType.TOURNAMENT_HOST_REJECTED ->
             Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
     }
+    val appSurface = appSurfaceColor()
+    val appElevatedSurface = appElevatedSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
 
     Card(
         modifier = Modifier
@@ -297,7 +304,7 @@ private fun NotificationRow(
                 shape = RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (notification.isRead) DarkNavy else DarkSurface
+            containerColor = if (notification.isRead) appSurface else appElevatedSurface
         ),
         shape = RoundedCornerShape(16.dp),
         onClick = onClick
@@ -343,20 +350,20 @@ private fun NotificationRow(
                     text = notification.title,
                     fontSize = 15.sp,
                     fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
-                    color = White
+                    color = appTextPrimary
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = notification.message,
                     fontSize = 13.sp,
-                    color = if (notification.isRead) MidGray else LightGray,
+                    color = appTextSecondary,
                     maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatNotificationTime(notification.timestamp),
                     fontSize = 11.sp,
-                    color = MidGray
+                    color = appTextSecondary.copy(alpha = 0.86f)
                 )
             }
 
@@ -368,7 +375,7 @@ private fun NotificationRow(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = MidGray,
+                    tint = appTextSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }

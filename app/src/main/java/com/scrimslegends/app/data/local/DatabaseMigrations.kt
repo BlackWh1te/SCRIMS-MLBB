@@ -195,3 +195,97 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
         db.execSQL("ALTER TABLE cached_scrims ADD COLUMN cancelledBy TEXT")
     }
 }
+
+/**
+ * Migration from version 17 to 18.
+ * Adds MatchResultEntity and TournamentEntity for comprehensive caching.
+ */
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `cached_match_results` (
+                `id` TEXT NOT NULL,
+                `scrimId` TEXT NOT NULL,
+                `teamAId` TEXT NOT NULL,
+                `teamAName` TEXT NOT NULL,
+                `teamBId` TEXT NOT NULL,
+                `teamBName` TEXT NOT NULL,
+                `teamAReportJson` TEXT,
+                `teamBReportJson` TEXT,
+                `screenshotUrl` TEXT,
+                `verificationStatus` TEXT NOT NULL,
+                `confirmedWinnerId` TEXT,
+                `adminNotes` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                `resolvedAt` INTEGER,
+                `teamARosterJson` TEXT,
+                `teamBRosterJson` TEXT,
+                `adminVerdict` TEXT,
+                `punishedTeamId` TEXT,
+                `punishmentDurationHours` INTEGER NOT NULL,
+                `reviewedByAdminId` TEXT,
+                `reviewedAt` INTEGER,
+                `noShowTeamId` TEXT,
+                `matchActuallyPlayed` INTEGER NOT NULL,
+                `matchType` TEXT NOT NULL,
+                `tournamentTitle` TEXT,
+                `roundNumber` INTEGER,
+                PRIMARY KEY(`id`)
+            )"""
+        )
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `cached_tournaments` (
+                `id` TEXT NOT NULL,
+                `hostUserId` TEXT NOT NULL,
+                `hostUsername` TEXT NOT NULL,
+                `title` TEXT NOT NULL,
+                `description` TEXT NOT NULL,
+                `logoUrl` TEXT,
+                `prizeType` TEXT NOT NULL,
+                `prizeDescription` TEXT,
+                `maxTeams` INTEGER NOT NULL,
+                `minTeamSize` INTEGER NOT NULL,
+                `bestOf` INTEGER NOT NULL,
+                `region` TEXT NOT NULL,
+                `skillLevel` TEXT NOT NULL,
+                `swissRounds` INTEGER,
+                `currentRound` INTEGER NOT NULL,
+                `status` TEXT NOT NULL,
+                `registrationDeadline` INTEGER NOT NULL,
+                `checkInDeadline` INTEGER NOT NULL,
+                `isLiveStreamEnabled` INTEGER NOT NULL,
+                `isFlagged` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                `requirementsJson` TEXT,
+                `teamCount` INTEGER NOT NULL,
+                `hostTrustScore` REAL NOT NULL,
+                PRIMARY KEY(`id`)
+            )"""
+        )
+    }
+}
+
+/**
+ * Migration from version 18 to 19.
+ * Some v18 debug/production installs were created before ProfileEntity.shortId
+ * was included in the profiles table, but with the same Room version number.
+ * Add the column defensively so Room can validate the current schema.
+ */
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        if (!db.hasColumn("profiles", "shortId")) {
+            db.execSQL("ALTER TABLE profiles ADD COLUMN shortId TEXT")
+        }
+    }
+}
+
+private fun SupportSQLiteDatabase.hasColumn(tableName: String, columnName: String): Boolean {
+    query("PRAGMA table_info(`$tableName`)").use { cursor ->
+        val nameIndex = cursor.getColumnIndex("name")
+        while (cursor.moveToNext()) {
+            if (cursor.getString(nameIndex) == columnName) return true
+        }
+    }
+    return false
+}

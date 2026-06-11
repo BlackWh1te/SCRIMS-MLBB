@@ -3,6 +3,7 @@ package com.scrimslegends.app.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +37,11 @@ import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import com.scrimslegends.app.data.model.MatchResult
+import com.scrimslegends.app.data.model.VerificationStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +53,8 @@ fun TeamDetailScreen(
     weeklyWins: Int = 0,
     weeklyLosses: Int = 0,
     teamRatings: List<com.scrimslegends.app.data.model.TeamRating> = emptyList(),
+    matchHistory: List<MatchResult> = emptyList(),
+    isMatchHistoryLoading: Boolean = false,
     onNavigateBack: () -> Unit,
     onUpdatePlayerRole: ((playerId: String, newRole: com.scrimslegends.app.data.model.PlayerRole) -> Unit)? = null,
     onRemovePlayer: ((playerId: String) -> Unit)? = null,
@@ -58,16 +66,21 @@ fun TeamDetailScreen(
     onAcceptApplication: ((applicationId: String) -> Unit)? = null,
     onDeclineApplication: ((applicationId: String) -> Unit)? = null,
     onLoadStats: () -> Unit = {},
-    onSubmitRating: ((rating: Int, feedback: String) -> Unit)? = null
+    onSubmitRating: ((rating: Int, feedback: String) -> Unit)? = null,
+    onUpdateLogo: ((android.net.Uri) -> Unit)? = null,
+    isUpdatingLogo: Boolean = false,
+    onApplyToTeam: ((message: String) -> Unit)? = null,
+    onOpenTeamChat: (() -> Unit)? = null,
+    onOpenMatchResult: ((MatchResult) -> Unit)? = null
 ) {
     LaunchedEffect(team.id) {
         onLoadStats()
     }
 
     // Pre-compute stats so they're available across all LazyColumn items
-    val totalScrims = (teamStats["total_scrims"] as? Number)?.toInt() ?: 0
-    val wins = (teamStats["wins"] as? Number)?.toInt() ?: 0
-    val losses = (teamStats["losses"] as? Number)?.toInt() ?: 0
+    val totalScrims = ((teamStats["total_scrims"] ?: teamStats["total_matches"]) as? Number)?.toInt() ?: 0
+    val wins = ((teamStats["wins"] ?: teamStats["win_count"]) as? Number)?.toInt() ?: 0
+    val losses = ((teamStats["losses"] ?: teamStats["loss_count"]) as? Number)?.toInt() ?: 0
     val totalPoints = (teamStats["total_points"] as? Number)?.toInt() ?: 0
     val matchesPlayed = wins + losses
     val winRate = if (matchesPlayed > 0) "${(wins * 100 / matchesPlayed)}%" else "0%"
@@ -80,18 +93,24 @@ fun TeamDetailScreen(
     var showRemoveDialog by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
     var showAddPlayerDialog by remember { mutableStateOf(false) }
+    var showApplyDialog by remember { mutableStateOf(false) }
     var playerToRemove by remember { mutableStateOf<com.scrimslegends.app.data.model.Player?>(null) }
+    var playerToChangeRole by remember { mutableStateOf<com.scrimslegends.app.data.model.Player?>(null) }
 
     val inviteCode = remember(team.id) {
         "SL-${team.name.take(3).uppercase()}${team.id.takeLast(4).uppercase()}"
     }
+    val isTeamMember = isLeader || team.leaderId == currentUserId || team.players.any { it.id == currentUserId }
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = mutableListOf("Overview", "Roster")
+    tabs.add("History")
     // Only show Manage tab if there's manage actions or leader
     if (isLeader || onLeaveTeam != null) {
         tabs.add("Manage")
     }
+    val safeSelectedTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+    val selectedTab = tabs[safeSelectedTabIndex]
 
     Box(
         modifier = Modifier
@@ -120,7 +139,7 @@ fun TeamDetailScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = appTextPrimaryColor()
                         )
                     )
 
@@ -129,10 +148,8 @@ fun TeamDetailScreen(
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(vertical = 20.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 120.dp)
             ) {
                 // Team Header Card
                 item {
@@ -146,7 +163,7 @@ fun TeamDetailScreen(
                                     shape = RoundedCornerShape(20.dp)
                                 ),
                             colors = CardDefaults.cardColors(
-                                containerColor = DarkNavy
+                                containerColor = appSurfaceColor()
                             ),
                             shape = RoundedCornerShape(20.dp)
                         ) {
@@ -177,7 +194,7 @@ fun TeamDetailScreen(
                                         text = team.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.team_initial_fallback),
                                         fontSize = 40.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = White
+                                        color = appTextPrimaryColor()
                                     )
                                 }
 
@@ -189,7 +206,7 @@ fun TeamDetailScreen(
                                     style = MaterialTheme.typography.headlineLarge.copy(
                                         fontSize = 24.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = White
+                                        color = appTextPrimaryColor()
                                     )
                                 )
 
@@ -202,7 +219,7 @@ fun TeamDetailScreen(
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = stringResource(R.string.content_desc_players),
-                                        tint = LightGray,
+                                        tint = appTextSecondaryColor(),
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -210,9 +227,41 @@ fun TeamDetailScreen(
                                         text = stringResource(R.string.players_count, team.players.size, 7),
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = 15.sp,
-                                            color = LightGray
+                                            color = appTextSecondaryColor()
                                         )
                                     )
+                                }
+
+                                if (onApplyToTeam != null && !isTeamMember) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { showApplyDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                                    ) {
+                                        Text("Apply to Join")
+                                    }
+                                }
+
+                                if (onOpenTeamChat != null && isTeamMember) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(
+                                        onClick = onOpenTeamChat,
+                                        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Groups,
+                                            contentDescription = null,
+                                            tint = DarkBlue,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.team_chat_default_name),
+                                            color = DarkBlue,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -225,29 +274,29 @@ fun TeamDetailScreen(
                 item {
                     AnimatedEntrance(delayMillis = 150) {
                         TabRow(
-                            selectedTabIndex = selectedTabIndex,
+                            selectedTabIndex = safeSelectedTabIndex,
                             containerColor = Color.Transparent,
-                            contentColor = White,
+                            contentColor = appTextPrimaryColor(),
                             indicator = { tabPositions ->
                                 TabRowDefaults.Indicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                    Modifier.tabIndicatorOffset(tabPositions[safeSelectedTabIndex]),
                                     color = GoldPrimary,
                                     height = 3.dp
                                 )
                             },
                             divider = {
-                                Divider(color = GlassBorder)
+                                Divider(color = appBorderColor())
                             }
                         ) {
                             tabs.forEachIndexed { index, title ->
                                 Tab(
-                                    selected = selectedTabIndex == index,
+                                    selected = safeSelectedTabIndex == index,
                                     onClick = { selectedTabIndex = index },
                                     text = { 
                                         Text(
                                             text = title, 
-                                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (selectedTabIndex == index) GoldPrimary else LightGray
+                                            fontWeight = if (safeSelectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (safeSelectedTabIndex == index) GoldPrimary else appTextSecondaryColor()
                                         ) 
                                     }
                                 )
@@ -258,7 +307,7 @@ fun TeamDetailScreen(
                 }
 
                 // ─── OVERVIEW TAB ───
-                if (tabs[selectedTabIndex] == "Overview") {
+                if (selectedTab == "Overview") {
                     // Team Stats Section (real data from get_team_stats RPC)
                     item {
                     AnimatedEntrance(delayMillis = 175) {
@@ -267,7 +316,7 @@ fun TeamDetailScreen(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = White
+                                color = appTextPrimaryColor()
                             )
                         )
                     }
@@ -295,17 +344,17 @@ fun TeamDetailScreen(
                             )
                             TeamStatBox(
                                 modifier = Modifier.weight(1f),
+                                icon = Icons.Default.TrendingDown,
+                                label = stringResource(R.string.losses),
+                                value = losses.toString(),
+                                tint = ErrorRed
+                            )
+                            TeamStatBox(
+                                modifier = Modifier.weight(1f),
                                 icon = Icons.Default.TrendingUp,
                                 label = stringResource(R.string.win_rate),
                                 value = winRate,
                                 tint = GoldPrimary
-                            )
-                            TeamStatBox(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Default.Star,
-                                label = stringResource(R.string.avg_rating),
-                                value = avgRating,
-                                tint = Purple
                             )
                         }
                     }
@@ -318,7 +367,7 @@ fun TeamDetailScreen(
                     AnimatedEntrance(delayMillis = 190) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                            colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -327,7 +376,7 @@ fun TeamDetailScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                        color = appTextPrimaryColor()
                                     )
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
@@ -355,7 +404,7 @@ fun TeamDetailScreen(
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = White
+                                    color = appTextPrimaryColor()
                                 )
                             )
                         }
@@ -365,7 +414,7 @@ fun TeamDetailScreen(
                         AnimatedEntrance(delayMillis = 220) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
@@ -378,7 +427,7 @@ fun TeamDetailScreen(
                                             text = rating.raterTeamName,
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = White
+                                                color = appTextPrimaryColor()
                                             )
                                         )
                                         Row {
@@ -397,7 +446,7 @@ fun TeamDetailScreen(
                                         Text(
                                             text = rating.feedback,
                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                color = LightGray
+                                                color = appTextSecondaryColor()
                                             )
                                         )
                                     }
@@ -410,7 +459,7 @@ fun TeamDetailScreen(
                 } // End Overview Tab
 
                 // ─── ROSTER TAB ───
-                if (tabs[selectedTabIndex] == "Roster") {
+                if (selectedTab == "Roster") {
                     // Players Section
                 item {
                     AnimatedEntrance(delayMillis = 200) {
@@ -419,7 +468,7 @@ fun TeamDetailScreen(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = White
+                                color = appTextPrimaryColor()
                             )
                         )
                     }
@@ -461,7 +510,7 @@ fun TeamDetailScreen(
                                         shape = RoundedCornerShape(16.dp)
                                     ),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = DarkNavy
+                                    containerColor = appSurfaceColor()
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 onClick = { showAddPlayerDialog = true }
@@ -505,7 +554,7 @@ fun TeamDetailScreen(
                                         shape = RoundedCornerShape(16.dp)
                                     ),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = DarkNavy
+                                    containerColor = appSurfaceColor()
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 onClick = { showInviteDialog = true }
@@ -540,7 +589,86 @@ fun TeamDetailScreen(
                 } // End Roster Tab
 
                 // ─── MANAGE TAB ───
-                if (tabs.getOrNull(selectedTabIndex) == "Manage") {
+                if (selectedTab == "History") {
+                    item {
+                        AnimatedEntrance(delayMillis = 200) {
+                            Text(
+                                text = "Ranked match history",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = appTextPrimaryColor()
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    when {
+                        isMatchHistoryLoading && matchHistory.isEmpty() -> {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 36.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = GoldPrimary)
+                                }
+                            }
+                        }
+                        matchHistory.isEmpty() -> {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.History,
+                                            contentDescription = null,
+                                            tint = appTextSecondaryColor().copy(alpha = 0.5f),
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                            text = "No ranked matches yet",
+                                            color = appTextSecondaryColor(),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Classic scrims are not saved in team history.",
+                                            color = appTextSecondaryColor(),
+                                            fontSize = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        else -> {
+                            items(matchHistory, key = { it.id }) { match ->
+                                AnimatedEntrance(delayMillis = 240) {
+                                    TeamHistoryCard(
+                                        match = match,
+                                        teamId = team.id,
+                                        onClick = { onOpenMatchResult?.invoke(match) }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                            }
+                        }
+                    }
+                }
+
+                if (selectedTab == "Manage") {
                     // Pending Applications (Leader only)
                 if (isLeader && applications.isNotEmpty()) {
                     item {
@@ -552,7 +680,7 @@ fun TeamDetailScreen(
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = White
+                                    color = appTextPrimaryColor()
                                 )
                             )
                         }
@@ -570,7 +698,7 @@ fun TeamDetailScreen(
                                             shape = RoundedCornerShape(16.dp)
                                         ),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = DarkNavy
+                                        containerColor = appSurfaceColor()
                                     ),
                                     shape = RoundedCornerShape(16.dp)
                                 ) {
@@ -611,7 +739,7 @@ fun TeamDetailScreen(
                                                     style = MaterialTheme.typography.titleMedium.copy(
                                                         fontSize = 16.sp,
                                                         fontWeight = FontWeight.SemiBold,
-                                                        color = White
+                                                        color = appTextPrimaryColor()
                                                     )
                                                 )
                                                 if (!app.message.isNullOrBlank()) {
@@ -620,7 +748,7 @@ fun TeamDetailScreen(
                                                         text = app.message,
                                                         style = MaterialTheme.typography.bodySmall.copy(
                                                             fontSize = 12.sp,
-                                                            color = LightGray
+                                                            color = appTextSecondaryColor()
                                                         ),
                                                         maxLines = 2,
                                                         overflow = TextOverflow.Ellipsis
@@ -764,22 +892,80 @@ fun TeamDetailScreen(
         }
     }
 
+    // --- Apply To Team Dialog ---
+    if (showApplyDialog) {
+        var applyMessage by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showApplyDialog = false },
+            containerColor = appSurfaceColor(),
+            title = {
+                Text(
+                    text = stringResource(R.string.apply_to_team),
+                    color = appTextPrimaryColor(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Would you like to include a message with your application?",
+                        color = appTextSecondaryColor(),
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = applyMessage,
+                        onValueChange = { applyMessage = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("e.g. Im a Mythic Roamer Main...", color = appTextSecondaryColor()) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = appTextPrimaryColor(),
+                            unfocusedTextColor = appTextPrimaryColor(),
+                            focusedBorderColor = BluePrimary,
+                            unfocusedBorderColor = appBorderColor(),
+                            focusedContainerColor = appElevatedSurfaceColor(),
+                            unfocusedContainerColor = appElevatedSurfaceColor()
+                        ),
+                        maxLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onApplyToTeam?.invoke(applyMessage)
+                        showApplyDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                ) {
+                    Text("Apply", color = appTextPrimaryColor())
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApplyDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
+                }
+            }
+        )
+    }
+
     // Leave Team Dialog
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.leave_team_confirm),
-                    color = White,
+                    color = appTextPrimaryColor(),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.leave_team_message, team.name),
-                    color = LightGray,
+                    color = appTextSecondaryColor(),
                     fontSize = 14.sp
                 )
             },
@@ -795,7 +981,7 @@ fun TeamDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLeaveDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MidGray)
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                 }
             }
         )
@@ -805,18 +991,18 @@ fun TeamDetailScreen(
     if (showDisbandDialog) {
         AlertDialog(
             onDismissRequest = { showDisbandDialog = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.disband_team_confirm),
-                    color = White,
+                    color = appTextPrimaryColor(),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.disband_team_message, team.name),
-                    color = LightGray,
+                    color = appTextSecondaryColor(),
                     fontSize = 14.sp
                 )
             },
@@ -832,7 +1018,7 @@ fun TeamDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDisbandDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MidGray)
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                 }
             }
         )
@@ -843,18 +1029,18 @@ fun TeamDetailScreen(
         if (showRemoveDialog) {
             AlertDialog(
                 onDismissRequest = { showRemoveDialog = false },
-                containerColor = DarkNavy,
+                containerColor = appSurfaceColor(),
                 title = {
                     Text(
                         text = stringResource(R.string.remove_player_confirm),
-                        color = White,
+                        color = appTextPrimaryColor(),
                         fontWeight = FontWeight.Bold
                     )
                 },
                 text = {
                     Text(
                         text = stringResource(R.string.remove_player_message, player.name),
-                        color = LightGray,
+                        color = appTextSecondaryColor(),
                         fontSize = 14.sp
                     )
                 },
@@ -871,7 +1057,7 @@ fun TeamDetailScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showRemoveDialog = false }) {
-                        Text(stringResource(R.string.cancel), color = MidGray)
+                        Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                     }
                 }
             )
@@ -896,6 +1082,101 @@ fun TeamDetailScreen(
                 onAddPlayer?.invoke(name, email, role)
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TeamHistoryCard(
+    match: MatchResult,
+    teamId: String,
+    onClick: () -> Unit
+) {
+    val isTeamA = match.teamAId == teamId
+    val opponentName = if (isTeamA) match.teamBName else match.teamAName
+    val statusText = when (match.verificationStatus) {
+        VerificationStatus.CONFIRMED -> when {
+            match.isDraw -> "Draw"
+            match.confirmedWinnerId == teamId -> "Win"
+            else -> "Loss"
+        }
+        VerificationStatus.PENDING -> "Pending"
+        VerificationStatus.DISPUTED -> "Disputed"
+        VerificationStatus.ADMIN_REVIEW -> "Review"
+        VerificationStatus.AUTO_CANCELLED -> "Cancelled"
+        VerificationStatus.ADMIN_RESOLVED -> "Resolved"
+    }
+    val statusColor = when (statusText) {
+        "Win" -> SuccessGreen
+        "Loss", "Cancelled" -> ErrorRed
+        "Draw", "Resolved" -> MidGray
+        "Disputed" -> Purple
+        "Review" -> BluePrimary
+        else -> WarningOrange
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
+        shape = RoundedCornerShape(16.dp),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(statusColor.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                    .border(1.dp, statusColor.copy(alpha = 0.28f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = statusText.take(1),
+                    color = statusColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "vs ${opponentName.ifBlank { "Opponent" }}",
+                    color = appTextPrimaryColor(),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(match.createdAt)),
+                    color = appTextSecondaryColor(),
+                    fontSize = 12.sp
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (match.isConfirmed) "Ranked" else match.verificationStatus.name.replace("_", " "),
+                    color = appTextSecondaryColor().copy(alpha = 0.75f),
+                    fontSize = 11.sp
+                )
+            }
+        }
     }
 }
 
@@ -924,7 +1205,7 @@ fun PlayerCard(
                 }
             },
         colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
+            containerColor = appSurfaceColor()
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -979,7 +1260,7 @@ fun PlayerCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = appTextPrimaryColor()
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -987,7 +1268,7 @@ fun PlayerCard(
                     text = stringResource(R.string.email_label, player.email),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
-                        color = LightGray
+                        color = appTextSecondaryColor()
                     )
                 )
             }
@@ -999,7 +1280,7 @@ fun PlayerCard(
                     color = when (player.role) {
                         com.scrimslegends.app.data.model.PlayerRole.LEADER -> WarningOrange.copy(alpha = 0.15f)
                         com.scrimslegends.app.data.model.PlayerRole.CO_LEADER -> SuccessGreen.copy(alpha = 0.15f)
-                        else -> White.copy(alpha = 0.15f)
+                        else -> appElevatedSurfaceColor()
                     }
                 ) {
                     Text(
@@ -1009,7 +1290,7 @@ fun PlayerCard(
                         color = when (player.role) {
                             com.scrimslegends.app.data.model.PlayerRole.LEADER -> WarningOrange
                             com.scrimslegends.app.data.model.PlayerRole.CO_LEADER -> SuccessGreen
-                            else -> LightGray
+                            else -> appTextSecondaryColor()
                         },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
@@ -1022,17 +1303,17 @@ fun PlayerCard(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = stringResource(R.string.content_desc_player_actions),
-                                tint = MidGray,
+                                tint = appTextSecondaryColor(),
                                 modifier = Modifier.size(22.dp)
                             )
                         }
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(DarkNavy)
+                            modifier = Modifier.background(appSurfaceColor())
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.change_role), color = White) },
+                                text = { Text(stringResource(R.string.change_role), color = appTextPrimaryColor()) },
                                 onClick = {
                                     showMenu = false
                                     showRoleDialog = true
@@ -1047,7 +1328,7 @@ fun PlayerCard(
                                 },
                                 leadingIcon = { Icon(Icons.Default.Stars, contentDescription = null, tint = GoldPrimary) }
                             )
-                            Divider(color = White.copy(alpha = 0.1f))
+                            Divider(color = appBorderColor())
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.kick_player), color = ErrorRed) },
                                 onClick = {
@@ -1059,7 +1340,8 @@ fun PlayerCard(
                         }
                     }
                 }
-            }
+            } // End of LazyColumn
+
         }
     }
 
@@ -1067,11 +1349,11 @@ fun PlayerCard(
     if (showRoleDialog) {
         AlertDialog(
             onDismissRequest = { showRoleDialog = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.change_role),
-                    color = White,
+                    color = appTextPrimaryColor(),
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -1079,7 +1361,7 @@ fun PlayerCard(
                 Column {
                     Text(
                         text = stringResource(R.string.select_new_role, player.name),
-                        color = LightGray,
+                        color = appTextSecondaryColor(),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1095,9 +1377,9 @@ fun PlayerCard(
                                 containerColor = if (isSelected) {
                                     when (role) {
                                         com.scrimslegends.app.data.model.PlayerRole.CO_LEADER -> SuccessGreen.copy(alpha = 0.3f)
-                                        else -> White.copy(alpha = 0.2f)
+                                        else -> appElevatedSurfaceColor()
                                     }
-                                } else DarkSurface.copy(alpha = 0.6f)
+                                } else appElevatedSurfaceColor()
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
@@ -1132,7 +1414,7 @@ fun PlayerCard(
             },
             confirmButton = {
                 TextButton(onClick = { showRoleDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = MidGray)
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                 }
             }
         )
@@ -1142,18 +1424,18 @@ fun PlayerCard(
     if (showHandoverConfirm) {
         AlertDialog(
             onDismissRequest = { showHandoverConfirm = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.handover_leadership_confirm),
-                    color = White,
+                    color = appTextPrimaryColor(),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.handover_leadership_message, player.name),
-                    color = LightGray,
+                    color = appTextSecondaryColor(),
                     fontSize = 14.sp
                 )
             },
@@ -1169,7 +1451,7 @@ fun PlayerCard(
             },
             dismissButton = {
                 TextButton(onClick = { showHandoverConfirm = false }) {
-                    Text(stringResource(R.string.cancel), color = MidGray)
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                 }
             }
         )
@@ -1179,18 +1461,18 @@ fun PlayerCard(
     if (showKickConfirm) {
         AlertDialog(
             onDismissRequest = { showKickConfirm = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.kick_player_confirm),
-                    color = White,
+                    color = appTextPrimaryColor(),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.kick_player_message, player.name),
-                    color = LightGray,
+                    color = appTextSecondaryColor(),
                     fontSize = 14.sp
                 )
             },
@@ -1206,7 +1488,7 @@ fun PlayerCard(
             },
             dismissButton = {
                 TextButton(onClick = { showKickConfirm = false }) {
-                    Text(stringResource(R.string.cancel), color = MidGray)
+                    Text(stringResource(R.string.cancel), color = appTextSecondaryColor())
                 }
             }
         )
@@ -1244,7 +1526,7 @@ private fun MiniBar(label: String, value: Int, color: Color, max: Int = 20) {
             text = label,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 11.sp,
-                color = LightGray
+                color = appTextSecondaryColor()
             )
         )
     }
@@ -1266,7 +1548,7 @@ private fun TeamStatBox(
                 shape = RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
+            containerColor = appSurfaceColor()
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -1288,7 +1570,7 @@ private fun TeamStatBox(
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = White
+                    color = appTextPrimaryColor()
                 )
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -1296,7 +1578,7 @@ private fun TeamStatBox(
                 text = label,
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.sp,
-                    color = LightGray
+                    color = appTextSecondaryColor()
                 )
             )
         }

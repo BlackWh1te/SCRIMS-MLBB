@@ -42,6 +42,9 @@ fun ScheduleScreen(
     onScrimClick: (String) -> Unit
 ) {
     val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
+    val appBorder = appBorderColor()
 
     // Only show scrims the user is actively involved in (same logic as HomeScreen)
     val userTeamIds = teams.map { it.id }.toSet()
@@ -82,7 +85,7 @@ fun ScheduleScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = appTextPrimary
                         )
                     )
                     Spacer(modifier = Modifier.width(44.dp))
@@ -98,14 +101,14 @@ fun ScheduleScreen(
                         Icon(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
-                            tint = MidGray,
+                            tint = appTextSecondary,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = stringResource(R.string.no_upcoming_scrims),
                             style = MaterialTheme.typography.titleMedium.copy(
-                                color = LightGray,
+                                color = appTextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
@@ -113,7 +116,7 @@ fun ScheduleScreen(
                         Text(
                             text = stringResource(R.string.create_join_scrim_hint),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MidGray
+                                color = appTextSecondary
                             )
                         )
                     }
@@ -146,7 +149,7 @@ fun ScheduleScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = White
+                                            color = appTextPrimary
                                         )
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -154,7 +157,7 @@ fun ScheduleScreen(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(1.dp)
-                                            .background(MidGray.copy(alpha = 0.3f))
+                                            .background(appBorder)
                                     )
                                 }
                             }
@@ -193,6 +196,9 @@ private fun ScheduleCard(
         ScrimStatus.COMPLETED -> MidGray
         ScrimStatus.CANCELLED -> ErrorRed
     }
+    val appSurface = appSurfaceColor()
+    val appTextPrimary = appTextPrimaryColor()
+    val appTextSecondary = appTextSecondaryColor()
 
     Card(
         modifier = Modifier
@@ -203,7 +209,7 @@ private fun ScheduleCard(
                 shape = RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = DarkNavy
+            containerColor = appSurface
         ),
         shape = RoundedCornerShape(16.dp),
         onClick = onClick
@@ -224,7 +230,7 @@ private fun ScheduleCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = White
+                        color = appTextPrimary
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -256,21 +262,21 @@ private fun ScheduleCard(
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = appTextPrimary
                     )
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 ScrimCountdown(
                     targetTime = scrim.scheduledTime,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    baseColor = MidGray
+                    baseColor = appTextSecondary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.SportsEsports,
                         contentDescription = null,
-                        tint = MidGray,
+                        tint = appTextSecondary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -278,7 +284,7 @@ private fun ScheduleCard(
                         text = "${scrim.gameMode.displayName} · ${scrim.region.displayName} ${scrim.region.utcOffset}",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 13.sp,
-                            color = MidGray
+                            color = appTextSecondary
                         )
                     )
                 }
@@ -287,15 +293,15 @@ private fun ScheduleCard(
                     Icon(
                         imageVector = Icons.Default.People,
                         contentDescription = null,
-                        tint = MidGray,
+                        tint = appTextSecondary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.players_count, scrim.currentPlayers, scrim.maxPlayers),
+                        text = stringResource(R.string.players_count, scrim.displayCurrentPlayers, scrim.displayMaxPlayers),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 13.sp,
-                            color = MidGray
+                            color = appTextSecondary
                         )
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -327,7 +333,7 @@ private fun ScheduleCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "View",
-                tint = MidGray,
+                tint = appTextSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }

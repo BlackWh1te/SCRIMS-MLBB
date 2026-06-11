@@ -38,7 +38,7 @@ class AppSettings(private val context: Context) {
     val messageNotifications: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.MESSAGE_NOTIFICATIONS] ?: true }
     val soundEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.SOUND_ENABLED] ?: true }
     val vibrationEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.VIBRATION_ENABLED] ?: true }
-    val languageCode: Flow<String> = context.settingsDataStore.data.map { it[Keys.LANGUAGE_CODE] ?: "en" }
+    val languageCode: Flow<String> = context.settingsDataStore.data.map { "en" }
     val darkMode: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.DARK_MODE] ?: true }
 
     suspend fun setNotifications(enabled: Boolean) {
@@ -62,10 +62,9 @@ class AppSettings(private val context: Context) {
     }
 
     suspend fun setLanguageCode(code: String) {
-        // Keep the sync value ahead of DataStore emission so Activity recreation
-        // reads the new locale in attachBaseContext.
-        setLanguageCodeSync(code)
-        context.settingsDataStore.edit { it[Keys.LANGUAGE_CODE] = code }
+        // Product language is locked to English for now.
+        setLanguageCodeSync("en")
+        context.settingsDataStore.edit { it[Keys.LANGUAGE_CODE] = "en" }
     }
 
     suspend fun setDarkMode(enabled: Boolean) {
@@ -79,11 +78,11 @@ class AppSettings(private val context: Context) {
     }
 
     fun getLanguageCodeSync(default: String = "en"): String {
-        return securePrefs.getString(Keys.LANGUAGE_CODE.name, default) ?: default
+        return "en"
     }
 
     fun setLanguageCodeSync(code: String) {
-        securePrefs.putString(Keys.LANGUAGE_CODE.name, code)
+        securePrefs.putString(Keys.LANGUAGE_CODE.name, "en")
     }
 
     // ── LFG Post View Tracking (one view per user per post) ─────────────────

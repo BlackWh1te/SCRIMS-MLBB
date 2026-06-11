@@ -82,8 +82,8 @@ fun PremiumGlassCard(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        SurfaceElevated.copy(alpha = 0.85f),
-                        SurfaceBase.copy(alpha = 0.85f)
+                        appElevatedSurfaceColor().copy(alpha = 0.85f),
+                        appSurfaceColor().copy(alpha = 0.85f)
                     )
                 ),
                 shape = RoundedCornerShape(24.dp)
@@ -92,9 +92,9 @@ fun PremiumGlassCard(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        White.copy(alpha = borderAlpha),
+                        appBorderColor().copy(alpha = borderAlpha.coerceAtLeast(0.35f)),
                         accentColor,
-                        White.copy(alpha = borderAlpha * 0.5f)
+                        appBorderColor().copy(alpha = borderAlpha.coerceAtLeast(0.35f) * 0.5f)
                     )
                 ),
                 shape = RoundedCornerShape(24.dp)

@@ -88,6 +88,17 @@ val PurpleGlow     = Color(0x407C4DFF)
 val GreenGlow      = Color(0x3400C853)
 
 // ── Rank / Tier System ───────────────────────
+val WarriorBrown   = Color(0xFF8B5A2B)
+val EliteSilver    = Color(0xFFA9A9A9)
+val MasterGold     = Color(0xFFD4AF37)
+val GrandmasterPurple = Color(0xFF9B59B6)
+val EpicCyan       = Color(0xFF00CED1)
+val LegendRed      = Color(0xFFFF4757)
+val MythicCrimson  = Color(0xFFFF1B1B)
+val HonorBlue      = Color(0xFF1E90FF)
+val GloryPink      = Color(0xFFFF69B4)
+val ImmortalRed    = Color(0xFF8B0000)
+
 val Bronze         = Color(0xFFCD7F32)
 val Silver         = Color(0xFFC0C0C0)
 val Gold           = Color(0xFFFFD700)
@@ -97,10 +108,6 @@ val Master         = Color(0xFFFF00FF)
 val Grandmaster    = Color(0xFFFFD700)
 val SolverBlue     = Color(0xFF4A90D9)
 val GoldRank       = Color(0xFFFFB800)
-val GrandmasterPurple = Color(0xFF9B59B6)
-val EpicCyan       = Color(0xFF00CED1)
-val LegendRed      = Color(0xFFFF4757)
-val MythicCrimson  = Color(0xFFFF1B1B)
 
 // ── Top Badge Colors ─────────────────────────
 val Top1Gold       = Color(0xFFFFD700)
@@ -135,6 +142,16 @@ val WarningGradient = listOf(Color(0xFFFF9100), Color(0xFFFFAB40), Color(0xFFFF6
 val ErrorGradient   = listOf(Color(0xFFFF3D00), Color(0xFFFF5252), Color(0xFFD50000))
 
 // Rank gradients
+val WarriorGradient     = listOf(Color(0xFF8B5A2B), Color(0xFF5C3A21), Color(0xFF3B2516))
+val EliteGradient       = listOf(Color(0xFFD3D3D3), Color(0xFFA9A9A9), Color(0xFF696969))
+val MasterGoldGradient  = listOf(Color(0xFFFFD700), Color(0xFFD4AF37), Color(0xFF996515))
+val EpicGradient        = listOf(Color(0xFF00FFFF), Color(0xFF00CED1), Color(0xFF008B8B))
+val LegendGradient      = listOf(Color(0xFFFF4757), Color(0xFFDC143C), Color(0xFF8B0000))
+val MythicGradient      = listOf(Color(0xFFFF1B1B), Color(0xFF8B0000), Color(0xFF4A0000))
+val MythicalHonorGradient = listOf(Color(0xFF00BFFF), Color(0xFF1E90FF), Color(0xFF00008B))
+val MythicalGloryGradient = listOf(Color(0xFFFFB6C1), Color(0xFFFF69B4), Color(0xFFC71585))
+val MythicalImmortalGradient = listOf(Color(0xFFFF0000), Color(0xFF8B0000), Color(0xFF000000))
+
 val BronzeGradient      = listOf(Color(0xFFCD7F32), Color(0xFFB87333), Color(0xFF8B4513))
 val SilverGradient      = listOf(Color(0xFFE8E8E8), Color(0xFFC0C0C0), Color(0xFFA0A0A0))
 val GoldRankGradient    = listOf(Color(0xFFFFBB00), Color(0xFFFFC107), Color(0xFFFF9800))
@@ -160,7 +177,27 @@ fun goldGradientBrush()    : Brush = Brush.horizontalGradient(colors = GoldGradi
 fun blueGradientBrush()    : Brush = Brush.horizontalGradient(colors = BlueGradient)
 fun purpleGradientBrush()  : Brush = Brush.horizontalGradient(colors = PurpleGradient)
 val HeroGradientBrush: Brush = Brush.verticalGradient(colors = HeroGradient)
-fun heroGradientBrush()    : Brush = HeroGradientBrush
+@Composable
+fun heroGradientBrush(): Brush {
+    val colors = MaterialTheme.colorScheme
+    return Brush.verticalGradient(
+        colors = listOf(
+            colors.background,
+            colors.surface,
+            colors.surfaceVariant.copy(alpha = 0.70f)
+        )
+    )
+}
+@Composable
+fun appSurfaceColor(): Color = MaterialTheme.colorScheme.surface
+@Composable
+fun appElevatedSurfaceColor(): Color = MaterialTheme.colorScheme.surfaceVariant
+@Composable
+fun appTextPrimaryColor(): Color = MaterialTheme.colorScheme.onSurface
+@Composable
+fun appTextSecondaryColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant
+@Composable
+fun appBorderColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
 fun cardGradientBrush()    : Brush = Brush.verticalGradient(colors = CardGradient)
 fun successGradientBrush() : Brush = Brush.horizontalGradient(colors = SuccessGradient)
 fun warningGradientBrush() : Brush = Brush.horizontalGradient(colors = WarningGradient)
