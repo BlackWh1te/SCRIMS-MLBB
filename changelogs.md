@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-06-14 00:56 +04:00 — fix(chat): surface outbox delivery states in chat
+
+### Commits
+- `114e46d` — fix(chat): surface outbox delivery states
+
+### Problem
+Outgoing messages were inserted into `pending_messages` first, but `getMessagesPaged()` rendered only the Room `messages` table. That meant queued messages did not appear until the server round-trip, failed sends disappeared from the conversation, and the existing inline Failed/Retry/Cancel UI in `MessageBubble` never received a real `FAILED` status or `clientMessageId`.
+
+### Fix
+- Changed the chat paging contract to emit `PagingData<MessageWithDelivery>` instead of bare `Message`.
+- `SupabaseMessageRepository.getMessagesPaged()` now combines the Room-backed pager with `pendingMessageDao.getPendingMessagesForConversation(...)` and prepends active outbox rows into the chat stream.
+- Preserved server `delivery_status` and `client_message_id` when `MessageRemoteMediator` and bridge fetches save server DTOs into Room.
+- `ChatScreen` now consumes the real `MessageWithDelivery` item instead of wrapping every row as `DeliveryStatus.SENT`, so pending/failed indicators and Retry/Cancel actions are wired to real `clientMessageId` values.
+- Mock `MessageRepository` now honors the supplied sender id/name for sent messages, matching the production optimistic-message path.
+
+### Verification
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (18s incremental rebuild after final edit).
+
+### Notes
+- `[INTENTIONAL FIX]` — Pending/failed outgoing chat rows must remain sourced from `pending_messages` and merged into the paged chat stream. Do not return `getMessagesPaged()` to bare `Message` rows from `messages` only, or the retry/cancel UI becomes dead code again.
+- `[INTENTIONAL]` — Server-confirmed rows still use the existing `messages` Room table and server id; the outbox merge is only for active local delivery states.
+
+---
+
 ## 2026-06-13 23:59 +04:00 — fix(chat): own sent messages rendering on the received side
 
 ### Commits
