@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-06-13 20:05 +04:00 — feat(ui): brand fonts + M3 surface-container tiers (foundation pass 1)
+
+### Commits
+- `a56e01e` — feat(ui): enable Rajdhani/Teko brand fonts and add M3 surface-container tiers for both themes
+
+### Problem
+Design foundation gaps from the UI/UX audit: (1) the "epic gaming" typographic identity was absent — `DisplayFontFamily`, `BodyFontFamily`, `StatsFontFamily` all fell back to `FontFamily.SansSerif` with the real fonts commented out; (2) both color schemes omitted the Material 3 `surfaceContainer*` tonal roles, so cards/sheets/menus/nav fell back to flat tones with weak elevation separation.
+
+### Fix
+- Bundled OFL fonts under `app/src/main/res/font/`:
+  - **Rajdhani** (static: regular/medium/semibold/bold) → `DisplayFontFamily` (titles, headers, tier badges).
+  - **Teko** (single variable font `teko_variable.ttf`) → `StatsFontFamily`, mapped to logical weights via `FontVariation.weight(...)` (applies on API 26+, falls back to the default instance on API 24–25).
+  - `BodyFontFamily` intentionally kept on the platform sans-serif (Roboto) for small-size legibility (matches DESIGN.md body spec).
+  - Moved Material `labelMedium`/`labelSmall` off Teko onto the body font so tiny 10–11sp labels stay readable.
+- Added `@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)` to `Type.kt` for the `FontVariation` API.
+- `Theme.kt`: added `surfaceContainerLowest/Low/-/High/Highest`, `surfaceTint`, `inverseSurface/OnSurface`, `inversePrimary`, and `errorContainer/onErrorContainer` to **both** light and dark schemes; refined primary/secondary/tertiary container tones. Brand hues (blue/navy/purple) intentionally preserved to avoid disrupting the in-progress redesign.
+
+### Verification
+- `.\gradlew.bat :app:assembleDebug` — **BUILD SUCCESSFUL** (3m50s). Only pre-existing warnings (unused params, deprecated `Icons.Filled.Chat`).
+
+### Notes
+- `[INTENTIONAL]` — Body text stays on system sans-serif by design; do not switch `BodyFontFamily` to a condensed display font.
+- `[INTENTIONAL]` — Teko is loaded as a variable font with per-weight `FontVariation` entries; do not replace with non-existent static Teko files (the google/fonts repo only ships the variable `Teko[wght].ttf`).
+- **Environment note:** CLI Gradle builds fail with `AccessDeniedException`/`Unable to delete directory` under `app/build` because the project lives on an OneDrive/Defender-watched `Desktop` path. Workaround used: relocate the build dir via an init script (`-I C:\Users\Shukhrat\sbuild-init.gradle` → output to `C:\sbuild`). Recommend excluding the project from OneDrive/Defender or moving it off Desktop.
+
+---
+
 ## 2026-06-13 19:35 +04:00 — checkpoint: snapshot in-progress UI redesign before design pass
 
 ### Commits
