@@ -3,6 +3,7 @@ package com.scrimslegends.app.data.repository
 import com.scrimslegends.app.data.model.Conversation
 import com.scrimslegends.app.data.model.Message
 import com.scrimslegends.app.data.model.MessageType
+import com.scrimslegends.app.data.model.MessageWithDelivery
 import kotlinx.coroutines.flow.Flow
 import androidx.paging.PagingData
 
@@ -33,6 +34,8 @@ interface MessageRepositoryInterface {
         content: String,
         type: MessageType,
         clientMessageId: String,
+        senderId: String,
+        senderName: String,
         imageUrl: String? = null,
         voiceUrl: String? = null,
         voiceDuration: Int? = null,
@@ -65,7 +68,7 @@ interface MessageRepositoryInterface {
      * Load older messages for pagination (before the given timestamp).
      * Returns a stream of PagingData driven by Room and RemoteMediator.
      */
-    fun getMessagesPaged(conversationId: String): Flow<PagingData<Message>>
+    fun getMessagesPaged(conversationId: String): Flow<PagingData<MessageWithDelivery>>
 
     suspend fun sendApplyMessage(
         scrimId: String,

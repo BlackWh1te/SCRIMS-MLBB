@@ -74,7 +74,7 @@ fun ChatScreen(
     teamInfo        : Team? = null,
     isRefreshing    : Boolean = false,
     onRefresh       : () -> Unit = {},
-    messagesPaged: androidx.paging.compose.LazyPagingItems<com.scrimslegends.app.data.model.Message>? = null,
+    messagesPaged: androidx.paging.compose.LazyPagingItems<MessageWithDelivery>? = null,
     onRetryMessage  : (String) -> Unit = {},
     onCancelMessage : (String) -> Unit = {},
     // ── New features ──
@@ -445,18 +445,16 @@ fun ChatScreen(
                             reverseLayout  = true // Paging 3 chat standard
                         ) {
                             if (messagesPaged != null) {
-                                items(count = messagesPaged.itemCount, key = { i -> messagesPaged.peek(i)?.id ?: i }) { index ->
-                                    val rawMessage = messagesPaged[index] ?: return@items
-                                    val item = com.scrimslegends.app.data.model.MessageWithDelivery(
-                                        message = rawMessage,
-                                        status = com.scrimslegends.app.data.model.DeliveryStatus.SENT
-                                    )
+                                items(count = messagesPaged.itemCount, key = { i -> messagesPaged.peek(i)?.message?.id ?: i }) { index ->
+                                    val item = messagesPaged[index] ?: return@items
                                     val message = item.message
                                     val isFromMe = message.senderId == currentUserId
 
                                     // Because reverseLayout = true, the newer messages are at lower indices.
-                                    val prevMessage = if (index < messagesPaged.itemCount - 1) messagesPaged.peek(index + 1) else null
-                                    val nextMessage = if (index > 0) messagesPaged.peek(index - 1) else null
+                                    val prevMessage =
+                                        if (index < messagesPaged.itemCount - 1) messagesPaged.peek(index + 1)?.message else null
+                                    val nextMessage =
+                                        if (index > 0) messagesPaged.peek(index - 1)?.message else null
 
                                     val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
                                     val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator

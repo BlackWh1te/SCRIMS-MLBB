@@ -7,6 +7,7 @@ import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
 import com.scrimslegends.app.data.local.MessageEntity
 import com.scrimslegends.app.data.local.ScrimsLegendsDatabase
+import com.scrimslegends.app.data.service.MessageDto
 import com.scrimslegends.app.data.service.SupabaseApiService
 import timber.log.Timber
 import java.time.Instant
@@ -16,8 +17,7 @@ class MessageRemoteMediator(
     private val conversationId: String,
     private val api: SupabaseApiService,
     private val database: ScrimsLegendsDatabase,
-    private val mapDtoToMessage: (com.scrimslegends.app.data.service.MessageDto) -> com.scrimslegends.app.data.model.Message,
-    private val mapMessageToEntity: (com.scrimslegends.app.data.model.Message) -> MessageEntity
+    private val mapDtoToEntity: (MessageDto) -> MessageEntity
 ) : RemoteMediator<Int, MessageEntity>() {
 
     private val messageDao = database.messageDao()
@@ -63,7 +63,7 @@ class MessageRemoteMediator(
             val endOfPaginationReached = messagesDto.isEmpty()
 
             database.withTransaction {
-                val entities = messagesDto.map { mapMessageToEntity(mapDtoToMessage(it)) }
+                val entities = messagesDto.map(mapDtoToEntity)
                 messageDao.insertMessages(entities)
             }
 

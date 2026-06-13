@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.cancel
@@ -43,6 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.currentCoroutineContext
+import androidx.paging.insertHeaderItem
 import androidx.paging.map
 
 import java.util.*
@@ -233,14 +235,15 @@ class SupabaseMessageRepository(
                 }
 
                 val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
-                val messages = if (messagesResponse.isSuccessful) {
+                val messageDtos = if (messagesResponse.isSuccessful) {
                     cacheMutex.withLock {
                         conversationLookupCache[conversationId] = cachedEntry.copy(lastMessageFetch = System.currentTimeMillis())
                     }
-                    messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                    messagesResponse.body() ?: emptyList()
                 } else emptyList()
+                val messages = messageDtos.map { mapDtoToMessage(it) }
                 if (messages.isNotEmpty()) {
-                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
+                    try { messageDao.insertMessages(messageDtos.map { mapDtoToMessageEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
                 }
                 emit(Result.success(cachedEntry.conversation.copy(messages = messages)))
                 return@flow
@@ -264,14 +267,15 @@ class SupabaseMessageRepository(
                     }
 
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
-                    val messages = if (messagesResponse.isSuccessful) {
+                    val messageDtos = if (messagesResponse.isSuccessful) {
                         cacheMutex.withLock {
                             conversationLookupCache[conversationId] = newCacheEntry.copy(lastMessageFetch = System.currentTimeMillis())
                         }
-                        messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                        messagesResponse.body() ?: emptyList()
                     } else emptyList()
+                    val messages = messageDtos.map { mapDtoToMessage(it) }
                     if (messages.isNotEmpty()) {
-                        try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
+                        try { messageDao.insertMessages(messageDtos.map { mapDtoToMessageEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
                     }
                     emit(Result.success(domainConv.copy(messages = messages)))
                     return@flow
@@ -289,18 +293,19 @@ class SupabaseMessageRepository(
                     }
                     cacheConversation(conv)
                     val messagesResponse = api.getMessages(conversationId = PostgrestFilter.eq(conversationId))
-                    val messages = if (messagesResponse.isSuccessful) {
+                    val messageDtos = if (messagesResponse.isSuccessful) {
                         cacheMutex.withLock {
                             val entry = conversationLookupCache[conversationId]
                             if (entry != null) {
                                 conversationLookupCache[conversationId] = entry.copy(lastMessageFetch = System.currentTimeMillis())
                             }
                         }
-                        messagesResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                        messagesResponse.body() ?: emptyList()
                     } else emptyList()
+                    val messages = messageDtos.map { mapDtoToMessage(it) }
                     try {
                         conversationDao.insertConversation(mapConversationToEntity(conv))
-                        if (messages.isNotEmpty()) messageDao.insertMessages(messages.map { mapMessageToEntity(it) })
+                        if (messages.isNotEmpty()) messageDao.insertMessages(messageDtos.map { mapDtoToMessageEntity(it) })
                     } catch (e: Exception) { Timber.w(TAG, "Failed to persist conversation/messages to Room", e) }
                     emit(Result.success(conv.copy(messages = messages)))
                 } else {
@@ -425,6 +430,8 @@ class SupabaseMessageRepository(
         content: String,
         type: MessageType,
         clientMessageId: String,
+        senderId: String,
+        senderName: String,
         imageUrl: String?,
         voiceUrl: String?,
         voiceDuration: Int?,
@@ -436,8 +443,8 @@ class SupabaseMessageRepository(
         val pending = PendingMessageEntity(
             clientMessageId = clientMessageId,
             conversationId = conversationId,
-            senderId = "", // Spoofing prevented: handled by backend auth.uid()
-            senderName = "",
+            senderId = senderId, // Spoofing prevented: handled by backend auth.uid()
+            senderName = senderName,
             content = content,
             type = type.name,
             imageUrl = imageUrl,
@@ -704,8 +711,8 @@ class SupabaseMessageRepository(
     }
 
     @OptIn(androidx.paging.ExperimentalPagingApi::class)
-    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<Message>> {
-        return androidx.paging.Pager(
+    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<MessageWithDelivery>> {
+        val pagedMessages = androidx.paging.Pager(
             config = androidx.paging.PagingConfig(
                 pageSize = 50,
                 prefetchDistance = 15,
@@ -715,12 +722,20 @@ class SupabaseMessageRepository(
                 conversationId = conversationId,
                 api = api,
                 database = database,
-                mapDtoToMessage = ::mapDtoToMessage,
-                mapMessageToEntity = ::mapMessageToEntity
+                mapDtoToEntity = ::mapDtoToMessageEntity
             ),
             pagingSourceFactory = { messageDao.getMessagesPaged(conversationId) }
         ).flow.map { pagingData ->
-            pagingData.map { it.toDomainModel() }
+            pagingData.map { it.toMessageWithDelivery() }
+        }
+
+        return combine(
+            pagedMessages,
+            pendingMessageDao.getPendingMessagesForConversation(conversationId)
+        ) { pagingData, pendingMessages ->
+            pendingMessages.fold(pagingData) { acc, pending ->
+                acc.insertHeaderItem(item = pending.toDomainModel())
+            }
         }
     }
 
@@ -877,7 +892,8 @@ class SupabaseMessageRepository(
                     limit = 100
                 )
                 if (latestResponse.isSuccessful) {
-                    val serverMessages = latestResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                    val serverDtos = latestResponse.body() ?: emptyList()
+                    val serverMessages = serverDtos.map { mapDtoToMessage(it) }
                     serverMessages.forEach { msg ->
                         if (msg.id !in cachedIds) {
                             cachedIds.add(msg.id)
@@ -885,7 +901,7 @@ class SupabaseMessageRepository(
                         }
                     }
                     try {
-                        messageDao.insertMessages(serverMessages.map { mapMessageToEntity(it) })
+                        messageDao.insertMessages(serverDtos.map { mapDtoToMessageEntity(it) })
                     } catch (e: Exception) { Timber.w(TAG, "Failed to persist bridge messages to Room", e) }
                 }
             } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
@@ -1140,8 +1156,8 @@ class SupabaseMessageRepository(
             imageUrl = record.get("image_url")?.asString,
             voice_url = record.get("voice_url")?.asString,
             voiceDuration = record.get("voice_duration")?.asInt,
-            clientMessageId = record.get("client_message_id")?.asString,
-            deliveryStatus = record.get("delivery_status")?.asString,
+            clientMessageId = record.get("client_message_id")?.takeIf { !it.isJsonNull }?.asString,
+            deliveryStatus = record.get("delivery_status")?.takeIf { !it.isJsonNull }?.asString,
             replyToId = record.get("reply_to_id")?.takeIf { !it.isJsonNull }?.asString,
             replyToSnippet = record.get("reply_to_snippet")?.takeIf { !it.isJsonNull }?.asString,
             replyToSenderName = record.get("reply_to_sender_name")?.takeIf { !it.isJsonNull }?.asString,
@@ -1235,6 +1251,33 @@ class SupabaseMessageRepository(
             replyToSenderName = msg.replyToSenderName,
             isDeleted = msg.isDeleted
         )
+    }
+
+    private fun mapDtoToMessageEntity(dto: MessageDto): MessageEntity {
+        return mapMessageToEntity(mapDtoToMessage(dto)).copy(
+            deliveryStatus = parseDeliveryStatus(dto.deliveryStatus).name,
+            clientMessageId = dto.clientMessageId
+        )
+    }
+
+    private fun MessageEntity.toMessageWithDelivery(): MessageWithDelivery {
+        return MessageWithDelivery(
+            message = toDomainModel(),
+            status = parseDeliveryStatus(deliveryStatus),
+            clientMessageId = clientMessageId
+        )
+    }
+
+    private fun parseDeliveryStatus(value: String?): DeliveryStatus {
+        return when (value?.uppercase(Locale.US)) {
+            DeliveryStatus.PENDING.name -> DeliveryStatus.PENDING
+            DeliveryStatus.SENDING.name -> DeliveryStatus.SENDING
+            DeliveryStatus.DELIVERED.name -> DeliveryStatus.DELIVERED
+            DeliveryStatus.READ.name -> DeliveryStatus.READ
+            DeliveryStatus.FAILED.name -> DeliveryStatus.FAILED
+            DeliveryStatus.CANCELLED.name -> DeliveryStatus.CANCELLED
+            else -> DeliveryStatus.SENT
+        }
     }
 
     override suspend fun blockUser(blockerId: String, blockedId: String): Result<Unit> {

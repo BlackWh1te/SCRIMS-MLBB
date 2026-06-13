@@ -41,8 +41,8 @@ class ChatRoomViewModel @Inject constructor(
     private val _selectedConversation = MutableStateFlow<Conversation?>(null)
     val selectedConversation: StateFlow<Conversation?> = _selectedConversation.asStateFlow()
 
-    private val _messagesPaged = MutableStateFlow<PagingData<Message>>(PagingData.empty())
-    val messagesPaged: StateFlow<PagingData<Message>> = _messagesPaged.asStateFlow()
+    private val _messagesPaged = MutableStateFlow<PagingData<MessageWithDelivery>>(PagingData.empty())
+    val messagesPaged: StateFlow<PagingData<MessageWithDelivery>> = _messagesPaged.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()

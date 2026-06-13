@@ -13,7 +13,7 @@ class MessageRepository : MessageRepositoryInterface {
 
     private val conversations = mutableListOf<Conversation>()
 
-    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<Message>> {
+    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<MessageWithDelivery>> {
         return flow { emit(androidx.paging.PagingData.empty()) }
     }
 
@@ -144,6 +144,8 @@ class MessageRepository : MessageRepositoryInterface {
         content: String,
         type: MessageType,
         clientMessageId: String,
+        senderId: String,
+        senderName: String,
         imageUrl: String?,
         voiceUrl: String?,
         voiceDuration: Int?,
@@ -162,8 +164,8 @@ class MessageRepository : MessageRepositoryInterface {
         val message = Message(
             id = java.util.UUID.randomUUID().toString(),
             conversationId = conversationId,
-            senderId = "mock_user",
-            senderName = "Mock User",
+            senderId = senderId.ifBlank { "mock_user" },
+            senderName = senderName.ifBlank { "Mock User" },
             content = content,
             type = type,
             imageUrl = imageUrl,
@@ -251,7 +253,9 @@ class MessageRepository : MessageRepositoryInterface {
             conversationId = convId,
             content = "$applicantTeamName has applied to join your scrim.",
             type = MessageType.SYSTEM,
-            clientMessageId = "mock_${java.util.UUID.randomUUID()}"
+            clientMessageId = "mock_${java.util.UUID.randomUUID()}",
+            senderId = "",
+            senderName = "System",
         ).collect {}
 
         // Send apply info message with team details
@@ -259,7 +263,9 @@ class MessageRepository : MessageRepositoryInterface {
             conversationId = convId,
             content = "Team ID: $applicantTeamId | Team Name: $applicantTeamName | Players: $teamPlayerCount/$teamMaxPlayers",
             type = MessageType.APPLY,
-            clientMessageId = "mock_${java.util.UUID.randomUUID()}"
+            clientMessageId = "mock_${java.util.UUID.randomUUID()}",
+            senderId = "",
+            senderName = "System",
         ).collect {}
 
         // Update unread count for the scrim creator

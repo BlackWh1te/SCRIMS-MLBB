@@ -11,6 +11,9 @@ interface PendingMessageDao {
     @Query("SELECT * FROM pending_messages WHERE status IN ('PENDING','SENDING','FAILED') ORDER BY createdAt ASC")
     fun getPendingMessages(): Flow<List<PendingMessageEntity>>
 
+    @Query("SELECT * FROM pending_messages WHERE conversationId = :conversationId AND status IN ('PENDING','SENDING','FAILED') ORDER BY createdAt ASC")
+    fun getPendingMessagesForConversation(conversationId: String): Flow<List<PendingMessageEntity>>
+
     @Query(
         "SELECT * FROM pending_messages WHERE " +
         "(status IN ('PENDING','FAILED') AND nextRetryAt <= :now) " +
