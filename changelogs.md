@@ -8,6 +8,28 @@
 
 ---
 
+## 2026-06-14 01:02 +04:00 — fix(ui): remove risky screen null assertions
+
+### Commits
+- `eae3c62` — fix(ui): remove risky screen null assertions
+
+### Problem
+The screen layer still contained nullable state assertions (`!!`) in dialog flows and action callbacks. Most were guarded nearby, but mutable Compose state can change between composition and callback execution, making those assertions avoidable crash risks.
+
+### Fix
+- Removed all remaining `!!` usages from `app/src/main/java/com/scrimslegends/app/ui/screens`.
+- Replaced report dialogs, error labels, validation labels, player/team picker state, tournament dispute/roster dialogs, tournament chat navigation, host-request status, and scrim-list empty-state status with local captured values or `?.let`/Elvis fallbacks.
+- Kept behavior unchanged: dialogs still show only when their backing state exists, and callbacks now use stable local values captured at composition time.
+
+### Verification
+- `rg -n "!!" app/src/main/java/com/scrimslegends/app/ui/screens` — no matches.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (10s incremental rebuild). Remaining warning is a pre-existing deprecated `Icons.Filled.Chat` use in `TournamentHostRequestScreen`.
+
+### Notes
+- `[INTENTIONAL FIX]` — Keep screen dialog/action flows using captured nullable state (`?.let`, local ids, Elvis fallbacks) instead of reintroducing `!!` in callbacks.
+
+---
+
 ## 2026-06-14 00:57 +04:00 — fix(nav): preserve bottom tab back stack
 
 ### Commits
