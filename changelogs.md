@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-06-14 00:57 +04:00 — fix(nav): preserve bottom tab back stack
+
+### Commits
+- `4447817` — fix(nav): preserve bottom tab back stack
+
+### Problem
+The bottom navigation used `popUpTo(item.route) { inclusive = true }` when switching tabs. That self-pop discarded the selected tab entry/state and left tab navigation with poor back behavior, including cases where Back exited instead of returning to Home.
+
+### Fix
+- `AppBottomNav` now navigates top-level tabs with:
+  - `popUpTo(BottomNavItem.Home.route) { saveState = true }`
+  - `launchSingleTop = true`
+  - `restoreState = true`
+- Home remains the base bottom-tab destination while previously visited tab state can be restored.
+
+### Verification
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (8s incremental rebuild).
+
+### Notes
+- `[INTENTIONAL FIX]` — Do not restore `popUpTo(item.route) { inclusive = true }` for bottom tabs; it destroys the selected tab destination and breaks expected tab/back-stack behavior.
+
+---
+
 ## 2026-06-14 00:56 +04:00 — fix(chat): surface outbox delivery states in chat
 
 ### Commits
