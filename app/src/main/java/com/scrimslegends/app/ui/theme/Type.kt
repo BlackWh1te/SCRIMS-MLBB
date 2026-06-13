@@ -1,40 +1,44 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package com.scrimslegends.app.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.scrimslegends.app.R
 
 // ============================================
 // Scrims Legends typography system
 // Optimized for Android vertical screens
 // ============================================
-// To enable custom fonts, add TTF files to app/src/main/res/font/ and
-// uncomment the Font() blocks below.
+// Brand fonts:
+//   Display  -> Rajdhani  (futuristic, semi-condensed) — titles, headers, tier badges
+//   Stats    -> Teko      (tall, condensed)            — XP, ranks, scores, counts
+//   Body     -> system sans-serif (Roboto)             — clean, highly readable body text
 
-val DisplayFontFamily = FontFamily.SansSerif
-// val DisplayFontFamily = FontFamily(
-//     Font(R.font.rajdhani_bold, FontWeight.Bold),
-//     Font(R.font.rajdhani_semibold, FontWeight.SemiBold),
-//     Font(R.font.rajdhani_medium, FontWeight.Medium),
-//     Font(R.font.rajdhani_regular, FontWeight.Normal)
-// )
+// Rajdhani ships as discrete static weights.
+val DisplayFontFamily = FontFamily(
+    Font(R.font.rajdhani_regular,  FontWeight.Normal),
+    Font(R.font.rajdhani_medium,   FontWeight.Medium),
+    Font(R.font.rajdhani_semibold, FontWeight.SemiBold),
+    Font(R.font.rajdhani_bold,     FontWeight.Bold)
+)
 
+// Body stays on the platform sans-serif (Roboto) for maximum legibility at small sizes.
 val BodyFontFamily = FontFamily.SansSerif
-// val BodyFontFamily = FontFamily(
-//     Font(R.font.inter_regular, FontWeight.Normal),
-//     Font(R.font.inter_medium, FontWeight.Medium),
-//     Font(R.font.inter_semibold, FontWeight.SemiBold),
-//     Font(R.font.inter_bold, FontWeight.Bold)
-// )
 
-val StatsFontFamily = FontFamily.SansSerif
-// val StatsFontFamily = FontFamily(
-//     Font(R.font.teko_bold, FontWeight.Bold),
-//     Font(R.font.teko_semibold, FontWeight.SemiBold),
-//     Font(R.font.teko_regular, FontWeight.Normal)
-// )
+// Teko ships as a single variable font; map logical weights via weight variation
+// settings (applied on API 26+, gracefully falls back to the default instance below).
+val StatsFontFamily = FontFamily(
+    Font(R.font.teko_variable, FontWeight.Normal,   variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.teko_variable, FontWeight.Medium,   variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.teko_variable, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.teko_variable, FontWeight.Bold,     variationSettings = FontVariation.Settings(FontVariation.weight(700)))
+)
 
 // ============================================
 // Material3 Typography Scale
@@ -142,14 +146,14 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
-        fontFamily   = StatsFontFamily,
+        fontFamily   = BodyFontFamily,
         fontWeight   = FontWeight.Medium,
         fontSize     = 11.sp,
         lineHeight   = 14.sp,
         letterSpacing = 0.3.sp
     ),
     labelSmall = TextStyle(
-        fontFamily   = StatsFontFamily,
+        fontFamily   = BodyFontFamily,
         fontWeight   = FontWeight.Medium,
         fontSize     = 10.sp,
         lineHeight   = 12.sp,
