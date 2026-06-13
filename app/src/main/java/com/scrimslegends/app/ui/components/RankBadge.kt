@@ -34,7 +34,7 @@ import com.scrimslegends.app.ui.theme.*
 
 // ═══════════════════════════════════════════════════════════════════
 // RANK BADGE — Rich visual badge for each of the 7 custom tiers
-// Bronze → Solver → Gold → Grandmaster → Epic → Legend → Mythic
+// Bronze → Silver → Gold → Grandmaster → Epic → Legend → Mythic
 // ═══════════════════════════════════════════════════════════════════
 
 @Composable
@@ -44,13 +44,16 @@ fun RankBadge(
     size: RankBadgeSize = RankBadgeSize.MEDIUM
 ) {
     when (tier) {
-        RankTier.BRONZE -> BronzeBadge(modifier, size)
-        RankTier.SOLVER -> SolverBadge(modifier, size)
-        RankTier.GOLD -> GoldBadge(modifier, size)
+        RankTier.WARRIOR -> BronzeBadge(modifier, size) // fallback to bronze img
+        RankTier.ELITE -> SolverBadge(modifier, size) // fallback to silver img
+        RankTier.MASTER -> GoldBadge(modifier, size) // fallback to gold img
         RankTier.GRANDMASTER -> GrandmasterBadge(modifier, size)
         RankTier.EPIC -> EpicBadge(modifier, size)
         RankTier.LEGEND -> LegendBadge(modifier, size)
         RankTier.MYTHIC -> MythicBadge(modifier, size)
+        RankTier.MYTHICAL_HONOR -> MythicBadge(modifier, size) // fallback
+        RankTier.MYTHICAL_GLORY -> MythicBadge(modifier, size) // fallback
+        RankTier.MYTHICAL_IMMORTAL -> MythicBadge(modifier, size) // fallback
     }
 }
 
@@ -71,7 +74,7 @@ private fun BronzeBadge(modifier: Modifier, size: RankBadgeSize) {
     )
 }
 
-// ─── Solver (Silver) Badge ───
+// ─── Solver Badge ───
 @Composable
 private fun SolverBadge(modifier: Modifier, size: RankBadgeSize) {
     Image(
@@ -172,7 +175,7 @@ private fun Top1Badge(modifier: Modifier) {
             Icon(
                 imageVector = Icons.Default.EmojiEvents,
                 contentDescription = null,
-                tint = DarkBlue,
+                tint = MaterialTheme.colorScheme.background,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -180,7 +183,7 @@ private fun Top1Badge(modifier: Modifier) {
                 text = "TOP 1 RU",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
-                color = DarkBlue
+                color = MaterialTheme.colorScheme.background
             )
         }
     }
@@ -205,7 +208,7 @@ private fun Top2Badge(modifier: Modifier) {
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
-                tint = DarkBlue,
+                tint = MaterialTheme.colorScheme.background,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -213,7 +216,7 @@ private fun Top2Badge(modifier: Modifier) {
                 text = "TOP 2 RU",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
-                color = DarkBlue
+                color = MaterialTheme.colorScheme.background
             )
         }
     }
@@ -238,7 +241,7 @@ private fun Top3Badge(modifier: Modifier) {
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -246,7 +249,7 @@ private fun Top3Badge(modifier: Modifier) {
                 text = "TOP 3 RU",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -274,9 +277,9 @@ fun TierBadge(
         val (gradient, textColor) = when (tierName.lowercase()) {
             "bronze" -> BronzeGradient to Color.White
             "silver" -> SilverGradient to Color.White
-            "gold" -> GoldRankGradient to DarkBlue
-            "platinum" -> PlatinumGradient to DarkBlue
-            "diamond" -> DiamondGradient to DarkBlue
+            "gold" -> GoldRankGradient to MaterialTheme.colorScheme.background
+            "platinum" -> PlatinumGradient to MaterialTheme.colorScheme.background
+            "diamond" -> DiamondGradient to MaterialTheme.colorScheme.background
             "master" -> MasterGradient to Color.White
             "grandmaster" -> GrandmasterGradient to Color.White
             else -> PurpleGradient to Color.White

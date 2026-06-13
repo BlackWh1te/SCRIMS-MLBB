@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 import com.scrimslegends.app.notifications.LocalNotificationHelper
+import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -30,10 +31,10 @@ import javax.inject.Inject
 class ScrimsLegendsApplication : Application() {
 
     @Inject
-    lateinit var realtimeClient: SupabaseRealtimeClient
+    lateinit var realtimeClient: Lazy<SupabaseRealtimeClient>
 
     @Inject
-    lateinit var messageRepository: MessageRepositoryInterface
+    lateinit var messageRepository: Lazy<MessageRepositoryInterface>
 
     private val appScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -53,11 +54,15 @@ class ScrimsLegendsApplication : Application() {
 
         // Initialize Firebase Crashlytics (gracefully skips if google-services.json missing)
         try {
-            FirebaseApp.initializeApp(this)
-            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!isDebuggable())
-            Timber.i("Firebase Crashlytics initialized")
+            val firebaseApp = FirebaseApp.initializeApp(this)
+            if (firebaseApp != null) {
+                FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!isDebuggable())
+                Timber.i("Firebase Crashlytics initialized")
+            } else {
+                Timber.w("Firebase not configured (missing google-services.json?)")
+            }
         } catch (e: Exception) {
-            Timber.w(e, "Firebase not configured (missing google-services.json?)")
+            Timber.w(e, "Firebase initialization failed")
         }
 
         // Run potentially slow initializations (like DB and security checks) in the background
@@ -84,7 +89,7 @@ class ScrimsLegendsApplication : Application() {
         super.onTerminate()
         // Clean up Realtime WebSocket connection
         unregisterNetworkRestoreSync()
-        realtimeClient.disconnect()
+        realtimeClient.get().disconnect()
         appScope.cancel()
     }
 
@@ -94,7 +99,7 @@ class ScrimsLegendsApplication : Application() {
      */
     fun onUserSignedIn() {
         Timber.d("User signed in — connecting Realtime eagerly")
-        realtimeClient.connect()
+        realtimeClient.get().connect()
     }
 
     /**
@@ -102,7 +107,7 @@ class ScrimsLegendsApplication : Application() {
      */
     fun onUserSignedOut() {
         Timber.d("User signed out — disconnecting Realtime")
-        realtimeClient.disconnect()
+        realtimeClient.get().disconnect()
     }
 
     /**
@@ -168,8 +173,12 @@ class ScrimsLegendsApplication : Application() {
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 appScope.launch {
+                    if (SupabaseSession.getUserIdOrNull().isNullOrBlank()) {
+                        Timber.d("Network restored with no active session; skipping sync")
+                        return@launch
+                    }
                     try {
-                        val result = messageRepository.syncOutbox()
+                        val result = messageRepository.get().syncOutbox()
                         result.onSuccess { count ->
                             if (count > 0) Timber.i("Synced $count queued messages after network restore")
                         }.onFailure { Timber.w(it, "Network restore outbox sync failed") }
@@ -177,7 +186,7 @@ class ScrimsLegendsApplication : Application() {
                         Timber.w(e, "Network restore callback failed")
                     }
                     try {
-                        realtimeClient.connect()
+                        realtimeClient.get().connect()
                     } catch (e: Exception) {
                         Timber.w(e, "Realtime reconnect after network restore failed")
                     }

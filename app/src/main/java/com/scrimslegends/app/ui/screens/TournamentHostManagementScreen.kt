@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -53,7 +54,7 @@ fun TournamentHostManagementScreen(
             // Header
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = DarkNavy.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
             ) {
                 Column(
                     modifier = Modifier
@@ -75,7 +76,7 @@ fun TournamentHostManagementScreen(
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         )
 
@@ -92,7 +93,7 @@ fun TournamentHostManagementScreen(
                         PremiumChip(
                             text = "${hostedTournaments.size} HOSTED",
                             icon = Icons.Default.EmojiEvents,
-                            color = GoldPrimary,
+                            color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.weight(1f)
                         )
                         PremiumChip(
@@ -117,7 +118,7 @@ fun TournamentHostManagementScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(48.dp))
+                    LottieLoadingIndicator(size = 80.dp)
                 }
             } else if (hostedTournaments.isEmpty()) {
                 Box(
@@ -131,20 +132,20 @@ fun TournamentHostManagementScreen(
                             imageVector = Icons.Default.EmojiEvents,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = TextTertiary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = stringResource(R.string.my_tournaments_empty),
                             style = MaterialTheme.typography.titleMedium.copy(
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.my_tournaments_empty_desc),
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextTertiary)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                         )
                     }
                 }
@@ -178,24 +179,24 @@ fun TournamentHostManagementScreen(
         if (showCancelDialog) {
             AlertDialog(
                 onDismissRequest = { showCancelDialog = false },
-                title = { Text("Cancel Tournament", color = White) },
+                title = { Text("Cancel Tournament", color = MaterialTheme.colorScheme.onSurface) },
                 text = {
                     Column {
                         Text(
                             "This will cancel the tournament and notify all participants.",
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = cancelReason,
                             onValueChange = { cancelReason = it },
-                            label = { Text("Reason (optional)", color = TextTertiary) },
+                            label = { Text("Reason (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = White,
-                                unfocusedTextColor = White,
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = Separator
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                             )
                         )
                     }
@@ -214,10 +215,10 @@ fun TournamentHostManagementScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showCancelDialog = false }) {
-                        Text("Dismiss", color = LightGray)
+                        Text("Dismiss", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                     }
                 },
-                containerColor = SurfaceCard
+                containerColor = MaterialTheme.colorScheme.surface
             )
         }
 
@@ -229,10 +230,10 @@ fun TournamentHostManagementScreen(
                     .padding(16.dp),
                 containerColor = ErrorRed,
                 action = {
-                    TextButton(onClick = onDismissError) { Text("OK", color = White) }
+                    TextButton(onClick = onDismissError) { Text("OK", color = MaterialTheme.colorScheme.onSurface) }
                 }
             ) {
-                Text(it, color = White)
+                Text(it, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -250,9 +251,9 @@ private fun HostTournamentCard(
         TournamentStatus.REGISTRATION -> SuccessGreen
         TournamentStatus.CHECK_IN -> WarningOrange
         TournamentStatus.IN_PROGRESS -> ErrorRed
-        TournamentStatus.COMPLETED -> BluePrimary
-        TournamentStatus.CANCELLED -> TextTertiary
-        else -> TextTertiary
+        TournamentStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+        TournamentStatus.CANCELLED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
     }
 
     val statusLabel = when (tournament.status) {
@@ -266,11 +267,11 @@ private fun HostTournamentCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(
             width = if (tournament.isLive) 1.dp else 0.5.dp,
-            color = if (tournament.isLive) ErrorRed.copy(alpha = 0.4f) else Separator
+            color = if (tournament.isLive) ErrorRed.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant
         )
     ) {
         Column(
@@ -318,12 +319,12 @@ private fun HostTournamentCard(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(BluePrimary.copy(alpha = 0.2f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit",
-                            tint = BluePrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -376,7 +377,7 @@ private fun HostTournamentCard(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(SurfaceElevated),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
@@ -384,17 +385,17 @@ private fun HostTournamentCard(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(GoldPrimary.copy(alpha = 0.15f)),
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
                     }
                 }
                 Text(
                     text = tournament.title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 18.sp
                     ),
                     maxLines = 1,
@@ -421,8 +422,8 @@ private fun HostTournamentCard(
             iOSPrimaryButton(
                 text = stringResource(R.string.view_detail),
                 onClick = onViewDetail,
-                backgroundColor = SurfaceElevated,
-                contentColor = White
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -437,12 +438,12 @@ private fun HostInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = TextSecondary,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary)
+            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
         )
     }
 }

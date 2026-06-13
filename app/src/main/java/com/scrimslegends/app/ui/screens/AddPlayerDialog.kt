@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +36,7 @@ fun AddPlayerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(20.dp),
         title = {
             Text(
@@ -43,7 +44,7 @@ fun AddPlayerDialog(
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -61,25 +62,25 @@ fun AddPlayerDialog(
                         playerName = it
                         errorMsg = ""
                     },
-                    label = { Text("Player Name", color = LightGray) },
-                    placeholder = { Text("Enter player name", color = MidGray) },
+                    label = { Text("Player Name", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)) },
+                    placeholder = { Text("Enter player name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = null,
-                            tint = BluePrimary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        cursorColor = GoldPrimary
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = MaterialTheme.colorScheme.secondary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -93,19 +94,19 @@ fun AddPlayerDialog(
                         playerEmail = it
                         errorMsg = ""
                     },
-                    label = { Text("Email", color = LightGray) },
-                    placeholder = { Text("player@email.com", color = MidGray) },
+                    label = { Text("Email", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)) },
+                    placeholder = { Text("player@email.com", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        cursorColor = GoldPrimary
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = MaterialTheme.colorScheme.secondary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -118,7 +119,7 @@ fun AddPlayerDialog(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = LightGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     ),
                     modifier = Modifier.align(Alignment.Start)
                 )
@@ -143,14 +144,14 @@ fun AddPlayerDialog(
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = when (role) {
                                     PlayerRole.CO_LEADER -> SuccessGreen.copy(alpha = 0.2f)
-                                    else -> BluePrimary.copy(alpha = 0.2f)
+                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                 },
                                 selectedLabelColor = when (role) {
                                     PlayerRole.CO_LEADER -> SuccessGreen
-                                    else -> BluePrimary
+                                    else -> MaterialTheme.colorScheme.primary
                                 },
-                                containerColor = White.copy(alpha = 0.1f),
-                                labelColor = LightGray
+                                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             ),
                             border = null
                         )
@@ -189,7 +190,7 @@ fun AddPlayerDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = MidGray)
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

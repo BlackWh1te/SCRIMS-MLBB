@@ -12,7 +12,8 @@ import kotlinx.coroutines.delay
  * Uses REST API via Retrofit + RPC calls for mutations.
  */
 class SupabaseTournamentRepository(
-    private val cacheManager: UnifiedCacheManager
+    private val cacheManager: UnifiedCacheManager,
+    private val tournamentDao: com.scrimslegends.app.data.local.TournamentDao
 ) : TournamentRepositoryInterface {
 
     private val api = SupabaseService.api
@@ -62,47 +63,86 @@ class SupabaseTournamentRepository(
         status: String?,
         region: String?,
         skillLevel: String?
-    ): Result<List<Tournament>> = try {
-        withRetry {
-            val statusFilter = status?.let { "eq.$it" } ?: "neq.draft"
-            val response = api.getTournaments(
-                select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)",
-                status = statusFilter,
-                region = region?.let { "eq.$it" },
-                skillLevel = skillLevel?.let { "eq.$it" },
-                order = "created_at.desc",
-                range = "0-49"
+    ): Result<List<Tournament>> {
+        val cacheKey = CACHE_KEY_LIST + "_status_${status ?: "all"}_region_${region ?: "all"}_skill_${skillLevel ?: "all"}"
+        return try {
+            val list = cacheManager.get(
+                key = cacheKey,
+                memoryTtlMs = MEM_TTL,
+                roomTtlMs = ROOM_TTL,
+                roomLoader = {
+                    val cached = tournamentDao.getAll().map { com.scrimslegends.app.data.local.entityToModel(it) }
+                    // simple local filtering
+                    val filtered = cached.filter { t ->
+                        (status == null || (status != "draft" && t.status.value == status)) &&
+                        (region == null || t.region == region) &&
+                        (skillLevel == null || t.skillLevel == skillLevel)
+                    }
+                    if (filtered.isEmpty()) null else filtered
+                },
+                roomSaver = { models ->
+                    tournamentDao.insertAll(models.map { com.scrimslegends.app.data.local.modelToEntity(it) })
+                },
+                networkLoader = {
+                    withRetry {
+                        val statusFilter = status?.let { "eq.$it" } ?: "neq.draft"
+                        val response = api.getTournaments(
+                            select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)",
+                            status = statusFilter,
+                            region = region?.let { "eq.$it" },
+                            skillLevel = skillLevel?.let { "eq.$it" },
+                            order = "created_at.desc",
+                            range = "0-49"
+                        )
+                        if (response.isSuccessful) {
+                            response.body()?.map { mapDtoToTournament(it) } ?: emptyList()
+                        } else {
+                            throw Exception("Failed to fetch tournaments: ${response.code()}")
+                        }
+                    }
+                }
             )
-            if (response.isSuccessful) {
-                val tournaments = response.body()?.map { mapDtoToTournament(it) } ?: emptyList()
-                Result.success(tournaments)
-            } else {
-                Result.failure(Exception("Failed to fetch tournaments: ${response.code()}"))
-            }
+            Result.success(list ?: emptyList())
+        } catch (e: Exception) {
+            Timber.e(TAG, "Error fetching tournaments", e)
+            Result.failure(e)
         }
-    } catch (e: Exception) {
-        Timber.e(TAG, "Error fetching tournaments", e)
-        Result.failure(e)
     }
 
     // ── Tournament detail ────────────────────────────────────────
 
-    override suspend fun getTournamentById(tournamentId: String): Result<Tournament> = try {
-        withRetry {
-            val response = api.getTournamentById(
-                id = PostgrestFilter.eq(tournamentId),
-                select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)"
+    override suspend fun getTournamentById(tournamentId: String): Result<Tournament> {
+        return try {
+            val tournament = cacheManager.get(
+                key = "$CACHE_KEY_DETAIL_PREFIX$tournamentId",
+                memoryTtlMs = MEM_TTL,
+                roomTtlMs = ROOM_TTL,
+                roomLoader = {
+                    tournamentDao.getById(tournamentId)?.let { com.scrimslegends.app.data.local.entityToModel(it) }
+                },
+                roomSaver = { model ->
+                    tournamentDao.insert(com.scrimslegends.app.data.local.modelToEntity(model))
+                },
+                networkLoader = {
+                    withRetry {
+                        val response = api.getTournamentById(
+                            id = PostgrestFilter.eq(tournamentId),
+                            select = "*,profiles:host_user_id(username,host_trust_score),tournament_teams(count)"
+                        )
+                        if (response.isSuccessful) {
+                            val dto = response.body()?.firstOrNull() ?: throw Exception("Tournament not found")
+                            mapDtoToTournament(dto)
+                        } else {
+                            throw Exception("Tournament not found: ${response.code()}")
+                        }
+                    }
+                }
             )
-            if (response.isSuccessful) {
-                val dto = response.body()?.firstOrNull() ?: throw Exception("Tournament not found")
-                Result.success(mapDtoToTournament(dto))
-            } else {
-                Result.failure(Exception("Tournament not found: ${response.code()}"))
-            }
+            Result.success(tournament)
+        } catch (e: Exception) {
+            Timber.e(TAG, "Error fetching tournament $tournamentId", e)
+            Result.failure(e)
         }
-    } catch (e: Exception) {
-        Timber.e(TAG, "Error fetching tournament $tournamentId", e)
-        Result.failure(e)
     }
 
     // ── Requirements ─────────────────────────────────────────────

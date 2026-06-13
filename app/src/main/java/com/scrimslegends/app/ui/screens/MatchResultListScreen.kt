@@ -1,10 +1,12 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,7 +70,7 @@ fun MatchResultListScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
 
@@ -77,14 +79,14 @@ fun MatchResultListScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .background(
-                                color = White.copy(alpha = 0.1f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(12.dp)
                             )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.refresh),
-                            tint = LightGray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -102,7 +104,7 @@ fun MatchResultListScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = GoldPrimary)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     matchResults.isEmpty() -> {
@@ -166,16 +168,16 @@ private fun MatchResultCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                spotColor = when (matchResult.verificationStatus) {
-                    VerificationStatus.CONFIRMED -> SuccessGreen.copy(alpha = 0.2f)
-                    VerificationStatus.DISPUTED -> ErrorRed.copy(alpha = 0.2f)
-                    else -> BluePrimary.copy(alpha = 0.2f)
+            .border(
+                width = 1.dp,
+                color = when (matchResult.verificationStatus) {
+                    VerificationStatus.CONFIRMED -> SuccessGreen.copy(alpha = 0.30f)
+                    VerificationStatus.DISPUTED  -> ErrorRed.copy(alpha = 0.30f)
+                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
                 },
                 shape = RoundedCornerShape(16.dp)
             ),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
@@ -201,7 +203,7 @@ private fun MatchResultCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GoldPrimary
+                        color = MaterialTheme.colorScheme.secondary
                     ),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
@@ -215,7 +217,7 @@ private fun MatchResultCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Divider(color = White.copy(alpha = 0.1f), thickness = 1.dp)
+            Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), thickness = 1.dp)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -241,7 +243,7 @@ private fun MatchResultCard(
                     text = formatDate(matchResult.createdAt),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 12.sp,
-                        color = MidGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -252,20 +254,20 @@ private fun MatchResultCard(
                     onClick = onReportClick,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GoldPrimary.copy(alpha = 0.2f)
+                        containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
-                        tint = GoldPrimary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.report_result),
-                        color = GoldPrimary,
+                        color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -286,7 +288,7 @@ private fun TeamNameWithStatus(
                 Icon(
                     imageVector = Icons.Default.EmojiEvents,
                     contentDescription = null,
-                    tint = GoldPrimary,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -296,7 +298,7 @@ private fun TeamNameWithStatus(
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 15.sp,
                     fontWeight = if (isWinner) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isWinner) GoldPrimary else White
+                    color = if (isWinner) MaterialTheme.colorScheme.secondary else White
                 )
             )
         }
@@ -325,6 +327,7 @@ private fun StatusDot(status: VerificationStatus) {
     )
 }
 
+@Composable
 private fun statusColor(status: VerificationStatus): Color {
     return when (status) {
         VerificationStatus.PENDING -> WarningOrange
@@ -332,7 +335,7 @@ private fun statusColor(status: VerificationStatus): Color {
         VerificationStatus.DISPUTED -> ErrorRed
         VerificationStatus.ADMIN_REVIEW -> Purple
         VerificationStatus.AUTO_CANCELLED -> ErrorRed
-        VerificationStatus.ADMIN_RESOLVED -> LightGray
+        VerificationStatus.ADMIN_RESOLVED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
     }
 }
 

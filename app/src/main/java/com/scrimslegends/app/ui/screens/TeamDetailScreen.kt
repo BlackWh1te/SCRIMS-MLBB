@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -77,11 +78,15 @@ fun TeamDetailScreen(
         onLoadStats()
     }
 
-    // Pre-compute stats so they're available across all LazyColumn items
-    val totalScrims = ((teamStats["total_scrims"] ?: teamStats["total_matches"]) as? Number)?.toInt() ?: 0
-    val wins = ((teamStats["wins"] ?: teamStats["win_count"]) as? Number)?.toInt() ?: 0
-    val losses = ((teamStats["losses"] ?: teamStats["loss_count"]) as? Number)?.toInt() ?: 0
-    val totalPoints = (teamStats["total_points"] as? Number)?.toInt() ?: 0
+    // Use matchHistory as source of truth if available, otherwise fallback to teamStats
+    val computedTotal = matchHistory.sumOf { it.bestOf }
+    val computedWins = matchHistory.sumOf { if (it.confirmedWinnerId == team.id) it.bestOf else 0 }
+    val computedLosses = matchHistory.sumOf { if (it.confirmedWinnerId != null && it.confirmedWinnerId != team.id && !it.isDraw) it.bestOf else 0 }
+
+    val totalScrims = if (!isMatchHistoryLoading && matchHistory.isNotEmpty()) computedTotal else ((teamStats["total_scrims"] ?: teamStats["total_matches"]) as? Number)?.toInt() ?: 0
+    val wins = if (!isMatchHistoryLoading && matchHistory.isNotEmpty()) computedWins else ((teamStats["wins"] ?: teamStats["win_count"]) as? Number)?.toInt() ?: 0
+    val losses = if (!isMatchHistoryLoading && matchHistory.isNotEmpty()) computedLosses else ((teamStats["losses"] ?: teamStats["loss_count"]) as? Number)?.toInt() ?: 0
+    val totalPoints = team.players.sumOf { it.pts }
     val matchesPlayed = wins + losses
     val winRate = if (matchesPlayed > 0) "${(wins * 100 / matchesPlayed)}%" else "0%"
     val avgRating = if (teamRatings.isNotEmpty())
@@ -157,11 +162,7 @@ fun TeamDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 8.dp,
-                                    spotColor = BluePrimary.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                             colors = CardDefaults.cardColors(
                                 containerColor = appSurfaceColor()
                             ),
@@ -177,24 +178,16 @@ fun TeamDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(90.dp)
-                                        .shadow(
-                                            elevation = 12.dp,
-                                            spotColor = BluePrimary.copy(alpha = 0.3f),
-                                            shape = CircleShape
-                                        )
                                         .clip(CircleShape)
-                                        .background(
-                                            brush = Brush.verticalGradient(
-                                                colors = listOf(BluePrimary, Color(0xFF0A5A9F))
-                                            )
-                                        ),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                                        .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = team.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.team_initial_fallback),
                                         fontSize = 40.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = appTextPrimaryColor()
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
 
@@ -236,7 +229,7 @@ fun TeamDetailScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
                                         onClick = { showApplyDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
                                         Text("Apply to Join")
                                     }
@@ -246,19 +239,19 @@ fun TeamDetailScreen(
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Button(
                                         onClick = onOpenTeamChat,
-                                        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Groups,
                                             contentDescription = null,
-                                            tint = DarkBlue,
+                                            tint = MaterialTheme.colorScheme.background,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = stringResource(R.string.team_chat_default_name),
-                                            color = DarkBlue,
+                                            color = MaterialTheme.colorScheme.background,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     }
@@ -280,7 +273,7 @@ fun TeamDetailScreen(
                             indicator = { tabPositions ->
                                 TabRowDefaults.Indicator(
                                     Modifier.tabIndicatorOffset(tabPositions[safeSelectedTabIndex]),
-                                    color = GoldPrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     height = 3.dp
                                 )
                             },
@@ -296,7 +289,7 @@ fun TeamDetailScreen(
                                         Text(
                                             text = title, 
                                             fontWeight = if (safeSelectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (safeSelectedTabIndex == index) GoldPrimary else appTextSecondaryColor()
+                                            color = if (safeSelectedTabIndex == index) MaterialTheme.colorScheme.primary else appTextSecondaryColor()
                                         ) 
                                     }
                                 )
@@ -324,37 +317,40 @@ fun TeamDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     AnimatedEntrance(delayMillis = 185) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                TeamStatBox(
+                                    modifier = Modifier.weight(1f),
+                                    icon = Icons.Default.SportsEsports,
+                                    label = stringResource(R.string.scrims),
+                                    value = totalScrims.toString(),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                TeamStatBox(
+                                    modifier = Modifier.weight(1f),
+                                    icon = Icons.Default.EmojiEvents,
+                                    label = stringResource(R.string.wins),
+                                    value = wins.toString(),
+                                    tint = SuccessGreen
+                                )
+                                TeamStatBox(
+                                    modifier = Modifier.weight(1f),
+                                    icon = Icons.Default.TrendingDown,
+                                    label = stringResource(R.string.losses),
+                                    value = losses.toString(),
+                                    tint = ErrorRed
+                                )
+                            }
                             TeamStatBox(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Default.SportsEsports,
-                                label = stringResource(R.string.scrims),
-                                value = totalScrims.toString(),
-                                tint = BluePrimary
-                            )
-                            TeamStatBox(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Default.EmojiEvents,
-                                label = stringResource(R.string.wins),
-                                value = wins.toString(),
-                                tint = SuccessGreen
-                            )
-                            TeamStatBox(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Default.TrendingDown,
-                                label = stringResource(R.string.losses),
-                                value = losses.toString(),
-                                tint = ErrorRed
-                            )
-                            TeamStatBox(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 icon = Icons.Default.TrendingUp,
                                 label = stringResource(R.string.win_rate),
                                 value = winRate,
-                                tint = GoldPrimary
+                                tint = MaterialTheme.colorScheme.secondary,
+                                isLarge = true
                             )
                         }
                     }
@@ -362,32 +358,174 @@ fun TeamDetailScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Weekly Wins / Losses mini-graph
+                // Squad Stats — Player PTS List
                 item {
                     AnimatedEntrance(delayMillis = 190) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(20.dp)
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.this_week),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = appTextPrimaryColor()
-                                    )
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp)
+                            ) {
+                                // Header row: title + total PTS
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                    verticalAlignment = Alignment.Bottom
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    MiniBar(label = stringResource(R.string.wins), value = weeklyWins, color = SuccessGreen)
-                                    MiniBar(label = stringResource(R.string.losses), value = weeklyLosses, color = ErrorRed)
-                                    MiniBar(label = stringResource(R.string.points), value = totalPoints.coerceAtMost(100), color = GoldPrimary)
+                                    Text(
+                                        text = "Squad Stats",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = appTextPrimaryColor()
+                                        )
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "${if (totalPoints >= 0) "+" else ""}$totalPoints PTS",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.secondary
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Player list sorted by PTS
+                                val sortedPlayers = remember(team.players) {
+                                    team.players.sortedByDescending { it.pts }
+                                }
+
+                                sortedPlayers.forEachIndexed { index, player ->
+                                    val isTopContributor = index == 0 && player.pts > 0
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(
+                                                if (isTopContributor) Modifier
+                                                    .background(
+                                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.06f),
+                                                        RoundedCornerShape(12.dp)
+                                                    )
+                                                else Modifier
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Rank number
+                                        Box(
+                                            modifier = Modifier.width(28.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isTopContributor) {
+                                                Icon(
+                                                    imageVector = Icons.Default.EmojiEvents,
+                                                    contentDescription = "Top",
+                                                    tint = MaterialTheme.colorScheme.secondary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = appTextSecondaryColor()
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        // Avatar
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (!player.avatarUrl.isNullOrBlank()) {
+                                                coil.compose.AsyncImage(
+                                                    model = player.avatarUrl,
+                                                    contentDescription = player.name,
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(CircleShape),
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Name + Role
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = player.name,
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = appTextPrimaryColor()
+                                                ),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = when (player.role) {
+                                                    com.scrimslegends.app.data.model.PlayerRole.LEADER -> "Leader"
+                                                    com.scrimslegends.app.data.model.PlayerRole.CO_LEADER -> "Co-Leader"
+                                                    com.scrimslegends.app.data.model.PlayerRole.MEMBER -> "Member"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontSize = 11.sp,
+                                                    color = appTextSecondaryColor()
+                                                )
+                                            )
+                                        }
+
+                                        // PTS
+                                        Text(
+                                            text = "${if (player.pts >= 0) "+" else ""}${player.pts}",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = if (player.pts >= 0) MaterialTheme.colorScheme.secondary else ErrorRed
+                                            )
+                                        )
+                                    }
+
+                                    // Divider between players (not after last)
+                                    if (index < sortedPlayers.lastIndex) {
+                                        androidx.compose.material3.HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            thickness = 0.5.dp,
+                                            color = appBorderColor().copy(alpha = 0.3f)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -435,7 +573,7 @@ fun TeamDetailScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.Star,
                                                     contentDescription = null,
-                                                    tint = GoldPrimary,
+                                                    tint = MaterialTheme.colorScheme.secondary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             }
@@ -504,15 +642,11 @@ fun TeamDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .shadow(
-                                        elevation = 4.dp,
-                                        spotColor = Color.Black.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(16.dp)
-                                    ),
+                                    .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                                 colors = CardDefaults.cardColors(
                                     containerColor = appSurfaceColor()
                                 ),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(20.dp),
                                 onClick = { showAddPlayerDialog = true }
                             ) {
                                 Row(
@@ -525,7 +659,7 @@ fun TeamDetailScreen(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = stringResource(R.string.content_desc_add_player),
-                                        tint = BluePrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -534,7 +668,7 @@ fun TeamDetailScreen(
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = BluePrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     )
                                 }
@@ -548,15 +682,11 @@ fun TeamDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .shadow(
-                                        elevation = 4.dp,
-                                        spotColor = GoldPrimary.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(16.dp)
-                                    ),
+                                    .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                                 colors = CardDefaults.cardColors(
                                     containerColor = appSurfaceColor()
                                 ),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(20.dp),
                                 onClick = { showInviteDialog = true }
                             ) {
                                 Row(
@@ -569,7 +699,7 @@ fun TeamDetailScreen(
                                     Icon(
                                         imageVector = Icons.Default.Share,
                                         contentDescription = stringResource(R.string.content_desc_invite_code),
-                                        tint = GoldPrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -578,7 +708,7 @@ fun TeamDetailScreen(
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = GoldPrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     )
                                 }
@@ -613,7 +743,7 @@ fun TeamDetailScreen(
                                         .padding(vertical = 36.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(color = GoldPrimary)
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -622,7 +752,7 @@ fun TeamDetailScreen(
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(20.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -692,15 +822,11 @@ fun TeamDetailScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .shadow(
-                                            elevation = 4.dp,
-                                            spotColor = GoldPrimary.copy(alpha = 0.1f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        ),
+                                        .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                                     colors = CardDefaults.cardColors(
                                         containerColor = appSurfaceColor()
                                     ),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(20.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -718,8 +844,8 @@ fun TeamDetailScreen(
                                                     .background(
                                                         brush = Brush.verticalGradient(
                                                             colors = listOf(
-                                                                GoldPrimary.copy(alpha = 0.3f),
-                                                                GoldPrimary.copy(alpha = 0.1f)
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                                             )
                                                         )
                                                     ),
@@ -729,7 +855,7 @@ fun TeamDetailScreen(
                                                     text = app.applicantName.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.unknown_applicant_initial),
                                                     fontSize = 18.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = GoldPrimary
+                                                    color = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                             Spacer(modifier = Modifier.width(12.dp))
@@ -808,15 +934,11 @@ fun TeamDetailScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .shadow(
-                                            elevation = 4.dp,
-                                            spotColor = ErrorRed.copy(alpha = 0.1f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        ),
+                                        .border(1.dp, ErrorRed.copy(alpha = 0.35f), RoundedCornerShape(20.dp)),
                                     colors = CardDefaults.cardColors(
                                         containerColor = ErrorRed.copy(alpha = 0.08f)
                                     ),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(20.dp),
                                     onClick = { showDisbandDialog = true }
                                 ) {
                                     Row(
@@ -848,15 +970,11 @@ fun TeamDetailScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .shadow(
-                                            elevation = 4.dp,
-                                            spotColor = WarningOrange.copy(alpha = 0.1f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        ),
+                                        .border(1.dp, WarningOrange.copy(alpha = 0.35f), RoundedCornerShape(20.dp)),
                                     colors = CardDefaults.cardColors(
                                         containerColor = WarningOrange.copy(alpha = 0.08f)
                                     ),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(20.dp),
                                     onClick = { showLeaveDialog = true }
                                 ) {
                                     Row(
@@ -922,7 +1040,7 @@ fun TeamDetailScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = appTextPrimaryColor(),
                             unfocusedTextColor = appTextPrimaryColor(),
-                            focusedBorderColor = BluePrimary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = appBorderColor(),
                             focusedContainerColor = appElevatedSurfaceColor(),
                             unfocusedContainerColor = appElevatedSurfaceColor()
@@ -937,7 +1055,7 @@ fun TeamDetailScreen(
                         onApplyToTeam?.invoke(applyMessage)
                         showApplyDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Apply", color = appTextPrimaryColor())
                 }
@@ -1109,18 +1227,18 @@ private fun TeamHistoryCard(
     val statusColor = when (statusText) {
         "Win" -> SuccessGreen
         "Loss", "Cancelled" -> ErrorRed
-        "Draw", "Resolved" -> MidGray
+        "Draw", "Resolved" -> MaterialTheme.colorScheme.onSurfaceVariant
         "Disputed" -> Purple
-        "Review" -> BluePrimary
+        "Review" -> MaterialTheme.colorScheme.primary
         else -> WarningOrange
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         onClick = onClick
     ) {
         Row(
@@ -1194,11 +1312,7 @@ fun PlayerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp)
-            )
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp))
             .clickable {
                 if (isLeader && player.role != com.scrimslegends.app.data.model.PlayerRole.LEADER) {
                     showRoleDialog = true
@@ -1207,7 +1321,7 @@ fun PlayerCard(
         colors = CardDefaults.cardColors(
             containerColor = appSurfaceColor()
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
@@ -1215,21 +1329,13 @@ fun PlayerCard(
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Player Avatar with gradient
+            // Player Avatar
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .shadow(
-                        elevation = 6.dp,
-                        spotColor = BluePrimary.copy(alpha = 0.2f),
-                        shape = CircleShape
-                    )
                     .clip(CircleShape)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(BluePrimary.copy(alpha = 0.3f), BluePrimary.copy(alpha = 0.1f))
-                        )
-                    ),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (player.avatarUrl != null) {
@@ -1244,7 +1350,7 @@ fun PlayerCard(
                         text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: stringResource(R.string.player_initial_fallback),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -1263,14 +1369,7 @@ fun PlayerCard(
                         color = appTextPrimaryColor()
                     )
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.email_label, player.email),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
-                        color = appTextSecondaryColor()
-                    )
-                )
+
             }
 
             // Role Badge & Actions
@@ -1318,15 +1417,15 @@ fun PlayerCard(
                                     showMenu = false
                                     showRoleDialog = true
                                 },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = BluePrimary) }
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.handover_leadership), color = GoldPrimary) },
+                                text = { Text(stringResource(R.string.handover_leadership), color = MaterialTheme.colorScheme.secondary) },
                                 onClick = {
                                     showMenu = false
                                     showHandoverConfirm = true
                                 },
-                                leadingIcon = { Icon(Icons.Default.Stars, contentDescription = null, tint = GoldPrimary) }
+                                leadingIcon = { Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) }
                             )
                             Divider(color = appBorderColor())
                             DropdownMenuItem(
@@ -1446,7 +1545,7 @@ fun PlayerCard(
                         showHandoverConfirm = false
                     }
                 ) {
-                    Text(stringResource(R.string.handover), color = GoldPrimary)
+                    Text(stringResource(R.string.handover), color = MaterialTheme.colorScheme.secondary)
                 }
             },
             dismissButton = {
@@ -1538,46 +1637,44 @@ private fun TeamStatBox(
     icon: ImageVector,
     label: String,
     value: String,
-    tint: Color
+    tint: Color,
+    isLarge: Boolean = false
 ) {
     Card(
         modifier = modifier
-            .shadow(
-                elevation = 4.dp,
-                spotColor = tint.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(16.dp)
-            ),
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(
             containerColor = appSurfaceColor()
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(if (isLarge) 24.dp else 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = tint,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (isLarge) 40.dp else 28.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = if (isLarge) 32.sp else 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     color = appTextPrimaryColor()
                 )
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(if (isLarge) 6.dp else 4.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.sp,
+                    fontSize = if (isLarge) 14.sp else 12.sp,
+                    fontWeight = if (isLarge) FontWeight.SemiBold else FontWeight.Normal,
                     color = appTextSecondaryColor()
                 )
             )

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -138,7 +139,7 @@ fun TournamentEditScreen(
             // ── Header ──
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = DarkNavy.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
             ) {
                 Row(
                     modifier = Modifier
@@ -153,7 +154,7 @@ fun TournamentEditScreen(
                         text = "Edit Tournament",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -165,6 +166,7 @@ fun TournamentEditScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -172,13 +174,13 @@ fun TournamentEditScreen(
                 // Immutable fields (read-only display)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceElevated.copy(alpha = 0.5f)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "Hosted by ${tournament.hostUsername}",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -198,7 +200,7 @@ fun TournamentEditScreen(
                         }
                         Text(
                             text = "These fields cannot be changed after creation.",
-                            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary)
+                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                         )
                     }
                 }
@@ -206,9 +208,9 @@ fun TournamentEditScreen(
                 // ── Basic Information ──
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Separator.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -216,7 +218,7 @@ fun TournamentEditScreen(
                     ) {
                         Text(
                             text = "Basic Information",
-                            style = MaterialTheme.typography.titleSmall.copy(color = GoldPrimary, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         )
                         
                         // ── Logo picker ──
@@ -231,8 +233,8 @@ fun TournamentEditScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(64.dp)
-                                        .background(SurfaceElevated, RoundedCornerShape(12.dp))
-                                        .border(1.dp, if (selectedLogoUri != null || tournament.logoUrl != null) GoldPrimary else Separator, RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                                        .border(1.dp, if (selectedLogoUri != null || tournament.logoUrl != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                                         .clickable { logoPicker.launch("image/*") },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -245,7 +247,7 @@ fun TournamentEditScreen(
                                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                         )
                                     } else {
-                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Add logo", tint = TextTertiary, modifier = Modifier.size(28.dp))
+                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Add logo", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))
                                     }
                                 }
                                 Column {
@@ -256,7 +258,7 @@ fun TournamentEditScreen(
                                             else -> "No logo — tap to add"
                                         },
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = if (selectedLogoUri != null) SuccessGreen else if (tournament.logoUrl != null) GoldPrimary else TextSecondary
+                                            color = if (selectedLogoUri != null) SuccessGreen else if (tournament.logoUrl != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     )
                                 }
@@ -284,7 +286,7 @@ fun TournamentEditScreen(
                                 value = description,
                                 onValueChange = { description = it; descriptionError = null },
                                 modifier = Modifier.fillMaxWidth().height(120.dp),
-                                placeholder = { Text("Describe your tournament…", color = TextTertiary) },
+                                placeholder = { Text("Describe your tournament…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = inputColors(),
                                 isError = descriptionError != null,
@@ -301,9 +303,9 @@ fun TournamentEditScreen(
                 // ── Prize & Formats ──
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Separator.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -311,7 +313,7 @@ fun TournamentEditScreen(
                     ) {
                         Text(
                             text = "Prize & Formats",
-                            style = MaterialTheme.typography.titleSmall.copy(color = GoldPrimary, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         )
                         
                         Column {
@@ -340,9 +342,9 @@ fun TournamentEditScreen(
                 // ── Deadlines & Advanced ──
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Separator.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -350,7 +352,7 @@ fun TournamentEditScreen(
                     ) {
                         Text(
                             text = "Deadlines & Advanced",
-                            style = MaterialTheme.typography.titleSmall.copy(color = GoldPrimary, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         )
                         
                         Column {
@@ -364,15 +366,15 @@ fun TournamentEditScreen(
                                     value = registrationDeadline,
                                     onValueChange = {},
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("Pick date & time", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                                     readOnly = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = inputColors(),
-                                    textStyle = TextStyle(color = White, fontSize = 13.sp),
+                                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                                     isError = deadlineError != null,
-                                    leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) },
+                                    leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), modifier = Modifier.size(18.dp)) },
                                     trailingIcon = {
-                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(18.dp).clickable { showRegDatePicker = true })
+                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp).clickable { showRegDatePicker = true })
                                     }
                                 )
                             }
@@ -389,15 +391,15 @@ fun TournamentEditScreen(
                                     value = checkInDeadline,
                                     onValueChange = {},
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("Pick date & time", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                                     readOnly = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = inputColors(),
-                                    textStyle = TextStyle(color = White, fontSize = 13.sp),
+                                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                                     isError = deadlineError != null,
-                                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = LightGray, modifier = Modifier.size(18.dp)) },
+                                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), modifier = Modifier.size(18.dp)) },
                                     trailingIcon = {
-                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(18.dp).clickable { showCheckInDatePicker = true })
+                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp).clickable { showCheckInDatePicker = true })
                                     }
                                 )
                             }
@@ -406,7 +408,7 @@ fun TournamentEditScreen(
                             }
                         }
 
-                        HorizontalDivider(thickness = 0.5.dp, color = Separator.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -420,13 +422,13 @@ fun TournamentEditScreen(
                                 Icon(
                                     imageVector = Icons.Default.Videocam,
                                     contentDescription = null,
-                                    tint = if (isLiveStreamEnabled) ErrorRed else TextTertiary,
+                                    tint = if (isLiveStreamEnabled) ErrorRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
                                     text = "Enable Live Stream",
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = if (isLiveStreamEnabled) White else TextSecondary,
+                                        color = if (isLiveStreamEnabled) White else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Medium
                                     )
                                 )
@@ -435,10 +437,10 @@ fun TournamentEditScreen(
                                 checked = isLiveStreamEnabled,
                                 onCheckedChange = { isLiveStreamEnabled = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedTrackColor = GoldPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.secondary,
                                     checkedThumbColor = White,
-                                    uncheckedTrackColor = SurfaceElevated,
-                                    uncheckedThumbColor = TextTertiary
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                             )
                         }
@@ -448,9 +450,9 @@ fun TournamentEditScreen(
                 // ── Requirements editor ──────────────────────────────────
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Separator.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
@@ -460,7 +462,7 @@ fun TournamentEditScreen(
                         ) {
                             Text(
                                 text = "Entry Requirements",
-                                style = MaterialTheme.typography.titleSmall.copy(color = GoldPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                             )
                             if (pendingRequirements.size < 5) {
                                 IconButton(onClick = {
@@ -469,14 +471,14 @@ fun TournamentEditScreen(
                                     newReqUrl = ""
                                     showAddReqDialog = true
                                 }) {
-                                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Add", tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Add", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
                         if (pendingRequirements.isEmpty()) {
                             Text(
                                 "No requirements set. Tap + to add one.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = TextTertiary)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                             )
                         } else {
                             pendingRequirements.forEachIndexed { index, req ->
@@ -492,12 +494,12 @@ fun TournamentEditScreen(
                                             else                               -> Icons.Default.CheckCircle
                                         },
                                         contentDescription = null,
-                                        tint = GoldPrimary,
+                                        tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         req.label,
-                                        style = MaterialTheme.typography.bodySmall.copy(color = White),
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
                                         modifier = Modifier.weight(1f)
                                     )
                                     IconButton(
@@ -520,8 +522,8 @@ fun TournamentEditScreen(
                                     onSaveRequirements(tournament.id, pendingRequirements)
                                     requirementsDirty = false
                                 },
-                                backgroundColor = BluePrimary,
-                                contentColor = White
+                                backgroundColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -531,8 +533,8 @@ fun TournamentEditScreen(
                 if (showAddReqDialog) {
                     androidx.compose.material3.AlertDialog(
                         onDismissRequest = { showAddReqDialog = false },
-                        containerColor = SurfaceCard,
-                        title = { Text("Add Requirement", color = White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        title = { Text("Add Requirement", color = MaterialTheme.colorScheme.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -552,10 +554,10 @@ fun TournamentEditScreen(
                                             },
                                             modifier = Modifier.height(30.dp),
                                             colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                                selectedLabelColor = GoldPrimary,
-                                                containerColor = SurfaceElevated,
-                                                labelColor = LightGray
+                                                selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                                selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                             )
                                         )
                                     }
@@ -564,7 +566,7 @@ fun TournamentEditScreen(
                                     value = newReqLabel,
                                     onValueChange = { newReqLabel = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("Label", color = TextTertiary, fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)) },
+                                    placeholder = { Text("Label", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(10.dp),
                                     colors = inputColors()
@@ -573,7 +575,7 @@ fun TournamentEditScreen(
                                     value = newReqUrl,
                                     onValueChange = { newReqUrl = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("URL (optional)", color = TextTertiary, fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)) },
+                                    placeholder = { Text("URL (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(10.dp),
                                     colors = inputColors()
@@ -591,10 +593,10 @@ fun TournamentEditScreen(
                                     requirementsDirty = true
                                     showAddReqDialog = false
                                 }
-                            }) { Text("Add", color = GoldPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                            }) { Text("Add", color = MaterialTheme.colorScheme.secondary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showAddReqDialog = false }) { Text("Cancel", color = TextSecondary) }
+                            TextButton(onClick = { showAddReqDialog = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
                     )
                 }
@@ -628,8 +630,8 @@ fun TournamentEditScreen(
                             onSave(tournament.id, buildUpdates())
                         }
                     },
-                    backgroundColor = GoldPrimary,
-                    contentColor = DarkNavy
+                    backgroundColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.background
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -647,24 +649,24 @@ fun TournamentEditScreen(
                             showRegTimePicker = true
                             pendingRegDateMillis = dateMillis
                         }
-                    }) { Text("Next", color = GoldPrimary) }
+                    }) { Text("Next", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showRegDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showRegDatePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             ) {
                 DatePicker(state = regDatePickerState,
                     colors = DatePickerDefaults.colors(
-                        containerColor = DarkNavy,
-                        titleContentColor = White,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
                         headlineContentColor = White,
-                        navigationContentColor = GoldPrimary,
-                        yearContentColor = LightGray,
-                        currentYearContentColor = GoldPrimary,
-                        selectedDayContentColor = DarkNavy,
-                        selectedDayContainerColor = GoldPrimary,
+                        navigationContentColor = MaterialTheme.colorScheme.secondary,
+                        yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        currentYearContentColor = MaterialTheme.colorScheme.secondary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.background,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.secondary,
                         dayContentColor = White,
-                        weekdayContentColor = TextSecondary
+                        weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -674,7 +676,7 @@ fun TournamentEditScreen(
         if (showRegTimePicker) {
             AlertDialog(
                 onDismissRequest = { showRegTimePicker = false },
-                containerColor = DarkNavy,
+                containerColor = MaterialTheme.colorScheme.background,
                 confirmButton = {
                     TextButton(onClick = {
                         val cal = java.util.Calendar.getInstance().apply {
@@ -686,14 +688,14 @@ fun TournamentEditScreen(
                         registrationDeadline = formatTimestamp(cal.timeInMillis)
                         deadlineError = null
                         showRegTimePicker = false
-                    }) { Text("OK", color = GoldPrimary) }
+                    }) { Text("OK", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showRegTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showRegTimePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Select Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Text("Select Time", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
                         TimePicker(state = regTimePickerState)
                     }
@@ -712,24 +714,24 @@ fun TournamentEditScreen(
                             showCheckInTimePicker = true
                             pendingCheckInDateMillis = dateMillis
                         }
-                    }) { Text("Next", color = GoldPrimary) }
+                    }) { Text("Next", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             ) {
                 DatePicker(state = checkInDatePickerState,
                     colors = DatePickerDefaults.colors(
-                        containerColor = DarkNavy,
-                        titleContentColor = White,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
                         headlineContentColor = White,
-                        navigationContentColor = GoldPrimary,
-                        yearContentColor = LightGray,
-                        currentYearContentColor = GoldPrimary,
-                        selectedDayContentColor = DarkNavy,
-                        selectedDayContainerColor = GoldPrimary,
+                        navigationContentColor = MaterialTheme.colorScheme.secondary,
+                        yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        currentYearContentColor = MaterialTheme.colorScheme.secondary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.background,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.secondary,
                         dayContentColor = White,
-                        weekdayContentColor = TextSecondary
+                        weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -739,7 +741,7 @@ fun TournamentEditScreen(
         if (showCheckInTimePicker) {
             AlertDialog(
                 onDismissRequest = { showCheckInTimePicker = false },
-                containerColor = DarkNavy,
+                containerColor = MaterialTheme.colorScheme.background,
                 confirmButton = {
                     TextButton(onClick = {
                         val cal = java.util.Calendar.getInstance().apply {
@@ -751,14 +753,14 @@ fun TournamentEditScreen(
                         checkInDeadline = formatTimestamp(cal.timeInMillis)
                         deadlineError = null
                         showCheckInTimePicker = false
-                    }) { Text("OK", color = GoldPrimary) }
+                    }) { Text("OK", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Select Check-In Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Text("Select Check-In Time", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
                         TimePicker(state = checkInTimePickerState)
                     }
@@ -769,10 +771,10 @@ fun TournamentEditScreen(
         // Loading overlay
         if (isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().background(DarkNavy.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.6f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(48.dp))
+                LottieLoadingIndicator(size = 80.dp)
             }
         }
 
@@ -783,8 +785,8 @@ fun TournamentEditScreen(
                     .align(Alignment.BottomCenter)
                     .padding(16.dp),
                 containerColor = ErrorRed,
-                action = { TextButton(onClick = onDismissError) { Text("OK", color = White) } }
-            ) { Text(it, color = White) }
+                action = { TextButton(onClick = onDismissError) { Text("OK", color = MaterialTheme.colorScheme.onSurface) } }
+            ) { Text(it, color = MaterialTheme.colorScheme.onSurface) }
         }
     }
 }
@@ -795,13 +797,13 @@ private fun ImmutableInfo(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.labelMedium.copy(
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 9.sp)
+            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 9.sp)
         )
     }
 }

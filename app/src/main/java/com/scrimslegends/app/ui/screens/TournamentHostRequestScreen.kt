@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -61,7 +62,7 @@ fun TournamentHostRequestScreen(
             // ── Header ──
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = DarkNavy.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
             ) {
                 Row(
                     modifier = Modifier
@@ -76,7 +77,7 @@ fun TournamentHostRequestScreen(
                         text = stringResource(R.string.tournament_host_request),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -104,7 +105,7 @@ fun TournamentHostRequestScreen(
                 ) {
                     // Info card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = GoldPrimary.copy(alpha = 0.1f)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
@@ -115,7 +116,7 @@ fun TournamentHostRequestScreen(
                             Icon(
                                 imageVector = Icons.Default.EmojiEvents,
                                 contentDescription = null,
-                                tint = GoldPrimary,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(32.dp)
                             )
                             Column {
@@ -123,12 +124,12 @@ fun TournamentHostRequestScreen(
                                     text = "Become a Tournament Host",
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = GoldPrimary
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                 )
                                 Text(
                                     text = "Host Swiss-style tournaments, manage teams, and run live matches.",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 )
                             }
                         }
@@ -139,7 +140,7 @@ fun TournamentHostRequestScreen(
                         Text(
                             text = stringResource(R.string.tournament_host_motivation),
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
@@ -148,16 +149,16 @@ fun TournamentHostRequestScreen(
                             value = motivation,
                             onValueChange = { motivation = it },
                             modifier = Modifier.fillMaxWidth().height(120.dp),
-                            placeholder = { Text("I want to host because…", color = TextTertiary) },
+                            placeholder = { Text("I want to host because…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = Separator,
-                                focusedContainerColor = SurfaceElevated,
-                                unfocusedContainerColor = SurfaceElevated,
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -167,7 +168,7 @@ fun TournamentHostRequestScreen(
                         Text(
                             text = stringResource(R.string.tournament_host_experience),
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
@@ -176,17 +177,17 @@ fun TournamentHostRequestScreen(
                             value = experience,
                             onValueChange = { experience = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Previous experience hosting…", color = TextTertiary) },
+                            placeholder = { Text("Previous experience hosting…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = Separator,
-                                focusedContainerColor = SurfaceElevated,
-                                unfocusedContainerColor = SurfaceElevated,
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -196,7 +197,7 @@ fun TournamentHostRequestScreen(
                         Text(
                             text = stringResource(R.string.tournament_host_telegram),
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
@@ -205,18 +206,18 @@ fun TournamentHostRequestScreen(
                             value = telegramChannel,
                             onValueChange = { telegramChannel = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("@channel", color = TextTertiary) },
+                            placeholder = { Text("@channel", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
-                            leadingIcon = { Icon(Icons.Default.Chat, null, tint = BluePrimary) },
+                            leadingIcon = { Icon(Icons.Default.Chat, null, tint = MaterialTheme.colorScheme.primary) },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = Separator,
-                                focusedContainerColor = SurfaceElevated,
-                                unfocusedContainerColor = SurfaceElevated,
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -226,30 +227,30 @@ fun TournamentHostRequestScreen(
                         Text(
                             text = stringResource(R.string.tournament_host_social),
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 fontWeight = FontWeight.SemiBold
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "One link per line",
-                            style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary, fontSize = 10.sp)
+                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 10.sp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = socialLinksText,
                             onValueChange = { socialLinksText = it },
                             modifier = Modifier.fillMaxWidth().height(80.dp),
-                            placeholder = { Text("https://…\nhttps://…", color = TextTertiary) },
+                            placeholder = { Text("https://…\nhttps://…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = Separator,
-                                focusedContainerColor = SurfaceElevated,
-                                unfocusedContainerColor = SurfaceElevated,
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -265,8 +266,8 @@ fun TournamentHostRequestScreen(
                         },
                         enabled = motivation.isNotBlank() && !isLoading,
                         isLoading = isLoading,
-                        backgroundColor = GoldPrimary,
-                        contentColor = DarkNavy
+                        backgroundColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.background
                     )
                 }
             }
@@ -279,8 +280,8 @@ fun TournamentHostRequestScreen(
                     .align(Alignment.BottomCenter)
                     .padding(16.dp),
                 containerColor = ErrorRed,
-                action = { TextButton(onClick = onDismissError) { Text("OK", color = White) } }
-            ) { Text(it, color = White) }
+                action = { TextButton(onClick = onDismissError) { Text("OK", color = MaterialTheme.colorScheme.onSurface) } }
+            ) { Text(it, color = MaterialTheme.colorScheme.onSurface) }
         }
     }
 }
@@ -303,7 +304,7 @@ private fun ExistingRequestStatus(
             isApproved -> SuccessGreen
             isPending -> WarningOrange
             isRejected -> ErrorRed
-            else -> TextTertiary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         }
 
         val statusIcon = when {
@@ -341,7 +342,7 @@ private fun ExistingRequestStatus(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Your request is being reviewed by the admin team. You'll be notified when a decision is made.",
-                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
+                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
         }
@@ -363,7 +364,7 @@ private fun ExistingRequestStatus(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = request.adminNotes,
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                 }
             }

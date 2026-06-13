@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -76,7 +77,7 @@ fun AchievementBadge(
                     text = achievement.iconLetter,
                     fontSize = (size.dp * 0.45).sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -116,7 +117,7 @@ fun AchievementCard(
                 shape = shape
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isUnlocked) DarkNavy else DarkNavy.copy(alpha = 0.6f)
+            containerColor = if (isUnlocked) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
         ),
         shape = shape,
         onClick = onClick
@@ -141,13 +142,13 @@ fun AchievementCard(
                     text = achievement.displayName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isUnlocked) White else LightGray.copy(alpha = 0.6f)
+                    color = if (isUnlocked) White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = achievement.description,
                     fontSize = 13.sp,
-                    color = if (isUnlocked) LightGray else LightGray.copy(alpha = 0.4f),
+                    color = if (isUnlocked) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.4f),
                     lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(10.dp))
@@ -158,7 +159,7 @@ fun AchievementCard(
                         modifier = Modifier
                             .weight(1f)
                             .height(6.dp)
-                            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
                     ) {
                         Box(
                             modifier = Modifier
@@ -174,7 +175,7 @@ fun AchievementCard(
                     Text(
                         text = "$current / $max",
                         fontSize = 11.sp,
-                        color = LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -206,7 +207,7 @@ fun AchievementBadgeRow(
                 modifier = Modifier
                     .size(28.dp)
                     .background(
-                        color = White.copy(alpha = 0.1f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(6.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -215,7 +216,7 @@ fun AchievementBadgeRow(
                     text = "+${achievements.size - 5}",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }

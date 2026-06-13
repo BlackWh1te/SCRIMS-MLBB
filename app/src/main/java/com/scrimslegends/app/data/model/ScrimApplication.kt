@@ -9,6 +9,7 @@ data class ScrimApplication(
     val applicantTeamLeaderName: String = "",
     val applicantTeamAvatarUrl: String? = null,
     val applicantTeamPlayers: List<Player> = emptyList(),
+    val applicantRosterIds: List<String>? = null,
     val status: ApplicationStatus = ApplicationStatus.PENDING,
     val appliedAt: Long = System.currentTimeMillis(),
     val respondedAt: Long? = null,
@@ -17,7 +18,7 @@ data class ScrimApplication(
 
 enum class ApplicationStatus {
     PENDING,    // Waiting for host team to approve
-    APPROVED,   // Host approved, chat will open at scheduled time
+    APPROVED,   // Host approved, chat opens immediately
     REJECTED,   // Host declined
     CANCELLED   // Applicant withdrew or match was cancelled
 }

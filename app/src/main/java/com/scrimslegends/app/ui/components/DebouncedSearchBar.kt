@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,7 +43,7 @@ fun DebouncedSearchBar(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(White.copy(alpha = 0.08f)),
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
@@ -54,7 +55,7 @@ fun DebouncedSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = MidGray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
 
@@ -66,7 +67,7 @@ fun DebouncedSearchBar(
                 placeholder = {
                     Text(
                         text = placeholder,
-                        color = MidGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 15.sp
                     )
                 },
@@ -78,8 +79,8 @@ fun DebouncedSearchBar(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent,
-                    focusedTextColor = White,
-                    unfocusedTextColor = White
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
@@ -105,7 +106,7 @@ fun DebouncedSearchBar(
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",
-                        tint = MidGray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }

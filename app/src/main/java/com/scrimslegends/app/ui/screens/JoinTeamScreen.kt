@@ -3,6 +3,8 @@ package com.scrimslegends.app.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -94,23 +96,15 @@ fun JoinTeamScreen(
                     Box(
                         modifier = Modifier
                             .size(80.dp)
-                            .shadow(
-                                elevation = 12.dp,
-                                spotColor = BluePrimary.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(BluePrimary.copy(alpha = 0.2f), BluePrimary.copy(alpha = 0.05f))
-                                ),
-                                shape = RoundedCornerShape(24.dp)
-                            ),
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(24.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.GroupAdd,
                             contentDescription = null,
-                            tint = BluePrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(36.dp)
                         )
                     }
@@ -146,11 +140,7 @@ fun JoinTeamScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = Color.Black.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                             colors = CardDefaults.cardColors(containerColor = appSurface),
                             shape = RoundedCornerShape(20.dp)
                         ) {
@@ -169,11 +159,11 @@ fun JoinTeamScreen(
                                     label = { Text(stringResource(R.string.invite_code)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = GoldPrimary,
+                                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
                                         unfocusedBorderColor = appBorder,
-                                        focusedLabelColor = GoldPrimary,
+                                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
                                         unfocusedLabelColor = appTextSecondary,
-                                        cursorColor = GoldPrimary,
+                                        cursorColor = MaterialTheme.colorScheme.secondary,
                                         focusedTextColor = appTextPrimary,
                                         unfocusedTextColor = appTextPrimary,
                                         focusedContainerColor = appElevatedSurface,
@@ -220,11 +210,7 @@ fun JoinTeamScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = SuccessGreen.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ),
+                                .border(1.dp, SuccessGreen.copy(alpha = 0.30f), RoundedCornerShape(20.dp)),
                             colors = CardDefaults.cardColors(
                                 containerColor = SuccessGreen.copy(alpha = 0.08f)
                             ),

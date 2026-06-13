@@ -23,7 +23,8 @@ import com.scrimslegends.app.data.cache.UnifiedCacheManager
  */
 class SupabaseAuthRepository(
     private val context: Context,
-    private val cacheManager: UnifiedCacheManager
+    private val cacheManager: UnifiedCacheManager,
+    private val realtimeManager: com.scrimslegends.app.data.service.RealtimeManager
 ) : AuthRepositoryInterface {
 
     companion object {
@@ -439,6 +440,8 @@ class SupabaseAuthRepository(
     override suspend fun signOut(): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
+            val uid = getUserId()
+            if (uid != null) realtimeManager.stopSubscription(uid)
             authHeader()?.let { header ->
                 authApi.signOut(header)
             }
@@ -490,6 +493,7 @@ class SupabaseAuthRepository(
                 } catch (e: Exception) {
                     Timber.w(e, "Failed to call delete-user Edge Function")
                 }
+                realtimeManager.stopSubscription(userId)
             }
             clearTokens()
             emit(AuthResult.Success)
@@ -727,7 +731,7 @@ class SupabaseAuthRepository(
         }
     }
 
-    override suspend fun getUserProfile(): UserProfile? {
+    override suspend fun getUserProfile(forceRefresh: Boolean): UserProfile? {
         val userId = getUserId() ?: return null
 
         val db = com.scrimslegends.app.data.local.ScrimsLegendsDatabase.getDatabase(context)
@@ -787,7 +791,7 @@ class SupabaseAuthRepository(
             email = entity.email ?: "",
             inGameId = entity.inGameId ?: "",
             avatarUrl = entity.avatarUrl,
-            currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.BRONZE,
+            currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.WARRIOR,
             pts = entity.points,
             isBanned = entity.isBanned,
             banReason = entity.banReason,

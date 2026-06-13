@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -92,7 +93,7 @@ fun VerificationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Background Glow Orbs ──────────────────────────────────
         Box(
@@ -102,7 +103,7 @@ fun VerificationScreen(
                 .offset(y = (-100).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.15f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), Color.Transparent)
                     )
                 )
         )
@@ -127,14 +128,14 @@ fun VerificationScreen(
                         modifier = Modifier
                             .size(90.dp)
                             .clip(RoundedCornerShape(26.dp))
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(26.dp)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(26.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Email,
                             contentDescription = null,
-                            tint = BluePrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -146,7 +147,7 @@ fun VerificationScreen(
                 PremiumFadeIn(delayMillis = 100) {
                     Text(
                         stringResource(R.string.verify_email_title),
-                        style = iOSTitle1.copy(color = TextPrimary),
+                        style = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -154,7 +155,7 @@ fun VerificationScreen(
                 PremiumFadeIn(delayMillis = 150) {
                     Text(
                         stringResource(R.string.verify_email_subtitle),
-                        style = iOSCallout.copy(color = TextSecondary),
+                        style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -166,13 +167,13 @@ fun VerificationScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = maskEmail(email),
-                            style = iOSCallout.copy(color = TextPrimary, fontWeight = FontWeight.Bold)
+                            style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                         )
                     }
                 }
@@ -223,21 +224,21 @@ fun VerificationScreen(
                                 localError = null
                             }
                         },
-                        placeholder = { Text(stringResource(R.string.enter_code), color = TextTertiary) },
+                        placeholder = { Text(stringResource(R.string.enter_code), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         textStyle = iOSTitle1.copy(
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             letterSpacing = 8.sp,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BluePrimary,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedContainerColor = SurfaceOverlay,
-                            unfocusedContainerColor = SurfaceOverlay,
-                            cursorColor = BluePrimary
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(16.dp)
                     )
@@ -274,9 +275,9 @@ fun VerificationScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         if (isLoading) {
-                            CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
-                            Text(stringResource(R.string.i_have_verified), style = iOSHeadline.copy(color = White))
+                            Text(stringResource(R.string.i_have_verified), style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface))
                         }
                     }
                 }
@@ -290,19 +291,19 @@ fun VerificationScreen(
                             onClick = { onResendEmail(email) },
                             enabled = canResend && !isLoading
                         ) {
-                            Icon(Icons.Default.Refresh, null, tint = if (canResend) BluePrimary else TextTertiary, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Refresh, null, tint = if (canResend) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 if (canResend) stringResource(R.string.resend_email)
                                 else stringResource(R.string.resend_in_seconds, resendCountdown),
-                                style = iOSCallout.copy(color = if (canResend) BluePrimary else TextTertiary, fontWeight = FontWeight.Medium)
+                                style = iOSCallout.copy(color = if (canResend) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontWeight = FontWeight.Medium)
                             )
                         }
 
                         Spacer(Modifier.height(8.dp))
 
                         TextButton(onClick = onBackToLogin) {
-                            Text(stringResource(R.string.back_to_login), style = iOSCallout.copy(color = TextSecondary))
+                            Text(stringResource(R.string.back_to_login), style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
                         }
                     }
                 }
@@ -329,11 +330,11 @@ private fun ExpiredAccountView(onBackToLogin: () -> Unit) {
             Icon(Icons.Default.Warning, null, tint = ErrorRed, modifier = Modifier.size(40.dp))
         }
         Spacer(Modifier.height(32.dp))
-        Text(stringResource(R.string.account_deleted_title), style = iOSTitle1.copy(color = TextPrimary), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.account_deleted_title), style = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface), textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(
             stringResource(R.string.account_deleted_subtitle),
-            style = iOSCallout.copy(color = TextSecondary),
+            style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(40.dp))
@@ -346,7 +347,7 @@ private fun ExpiredAccountView(onBackToLogin: () -> Unit) {
                 .clickable { onBackToLogin() },
             contentAlignment = Alignment.Center
         ) {
-            Text(stringResource(R.string.back_to_login), style = iOSHeadline.copy(color = White))
+            Text(stringResource(R.string.back_to_login), style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface))
         }
     }
 }

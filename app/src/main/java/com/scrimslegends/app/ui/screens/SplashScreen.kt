@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -28,12 +29,12 @@ import kotlinx.coroutines.isActive
 @Composable
 fun SplashScreen(
     onFinish: () -> Unit,
-    delayMillis: Long = 2800
+    delayMillis: Long = 1500
 ) {
     var startAnimation by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(200)
+        delay(100)
         startAnimation = true
         delay(delayMillis)
         if (currentCoroutineContext().isActive) {
@@ -47,9 +48,9 @@ fun SplashScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        DarkBlue,
-                        DarkNavy,
-                        DarkSurface.copy(alpha = 0.95f)
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                     )
                 )
             )
@@ -70,21 +71,21 @@ fun SplashScreen(
                 // Outer pulsing ring
                 AnimatedRing(
                     visible = startAnimation,
-                    delayMillis = 400,
+                    delayMillis = 150,
                     size = 120.dp,
-                    color = GoldPrimary.copy(alpha = 0.15f)
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                 )
                 AnimatedRing(
                     visible = startAnimation,
-                    delayMillis = 600,
+                    delayMillis = 250,
                     size = 100.dp,
-                    color = BluePrimary.copy(alpha = 0.12f)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 )
 
                 // Center glow
                 val glowAlpha by animateFloatAsState(
                     targetValue = if (startAnimation) 1f else 0f,
-                    animationSpec = tween(800, delayMillis = 300),
+                    animationSpec = tween(400, delayMillis = 150),
                     label = "glowAlpha"
                 )
 
@@ -94,8 +95,8 @@ fun SplashScreen(
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    GoldPrimary.copy(alpha = 0.3f * glowAlpha),
-                                    BluePrimary.copy(alpha = 0.1f * glowAlpha),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f * glowAlpha),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f * glowAlpha),
                                     Color.Transparent
                                 )
                             ),
@@ -106,10 +107,7 @@ fun SplashScreen(
                 // ML text logo
                 val logoScale by animateFloatAsState(
                     targetValue = if (startAnimation) 1f else 0.6f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    ),
+                    animationSpec = tween(350),
                     label = "logoScale"
                 )
 
@@ -125,14 +123,14 @@ fun SplashScreen(
             // App name
             val titleAlpha by animateFloatAsState(
                 targetValue = if (startAnimation) 1f else 0f,
-                animationSpec = tween(600, delayMillis = 600),
+                animationSpec = tween(300, delayMillis = 300),
                 label = "titleAlpha"
             )
 
             Text(
                 text = stringResource(R.string.app_title),
                 modifier = Modifier.alpha(titleAlpha),
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -144,14 +142,14 @@ fun SplashScreen(
             // Tagline
             val taglineAlpha by animateFloatAsState(
                 targetValue = if (startAnimation) 1f else 0f,
-                animationSpec = tween(600, delayMillis = 800),
+                animationSpec = tween(300, delayMillis = 400),
                 label = "taglineAlpha"
             )
 
             Text(
                 text = stringResource(R.string.tagline),
                 modifier = Modifier.alpha(taglineAlpha),
-                color = MidGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
@@ -162,7 +160,7 @@ fun SplashScreen(
         // Bottom loading bar
         val progressAlpha by animateFloatAsState(
             targetValue = if (startAnimation) 1f else 0f,
-            animationSpec = tween(400, delayMillis = 1000),
+            animationSpec = tween(250, delayMillis = 500),
             label = "progressAlpha"
         )
 
@@ -179,7 +177,7 @@ fun SplashScreen(
 
             Text(
                 text = stringResource(R.string.loading),
-                color = DimGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -196,13 +194,13 @@ private fun AnimatedRing(
 ) {
     val scale by animateFloatAsState(
         targetValue = if (visible) 1f else 0.5f,
-        animationSpec = tween(800, delayMillis = delayMillis),
+        animationSpec = tween(400, delayMillis = delayMillis),
         label = "ringScale"
     )
 
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(800, delayMillis = delayMillis),
+        animationSpec = tween(400, delayMillis = delayMillis),
         label = "ringAlpha"
     )
 
@@ -232,7 +230,7 @@ private fun LoadingBar(durationMillis: Int = 2000) {
         modifier = Modifier
             .width(120.dp)
             .height(3.dp)
-            .background(SurfaceOverlay, androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
     ) {
         Box(
             modifier = Modifier
@@ -240,7 +238,7 @@ private fun LoadingBar(durationMillis: Int = 2000) {
                 .fillMaxWidth(progress)
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(BluePrimary, GoldPrimary)
+                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                     ),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
                 )
@@ -254,8 +252,8 @@ private fun AmbientOrbs() {
 
     // Multiple floating orbs for ambient background
     val orbs = listOf(
-        OrbConfig(0.15f, 0.25f, GoldPrimary.copy(alpha = 0.04f), 8000, 0),
-        OrbConfig(0.85f, 0.15f, BluePrimary.copy(alpha = 0.03f), 9000, 1),
+        OrbConfig(0.15f, 0.25f, MaterialTheme.colorScheme.secondary.copy(alpha = 0.04f), 8000, 0),
+        OrbConfig(0.85f, 0.15f, MaterialTheme.colorScheme.primary.copy(alpha = 0.03f), 9000, 1),
         OrbConfig(0.5f, 0.75f, Purple.copy(alpha = 0.03f), 7000, 2)
     )
 

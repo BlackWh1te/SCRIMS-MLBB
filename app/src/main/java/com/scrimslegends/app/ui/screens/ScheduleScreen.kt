@@ -1,9 +1,11 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -52,8 +54,11 @@ fun ScheduleScreen(
         scrims.filter { scrim ->
             val isHost = scrim.teamId in userTeamIds
             val isOpponent = scrim.opponentTeamId in userTeamIds
+            if (scrim.status == ScrimStatus.COMPLETED || scrim.status == ScrimStatus.CANCELLED) {
+                return@filter false
+            }
             when {
-                isHost -> scrim.status !in setOf(ScrimStatus.OPEN, ScrimStatus.PENDING, ScrimStatus.CANCELLED)
+                isHost -> scrim.status !in setOf(ScrimStatus.OPEN, ScrimStatus.PENDING)
                 isOpponent -> true
                 else -> false
             }
@@ -141,7 +146,7 @@ fun ScheduleScreen(
                                         modifier = Modifier
                                             .size(8.dp)
                                             .clip(CircleShape)
-                                            .background(BluePrimary)
+                                            .background(MaterialTheme.colorScheme.primary)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
@@ -190,10 +195,10 @@ private fun ScheduleCard(
 ) {
     val statusColor = when (scrim.status) {
         ScrimStatus.OPEN, ScrimStatus.PENDING -> SuccessGreen
-        ScrimStatus.FILLED -> BluePrimary
+        ScrimStatus.FILLED -> MaterialTheme.colorScheme.primary
         ScrimStatus.READY_CHECK -> WarningOrange
         ScrimStatus.IN_PROGRESS -> WarningOrange
-        ScrimStatus.COMPLETED -> MidGray
+        ScrimStatus.COMPLETED -> MaterialTheme.colorScheme.onSurfaceVariant
         ScrimStatus.CANCELLED -> ErrorRed
     }
     val appSurface = appSurfaceColor()
@@ -203,11 +208,7 @@ private fun ScheduleCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                spotColor = BluePrimary.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(16.dp)
-            ),
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
             containerColor = appSurface
         ),
@@ -325,7 +326,7 @@ private fun ScheduleCard(
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
                     contentDescription = "Add to calendar",
-                    tint = BluePrimary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
             }

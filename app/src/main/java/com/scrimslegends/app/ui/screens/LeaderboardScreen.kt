@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -99,7 +100,7 @@ fun LeaderboardScreen(
                             .size(44.dp)
                             .background(
                                 color = appElevatedSurface,
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(14.dp)
                             )
                     ) {
                         Icon(
@@ -138,9 +139,8 @@ fun LeaderboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = error,
-                                    color = appTextPrimary,
-                                    fontSize = 13.sp
+                                    text  = error,
+                                    style = iOSCaption1.copy(color = appTextPrimary)
                                 )
                             }
                             IconButton(
@@ -175,7 +175,7 @@ fun LeaderboardScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     AnimatedEntrance(delayMillis = 100) {
-                        if (!isTeamsMode) {
+                        if (isTeamsMode) {
                             ScrollableTierFilter(
                                 selectedTier = selectedTier,
                                 onTierSelected = onTierFilter
@@ -329,7 +329,7 @@ private fun LeaderboardModeToggle(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (selected) BluePrimary else Color.Transparent)
+                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .clickable { onModeSelected(mode) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -343,10 +343,11 @@ private fun LeaderboardModeToggle(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (mode == LeaderboardMode.PLAYERS) "Players" else "Teams",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (selected) White else appTextSecondary
+                        text       = if (mode == LeaderboardMode.PLAYERS) "Players" else "Teams",
+                        style      = iOSCaption1.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (selected) White else appTextSecondary
+                        )
                     )
                 }
             }
@@ -359,7 +360,13 @@ private fun ScrollableTierFilter(
     selectedTier: RankTier?,
     onTierSelected: (RankTier?) -> Unit
 ) {
-    val tiers = remember { listOf(null) + RankTier.values() }
+    val tiers = remember { 
+        listOf(null) + RankTier.values().filter { 
+            it != RankTier.MYTHICAL_HONOR && 
+            it != RankTier.MYTHICAL_GLORY && 
+            it != RankTier.MYTHICAL_IMMORTAL 
+        } 
+    }
     val scrollState = rememberScrollState()
     val appElevatedSurface = appElevatedSurfaceColor()
     val appTextSecondary = appTextSecondaryColor()
@@ -385,7 +392,7 @@ private fun ScrollableTierFilter(
                 RankTier.MYTHICAL_HONOR -> HonorBlue
                 RankTier.MYTHICAL_GLORY -> GloryPink
                 RankTier.MYTHICAL_IMMORTAL -> ImmortalRed
-                null -> BluePrimary
+                null -> MaterialTheme.colorScheme.primary
             }
 
             Box(
@@ -406,10 +413,11 @@ private fun ScrollableTierFilter(
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
-                        text = display,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) chipColor else appTextSecondary
+                        text  = display,
+                        style = iOSCaption1.copy(
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) chipColor else appTextSecondary
+                        )
                     )
                 }
             }
@@ -424,10 +432,10 @@ private fun TeamLeaderboardRow(
     onClick: () -> Unit
 ) {
     val rankColor = when (entry.rank) {
-        1 -> GoldPrimary
+        1 -> MaterialTheme.colorScheme.secondary
         2 -> Silver
         3 -> Bronze
-        else -> MidGray
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val appSurface = appSurfaceColor()
     val appElevatedSurface = appElevatedSurfaceColor()
@@ -437,20 +445,13 @@ private fun TeamLeaderboardRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = if (isTopThree) 8.dp else 2.dp,
-                spotColor = if (isTopThree) rankColor.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
-            )
             .border(
-                width = if (isTopThree) 1.5.dp else 0.dp,
-                brush = Brush.linearGradient(
-                    colors = if (isTopThree) listOf(rankColor, rankColor.copy(alpha = 0.1f)) else listOf(Color.Transparent, Color.Transparent)
-                ),
-                shape = RoundedCornerShape(16.dp)
+                width = if (isTopThree) 1.5.dp else 1.dp,
+                color = if (isTopThree) rankColor.copy(alpha = 0.35f) else appBorderColor().copy(alpha = 0.55f),
+                shape = RoundedCornerShape(18.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = if (isTopThree) appElevatedSurface else appSurface),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         onClick = onClick
     ) {
         Row(
@@ -488,7 +489,8 @@ private fun TeamLeaderboardRow(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(GoldPrimary.copy(alpha = 0.30f), BluePrimary.copy(alpha = 0.22f)))),
+                    .border(1.dp, rankColor.copy(alpha = 0.22f), CircleShape)
+                    .background(rankColor.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 if (!entry.logoUrl.isNullOrBlank()) {
@@ -503,7 +505,7 @@ private fun TeamLeaderboardRow(
                         text = entry.teamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = White
+                        color = rankColor
                     )
                 }
             }
@@ -513,9 +515,10 @@ private fun TeamLeaderboardRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.teamName,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = appTextPrimary,
+                    style = iOSCallout.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = appTextPrimary
+                    ),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
@@ -524,17 +527,15 @@ private fun TeamLeaderboardRow(
                     Icon(Icons.Default.Groups, contentDescription = null, tint = appTextSecondary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${entry.memberCount} players",
-                        fontSize = 12.sp,
-                        color = appTextSecondary
+                        text  = "${entry.memberCount} players",
+                        style = iOSCaption1.copy(color = appTextSecondary)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Icon(Icons.Default.SportsEsports, contentDescription = null, tint = appTextSecondary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${entry.totalMatches} ranked",
-                        fontSize = 12.sp,
-                        color = appTextSecondary
+                        text  = "${entry.totalMatches} ranked",
+                        style = iOSCaption1.copy(color = appTextSecondary)
                     )
                 }
             }
@@ -543,15 +544,15 @@ private fun TeamLeaderboardRow(
                 RankBadge(tier = entry.currentTier, size = RankBadgeSize.MEDIUM)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "${entry.points} PTS",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GoldPrimary
+                    text  = "${entry.points} PTS",
+                    style = iOSCaption1.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 )
                 Text(
-                    text = "Rep ${String.format(java.util.Locale.US, "%.1f", entry.reputation)}",
-                    fontSize = 11.sp,
-                    color = appTextSecondary
+                    text  = "Rep ${String.format(java.util.Locale.US, "%.1f", entry.reputation)}",
+                    style = iOSCaption2.copy(color = appTextSecondary)
                 )
             }
         }
@@ -565,10 +566,10 @@ private fun LeaderboardRow(
     onReportUser: (userId: String, username: String, avatarUrl: String?) -> Unit = { _, _, _ -> }
 ) {
     val rankColor = when (entry.rank) {
-        1 -> GoldPrimary
+        1 -> MaterialTheme.colorScheme.secondary
         2 -> Silver
         3 -> Bronze
-        else -> MidGray
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val appSurface = appSurfaceColor()
     val appElevatedSurface = appElevatedSurfaceColor()
@@ -576,7 +577,7 @@ private fun LeaderboardRow(
     val appTextSecondary = appTextSecondaryColor()
 
     val rankBg = when (entry.rank) {
-        1 -> GoldPrimary.copy(alpha = 0.12f)
+        1 -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
         2 -> Silver.copy(alpha = 0.12f)
         3 -> Bronze.copy(alpha = 0.12f)
         else -> Color.Transparent
@@ -585,22 +586,15 @@ private fun LeaderboardRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = if (isTopThree) 8.dp else 2.dp,
-                spotColor = if (isTopThree) rankColor.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
-            )
             .border(
-                width = if (isTopThree) 1.5.dp else 0.dp,
-                brush = Brush.linearGradient(
-                    colors = if (isTopThree) listOf(rankColor, rankColor.copy(alpha = 0.1f)) else listOf(Color.Transparent, Color.Transparent)
-                ),
-                shape = RoundedCornerShape(16.dp)
+                width = if (isTopThree) 1.5.dp else 1.dp,
+                color = if (isTopThree) rankColor.copy(alpha = 0.35f) else appBorderColor().copy(alpha = 0.55f),
+                shape = RoundedCornerShape(18.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (isTopThree) appElevatedSurface else appSurface
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
         Row(
             modifier = Modifier
@@ -644,17 +638,9 @@ private fun LeaderboardRow(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .shadow(
-                        elevation = 4.dp,
-                        spotColor = BluePrimary.copy(alpha = 0.2f),
-                        shape = CircleShape
-                    )
                     .clip(CircleShape)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(BluePrimary.copy(alpha = 0.4f), BluePrimary.copy(alpha = 0.1f))
-                        )
-                    )
+                    .border(1.dp, rankColor.copy(alpha = 0.25f), CircleShape)
+                    .background(rankColor.copy(alpha = 0.10f))
                     .clickable {
                         onReportUser(entry.playerId, entry.username, entry.avatarUrl)
                     },
@@ -672,7 +658,7 @@ private fun LeaderboardRow(
                         text = entry.username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary
+                        color = rankColor
                     )
                 }
             }
@@ -683,36 +669,45 @@ private fun LeaderboardRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.username,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = appTextPrimary
+                    style = iOSCallout.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = appTextPrimary
+                    )
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = entry.teamName,
-                    fontSize = 12.sp,
-                    color = appTextSecondary
+                    style = iOSCaption1.copy(color = appTextSecondary)
                 )
             }
 
-            // Stats
+            // Stats — WIN / LOSE / PTS only (no rank badge for players)
             Column(horizontalAlignment = Alignment.End) {
-                RankBadge(tier = entry.currentTier, size = RankBadgeSize.MEDIUM)
-                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "${entry.xp} PTS",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GoldPrimary
+                    text  = "${entry.xp} PTS",
+                    style = iOSCallout.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 )
-                val totalGames = entry.wins + entry.losses
-                val wr = if (totalGames > 0) (entry.wins * 100f / totalGames) else 0f
-                val wrStr = String.format(java.util.Locale.US, "%.1f", wr) + "% WR"
-                Text(
-                    text = "${entry.wins}W / ${entry.losses}L ($wrStr)",
-                    fontSize = 11.sp,
-                    color = appTextSecondary
-                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text  = "${entry.wins}W",
+                        style = iOSCaption1.copy(fontWeight = FontWeight.Bold, color = SuccessGreen)
+                    )
+                    Text(
+                        text  = "/",
+                        style = iOSCaption1.copy(color = appTextSecondary)
+                    )
+                    Text(
+                        text  = "${entry.losses}L",
+                        style = iOSCaption1.copy(fontWeight = FontWeight.Bold, color = ErrorRed)
+                    )
+                }
             }
         }
     }

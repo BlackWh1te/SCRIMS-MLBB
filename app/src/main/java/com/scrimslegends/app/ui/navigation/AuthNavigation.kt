@@ -1,5 +1,8 @@
 package com.scrimslegends.app.ui.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
@@ -26,16 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.paging.compose.collectAsLazyPagingItems
+import kotlinx.collections.immutable.toPersistentList
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -88,7 +86,7 @@ import com.scrimslegends.app.ui.components.UserReportReason
 import com.scrimslegends.app.viewmodel.AuthViewModel
 import com.scrimslegends.app.viewmodel.LeaderboardViewModel
 import com.scrimslegends.app.viewmodel.MatchResultViewModel
-import com.scrimslegends.app.viewmodel.MessageViewModel
+
 import com.scrimslegends.app.viewmodel.NotificationViewModel
 import com.scrimslegends.app.viewmodel.ScrimViewModel
 import com.scrimslegends.app.viewmodel.SettingsViewModel
@@ -159,7 +157,8 @@ fun AuthNavigation(
     teamViewModel: TeamViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     scrimViewModel: ScrimViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     matchResultViewModel: MatchResultViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    messageViewModel: MessageViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    conversationListViewModel: com.scrimslegends.app.viewmodel.ConversationListViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    chatRoomViewModel: com.scrimslegends.app.viewmodel.ChatRoomViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     leaderboardViewModel: LeaderboardViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     notificationViewModel: NotificationViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     settingsViewModel: SettingsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
@@ -182,15 +181,17 @@ fun AuthNavigation(
     val matchResultIsRefreshing by matchResultViewModel.isRefreshing.collectAsState()
     val selectedMatchResult by matchResultViewModel.selectedMatchResult.collectAsState()
     val reportSuccess by matchResultViewModel.reportSuccess.collectAsState()
-    val conversations by messageViewModel.conversations.collectAsState()
-    val selectedConversation by messageViewModel.selectedConversation.collectAsState()
-    val messagesWithDelivery by messageViewModel.messagesWithDelivery.collectAsState()
-    val messagesIsLoading by messageViewModel.isLoading.collectAsState()
-    val messagesIsRefreshing by messageViewModel.isRefreshing.collectAsState()
-    val messageError by messageViewModel.error.collectAsState()
-    val replyingToMessage by messageViewModel.replyingToMessage.collectAsState()
-    val isLoadingOlder by messageViewModel.isLoadingOlder.collectAsState()
+    val conversations by conversationListViewModel.conversations.collectAsState()
+    val messagesIsLoading by conversationListViewModel.isLoading.collectAsState()
+    val messagesIsRefreshing by conversationListViewModel.isRefreshing.collectAsState()
+    val messageError by conversationListViewModel.error.collectAsState()
+    val chatConnectionState by chatRoomViewModel.connectionState.collectAsState()
+    val chatIsLoading by chatRoomViewModel.isLoading.collectAsState()
+    val chatError by chatRoomViewModel.error.collectAsState()
+    val selectedConversation by chatRoomViewModel.selectedConversation.collectAsState()
+    val replyingToMessage by chatRoomViewModel.replyingToMessage.collectAsState()
     val leaderboard by leaderboardViewModel.leaderboard.collectAsState()
+    val teamLeaderboard by leaderboardViewModel.teamLeaderboard.collectAsState()
     val leaderboardIsLoading by leaderboardViewModel.isLoading.collectAsState()
     val leaderboardIsRefreshing by leaderboardViewModel.isRefreshing.collectAsState()
     val leaderboardTier by leaderboardViewModel.selectedTier.collectAsState()
@@ -201,7 +202,7 @@ fun AuthNavigation(
     val soundEnabled by settingsViewModel.soundEnabled.collectAsState()
     val vibrationEnabled by settingsViewModel.vibrationEnabled.collectAsState()
     val languageCode by settingsViewModel.languageCode.collectAsState()
-    val darkMode by settingsViewModel.darkMode.collectAsState()
+    val themeMode by settingsViewModel.themeMode.collectAsState()
     val notifications by notificationViewModel.notifications.collectAsState()
     val notificationUnreadCount by notificationViewModel.unreadCount.collectAsState()
     val notificationIsLoading by notificationViewModel.isLoading.collectAsState()
@@ -806,7 +807,6 @@ fun AuthNavigation(
                 composable(Screen.Home.route) {
                     HomeScreen(
                         userProfile = userProfile,
-                        onLogout = { viewModel.signOut() },
                         onNavigateToCreateTeam = {
                             navController.navigate(Screen.CreateTeam.route)
                         },
@@ -962,16 +962,21 @@ fun AuthNavigation(
                     route = Screen.TeamDetail.route,
                     arguments = listOf(
                         androidx.navigation.navArgument("teamId") { type = androidx.navigation.NavType.StringType }
-                    )
+)
                 ) { backStackEntry ->
                     val teamId = backStackEntry.arguments?.getString("teamId") ?: ""
                     val team = teams.find { it.id == teamId }
                     if (team != null) {
                         val isLeader = team.leaderId == userProfile?.id
+                        val matchResultViewModel: com.scrimslegends.app.viewmodel.MatchResultViewModel = androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
+                        val matchResults by matchResultViewModel.matchResults.collectAsState()
+                        val isMatchHistoryLoading by matchResultViewModel.isLoading.collectAsState()
+
                         LaunchedEffect(teamId) {
                             if (isLeader) {
                                 teamViewModel.loadTeamApplications(teamId)
                             }
+                            matchResultViewModel.loadMatchResultsForTeam(teamId)
                         }
                         // Realtime: subscribe to team updates while viewing team detail
                         val currentUserId = userProfile?.id ?: ""
@@ -988,6 +993,8 @@ fun AuthNavigation(
                             currentUserId = userProfile?.id ?: "",
                             teamStats = teamStats,
                             teamRatings = teamRatings,
+                            matchHistory = matchResults,
+                            isMatchHistoryLoading = isMatchHistoryLoading,
                             onNavigateBack = {
                                 teamViewModel.clearTeamStats()
                                 navController.popBackStack()
@@ -1127,7 +1134,7 @@ fun AuthNavigation(
                                 if (app != null) {
                                     Toast.makeText(context, "Creating conversation...", Toast.LENGTH_SHORT).show()
                                     // Create conversation between the REAL applicant leader and the host
-                                    messageViewModel.sendApplyMessage(
+                                    chatRoomViewModel.sendApplyMessage(
                                         scrimId = sid,
                                         scrimTitle = scrim.teamName,
                                         applicantId = app.applicantTeamLeader,
@@ -1332,21 +1339,10 @@ fun AuthNavigation(
                 composable(Screen.MessageList.route) {
                     val userId = userProfile?.id ?: ""
                     LaunchedEffect(Unit) {
-                        messageViewModel.loadConversations(userId)
-                    }
-                    // Ensure team conversations exist for all user's teams
-                    LaunchedEffect(teams) {
-                        if (teams.isNotEmpty() && userId.isNotBlank()) {
-                            messageViewModel.ensureTeamConversations(teams, userId)
-                        }
-                    }
-                    // Start/stop background polling for new conversations
-                    androidx.compose.runtime.DisposableEffect(userId) {
-                        messageViewModel.startConversationsPolling(userId)
-                        onDispose { messageViewModel.stopConversationsPolling() }
+                        conversationListViewModel.loadConversations(userId)
                     }
                     MessageListScreen(
-                        conversations = conversations.filterNot { it.isTeamChat },
+                        conversations = conversations.filterNot { it.isTeamChat }.toPersistentList(),
                         isLoading = messagesIsLoading,
                         currentUserId = userId,
                         isTab = true,
@@ -1354,18 +1350,15 @@ fun AuthNavigation(
                             navController.popBackStack()
                         },
                         onNavigateToChat = { conversation ->
-                            // Set selectedConversation from list so ChatScreen has data instantly.
-                            // startChatSubscription will handle mark-as-read + message loading + realtime.
-                            messageViewModel.preSelectConversation(conversation)
                             navController.navigate(Screen.Chat.createRoute(conversation.id))
                         },
                         onRefresh = {
-                            messageViewModel.loadConversations(userId, isRefresh = true)
+                            conversationListViewModel.loadConversations(userId, isRefresh = true)
                         },
                         isRefreshing = messagesIsRefreshing,
                         error = messageError,
-                        onDismissError = { messageViewModel.clearError() },
-                        teamConversations = conversations.filter { it.isTeamChat }
+                        onDismissError = { conversationListViewModel.clearError() },
+                        teamConversations = conversations.filter { it.isTeamChat }.toPersistentList()
                     )
                 }
 
@@ -1390,18 +1383,15 @@ fun AuthNavigation(
                     ) { uri ->
                         uri?.let { 
                             context.contentResolver.openInputStream(it)?.use { stream ->
-                                messageViewModel.sendImageMessage(
-                                    conversationId, userId, userProfile?.username ?: "", stream.readBytes()
-                                )
+                                // chatRoomViewModel.sendImageMessage(conversationId, stream.readBytes())
                             }
                         }
                     }
 
                     // Start/stop real-time chat subscription while on this screen
                     androidx.compose.runtime.DisposableEffect(conversationId) {
-                        messageViewModel.resetPagination()
-                        messageViewModel.startChatSubscription(conversationId, userId)
-                        onDispose { messageViewModel.stopChatSubscription(conversationId) }
+                        chatRoomViewModel.startChatSubscription(conversationId, userId)
+                        onDispose { chatRoomViewModel.stopChatSubscription(conversationId) }
                     }
 
                     if (conversation != null) {
@@ -1410,20 +1400,18 @@ fun AuthNavigation(
                             currentUserId = userId,
                             currentUserName = userProfile?.username ?: "",
                             onNavigateBack = {
-                                messageViewModel.stopChatSubscription(conversationId)
+                                chatRoomViewModel.stopChatSubscription(conversationId)
                                 navController.popBackStack()
                             },
                             onSendMessage = { content ->
-                                messageViewModel.sendMessage(
+                                chatRoomViewModel.sendMessage(
                                     conversationId = conversationId,
-                                    senderId = userId,
-                                    senderName = userProfile?.username ?: "",
                                     content = content
                                 )
                             },
                             onSendImage = { imageLauncher.launch("image/*") },
                             onUpdateTyping = { isTyping ->
-                                messageViewModel.updateTypingStatus(conversationId, userId, isTyping)
+                                chatRoomViewModel.updateTypingStatus(conversationId, userId, isTyping)
                             },
                             onViewTeamInfo = { teamId, _ ->
                                 val team = teams.find { it.id == teamId }
@@ -1431,29 +1419,29 @@ fun AuthNavigation(
                                     navController.navigate(Screen.TeamDetail.createRoute(teamId))
                                 }
                             },
-                            onReportUser = { userId, userName ->
-                                reportTargetUserId = userId
+                            onReportUser = { reportedUserId, userName ->
+                                reportTargetUserId = reportedUserId
                                 reportTargetUserName = userName
                                 reportTargetAvatarUrl = null
                                 showReportDialog = true
                             },
-                            isLoading = messagesIsLoading,
-                            error = messageError,
-                            onDismissError = { messageViewModel.clearError() },
-                            isRefreshing = messagesIsRefreshing,
-                            onRefresh = { messageViewModel.loadConversation(conversationId) },
-                            messagesWithDelivery = messagesWithDelivery,
-                            onRetryMessage = { messageViewModel.retryMessage(it) },
-                            onCancelMessage = { messageViewModel.cancelMessage(it) },
+                            isLoading = chatIsLoading,
+                            error = chatError,
+                            onDismissError = { chatRoomViewModel.clearError() },
+                            isRefreshing = false,
+                            onRefresh = { },
+                            messagesPaged = chatRoomViewModel.messagesPaged.collectAsLazyPagingItems(),
+                            onRetryMessage = { chatRoomViewModel.retryMessage(it) },
+                            onCancelMessage = { chatRoomViewModel.cancelMessage(it) },
                             // ── New features ──
                             replyingTo = replyingToMessage,
-                            onClearReply = { messageViewModel.clearReply() },
-                            onSetReplyTarget = { messageViewModel.setReplyTarget(it) },
-                            onDeleteMessage = { messageViewModel.deleteMessage(it) },
-                            onClearChatHistory = { messageViewModel.clearChatHistory(conversationId) },
-                            isLoadingOlder = isLoadingOlder,
-                            hasMoreMessages = messageViewModel.hasMoreMessages,
-                            onLoadOlder = { messageViewModel.loadOlderMessages(conversationId) }
+                            onClearReply = { chatRoomViewModel.clearReply() },
+                            onSetReplyTarget = { chatRoomViewModel.setReplyTarget(it) },
+                            onDeleteMessage = { chatRoomViewModel.deleteMessage(it) },
+                            onClearChatHistory = { chatRoomViewModel.clearChatHistory(conversationId) },
+                            isLoadingOlder = false,
+                            hasMoreMessages = true,
+                            onLoadOlder = { }
                         )
                     }
                 }
@@ -1461,6 +1449,7 @@ fun AuthNavigation(
                 composable(Screen.Leaderboard.route) {
                     LeaderboardScreen(
                         entries = leaderboard,
+                        teamEntries = teamLeaderboard,
                         isLoading = leaderboardIsLoading,
                         isRefreshing = leaderboardIsRefreshing,
                         error = leaderboardError,
@@ -1504,7 +1493,7 @@ fun AuthNavigation(
                         soundEnabled = soundEnabled,
                         vibrationEnabled = vibrationEnabled,
                         languageCode = languageCode,
-                        darkMode = darkMode,
+                        themeMode = themeMode,
                         onToggleNotifications = { settingsViewModel.toggleNotifications(it) },
                         onToggleMatchNotifications = { settingsViewModel.toggleMatchNotifications(it) },
                         onToggleMessageNotifications = { settingsViewModel.toggleMessageNotifications(it) },
@@ -1514,17 +1503,16 @@ fun AuthNavigation(
                             settingsViewModel.setLanguage(code)
                         },
 
-                        onToggleDarkMode = { settingsViewModel.toggleDarkMode(it) },
-                        onLogout = { viewModel.signOut() }
+                        onSetThemeMode = { settingsViewModel.setThemeMode(it) }
                     )
                 }
 
                 composable(Screen.MatchHistory.route) {
                     MatchHistoryScreen(
-                        matchResults = matchResults,
+                        matchResults = matchResults.toPersistentList(),
                         isLoading = matchResultIsLoading,
                         isRefreshing = matchResultIsRefreshing,
-                        currentUserTeamId = teams.firstOrNull()?.id,
+                        currentUserTeamIds = teams.map { it.id }.toSet(),
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -1734,14 +1722,14 @@ fun AuthNavigation(
                             val senderName = userProfile?.username
                             if (!senderId.isNullOrBlank() && !senderName.isNullOrBlank()) {
                                 pendingDirectChat = true
-                                messageViewModel.startDirectConversation(
+                                chatRoomViewModel.startDirectConversation(
                                     senderId = senderId,
                                     senderName = senderName,
                                     recipientId = post.playerId,
                                     recipientName = post.playerName
                                 )
                             } else {
-                                messageViewModel.setError("Profile not loaded yet. Please try again.")
+                                android.widget.Toast.makeText(context, "Profile not loaded yet.", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         },
                         onInvitePlayer = { post ->
@@ -1754,7 +1742,7 @@ fun AuthNavigation(
                         onDismissError = { lfgViewModel.clearError() },
                         messageLoading = messagesIsLoading,
                         messageError = messageError,
-                        onDismissMessageError = { messageViewModel.clearError() }
+                        onDismissMessageError = { chatRoomViewModel.clearError() }
                     )
                 }
             }

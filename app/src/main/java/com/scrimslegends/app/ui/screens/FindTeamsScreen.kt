@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -103,7 +104,7 @@ fun FindTeamsScreen(
                         Icon(Icons.Default.Search, null, tint = appTextSecondary)
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
                         unfocusedBorderColor = appBorder,
                         focusedTextColor = appTextPrimary,
                         unfocusedTextColor = appTextPrimary,
@@ -125,7 +126,7 @@ fun FindTeamsScreen(
                 when {
                     isLoading && teams.isEmpty() -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = GoldPrimary)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     filteredTeams.isEmpty() -> {
@@ -185,7 +186,7 @@ private fun OpenTeamCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.15f))
+            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = appSurface),
         shape = RoundedCornerShape(16.dp)
@@ -228,7 +229,7 @@ private fun OpenTeamCard(
                 if (isApplying) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(36.dp),
-                        color = GoldPrimary,
+                        color = MaterialTheme.colorScheme.secondary,
                         strokeWidth = 2.dp
                     )
                 } else {

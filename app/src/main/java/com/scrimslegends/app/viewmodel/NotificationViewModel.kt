@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 
 /**
  * Manages in-app notifications with settings-aware badge count.
@@ -43,8 +46,8 @@ class NotificationViewModel @Inject constructor(
     private var markAllAsReadJob: Job? = null
     private var realtimeJob: Job? = null
 
-    private val _notifications = MutableStateFlow<List<Notification>>(emptyList())
-    val notifications: StateFlow<List<Notification>> = _notifications.asStateFlow()
+    private val _notifications = MutableStateFlow<ImmutableList<Notification>>(persistentListOf())
+    val notifications: StateFlow<ImmutableList<Notification>> = _notifications.asStateFlow()
 
     private val _unreadCount = MutableStateFlow(0)
     val unreadCount: StateFlow<Int> = _unreadCount.asStateFlow()
@@ -140,7 +143,7 @@ class NotificationViewModel @Inject constructor(
                 val current = _notifications.value.toMutableList()
                 if (current.none { it.id == newNotification.id }) {
                     current.add(0, newNotification)
-                    _notifications.value = current
+                    _notifications.value = current.toPersistentList()
                     recomputeUnreadCount()
                     // Post a heads-up system notification (respects sound/vibration settings)
                     LocalNotificationHelper.show(
@@ -167,7 +170,7 @@ class NotificationViewModel @Inject constructor(
             _error.value = null
             repository.getNotificationsForUser(userId).collect { result ->
                 result.onSuccess { list ->
-                    _notifications.value = list
+                    _notifications.value = list.toPersistentList()
                     recomputeUnreadCount()
                     _isLoading.value = false
                     _isRefreshing.value = false
@@ -187,7 +190,7 @@ class NotificationViewModel @Inject constructor(
         val index = current.indexOfFirst { it.id == notificationId }
         if (index != -1) {
             current[index] = current[index].copy(isRead = true)
-            _notifications.value = current
+            _notifications.value = current.toPersistentList()
             recomputeUnreadCount()
         }
         viewModelScope.launch {

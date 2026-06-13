@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import android.net.Uri
 import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -191,7 +192,7 @@ fun PlayerFinderScreen(
                         icon = Icons.Default.Groups,
                         value = posts.size.toString(),
                         label = "players",
-                        tint = BluePrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     FinderStatPill(
@@ -205,7 +206,7 @@ fun PlayerFinderScreen(
                         icon = Icons.Default.FilterList,
                         value = filteredPosts.size.toString(),
                         label = "shown",
-                        tint = GoldPrimary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -229,7 +230,7 @@ fun PlayerFinderScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = "$activeFilterCount active",
-                                    color = BluePrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -247,7 +248,7 @@ fun PlayerFinderScreen(
                                     },
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                                 ) {
-                                    Text("Reset", color = BluePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Reset", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Icon(
@@ -280,7 +281,7 @@ fun PlayerFinderScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = appSurfaceColor(),
                             unfocusedContainerColor = appSurfaceColor(),
-                            focusedBorderColor = BluePrimary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = appBorderColor(),
                             focusedTextColor = appTextPrimaryColor(),
                             unfocusedTextColor = appTextPrimaryColor()
@@ -406,7 +407,7 @@ fun PlayerFinderScreen(
             ) {
                 if (isLoading && posts.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = GoldPrimary)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                     }
                 } else if (error != null && posts.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -417,7 +418,7 @@ fun PlayerFinderScreen(
                             Spacer(Modifier.height(8.dp))
                             Text(error, color = appTextSecondaryColor(), fontSize = 13.sp, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(16.dp))
-                            OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = BluePrimary) }
+                            OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.primary) }
                         }
                     }
                 } else if (filteredPosts.isEmpty()) {
@@ -499,7 +500,7 @@ fun PlayerFinderScreen(
                     }) { Text(stringResource(R.string.delete_action), color = ErrorRed) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel), color = MidGray) }
+                    TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             )
         }
@@ -524,7 +525,7 @@ fun PlayerFinderScreen(
                     .background(Color.Black.copy(alpha = 0.4f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = GoldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
             }
         }
 
@@ -564,7 +565,7 @@ private fun PlayerFinderPrimaryAction(
             )
             .border(
                 width = 1.dp,
-                color = if (hasPost) ErrorRed.copy(alpha = 0.35f) else BluePrimary.copy(alpha = 0.45f),
+                color = if (hasPost) ErrorRed.copy(alpha = 0.35f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
                 shape = shape
             )
             .clickable { if (hasPost) onDelete() else onPost() }
@@ -687,8 +688,6 @@ private fun PlayerCard(
         }
     }
 
-    // Online status indicator based on recent post time (< 1 hr)
-    val isOnline = System.currentTimeMillis() - post.createdAt < 3600_000
 
     var hasViewed by remember { mutableStateOf(false) }
 
@@ -750,20 +749,9 @@ private fun PlayerCard(
                                     text = post.playerName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                        }
-                        if (isOnline) {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .align(Alignment.BottomEnd)
-                                    .offset(x = (-2).dp, y = (-2).dp)
-                                    .clip(CircleShape)
-                                    .background(SuccessGreen)
-                                    .border(2.dp, appSurfaceColor(), CircleShape)
-                            )
                         }
                     }
 
@@ -782,13 +770,13 @@ private fun PlayerCard(
                                 Spacer(Modifier.width(6.dp))
                                 Icon(
                                     Icons.Default.Mic, stringResource(R.string.content_desc_post),
-                                    tint = BluePrimary, modifier = Modifier.size(16.dp)
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)
                                 )
                             }
                             Spacer(Modifier.weight(1f))
                             Text(
                                 text = timeAgo,
-                                color = TextTertiary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -825,11 +813,11 @@ private fun PlayerCard(
                         if (post.rank.isNotBlank()) {
                             Box(
                                 modifier = Modifier
-                                    .background(GoldPrimary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-                                    .border(1.dp, GoldPrimary.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
-                                Text(post.rank, color = GoldPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(post.rank, color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -848,7 +836,7 @@ private fun PlayerCard(
                             icon = Icons.Default.SportsEsports,
                             label = stringResource(R.string.games),
                             value = post.totalMatches.toString(),
-                            color = BluePrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
@@ -866,7 +854,7 @@ private fun PlayerCard(
                             icon = Icons.Default.EmojiEvents,
                             label = stringResource(R.string.ranked_wr),
                             value = post.rankedWinRate,
-                            color = GoldPrimary,
+                            color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
@@ -884,8 +872,8 @@ private fun PlayerCard(
                         onClick = onMessage,
                         modifier = Modifier.weight(1f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.5f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BluePrimary),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Message, null, modifier = Modifier.size(16.dp))
@@ -908,9 +896,9 @@ private fun PlayerCard(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.PersonAdd, null, tint = White, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.PersonAdd, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text(stringResource(R.string.invite_action), color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.invite_action), color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -928,20 +916,20 @@ private fun PlayerCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .background(BluePrimary.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
-                        .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Icon(
                         Icons.Default.Visibility,
                         contentDescription = stringResource(R.string.views),
-                        tint = BluePrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         text = post.viewCount.toString(),
-                        color = BluePrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -949,7 +937,7 @@ private fun PlayerCard(
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = if (expanded) "Hide profile" else "View profile",
-                    color = TextTertiary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -957,7 +945,7 @@ private fun PlayerCard(
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = if (expanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
-                    tint = TextTertiary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -994,7 +982,7 @@ private fun PlayerCard(
                                 icon = Icons.Default.Star,
                                 label = stringResource(R.string.pts_label),
                                 value = (if (post.pts >= 0) "+" else "") + post.pts.toString(),
-                                color = GoldPrimary,
+                                color = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -1068,9 +1056,9 @@ private fun PlayerCard(
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Visibility, null, tint = White, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Visibility, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.tap_to_view), color = White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.tap_to_view), color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -1125,7 +1113,7 @@ private fun PlayerCard(
                     Button(
                         onClick = { onInvite() },
                         modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.GroupAdd, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
@@ -1145,11 +1133,11 @@ private fun PlayerCard(
 private fun CityBadge(city: String) {
     Box(
         modifier = Modifier
-            .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-            .border(1.dp, BluePrimary.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
-        Text(city.uppercase(), color = BluePrimary, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+        Text(city.uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -1188,14 +1176,14 @@ private fun StatBadge(
 private fun HeroPill(hero: String) {
     Box(
         modifier = Modifier
-            .background(GoldPrimary.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-            .border(1.dp, GoldPrimary.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
+            .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Star, null, tint = GoldPrimary, modifier = Modifier.size(12.dp))
+            Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
-            Text(hero, color = GoldPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(hero, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -1298,7 +1286,7 @@ private fun CreatePostSheet(
                     .padding(top = 12.dp, bottom = 4.dp)
                     .width(40.dp)
                     .height(4.dp)
-                    .background(White.copy(alpha = 0.2f), CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), CircleShape)
             )
         }
     ) {
@@ -1340,12 +1328,12 @@ private fun CreatePostSheet(
                     val selected = city == c
                     Box(
                         modifier = Modifier
-                            .background(if (selected) BluePrimary.copy(alpha = 0.25f) else appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
-                            .border(1.dp, if (selected) BluePrimary else appBorderColor(), RoundedCornerShape(10.dp))
+                            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else appElevatedSurfaceColor(), RoundedCornerShape(10.dp))
+                            .border(1.dp, if (selected) MaterialTheme.colorScheme.primary else appBorderColor(), RoundedCornerShape(10.dp))
                             .clickable { city = c }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text(c, color = if (selected) BluePrimary else appTextSecondaryColor(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(c, color = if (selected) MaterialTheme.colorScheme.primary else appTextSecondaryColor(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1363,11 +1351,11 @@ private fun CreatePostSheet(
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Default.Tag, null, tint = appTextSecondaryColor()) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = appBorderColor(),
                     focusedTextColor = appTextPrimaryColor(),
                     unfocusedTextColor = appTextPrimaryColor(),
-                    cursorColor = GoldPrimary
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
@@ -1388,12 +1376,12 @@ private fun CreatePostSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BluePrimary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = appBorderColor(),
                         focusedTextColor = appTextPrimaryColor(),
                         unfocusedTextColor = appTextPrimaryColor(),
-                        focusedLabelColor = BluePrimary,
-                        cursorColor = BluePrimary
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary
                     )
                 )
                 OutlinedTextField(
@@ -1424,12 +1412,12 @@ private fun CreatePostSheet(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = appBorderColor(),
                     focusedTextColor = appTextPrimaryColor(),
                     unfocusedTextColor = appTextPrimaryColor(),
-                    focusedLabelColor = GoldPrimary,
-                    cursorColor = GoldPrimary
+                    focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
@@ -1444,13 +1432,13 @@ private fun CreatePostSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary) },
+                leadingIcon = { Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.secondary) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = appBorderColor(),
                     focusedTextColor = appTextPrimaryColor(),
                     unfocusedTextColor = appTextPrimaryColor(),
-                    cursorColor = GoldPrimary
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
@@ -1465,13 +1453,13 @@ private fun CreatePostSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Star, null, tint = GoldPrimary) },
+                leadingIcon = { Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.secondary) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = appBorderColor(),
                     focusedTextColor = appTextPrimaryColor(),
                     unfocusedTextColor = appTextPrimaryColor(),
-                    cursorColor = GoldPrimary
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
@@ -1501,7 +1489,7 @@ private fun CreatePostSheet(
                             .clickable { screenshotUri = null },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Close, null, tint = White, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                     }
                 }
             } else {
@@ -1516,7 +1504,7 @@ private fun CreatePostSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Image, null, tint = BluePrimary, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                         Spacer(Modifier.height(6.dp))
                         Text(stringResource(R.string.tap_upload_screenshot), color = appTextSecondaryColor(), fontSize = 13.sp)
                     }
@@ -1524,7 +1512,7 @@ private fun CreatePostSheet(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(R.string.image_content_warning),
-                    color = TextTertiary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontSize = 11.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -1540,7 +1528,7 @@ private fun CreatePostSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Mic, contentDescription = null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.use_microphone), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = appTextPrimaryColor())
                 }
@@ -1549,7 +1537,7 @@ private fun CreatePostSheet(
                     onCheckedChange = { useMic = it },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = White,
-                        checkedTrackColor = BluePrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
                         uncheckedThumbColor = appTextSecondaryColor(),
                         uncheckedTrackColor = appElevatedSurfaceColor()
                     )
@@ -1604,11 +1592,11 @@ private fun CreatePostSheet(
                 maxLines = 4,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BluePrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = appBorderColor(),
                     focusedTextColor = appTextPrimaryColor(),
                     unfocusedTextColor = appTextPrimaryColor(),
-                    cursorColor = BluePrimary
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -1694,13 +1682,13 @@ private fun CreatePostSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Brush.linearGradient(BlueGradient), RoundedCornerShape(16.dp)),
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isUploading) {
-                        CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(stringResource(R.string.post_profile), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = White)
+                        Text(stringResource(R.string.post_profile), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -1740,7 +1728,7 @@ private fun SocialInputField(
         singleLine = true,
         shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BluePrimary.copy(alpha = 0.5f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
             unfocusedBorderColor = appBorderColor(),
             focusedTextColor = appTextPrimaryColor(),
             unfocusedTextColor = appTextPrimaryColor()
@@ -1767,10 +1755,10 @@ private fun EmptyPlayerFinderState(
             Box(
                 modifier = Modifier
                     .size(90.dp)
-                    .background(BluePrimary.copy(alpha = 0.1f), RoundedCornerShape(24.dp)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.PersonSearch, contentDescription = null, tint = BluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.PersonSearch, contentDescription = null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(48.dp))
             }
             Spacer(Modifier.height(20.dp))
             Text(
@@ -1792,13 +1780,13 @@ private fun EmptyPlayerFinderState(
             Spacer(Modifier.height(24.dp))
             if (hasFilters) {
                 TextButton(onClick = onClearFilters) {
-                    Text(stringResource(R.string.reset_filters), color = BluePrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.reset_filters), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             } else if (!isTeamLeader) {
                 Button(
                     onClick = onPost,
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.height(48.dp)
                 ) {
                     Text(stringResource(R.string.create_post), fontWeight = FontWeight.SemiBold)
@@ -1860,13 +1848,13 @@ fun TeamSelectionDialog(
                         Icon(
                             Icons.Default.GroupOff,
                             contentDescription = null,
-                            tint = MidGray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = "You need to be a team leader",
-                            color = MidGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
                         )
                     }
@@ -1881,7 +1869,7 @@ fun TeamSelectionDialog(
                             onClick = { onTeamSelected(team) },
                             shape = RoundedCornerShape(14.dp),
                             color = appElevatedSurfaceColor(),
-                            border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.2f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -1894,7 +1882,7 @@ fun TeamSelectionDialog(
                                     modifier = Modifier
                                         .size(42.dp)
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Brush.linearGradient(BlueGradient)),
+                                        .background(MaterialTheme.colorScheme.primary),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (!team.logoUrl.isNullOrBlank()) {
@@ -1908,7 +1896,7 @@ fun TeamSelectionDialog(
                                         Icon(
                                             Icons.Default.Shield,
                                             contentDescription = null,
-                                            tint = White,
+                                            tint = MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -1924,13 +1912,13 @@ fun TeamSelectionDialog(
                                     Text(
                                         text = "${team.currentPlayerCount}/${team.maxPlayers} members",
                                         fontSize = 12.sp,
-                                        color = MidGray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Icon(
                                     Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = TextTertiary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

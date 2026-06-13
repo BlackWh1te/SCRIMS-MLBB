@@ -1,9 +1,12 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -104,14 +107,14 @@ fun TeamListScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = BluePrimary.copy(alpha = 0.2f),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = stringResource(R.string.find_teams),
-                                tint = BluePrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -140,14 +143,14 @@ fun TeamListScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = BluePrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(R.string.create_team),
-                                tint = White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -178,7 +181,7 @@ fun TeamListScreen(
                                     GradientButton(
                                         text = stringResource(R.string.create_team),
                                         onClick = onNavigateToCreateTeam,
-                                        gradient = GoldGradient
+                                        gradient = PremiumBlueGradient
                                     )
                                     Spacer(modifier = Modifier.height(10.dp))
                                     com.scrimslegends.app.ui.components.GhostButton(
@@ -241,11 +244,7 @@ fun TeamCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = if (isPressed) 2.dp else 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp)
-            )
+            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp))
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -265,14 +264,14 @@ fun TeamCard(
             Surface(
                 modifier = Modifier.size(56.dp),
                 shape = RoundedCornerShape(14.dp),
-                color = BluePrimary.copy(alpha = 0.15f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

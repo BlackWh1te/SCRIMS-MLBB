@@ -24,6 +24,7 @@ interface TeamRepositoryInterface {
     // ─── Team Application Methods ───
     suspend fun getOpenTeams(): Flow<Result<List<Team>>>
     suspend fun applyToTeam(teamId: String, applicantUserId: String, message: String? = null): Flow<Result<TeamApplication>>
+    suspend fun applyToTeamByInviteCode(inviteCode: String, applicantUserId: String, message: String? = null): Flow<Result<TeamApplication>>
     suspend fun getTeamApplications(teamId: String): Flow<Result<List<TeamApplication>>>
     suspend fun getMyApplications(userId: String): Flow<Result<List<TeamApplication>>>
     suspend fun acceptApplication(applicationId: String): Flow<Result<Team>>

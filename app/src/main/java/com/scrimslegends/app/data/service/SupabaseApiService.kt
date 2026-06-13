@@ -413,6 +413,17 @@ data class AchievementAuditLogDto(
 
 // ─── Message DTO ───
 
+data class SendMessageRpcRequest(
+    val p_conversation_id: String,
+    val p_content: String,
+    val p_client_message_id: String,
+    val p_type: String? = "text",
+    val p_image_url: String? = null,
+    val p_voice_url: String? = null,
+    val p_voice_duration: Int? = null,
+    val p_reply_to_id: String? = null
+)
+
 data class MessageDto(
     @SerializedName("id") val id: String? = null,              // null = DB auto-generates UUID
     @SerializedName("conversation_id") val conversationId: String = "",
@@ -885,11 +896,14 @@ interface SupabaseApiService {
         @Query("id") idFilter: String? = null,
         @Query("client_message_id") clientMessageId: String? = null,
         @Query("limit") limit: Int? = null,
-        @Header("Range") range: String = "0-199"
+        @Header("Range") range: String? = null
     ): Response<List<MessageDto>>
 
     @POST("messages")
     suspend fun sendMessage(@Body message: MessageDto): Response<List<MessageDto>>
+
+    @POST("rpc/send_message_secure")
+    suspend fun rpcSendMessageSecure(@Body request: SendMessageRpcRequest): Response<String>
 
     @POST("conversations")
     suspend fun createConversation(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<List<ConversationDto>>
@@ -941,6 +955,7 @@ interface SupabaseApiService {
     // ─── RPC / Custom Functions ───
 
     // P2-1: get_team_stats RPC — must exist in DB schema or callers must be removed
+    @Headers("Accept: application/vnd.pgrst.object+json")
     @POST("rpc/get_team_stats")
     suspend fun getTeamStats(@Body params: Map<String, String>): Response<Map<String, @JvmSuppressWildcards Any>>
 
@@ -1257,6 +1272,17 @@ interface SupabaseApiService {
         @Query("order") order: String = "created_at.desc",
         @Header("Range") range: String = "0-99"
     ): Response<List<Map<String, @JvmSuppressWildcards Any?>>>
+
+    // ─── FCM RPCs ───
+
+    @POST("rpc/upsert_fcm_token")
+    suspend fun rpcUpsertFcmToken(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
+
+    @POST("rpc/delete_fcm_token")
+    suspend fun rpcDeleteFcmToken(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
+
+    @POST("rpc/send_message_secure")
+    suspend fun rpcSendMessageSecure(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
 }
 
 // ─── Ban Appeal DTO ───

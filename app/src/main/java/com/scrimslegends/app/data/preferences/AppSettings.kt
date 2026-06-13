@@ -25,7 +25,7 @@ class AppSettings(private val context: Context) {
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         val LANGUAGE_CODE = stringPreferencesKey("language_code")
-        val DARK_MODE = booleanPreferencesKey("dark_mode")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
 
         // LFG post views tracking (one view per user per post)
         val VIEWED_POSTS = stringPreferencesKey("viewed_posts")
@@ -39,7 +39,7 @@ class AppSettings(private val context: Context) {
     val soundEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.SOUND_ENABLED] ?: true }
     val vibrationEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.VIBRATION_ENABLED] ?: true }
     val languageCode: Flow<String> = context.settingsDataStore.data.map { "en" }
-    val darkMode: Flow<Boolean> = context.settingsDataStore.data.map { it[Keys.DARK_MODE] ?: true }
+    val themeMode: Flow<String> = context.settingsDataStore.data.map { it[Keys.THEME_MODE] ?: "system" }
 
     suspend fun setNotifications(enabled: Boolean) {
         context.settingsDataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = enabled }
@@ -61,14 +61,14 @@ class AppSettings(private val context: Context) {
         context.settingsDataStore.edit { it[Keys.VIBRATION_ENABLED] = enabled }
     }
 
+    suspend fun setThemeMode(mode: String) {
+        context.settingsDataStore.edit { it[Keys.THEME_MODE] = mode }
+    }
+
     suspend fun setLanguageCode(code: String) {
         // Product language is locked to English for now.
         setLanguageCodeSync("en")
         context.settingsDataStore.edit { it[Keys.LANGUAGE_CODE] = "en" }
-    }
-
-    suspend fun setDarkMode(enabled: Boolean) {
-        context.settingsDataStore.edit { it[Keys.DARK_MODE] = enabled }
     }
 
     // Synchronous methods for critical initialization paths (e.g., attachBaseContext)

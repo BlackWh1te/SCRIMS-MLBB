@@ -13,6 +13,10 @@ class MessageRepository : MessageRepositoryInterface {
 
     private val conversations = mutableListOf<Conversation>()
 
+    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<Message>> {
+        return flow { emit(androidx.paging.PagingData.empty()) }
+    }
+
     init {
         // Mock conversation for demo
         val convId = java.util.UUID.randomUUID().toString()
@@ -137,8 +141,6 @@ class MessageRepository : MessageRepositoryInterface {
 
     override suspend fun sendMessage(
         conversationId: String,
-        senderId: String,
-        senderName: String,
         content: String,
         type: MessageType,
         clientMessageId: String,
@@ -160,8 +162,8 @@ class MessageRepository : MessageRepositoryInterface {
         val message = Message(
             id = java.util.UUID.randomUUID().toString(),
             conversationId = conversationId,
-            senderId = senderId,
-            senderName = senderName,
+            senderId = "mock_user",
+            senderName = "Mock User",
             content = content,
             type = type,
             imageUrl = imageUrl,
@@ -194,11 +196,9 @@ class MessageRepository : MessageRepositoryInterface {
 
     override suspend fun clearChatHistory(conversationId: String): Result<Unit> = Result.success(Unit)
 
-    override suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int): Result<List<Message>> =
-        Result.success(emptyList())
-
     override suspend fun syncOutbox(): Result<Int> = Result.success(0)
     override fun unsubscribeFromMessages(conversationId: String) {}
+    override fun cleanupConversation(conversationId: String) {}
     override fun observeConnectionState(): Flow<ChatConnectionState> = flow { emit(ChatConnectionState.CONNECTED) }
 
     override suspend fun sendApplyMessage(
@@ -249,8 +249,6 @@ class MessageRepository : MessageRepositoryInterface {
         // Send system message
         sendMessage(
             conversationId = convId,
-            senderId = "system",
-            senderName = "System",
             content = "$applicantTeamName has applied to join your scrim.",
             type = MessageType.SYSTEM,
             clientMessageId = "mock_${java.util.UUID.randomUUID()}"
@@ -259,8 +257,6 @@ class MessageRepository : MessageRepositoryInterface {
         // Send apply info message with team details
         sendMessage(
             conversationId = convId,
-            senderId = applicantId,
-            senderName = applicantName,
             content = "Team ID: $applicantTeamId | Team Name: $applicantTeamName | Players: $teamPlayerCount/$teamMaxPlayers",
             type = MessageType.APPLY,
             clientMessageId = "mock_${java.util.UUID.randomUUID()}"
@@ -359,5 +355,22 @@ class MessageRepository : MessageRepositoryInterface {
         )
         conversations.add(newConv)
         emit(Result.success(newConv))
+    }
+
+    override suspend fun blockUser(blockerId: String, blockedId: String): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun unblockUser(blockerId: String, blockedId: String): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun checkBlockStatus(user1Id: String, user2Id: String): Result<com.scrimslegends.app.data.model.BlockStatus> {
+        return Result.success(
+            com.scrimslegends.app.data.model.BlockStatus(
+                isBlockedByCurrentUser = false,
+                isBlockedByOtherUser = false
+            )
+        )
     }
 }

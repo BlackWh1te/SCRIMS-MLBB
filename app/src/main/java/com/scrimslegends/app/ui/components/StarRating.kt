@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,9 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.scrimslegends.app.ui.theme.GoldPrimary
-import com.scrimslegends.app.ui.theme.MidGray
-
 @Composable
 fun StarRatingBar(
     rating: Int,
@@ -33,7 +31,7 @@ fun StarRatingBar(
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = "$starValue stars",
-                tint = if (isFilled) GoldPrimary else MidGray.copy(alpha = 0.3f),
+                tint = if (isFilled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 modifier = Modifier
                     .size(starSize.dp)
                     .clickable { onRatingChanged(starValue) }

@@ -176,7 +176,6 @@
     <string name="approve">批准</string>
     <string name="reject">拒绝</string>
     <string name="chat_opens_in">聊天开启倒计时</string>
-    <string name="chat_unlocks_2h">比赛前2小时解锁聊天</string>
     <string name="report_result">报告结果</string>
     <string name="match_label">比赛</string>
     <string name="who_won">谁赢了？</string>

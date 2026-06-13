@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -52,7 +53,7 @@ fun ReportDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(
@@ -85,12 +86,12 @@ fun ReportDialog(
                             text = stringResource(R.string.report_player),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = targetName,
                             fontSize = 14.sp,
-                            color = LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }
@@ -102,7 +103,7 @@ fun ReportDialog(
                     text = stringResource(R.string.reason),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -111,7 +112,7 @@ fun ReportDialog(
                     Surface(
                         onClick = { selectedReason = reason },
                         shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) ErrorRed.copy(alpha = 0.15f) else White.copy(alpha = 0.05f),
+                        color = if (isSelected) ErrorRed.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -136,7 +137,7 @@ fun ReportDialog(
                             Text(
                                 text = reason,
                                 fontSize = 14.sp,
-                                color = if (isSelected) White else LightGray.copy(alpha = 0.7f),
+                                color = if (isSelected) White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.7f),
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                             )
                         }
@@ -151,19 +152,19 @@ fun ReportDialog(
                     text = stringResource(R.string.details_optional),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    placeholder = { Text(stringResource(R.string.describe_what_happened), color = LightGray.copy(alpha = 0.5f)) },
+                    placeholder = { Text(stringResource(R.string.describe_what_happened), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.5f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = ErrorRed,
-                        unfocusedBorderColor = White.copy(alpha = 0.2f),
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(12.dp),
                     maxLines = 4
@@ -177,7 +178,7 @@ fun ReportDialog(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.cancel), color = LightGray)
+                        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     GradientButton(

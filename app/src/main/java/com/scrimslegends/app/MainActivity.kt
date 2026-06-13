@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.scrimslegends.app.data.localization.LocaleManager
@@ -22,9 +23,10 @@ import com.scrimslegends.app.ui.theme.ScrimsLegendsTheme
 import com.scrimslegends.app.viewmodel.AuthViewModel
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.scrimslegends.app.data.service.OtpApiClient
 
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -36,7 +38,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestPostNotificationsPermissionIfNeeded()
 
         lifecycleScope.launch {
             val settings = AppSettings(this@MainActivity)
@@ -49,20 +50,21 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Wake up the Render backend asynchronously
-        lifecycleScope.launch {
-            try {
-                OtpApiClient.service.wakeUp()
-            } catch (e: Exception) {
-                // Ignore exceptions, this is just a ping
-            }
-        }
-
         setContent {
-            val appSettings = remember { AppSettings(this@MainActivity) }
-            val darkMode by appSettings.darkMode.collectAsState(initial = true)
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(800)
+                requestPostNotificationsPermissionIfNeeded()
+            }
 
-            ScrimsLegendsTheme(darkTheme = darkMode) {
+            val appSettings = remember { AppSettings(this@MainActivity) }
+            val themeMode by appSettings.themeMode.collectAsStateWithLifecycle(initialValue = "system")
+            val darkTheme = when (themeMode) {
+                "dark" -> true
+                "light" -> false
+                else -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
+
+            ScrimsLegendsTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

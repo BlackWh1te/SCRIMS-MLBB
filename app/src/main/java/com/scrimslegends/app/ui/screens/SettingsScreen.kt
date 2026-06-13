@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -49,28 +50,34 @@ fun SettingsScreen(
     soundEnabled: Boolean = true,
     vibrationEnabled: Boolean = true,
     languageCode: String = "en",
-    darkMode: Boolean = true,
+    themeMode: String = "system",
     onToggleNotifications: (Boolean) -> Unit = {},
     onToggleMatchNotifications: (Boolean) -> Unit = {},
     onToggleMessageNotifications: (Boolean) -> Unit = {},
     onToggleSound: (Boolean) -> Unit = {},
     onToggleVibration: (Boolean) -> Unit = {},
     onSetLanguage: (String) -> Unit = {},
-    onToggleDarkMode: (Boolean) -> Unit = {},
+    onSetThemeMode: (String) -> Unit = {},
     onLogout: () -> Unit = {},
     appVersion: String = "1.0.0"
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val responsive = rememberResponsiveMetrics()
+    val isDark = when(themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> androidx.compose.foundation.isSystemInDarkTheme()
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Background Glow Orbs ──────────────────────────────────
         Box(
@@ -80,7 +87,7 @@ fun SettingsScreen(
                 .offset(x = 150.dp, y = 150.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.08f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.08f else 0.05f), Color.Transparent)
                     )
                 )
         )
@@ -103,7 +110,7 @@ fun SettingsScreen(
 
                         Text(
                             text = stringResource(R.string.settings),
-                            style = iOSTitle2.copy(color = TextPrimary),
+                            style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onBackground),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
@@ -192,12 +199,17 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(12.dp))
                 PremiumFadeIn(delayMillis = 375) {
-                    SettingsToggleCard(
+                    val themeDisplayName = when(themeMode) {
+                        "dark" -> "Dark"
+                        "light" -> "Light"
+                        else -> "System Default"
+                    }
+                    SettingsValueCard(
                         icon = Icons.Default.DarkMode,
-                        title = stringResource(R.string.dark_mode),
-                        subtitle = stringResource(R.string.dark_mode_sub),
-                        checked = darkMode,
-                        onCheckedChange = onToggleDarkMode
+                        title = "App Theme",
+                        subtitle = "Select appearance mode",
+                        value = themeDisplayName,
+                        onClick = { showThemeDialog = true }
                     )
                 }
                 Spacer(Modifier.height(10.dp))
@@ -300,7 +312,7 @@ fun SettingsScreen(
 
                 Text(
                     text = stringResource(R.string.version_label, appVersion),
-                    style = iOSFootnote.copy(color = TextTertiary),
+                    style = iOSFootnote.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)),
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 40.dp)
                 )
             }
@@ -310,6 +322,17 @@ fun SettingsScreen(
     }
 
     // ── Dialogs ───────────────────────────────────────────────────
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentMode = themeMode,
+            onDismiss = { showThemeDialog = false },
+            onSelect = { mode ->
+                showThemeDialog = false
+                onSetThemeMode(mode)
+            }
+        )
+    }
+
     if (showLanguageDialog) {
         LanguageSelectionDialog(
             currentCode = languageCode,
@@ -345,6 +368,59 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun ThemeSelectionDialog(
+    currentMode: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf(
+        "system" to "System Default",
+        "light" to "Light",
+        "dark" to "Dark"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = appSurfaceColor(),
+        modifier = Modifier.border(1.dp, appBorderColor(), RoundedCornerShape(28.dp)),
+        title = { Text("App Theme", style = iOSTitle2.copy(color = appTextPrimaryColor())) },
+        text = {
+            Column {
+                options.forEach { (mode, displayName) ->
+                    val isSelected = mode == currentMode
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(mode) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            displayName,
+                            style = iOSBody.copy(
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else appTextPrimaryColor(),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                        if (isSelected) {
+                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), color = appTextSecondaryColor(), fontWeight = FontWeight.Medium)
+            }
+        }
+    )
+}
+
+@Composable
 private fun PremiumConfirmDialog(
     title: String,
     message: String,
@@ -355,10 +431,10 @@ private fun PremiumConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceCard,
-        modifier = Modifier.border(1.dp, GlassBorder, RoundedCornerShape(28.dp)),
-        title = { Text(title, style = iOSTitle2.copy(color = TextPrimary)) },
-        text = { Text(message, style = iOSBody.copy(color = TextSecondary)) },
+        containerColor = appSurfaceColor(),
+        modifier = Modifier.border(1.dp, appBorderColor(), RoundedCornerShape(28.dp)),
+        title = { Text(title, style = iOSTitle2.copy(color = appTextPrimaryColor())) },
+        text = { Text(message, style = iOSBody.copy(color = appTextSecondaryColor())) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(confirmText, style = iOSHeadline.copy(color = confirmColor))
@@ -366,7 +442,7 @@ private fun PremiumConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel), style = iOSHeadline.copy(color = TextTertiary))
+                Text(stringResource(R.string.cancel), style = iOSHeadline.copy(color = appTextSecondaryColor()))
             }
         },
         shape = RoundedCornerShape(28.dp)
@@ -381,11 +457,11 @@ private fun LanguageSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceCard,
-        modifier = Modifier.border(1.dp, GlassBorder, RoundedCornerShape(28.dp)),
-        title = { Text(stringResource(R.string.select_language), style = iOSTitle2.copy(color = TextPrimary)) },
+        containerColor = appSurfaceColor(),
+        modifier = Modifier.border(1.dp, appBorderColor(), RoundedCornerShape(28.dp)),
+        title = { Text(stringResource(R.string.select_language), style = iOSTitle2.copy(color = appTextPrimaryColor())) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Language.values().forEach { lang ->
                     val isSelected = lang.code == currentCode
                     Row(
@@ -402,13 +478,13 @@ private fun LanguageSelectionDialog(
                             Text(
                                 lang.displayName,
                                 style = iOSBody.copy(
-                                    color = if (isSelected) GoldPrimary else TextPrimary,
+                                    color = if (isSelected) MaterialTheme.colorScheme.secondary else appTextPrimaryColor(),
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             )
                         }
                         if (isSelected) {
-                            Icon(Icons.Default.Check, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -417,7 +493,7 @@ private fun LanguageSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel), style = iOSHeadline.copy(color = TextTertiary))
+                Text(stringResource(R.string.cancel), style = iOSHeadline.copy(color = appTextSecondaryColor()))
             }
         },
         shape = RoundedCornerShape(28.dp)
@@ -428,7 +504,7 @@ private fun LanguageSelectionDialog(
 private fun SettingsSectionTitle(title: String) {
     Text(
         text = title.uppercase(),
-        style = iOSFootnote.copy(color = TextTertiary, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+        style = iOSFootnote.copy(color = appTextSecondaryColor(), fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
     )
 }
@@ -443,13 +519,18 @@ private fun SettingsToggleCard(
     onCheckedChange: (Boolean) -> Unit
 ) {
     val responsive = rememberResponsiveMetrics()
+    val cardColor = appSurfaceColor()
+    val elevatedColor = appElevatedSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -457,10 +538,10 @@ private fun SettingsToggleCard(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (enabled) BluePrimary.copy(alpha = 0.1f) else SurfaceOverlay),
+                    .background(if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else elevatedColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = if (enabled) BluePrimary else TextTertiary, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(
@@ -470,13 +551,13 @@ private fun SettingsToggleCard(
             ) {
                 Text(
                     title,
-                    style = iOSHeadline.copy(color = if (enabled) TextPrimary else TextTertiary),
+                    style = iOSHeadline.copy(color = if (enabled) primaryText else secondaryText.copy(alpha = 0.6f)),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     subtitle,
-                    style = iOSFootnote.copy(color = TextSecondary),
+                    style = iOSFootnote.copy(color = secondaryText),
                     maxLines = if (responsive.isCompact) 1 else 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -486,10 +567,10 @@ private fun SettingsToggleCard(
                 onCheckedChange = onCheckedChange,
                 enabled = enabled,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = GoldPrimary,
-                    checkedTrackColor = GoldPrimary.copy(alpha = 0.3f),
-                    uncheckedThumbColor = TextTertiary,
-                    uncheckedTrackColor = SurfaceOverlay
+                    checkedThumbColor = MaterialTheme.colorScheme.secondary,
+                    checkedTrackColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                    uncheckedThumbColor = secondaryText,
+                    uncheckedTrackColor = elevatedColor
                 )
             )
         }
@@ -505,13 +586,17 @@ private fun SettingsValueCard(
     onClick: () -> Unit
 ) {
     val responsive = rememberResponsiveMetrics()
+    val cardColor = appSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
@@ -520,10 +605,10 @@ private fun SettingsValueCard(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(BluePrimary.copy(alpha = 0.1f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(
@@ -533,26 +618,26 @@ private fun SettingsValueCard(
             ) {
                 Text(
                     title,
-                    style = iOSHeadline.copy(color = TextPrimary),
+                    style = iOSHeadline.copy(color = primaryText),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     subtitle,
-                    style = iOSFootnote.copy(color = TextSecondary),
+                    style = iOSFootnote.copy(color = secondaryText),
                     maxLines = if (responsive.isCompact) 1 else 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Text(
                 value,
-                style = iOSCallout.copy(color = GoldPrimary, fontWeight = FontWeight.Bold),
+                style = iOSCallout.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = if (responsive.isCompact) 96.dp else 150.dp)
             )
             Spacer(Modifier.width(8.dp))
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.ChevronRight, null, tint = secondaryText, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -562,17 +647,21 @@ private fun SettingsActionCard(
     icon: ImageVector,
     title: String,
     subtitle: String = "",
-    color: Color = BluePrimary,
+    color: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
     val responsive = rememberResponsiveMetrics()
+    val cardColor = appSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
@@ -590,20 +679,20 @@ private fun SettingsActionCard(
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = iOSHeadline.copy(color = TextPrimary),
+                    style = iOSHeadline.copy(color = primaryText),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (subtitle.isNotBlank()) {
                     Text(
                         subtitle,
-                        style = iOSFootnote.copy(color = TextSecondary),
+                        style = iOSFootnote.copy(color = secondaryText),
                         maxLines = if (responsive.isCompact) 1 else 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.ChevronRight, null, tint = secondaryText, modifier = Modifier.size(18.dp))
         }
     }
 }

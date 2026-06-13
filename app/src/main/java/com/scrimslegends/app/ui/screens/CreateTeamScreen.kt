@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -111,6 +112,7 @@ fun CreateTeamScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .imePadding()
                     .padding(horizontal = 20.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -122,18 +124,9 @@ fun CreateTeamScreen(
                         modifier = Modifier
                             .size(110.dp)
                             .scale(pulseScale)
-                            .shadow(12.dp, CircleShape, spotColor = BluePrimary.copy(alpha = 0.4f))
                             .clip(CircleShape)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        BluePrimary.copy(alpha = 0.25f),
-                                        PurplePrimary.copy(alpha = 0.15f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .border(2.dp, BluePrimary.copy(alpha = 0.4f), CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                            .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -157,14 +150,14 @@ fun CreateTeamScreen(
                                 Icon(
                                     Icons.Default.AddAPhoto,
                                     contentDescription = stringResource(R.string.content_desc_upload_logo),
-                                    tint = BluePrimary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     "LOGO",
                                     style = iOSCaption2.copy(
-                                        color = BluePrimary,
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 )
@@ -179,7 +172,7 @@ fun CreateTeamScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
+                            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                         colors = CardDefaults.cardColors(containerColor = appSurface),
                         shape = RoundedCornerShape(20.dp)
                     ) {
@@ -191,7 +184,7 @@ fun CreateTeamScreen(
                             Text(
                                 "TEAM DETAILS",
                                 style = iOSCaption1.copy(
-                                    color = GoldPrimary,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.5.sp
                                 )
@@ -204,11 +197,11 @@ fun CreateTeamScreen(
                                 label = { Text("Team Name *", color = appTextSecondary) },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GoldPrimary,
+                                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
                                     unfocusedBorderColor = appBorder,
-                                    focusedLabelColor = GoldPrimary,
+                                    focusedLabelColor = MaterialTheme.colorScheme.secondary,
                                     unfocusedLabelColor = appTextSecondary,
-                                    cursorColor = GoldPrimary,
+                                    cursorColor = MaterialTheme.colorScheme.secondary,
                                     focusedTextColor = appTextPrimary,
                                     unfocusedTextColor = appTextPrimary,
                                     focusedContainerColor = appElevatedSurface,
@@ -216,8 +209,9 @@ fun CreateTeamScreen(
                                 ),
                                 shape = RoundedCornerShape(14.dp),
                                 singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                                 leadingIcon = {
-                                    Icon(Icons.Default.Shield, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Shield, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                                 }
                             )
 
@@ -230,11 +224,11 @@ fun CreateTeamScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BluePrimary,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = appBorder,
-                                    focusedLabelColor = BluePrimary,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
                                     unfocusedLabelColor = appTextSecondary,
-                                    cursorColor = BluePrimary,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
                                     focusedTextColor = appTextPrimary,
                                     unfocusedTextColor = appTextPrimary,
                                     focusedContainerColor = appElevatedSurface,
@@ -242,8 +236,9 @@ fun CreateTeamScreen(
                                 ),
                                 shape = RoundedCornerShape(14.dp),
                                 maxLines = 3,
+                                keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                                 leadingIcon = {
-                                    Icon(Icons.Default.Description, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 }
                             )
 
@@ -304,7 +299,7 @@ fun CreateTeamScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+                            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
                         colors = CardDefaults.cardColors(containerColor = appSurface),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -358,7 +353,7 @@ fun CreateTeamScreen(
                                 else -> { localError = ""; onCreateTeam(teamName, selectedLogoUri, isOpenForApplications) }
                             }
                         },
-                        gradient = GoldGradient,
+                        gradient = PremiumBlueGradient,
                         enabled = !isLoading,
                         isLoading = isLoading,
                         modifier = Modifier

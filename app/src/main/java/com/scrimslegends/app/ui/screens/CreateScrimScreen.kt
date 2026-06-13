@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -57,8 +58,51 @@ fun CreateScrimScreen(
         description: String,
         currentPlayers: Int,
         selectedPlayerIds: List<String>
-    ) -> Unit
+    ) -> Unit,
+    isLoading: Boolean = false
 ) {
+    // P0-4: Guard against empty teams list — show error state instead of crash
+    if (teams.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(brush = heroGradientBrush()),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = WarningOrange,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.no_team_warning),
+                    style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.create_team_first_hint),
+                    style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                GradientButton(
+                    text = stringResource(R.string.go_back),
+                    onClick = onNavigateBack,
+                    gradient = PremiumBlueGradient,
+                    height = 48.dp
+                )
+            }
+        }
+        return
+    }
+
     // Team selection state
     var selectedTeamIndex by remember { mutableIntStateOf(0) }
     val selectedTeam = teams.getOrElse(selectedTeamIndex) { teams.firstOrNull() }
@@ -143,7 +187,7 @@ fun CreateScrimScreen(
                     )
                     Text(
                         text = stringResource(R.string.post_scrim),
-                        style = iOSTitle3.copy(color = White, fontWeight = FontWeight.Bold)
+                        style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.width(44.dp))
                 }
@@ -153,6 +197,7 @@ fun CreateScrimScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .imePadding()
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 100.dp)
@@ -162,8 +207,8 @@ fun CreateScrimScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SurfaceCard)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
                             .then(
                                 if (teams.size > 1) Modifier.clickable { showTeamPicker = true }
                                 else Modifier
@@ -174,29 +219,28 @@ fun CreateScrimScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .background(
-                                    brush = Brush.verticalGradient(colors = listOf(BluePrimary, Color(0xFF0A5A9F))),
-                                    shape = RoundedCornerShape(10.dp)
-                                ),
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = teamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = White
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.posting_as),
-                                style = iOSCaption1.copy(color = TextSecondary)
+                                style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = teamName,
-                                    style = iOSHeadline.copy(color = TextPrimary),
+                                    style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface),
                                     maxLines = 1,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
@@ -205,7 +249,7 @@ fun CreateScrimScreen(
                                     Icon(
                                         Icons.Default.SwapHoriz,
                                         contentDescription = stringResource(R.string.content_desc_switch_team),
-                                        tint = BluePrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -246,8 +290,8 @@ fun CreateScrimScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SurfaceCard)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
                             .clickable { showPlayerSelectionDialog = true }
                             .padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
@@ -260,15 +304,14 @@ fun CreateScrimScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(
-                                            brush = Brush.verticalGradient(GoldGradient),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ),
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f))
+                                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         Icons.Default.HowToReg, null,
-                                        tint = DarkBlue,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -276,7 +319,7 @@ fun CreateScrimScreen(
                                 Column {
                                     Text(
                                         text = stringResource(R.string.select_roster),
-                                        style = iOSHeadline.copy(color = TextPrimary)
+                                        style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                                     )
                                     Text(
                                         text = if (activePlayerCount >= 5) {
@@ -292,7 +335,7 @@ fun CreateScrimScreen(
                             }
                             Icon(
                                 Icons.Default.ChevronRight, null,
-                                tint = TextTertiary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -308,14 +351,14 @@ fun CreateScrimScreen(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(BluePrimary.copy(alpha = 0.2f)),
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = BluePrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -323,7 +366,7 @@ fun CreateScrimScreen(
                                     Text(
                                         "+${activePlayerCount - 7}",
                                         fontSize = 11.sp,
-                                        color = TextTertiary
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                     )
                                 }
                             }
@@ -337,7 +380,7 @@ fun CreateScrimScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(SurfaceCard)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(16.dp)
                     ) {
 
@@ -354,7 +397,7 @@ fun CreateScrimScreen(
                                     text = mode.displayName,
                                     selected = selectedGameMode == mode,
                                     onClick = { selectedGameMode = mode },
-                                    selectedColor = BluePrimary
+                                    selectedColor = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -374,7 +417,7 @@ fun CreateScrimScreen(
                                     text = region.displayName,
                                     selected = selectedRegion == region,
                                     onClick = { selectedRegion = region },
-                                    selectedColor = GoldPrimary
+                                    selectedColor = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -414,7 +457,7 @@ fun CreateScrimScreen(
                                     text = stringResource(R.string.bo_format, bestOf.games),
                                     selected = selectedBestOf == bestOf,
                                     onClick = { selectedBestOf = bestOf },
-                                    selectedColor = GoldPrimary
+                                    selectedColor = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -439,16 +482,16 @@ fun CreateScrimScreen(
                                     text = months[selectedMonth],
                                     selected = true,
                                     onClick = { monthExpanded = true },
-                                    selectedColor = BluePrimary
+                                    selectedColor = MaterialTheme.colorScheme.primary
                                 )
                                 DropdownMenu(
                                     expanded = monthExpanded,
                                     onDismissRequest = { monthExpanded = false },
-                                    modifier = Modifier.background(DarkNavy)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 ) {
                                     months.forEachIndexed { index, month ->
                                         DropdownMenuItem(
-                                            text = { Text(month, color = White) },
+                                            text = { Text(month, color = MaterialTheme.colorScheme.onSurface) },
                                             onClick = { selectedMonth = index; monthExpanded = false }
                                         )
                                     }
@@ -462,16 +505,16 @@ fun CreateScrimScreen(
                                     text = selectedDay.toString(),
                                     selected = true,
                                     onClick = { dayExpanded = true },
-                                    selectedColor = BluePrimary
+                                    selectedColor = MaterialTheme.colorScheme.primary
                                 )
                                 DropdownMenu(
                                     expanded = dayExpanded,
                                     onDismissRequest = { dayExpanded = false },
-                                    modifier = Modifier.background(DarkNavy)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 ) {
                                     (1..maxDay).forEach { day ->
                                         DropdownMenuItem(
-                                            text = { Text(day.toString(), color = White) },
+                                            text = { Text(day.toString(), color = MaterialTheme.colorScheme.onSurface) },
                                             onClick = { selectedDay = day; dayExpanded = false }
                                         )
                                     }
@@ -485,16 +528,16 @@ fun CreateScrimScreen(
                                     text = selectedYear.toString(),
                                     selected = true,
                                     onClick = { yearExpanded = true },
-                                    selectedColor = BluePrimary
+                                    selectedColor = MaterialTheme.colorScheme.primary
                                 )
                                 DropdownMenu(
                                     expanded = yearExpanded,
                                     onDismissRequest = { yearExpanded = false },
-                                    modifier = Modifier.background(DarkNavy)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 ) {
                                     availableYears.forEachIndexed { index, year ->
                                         DropdownMenuItem(
-                                            text = { Text(year.toString(), color = White) },
+                                            text = { Text(year.toString(), color = MaterialTheme.colorScheme.onSurface) },
                                             onClick = { selectedYearIndex = index; yearExpanded = false }
                                         )
                                     }
@@ -517,24 +560,24 @@ fun CreateScrimScreen(
                                     text = String.format("%02d", selectedHour) + "h",
                                     selected = true,
                                     onClick = { hourExpanded = true },
-                                    selectedColor = GoldPrimary,
+                                    selectedColor = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 DropdownMenu(
                                     expanded = hourExpanded,
                                     onDismissRequest = { hourExpanded = false },
-                                    modifier = Modifier.background(DarkNavy)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 ) {
                                     (0..23).forEach { hour ->
                                         DropdownMenuItem(
-                                            text = { Text(String.format("%02d", hour), color = White) },
+                                            text = { Text(String.format("%02d", hour), color = MaterialTheme.colorScheme.onSurface) },
                                             onClick = { selectedHour = hour; hourExpanded = false }
                                         )
                                     }
                                 }
                             }
 
-                            Text(":", color = TextSecondary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(":", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
                             // Minute
                             var minuteExpanded by remember { mutableStateOf(false) }
@@ -543,17 +586,17 @@ fun CreateScrimScreen(
                                     text = String.format("%02d", selectedMinute),
                                     selected = true,
                                     onClick = { minuteExpanded = true },
-                                    selectedColor = GoldPrimary,
+                                    selectedColor = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 DropdownMenu(
                                     expanded = minuteExpanded,
                                     onDismissRequest = { minuteExpanded = false },
-                                    modifier = Modifier.background(DarkNavy)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 ) {
                                     listOf(0, 15, 30, 45).forEach { minute ->
                                         DropdownMenuItem(
-                                            text = { Text(String.format("%02d", minute), color = White) },
+                                            text = { Text(String.format("%02d", minute), color = MaterialTheme.colorScheme.onSurface) },
                                             onClick = { selectedMinute = minute; minuteExpanded = false }
                                         )
                                     }
@@ -567,13 +610,13 @@ fun CreateScrimScreen(
                                 modifier = Modifier
                                     .weight(1.2f)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(BluePrimary.copy(alpha = 0.12f))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                                     .padding(horizontal = 8.dp, vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = selectedRegion.utcOffset,
-                                    style = iOSCallout.copy(color = BluePrimary, fontWeight = FontWeight.Bold)
+                                    style = iOSCallout.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 )
                             }
                         }
@@ -583,7 +626,7 @@ fun CreateScrimScreen(
                         // Summary line
                         Text(
                             text = "${months[selectedMonth]} $selectedDay, $selectedYear at ${String.format("%02d", selectedHour)}:${String.format("%02d", selectedMinute)} ${selectedRegion.utcOffset}",
-                            style = iOSCaption1.copy(color = TextSecondary)
+                            style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
                 }
@@ -596,23 +639,23 @@ fun CreateScrimScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(SurfaceCard)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(16.dp)
                     ) {
                         FormSectionLabel(stringResource(R.string.description_optional))
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
-                            placeholder = { Text(stringResource(R.string.add_scrim_details_hint), color = MidGray) },
+                            placeholder = { Text(stringResource(R.string.add_scrim_details_hint), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoldPrimary,
-                                unfocusedBorderColor = White.copy(alpha = 0.3f),
-                                cursorColor = GoldPrimary,
-                                focusedTextColor = White,
-                                unfocusedTextColor = White,
-                                focusedContainerColor = White.copy(alpha = 0.08f),
-                                unfocusedContainerColor = White.copy(alpha = 0.05f)
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             minLines = 2,
@@ -677,31 +720,37 @@ fun CreateScrimScreen(
                     scheduledTime > now + 30L * 24 * 60 * 60 * 1000L -> R.string.scrim_time_max_advance
                     else -> 0
                 }
-                val canPost = activePlayerCount >= 5 && timeErrorRes == 0
+                val canPost = activePlayerCount >= 5 && timeErrorRes == 0 && !isLoading
                 val timeErrorText = if (timeErrorRes != 0) stringResource(timeErrorRes) else ""
 
                 AnimatedEntrance(delayMillis = 280) {
-                    GradientButton(
-                        text = stringResource(R.string.post_scrim),
-                        onClick = {
-                            if (activePlayerCount < 5) {
-                                showMinPlayerDialog = true
-                            } else if (timeErrorRes != 0) {
-                                errorMessage = timeErrorText
-                            } else {
-                                errorMessage = ""
-                                onCreateScrim(
-                                    teamId, teamName, selectedGameMode, selectedRegion,
-                                    selectedSkillLevel, selectedBestOf, scheduledTime, description,
-                                    activePlayerCount,
-                                    selectedPlayerIds.toList()
-                                )
-                            }
-                        },
-                        gradient = GoldGradient,
-                        height = 52.dp,
-                        enabled = canPost
-                    )
+                    if (isLoading) {
+                        Box(modifier = Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                        }
+                    } else {
+                        GradientButton(
+                            text = stringResource(R.string.post_scrim),
+                            onClick = {
+                                if (activePlayerCount < 5) {
+                                    showMinPlayerDialog = true
+                                } else if (timeErrorRes != 0) {
+                                    errorMessage = timeErrorText
+                                } else {
+                                    errorMessage = ""
+                                    onCreateScrim(
+                                        teamId, teamName, selectedGameMode, selectedRegion,
+                                        selectedSkillLevel, selectedBestOf, scheduledTime, description,
+                                        activePlayerCount,
+                                        selectedPlayerIds.toList()
+                                    )
+                                }
+                            },
+                            gradient = PremiumBlueGradient,
+                            height = 52.dp,
+                            enabled = canPost
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -713,12 +762,12 @@ fun CreateScrimScreen(
     if (showTeamPicker) {
         AlertDialog(
             onDismissRequest = { showTeamPicker = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             title = {
-                Text(stringResource(R.string.select_team), color = White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.select_team), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
             },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     teams.forEachIndexed { index, team ->
                         val isSelected = index == selectedTeamIndex
                         val hasMinPlayers = team.meetsMinPlayers
@@ -727,7 +776,7 @@ fun CreateScrimScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) BluePrimary.copy(alpha = 0.15f) else White.copy(alpha = 0.05f)
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             onClick = {
@@ -744,12 +793,12 @@ fun CreateScrimScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(BluePrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
-                                        color = BluePrimary,
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp
                                     )
@@ -758,7 +807,7 @@ fun CreateScrimScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         team.name,
-                                        color = White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 15.sp
                                     )
@@ -777,7 +826,7 @@ fun CreateScrimScreen(
                                     }
                                 }
                                 if (isSelected) {
-                                    Icon(Icons.Default.CheckCircle, null, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -786,7 +835,7 @@ fun CreateScrimScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showTeamPicker = false }) {
-                    Text(stringResource(R.string.cancel), color = LightGray)
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                 }
             }
         )
@@ -796,24 +845,24 @@ fun CreateScrimScreen(
     if (showMinPlayerDialog) {
         AlertDialog(
             onDismissRequest = { showMinPlayerDialog = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             icon = {
                 Icon(Icons.Default.Warning, null, tint = WarningOrange, modifier = Modifier.size(32.dp))
             },
             title = {
-                Text(stringResource(R.string.not_enough_players), color = White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.not_enough_players), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
                     Text(
                         "You've selected $activePlayerCount out of 5 required players.",
-                        color = LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         stringResource(R.string.need_5_players_to_post),
-                        color = MidGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                     val eligibleTeams = teams.filter { it.meetsMinPlayers && it.id != teamId }
@@ -821,7 +870,7 @@ fun CreateScrimScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             stringResource(R.string.switch_to_team_with_5_plus),
-                            color = BluePrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -843,7 +892,7 @@ fun CreateScrimScreen(
                                 ) {
                                     Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(team.name, color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(team.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                     Spacer(modifier = Modifier.weight(1f))
                                     Text(stringResource(R.string.players_count_short, team.currentPlayerCount), color = SuccessGreen, fontSize = 12.sp)
                                 }
@@ -854,7 +903,7 @@ fun CreateScrimScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showMinPlayerDialog = false }) {
-                    Text(stringResource(R.string.ok), color = GoldPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ok), color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -865,10 +914,10 @@ fun CreateScrimScreen(
         val teamPlayers = selectedTeam.players
         AlertDialog(
             onDismissRequest = { showPlayerSelectionDialog = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             title = {
                 Column {
-                    Text(stringResource(R.string.select_roster), color = White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.select_roster), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -916,7 +965,7 @@ fun CreateScrimScreen(
                         TextButton(
                             onClick = { selectedPlayerIds = teamPlayers.map { it.id }.toSet() }
                         ) {
-                            Text("Select All", color = BluePrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Select All", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                         TextButton(
                             onClick = { selectedPlayerIds = emptySet() }
@@ -938,7 +987,7 @@ fun CreateScrimScreen(
                 .fillMaxWidth()
                 .padding(vertical = 3.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) GoldPrimary.copy(alpha = 0.10f) else White.copy(alpha = 0.05f)
+                containerColor = if (isSelected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
             ),
             shape = RoundedCornerShape(10.dp),
             onClick = {
@@ -961,11 +1010,11 @@ fun CreateScrimScreen(
                         .size(22.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .then(
-                            if (isSelected) Modifier.background(Brush.horizontalGradient(GoldGradient))
-                            else Modifier.background(White.copy(alpha = 0.05f))
+                            if (isSelected) Modifier.background(Brush.horizontalGradient(PremiumBlueGradient))
+                            else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                         )
                         .then(
-                            if (!isSelected) Modifier.border(1.5.dp, TextTertiary, RoundedCornerShape(6.dp))
+                            if (!isSelected) Modifier.border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
                             else Modifier
                         ),
                     contentAlignment = Alignment.Center
@@ -973,7 +1022,7 @@ fun CreateScrimScreen(
                     if (isSelected) {
                         Icon(
                             Icons.Default.Check, null,
-                            tint = DarkBlue,
+                            tint = MaterialTheme.colorScheme.background,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -983,21 +1032,21 @@ fun CreateScrimScreen(
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .background(BluePrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = player.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BluePrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = player.name,
-                        color = if (isSelected) TextPrimary else TextSecondary,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         fontSize = 14.sp
                     )
@@ -1007,7 +1056,7 @@ fun CreateScrimScreen(
                     Box(
                         modifier = Modifier
                             .background(
-                                if (roleLabel == "CPT") GoldPrimary.copy(alpha = 0.15f) else Purple.copy(alpha = 0.15f),
+                                if (roleLabel == "CPT") MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f) else Purple.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -1016,7 +1065,7 @@ fun CreateScrimScreen(
                             text = roleLabel,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (roleLabel == "CPT") GoldPrimary else Purple
+                            color = if (roleLabel == "CPT") MaterialTheme.colorScheme.secondary else Purple
                         )
                     }
                 }
@@ -1029,7 +1078,7 @@ fun CreateScrimScreen(
                 GradientButton(
                     text = "Done",
                     onClick = { showPlayerSelectionDialog = false },
-                    gradient = GoldGradient,
+                    gradient = PremiumBlueGradient,
                     height = 40.dp,
                     enabled = true
                 )
@@ -1053,7 +1102,7 @@ private fun CompactChip(
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (selected) selectedColor.copy(alpha = 0.18f)
-                else White.copy(alpha = 0.08f)
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
             )
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -1062,7 +1111,7 @@ private fun CompactChip(
         Text(
             text = text,
             style = iOSCallout.copy(
-                color = if (selected) selectedColor else TextSecondary,
+                color = if (selected) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
             )
         )
@@ -1077,12 +1126,12 @@ private fun FormSectionLabel(text: String) {
         Box(
             modifier = Modifier
                 .size(6.dp)
-                .background(GoldPrimary, RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(2.dp))
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
-            style = iOSHeadline.copy(color = TextPrimary)
+            style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))

@@ -1,10 +1,12 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -98,7 +100,7 @@ fun ScrimRosterScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
 
@@ -112,12 +114,8 @@ fun ScrimRosterScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .shadow(
-                            elevation = 4.dp,
-                            spotColor = BluePrimary.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -130,7 +128,7 @@ fun ScrimRosterScreen(
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -251,7 +249,7 @@ fun ScrimRosterScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = DarkNavy.copy(alpha = 0.6f)
+                            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -264,7 +262,7 @@ fun ScrimRosterScreen(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = BluePrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp)
@@ -272,7 +270,7 @@ fun ScrimRosterScreen(
                             Text(
                                 text = "Active players: +25 pts (win) / -15 pts (loss). Substitutes: 0 pts.",
                                 fontSize = 12.sp,
-                                color = LightGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -286,7 +284,7 @@ fun ScrimRosterScreen(
                                 onConfirmRoster(rosterEntries.toList())
                             }
                         },
-                        gradient = if (isValid) GoldGradient else listOf(Color.Gray, Color.DarkGray),
+                        gradient = if (isValid) PremiumBlueGradient else listOf(Color.Gray, Color.DarkGray),
                         enabled = isValid,
                         height = 56.dp
                     )
@@ -304,13 +302,9 @@ private fun RosterPlayerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(12.dp)
-            ),
+            .border(1.dp, appBorderColor(), RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = if (entry.isActive) SuccessGreen.copy(alpha = 0.08f) else DarkNavy
+            containerColor = if (entry.isActive) SuccessGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.background
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -331,7 +325,7 @@ private fun RosterPlayerCard(
                             colors = if (entry.isActive)
                                 listOf(SuccessGreen, Color(0xFF006400))
                             else
-                                listOf(BluePrimary, Color(0xFF0A5A9F))
+                                listOf(MaterialTheme.colorScheme.primary, Color(0xFF0A5A9F))
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -340,7 +334,7 @@ private fun RosterPlayerCard(
                     text = entry.playerName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -353,13 +347,13 @@ private fun RosterPlayerCard(
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
                 Text(
                     text = if (entry.isActive) "Active — pts affected" else "Substitute — no pts change",
                     fontSize = 12.sp,
-                    color = if (entry.isActive) SuccessGreen else MidGray
+                    color = if (entry.isActive) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -370,8 +364,8 @@ private fun RosterPlayerCard(
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = SuccessGreen.copy(alpha = 0.5f),
                     checkedThumbColor = SuccessGreen,
-                    uncheckedTrackColor = White.copy(alpha = 0.1f),
-                    uncheckedThumbColor = MidGray
+                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -404,7 +398,7 @@ private fun RosterStatBox(
             Text(
                 text = label,
                 fontSize = 10.sp,
-                color = LightGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
     }

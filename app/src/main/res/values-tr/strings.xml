@@ -176,7 +176,6 @@
     <string name="approve">Onayla</string>
     <string name="reject">Reddet</string>
     <string name="chat_opens_in">Sohbet şu sürede açılır</string>
-    <string name="chat_unlocks_2h">Sohbet, scrimden 2 saat önce açılır</string>
     <string name="report_result">Sonuç Bildir</string>
     <string name="match_label">Maç</string>
     <string name="who_won">Kim kazandı?</string>

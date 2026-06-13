@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,10 +36,12 @@ import com.scrimslegends.app.ui.components.LottieLoadingIndicator
 import java.text.SimpleDateFormat
 import java.util.*
 
+import kotlinx.collections.immutable.ImmutableList
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchHistoryScreen(
-    matchResults: List<MatchResult>,
+    matchResults: ImmutableList<MatchResult>,
     isLoading: Boolean,
     isRefreshing: Boolean = false,
     currentUserTeamIds: Set<String>,
@@ -167,7 +170,7 @@ fun MatchHistoryScreen(
                     .padding(16.dp)
                     .padding(bottom = 80.dp),
                 containerColor = ErrorRed,
-                contentColor = White
+                contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 Text(text = error)
             }
@@ -186,12 +189,12 @@ private fun MatchHistoryCard(
     val isWinner = match.confirmedWinnerId != null && match.confirmedWinnerId in currentUserTeamIds
     val isDraw = match.isDraw
     val statusColor = when (match.verificationStatus) {
-        VerificationStatus.CONFIRMED -> if (isDraw) MidGray else if (!isParticipant) SuccessGreen else if (isWinner) SuccessGreen else ErrorRed
+        VerificationStatus.CONFIRMED -> if (isDraw) MaterialTheme.colorScheme.onSurfaceVariant else if (!isParticipant) SuccessGreen else if (isWinner) SuccessGreen else ErrorRed
         VerificationStatus.PENDING -> WarningOrange
         VerificationStatus.DISPUTED -> Purple
-        VerificationStatus.ADMIN_REVIEW -> BluePrimary
+        VerificationStatus.ADMIN_REVIEW -> MaterialTheme.colorScheme.primary
         VerificationStatus.AUTO_CANCELLED -> ErrorRed
-        VerificationStatus.ADMIN_RESOLVED -> LightGray
+        VerificationStatus.ADMIN_RESOLVED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
     }
 
     val statusText = when (match.verificationStatus) {
@@ -209,19 +212,16 @@ private fun MatchHistoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                spotColor = statusColor.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(16.dp)
-            )
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, statusColor.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
             .drawBehind {
                 drawRect(
                     color = statusColor,
-                    size = androidx.compose.ui.geometry.Size(12.dp.toPx(), size.height)
+                    size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)
                 )
             },
         colors = CardDefaults.cardColors(containerColor = appSurface),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         onClick = onClick
     ) {
         Column(
@@ -292,7 +292,7 @@ private fun MatchHistoryCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TeamNameBox(match.teamAName, match.teamAId == match.confirmedWinnerId)
+                TeamNameBox(match.teamAName, match.teamAId == match.confirmedWinnerId, modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.vs_label),
@@ -301,7 +301,7 @@ private fun MatchHistoryCard(
                     color = appTextSecondary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                TeamNameBox(match.teamBName, match.teamBId == match.confirmedWinnerId)
+                TeamNameBox(match.teamBName, match.teamBId == match.confirmedWinnerId, modifier = Modifier.weight(1f))
             }
 
             if (match.verificationStatus == VerificationStatus.CONFIRMED && !match.isDraw) {
@@ -328,11 +328,11 @@ private fun MatchHistoryCard(
 }
 
 @Composable
-private fun TeamNameBox(name: String, isWinner: Boolean) {
+private fun TeamNameBox(name: String, isWinner: Boolean, modifier: Modifier = Modifier) {
     val appElevatedSurface = appElevatedSurfaceColor()
     val appTextPrimary = appTextPrimaryColor()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(
                 color = if (isWinner) SuccessGreen.copy(alpha = 0.12f) else appElevatedSurface,
                 shape = RoundedCornerShape(8.dp)
@@ -343,7 +343,9 @@ private fun TeamNameBox(name: String, isWinner: Boolean) {
             text = name,
             fontSize = 13.sp,
             fontWeight = if (isWinner) FontWeight.Bold else FontWeight.Medium,
-            color = if (isWinner) SuccessGreen else appTextPrimary
+            color = if (isWinner) SuccessGreen else appTextPrimary,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
 }

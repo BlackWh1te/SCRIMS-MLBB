@@ -176,7 +176,6 @@
     <string name="approve">승인</string>
     <string name="reject">거부</string>
     <string name="chat_opens_in">채팅 열림까지</string>
-    <string name="chat_unlocks_2h">스크림 2시간 전에 채팅이 열립니다</string>
     <string name="report_result">결과 보고</string>
     <string name="match_label">경기</string>
     <string name="who_won">누가 이겼나요?</string>

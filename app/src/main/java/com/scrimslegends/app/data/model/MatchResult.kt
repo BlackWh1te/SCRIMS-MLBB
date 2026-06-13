@@ -29,7 +29,8 @@ data class MatchResult(
     // ── Match type: scrim or tournament ──
     val matchType: MatchType = MatchType.SCRIM,
     val tournamentTitle: String? = null,
-    val roundNumber: Int? = null
+    val roundNumber: Int? = null,
+    val bestOf: Int = 1
 ) {
     val isDisputed: Boolean
         get() = teamAReport != null && teamBReport != null &&
@@ -37,6 +38,9 @@ data class MatchResult(
 
     val isConfirmed: Boolean
         get() = verificationStatus == VerificationStatus.CONFIRMED
+
+    val isDraw: Boolean
+        get() = verificationStatus == VerificationStatus.CONFIRMED && confirmedWinnerId == null
 
     val bothTeamsReported: Boolean
         get() = teamAReport != null && teamBReport != null

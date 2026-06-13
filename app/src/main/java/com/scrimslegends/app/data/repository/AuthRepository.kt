@@ -75,7 +75,7 @@ class AuthRepository : AuthRepositoryInterface {
                 totalMatches = 12,
                 wins = 8,
                 losses = 4,
-                currentTier = RankTier.GOLD,
+                currentTier = RankTier.MASTER,
                 emailVerified = false
             ))
             emit(AuthResult.EmailNotVerified(email))
@@ -135,7 +135,7 @@ class AuthRepository : AuthRepositoryInterface {
                 totalMatches = 12,
                 wins = 8,
                 losses = 4,
-                currentTier = RankTier.GOLD,
+                currentTier = RankTier.MASTER,
                 emailVerified = false
             ))
             // Require email verification before full access
@@ -162,7 +162,7 @@ class AuthRepository : AuthRepositoryInterface {
                     totalMatches = 12,
                     wins = 8,
                     losses = 4,
-                    currentTier = RankTier.GOLD,
+                    currentTier = RankTier.MASTER,
                     emailVerified = true // Assume verified for mock sign-in flow
                 ))
             }
@@ -324,7 +324,7 @@ class AuthRepository : AuthRepositoryInterface {
         return currentUser.get()
     }
     
-    override suspend fun getUserProfile(): UserProfile? {
+    override suspend fun getUserProfile(forceRefresh: Boolean): UserProfile? {
         return userProfile.get()
     }
 

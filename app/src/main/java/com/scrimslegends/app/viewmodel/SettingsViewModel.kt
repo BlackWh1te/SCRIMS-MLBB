@@ -20,7 +20,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private var toggleSoundJob: Job? = null
     private var toggleVibrationJob: Job? = null
     private var setLanguageJob: Job? = null
-    private var toggleDarkModeJob: Job? = null
+    private var setThemeModeJob: Job? = null
 
     private val _notificationsEnabled = MutableStateFlow(true)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
@@ -40,8 +40,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _languageCode = MutableStateFlow("en")
     val languageCode: StateFlow<String> = _languageCode.asStateFlow()
 
-    private val _darkMode = MutableStateFlow(true)
-    val darkMode: StateFlow<Boolean> = _darkMode.asStateFlow()
+    private val _themeMode = MutableStateFlow("system")
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -63,7 +63,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             appSettings.languageCode.collect { _languageCode.value = it }
         }
         viewModelScope.launch {
-            appSettings.darkMode.collect { _darkMode.value = it }
+            appSettings.themeMode.collect { _themeMode.value = it }
         }
     }
 
@@ -97,8 +97,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         setLanguageJob = viewModelScope.launch { appSettings.setLanguageCode(code) }
     }
 
-    fun toggleDarkMode(enabled: Boolean) {
-        toggleDarkModeJob?.cancel()
-        toggleDarkModeJob = viewModelScope.launch { appSettings.setDarkMode(enabled) }
+    fun setThemeMode(mode: String) {
+        setThemeModeJob?.cancel()
+        setThemeModeJob = viewModelScope.launch { appSettings.setThemeMode(mode) }
     }
 }

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -62,14 +63,14 @@ fun PremiumCaptcha(
             Icon(
                 Icons.Default.Shield,
                 contentDescription = null,
-                tint = if (isVerified) GoldPrimary else TextSecondary,
+                tint = if (isVerified) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 text = if (isVerified) "Identity Verified" else "Security Check",
                 style = iOSCaption1.copy(
-                    color = if (isVerified) GoldPrimary else TextSecondary,
+                    color = if (isVerified) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
             )
@@ -80,11 +81,11 @@ fun PremiumCaptcha(
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(28.dp))
-                .background(SurfaceOverlay)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(
                     width = 1.dp,
                     brush = Brush.linearGradient(
-                        colors = listOf(GlassBorder.copy(alpha = 0.5f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f).copy(alpha = 0.5f), Color.Transparent)
                     ),
                     shape = RoundedCornerShape(28.dp)
                 ),
@@ -94,7 +95,7 @@ fun PremiumCaptcha(
             Text(
                 text = "Slide to verify",
                 style = iOSBody.copy(
-                    color = TextTertiary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     letterSpacing = 0.5.sp
                 ),
@@ -110,7 +111,7 @@ fun PremiumCaptcha(
                         .fillMaxSize()
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(BluePrimary.copy(alpha = 0.2f), Color.Transparent)
+                                colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), Color.Transparent)
                             )
                         )
                 )
@@ -125,7 +126,7 @@ fun PremiumCaptcha(
                     .clip(CircleShape)
                     .background(
                         brush = if (isVerified) {
-                            Brush.linearGradient(colors = GoldGradient)
+                            Brush.linearGradient(colors = PremiumBlueGradient)
                         } else {
                             Brush.linearGradient(colors = BlueGradient)
                         }
@@ -133,7 +134,7 @@ fun PremiumCaptcha(
                     .shadow(
                         elevation = 8.dp,
                         shape = CircleShape,
-                        ambientColor = if (isVerified) GoldPrimary else BluePrimary
+                        ambientColor = if (isVerified) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
                     )
                     .pointerInput(isVerified) {
                         if (!isVerified) {
@@ -159,7 +160,7 @@ fun PremiumCaptcha(
                 Icon(
                     imageVector = if (isVerified) Icons.Default.Check else Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = if (isVerified) DarkNavy else White,
+                    tint = if (isVerified) MaterialTheme.colorScheme.background else White,
                     modifier = Modifier.size(24.dp)
                 )
             }

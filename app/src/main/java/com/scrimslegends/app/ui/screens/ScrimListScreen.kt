@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -47,6 +48,8 @@ import com.scrimslegends.app.R
 import androidx.compose.ui.res.stringResource
 import kotlin.math.absoluteValue
 
+import kotlinx.collections.immutable.ImmutableList
+
 // ── Status filter chip data ──────────────────────────────────
 
 private data class StatusChip(
@@ -58,7 +61,7 @@ private data class StatusChip(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrimListScreen(
-    scrims: List<Scrim>,
+    scrims: ImmutableList<Scrim>,
     isLoading: Boolean,
     error: String? = null,
     onNavigateBack: (() -> Unit)? = null,
@@ -83,14 +86,17 @@ fun ScrimListScreen(
     val appTextSecondary = appTextSecondaryColor()
     val appBorder = appBorderColor()
 
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     // Status chips — drives top filter row
-    val statusChips = remember(appTextSecondary) {
+    val statusChips = remember(appTextSecondary, secondaryColor, primaryColor) {
         listOf(
-            StatusChip("All",         null,                    GoldPrimary),
+            StatusChip("All",         null,                    secondaryColor),
             StatusChip("Open",        ScrimStatus.OPEN,        SuccessGreen),
             StatusChip("Filled",      ScrimStatus.FILLED,      WarningOrange),
             StatusChip("Ready",       ScrimStatus.READY_CHECK, WarningOrange),
-            StatusChip("In Progress", ScrimStatus.IN_PROGRESS, BluePrimary),
+            StatusChip("In Progress", ScrimStatus.IN_PROGRESS, primaryColor),
             StatusChip("Completed",   ScrimStatus.COMPLETED,   appTextSecondary),
             StatusChip("Cancelled",   ScrimStatus.CANCELLED,   ErrorRed)
         )
@@ -126,7 +132,7 @@ fun ScrimListScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -138,16 +144,17 @@ fun ScrimListScreen(
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text       = stringResource(R.string.scrims),
-                                fontSize   = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color      = appTextPrimary
+                                text  = stringResource(R.string.scrims),
+                                style = iOSTitle3.copy(color = appTextPrimary)
                             )
                             if (openCount > 0) {
+                                Spacer(Modifier.height(1.dp))
                                 Text(
-                                    text     = "$openCount open now",
-                                    fontSize = 11.sp,
-                                    color    = SuccessGreen.copy(alpha = 0.8f)
+                                    text  = "$openCount open now",
+                                    style = iOSCaption1.copy(
+                                        color = SuccessGreen,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 )
                             }
                         }
@@ -156,22 +163,22 @@ fun ScrimListScreen(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(
-                                    if (showFilters) GoldPrimary.copy(alpha = 0.15f)
+                                    if (showFilters) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                                     else appElevatedSurface
                                 )
                                 .border(
                                     1.dp,
-                                    if (showFilters) GoldPrimary.copy(alpha = 0.4f) else appBorder,
-                                    RoundedCornerShape(12.dp)
+                                    if (showFilters) MaterialTheme.colorScheme.secondary.copy(alpha = 0.40f) else appBorder,
+                                    RoundedCornerShape(14.dp)
                                 )
                                 .clickable { showFilters = !showFilters },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Tune, null,
-                                tint     = if (showFilters) GoldPrimary else appTextSecondary,
+                                tint     = if (showFilters) MaterialTheme.colorScheme.secondary else appTextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -182,7 +189,7 @@ fun ScrimListScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
-                            .padding(start = 14.dp, end = 14.dp, bottom = 10.dp),
+                            .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         statusChips.forEach { chip ->
@@ -200,12 +207,12 @@ fun ScrimListScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
-                                        if (isActive) chip.color.copy(alpha = 0.20f)
+                                        if (isActive) chip.color.copy(alpha = 0.18f)
                                         else appElevatedSurface
                                     )
                                     .border(
                                         1.dp,
-                                        if (isActive) chip.color.copy(alpha = 0.55f) else appBorder,
+                                        if (isActive) chip.color.copy(alpha = 0.50f) else appBorder,
                                         RoundedCornerShape(20.dp)
                                     )
                                     .clickable {
@@ -215,7 +222,7 @@ fun ScrimListScreen(
                                             selectedSkillLevel, selectedStatus
                                         )
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -224,25 +231,27 @@ fun ScrimListScreen(
                                     if (chip.status != null) {
                                         Box(
                                             modifier = Modifier
-                                                .size(6.dp)
+                                                .size(7.dp)
                                                 .background(
-                                                    if (isActive) chip.color else chip.color.copy(alpha = 0.5f),
+                                                    if (isActive) chip.color else chip.color.copy(alpha = 0.45f),
                                                     CircleShape
                                                 )
                                         )
                                     }
                                     Text(
                                         text       = chip.label,
-                                        fontSize   = 12.sp,
-                                        fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                                        color      = if (isActive) chip.color else appTextSecondary
+                                        style      = iOSCaption1.copy(
+                                            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                                            color      = if (isActive) chip.color else appTextSecondary
+                                        )
                                     )
                                     if (count > 0) {
                                         Text(
-                                            text     = "($count)",
-                                            fontSize = 11.sp,
-                                            color    = if (isActive) chip.color.copy(alpha = 0.7f)
-                                            else appTextSecondary.copy(alpha = 0.8f)
+                                            text  = "($count)",
+                                            style = iOSCaption2.copy(
+                                                color = if (isActive) chip.color.copy(alpha = 0.7f)
+                                                        else appTextSecondary.copy(alpha = 0.7f)
+                                            )
                                         )
                                     }
                                 }
@@ -304,13 +313,13 @@ fun ScrimListScreen(
                             } else null,
                             modifier      = Modifier.fillMaxWidth().height(50.dp),
                             colors        = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
+                                focusedBorderColor      = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                                 unfocusedBorderColor    = appBorder,
                                 focusedContainerColor   = appElevatedSurface,
                                 unfocusedContainerColor = appElevatedSurface,
                                 focusedTextColor        = appTextPrimary,
                                 unfocusedTextColor      = appTextPrimary,
-                                cursorColor             = GoldPrimary
+                                cursorColor             = MaterialTheme.colorScheme.secondary
                             ),
                             shape         = RoundedCornerShape(14.dp),
                             textStyle     = iOSBody.copy(fontSize = 14.sp),
@@ -332,7 +341,7 @@ fun ScrimListScreen(
                                 CompactFilterChip(
                                     label    = mode.displayName,
                                     selected = selectedGameMode == mode,
-                                    color    = BluePrimary,
+                                    color    = MaterialTheme.colorScheme.primary,
                                     onClick  = {
                                         selectedGameMode = if (selectedGameMode == mode) null else mode
                                         onSearch(searchQuery, selectedGameMode, selectedRegion, selectedSkillLevel, selectedStatus)
@@ -354,7 +363,7 @@ fun ScrimListScreen(
                                 CompactFilterChip(
                                     label    = region.displayName,
                                     selected = selectedRegion == region,
-                                    color    = GoldPrimary,
+                                    color    = MaterialTheme.colorScheme.secondary,
                                     onClick  = {
                                         selectedRegion = if (selectedRegion == region) null else region
                                         onSearch(searchQuery, selectedGameMode, selectedRegion, selectedSkillLevel, selectedStatus)
@@ -494,10 +503,10 @@ fun ScrimListScreen(
                 modifier       = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 20.dp, bottom = 96.dp),
-                containerColor = GoldPrimary,
-                contentColor   = DarkNavy,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor   = MaterialTheme.colorScheme.background,
                 shape          = CircleShape,
-                elevation      = FloatingActionButtonDefaults.elevation(8.dp)
+                elevation      = FloatingActionButtonDefaults.elevation(4.dp)
             ) {
                 Icon(
                     Icons.Default.Add,
@@ -633,7 +642,7 @@ fun PremiumScrimCard(
         ScrimStatus.OPEN, ScrimStatus.PENDING -> SuccessGreen
         ScrimStatus.FILLED      -> WarningOrange
         ScrimStatus.READY_CHECK -> WarningOrange
-        ScrimStatus.IN_PROGRESS -> BluePrimary
+        ScrimStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
         ScrimStatus.COMPLETED   -> appTextSecondaryColor()
         ScrimStatus.CANCELLED   -> ErrorRed
     }
@@ -657,10 +666,13 @@ fun PremiumScrimCard(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                elevation  = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 10.dp else 6.dp,
-                spotColor  = statusColor.copy(alpha = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) 0.22f else 0.12f),
-                shape      = RoundedCornerShape(22.dp)
+            .border(
+                width = 1.dp,
+                color = if (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING)
+                    statusColor.copy(alpha = 0.30f)
+                else
+                    appBorderColor().copy(alpha = 0.60f),
+                shape = RoundedCornerShape(22.dp)
             )
             .animateContentSize(),
         colors        = CardDefaults.cardColors(containerColor = appSurface),
@@ -673,12 +685,12 @@ fun PremiumScrimCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3.dp)
+                    .height(2.dp)
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                statusColor.copy(alpha = 0.9f),
-                                statusColor.copy(alpha = 0.4f),
+                                statusColor.copy(alpha = 0.80f),
+                                statusColor.copy(alpha = 0.25f),
                                 Color.Transparent
                             )
                         )
@@ -713,8 +725,8 @@ fun PremiumScrimCard(
                             )
                             Spacer(Modifier.height(4.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                MiniTag(text = scrim.gameMode.displayName, color = BluePrimary)
-                                MiniTag(text = scrim.region.displayName, color = GoldPrimary)
+                                MiniTag(text = scrim.gameMode.displayName, color = MaterialTheme.colorScheme.primary)
+                                MiniTag(text = scrim.region.displayName, color = MaterialTheme.colorScheme.secondary)
                             }
                         }
                     }
@@ -886,7 +898,7 @@ fun TeamAvatar(name: String) {
             text       = initials,
             fontSize   = 15.sp,
             fontWeight = FontWeight.Bold,
-            color      = White
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

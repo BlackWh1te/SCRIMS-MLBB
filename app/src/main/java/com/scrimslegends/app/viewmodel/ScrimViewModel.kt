@@ -28,14 +28,17 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import java.util.Collections
 import javax.inject.Inject
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 
 @HiltViewModel
 class ScrimViewModel @Inject constructor(
     private val scrimRepository: ScrimRepositoryInterface
 ) : ViewModel() {
 
-    private val _scrims = MutableStateFlow<List<Scrim>>(emptyList())
-    val scrims: StateFlow<List<Scrim>> = _scrims.asStateFlow()
+    private val _scrims = MutableStateFlow<ImmutableList<Scrim>>(persistentListOf())
+    val scrims: StateFlow<ImmutableList<Scrim>> = _scrims.asStateFlow()
 
     private val _selectedScrim = MutableStateFlow<Scrim?>(null)
     val selectedScrim: StateFlow<Scrim?> = _selectedScrim.asStateFlow()
@@ -105,7 +108,7 @@ class ScrimViewModel @Inject constructor(
                         newScrims.forEach { _scrimMap[it.id] = it }
                         
                         // Sort descending by date (newest first)
-                        _scrims.value = _scrimMap.values.toList().sortedByDescending { it.createdAt }
+                        _scrims.value = _scrimMap.values.sortedByDescending { it.createdAt }.toPersistentList()
                         
                         if (newScrims.isNotEmpty()) {
                             currentPage++
@@ -167,7 +170,7 @@ class ScrimViewModel @Inject constructor(
                 }
                 .collect { result ->
                     result.onSuccess { scrimList ->
-                        _scrims.value = scrimList
+                        _scrims.value = scrimList.toPersistentList()
                         _isLoading.value = false
                     }.onFailure { exception ->
                         _error.value = exception.message
@@ -680,7 +683,7 @@ class ScrimViewModel @Inject constructor(
             scrimRepository.subscribeToAllScrims().collect { updatedScrim ->
                 _scrimMap[updatedScrim.id] = updatedScrim
                 // Rebuild sorted list only when needed
-                _scrims.value = _scrimMap.values.toList()
+                _scrims.value = _scrimMap.values.toPersistentList()
             }
         }
     }

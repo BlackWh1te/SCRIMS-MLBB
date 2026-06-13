@@ -2,7 +2,9 @@ package com.scrimslegends.app.notifications
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -101,6 +103,18 @@ object LocalNotificationHelper {
         }
 
         val channelId = if (notification.type.isMessageChannel()) CHANNEL_MESSAGES else CHANNEL_ALERTS
+        val notifId = notification.id.hashCode()
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        val contentIntent = launchIntent?.let {
+            PendingIntent.getActivity(
+                context,
+                notifId,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.logo)
@@ -115,12 +129,9 @@ object LocalNotificationHelper {
             )
             .setAutoCancel(true)
 
+        if (contentIntent != null) builder.setContentIntent(contentIntent)
         if (!soundEnabled) builder.setSilent(true)
         if (!vibrationEnabled) builder.setVibrate(longArrayOf(0L))
-
-        // Use a stable int ID derived from notification UUID so repeated
-        // delivery of the same notification replaces rather than stacks.
-        val notifId = notification.id.hashCode()
 
         NotificationManagerCompat.from(context).notify(notifId, builder.build())
     }

@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 
 @HiltViewModel
 class MatchResultViewModel @Inject constructor(
@@ -24,8 +27,8 @@ class MatchResultViewModel @Inject constructor(
     private var createMatchResultJob: Job? = null
     private var resolveDisputeJob: Job? = null
 
-    private val _matchResults = MutableStateFlow<List<MatchResult>>(emptyList())
-    val matchResults: StateFlow<List<MatchResult>> = _matchResults.asStateFlow()
+    private val _matchResults = MutableStateFlow<ImmutableList<MatchResult>>(persistentListOf())
+    val matchResults: StateFlow<ImmutableList<MatchResult>> = _matchResults.asStateFlow()
 
     private val _selectedMatchResult = MutableStateFlow<MatchResult?>(null)
     val selectedMatchResult: StateFlow<MatchResult?> = _selectedMatchResult.asStateFlow()
@@ -42,9 +45,7 @@ class MatchResultViewModel @Inject constructor(
     private val _reportSuccess = MutableStateFlow(false)
     val reportSuccess: StateFlow<Boolean> = _reportSuccess.asStateFlow()
 
-    init {
-        loadMatchResults()
-    }
+
 
     fun loadMatchResults(isRefresh: Boolean = false) {
         loadMatchResultsJob?.cancel()
@@ -55,7 +56,7 @@ class MatchResultViewModel @Inject constructor(
 
             matchResultRepository.getAllMatchResults().collect { result ->
                 result.onSuccess { list ->
-                    _matchResults.value = list
+                    _matchResults.value = list.toPersistentList()
                     _isLoading.value = false
                     _isRefreshing.value = false
                 }.onFailure { exception ->
@@ -93,7 +94,7 @@ class MatchResultViewModel @Inject constructor(
 
             matchResultRepository.getMatchResultsForTeam(teamId).collect { result ->
                 result.onSuccess { list ->
-                    _matchResults.value = list
+                    _matchResults.value = list.toPersistentList()
                     _isLoading.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message

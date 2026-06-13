@@ -42,7 +42,7 @@ interface AuthRepositoryInterface {
 
     fun getCurrentUser(): String?
 
-    suspend fun getUserProfile(): UserProfile?
+    suspend fun getUserProfile(forceRefresh: Boolean = false): UserProfile?
 
     suspend fun invalidateProfileCache()
 

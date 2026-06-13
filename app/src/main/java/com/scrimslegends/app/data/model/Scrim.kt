@@ -68,12 +68,19 @@ data class Scrim(
 
     /** Can complete scrim only after all games have both screenshots and confirmed winners (no active disputes) */
     val canCompleteScrim: Boolean
-        get() = bothReady && gameResults.size == totalGames &&
-                gameResults.all {
-                    it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null &&
-                    (it.winnerTeamId != null || it.adminOverrideWinnerId != null) &&
-                    !it.isAwaitingAdmin
-                }
+        get() {
+            if (!bothReady || gameResults.isEmpty()) return false
+            val clinchReached = seriesWinnerTeamId != null
+            val gamesToValidate = if (clinchReached) gameResults.filter { it.hasWinner } else gameResults
+            
+            val allGamesValid = gamesToValidate.all {
+                it.teamAScreenshotUrl != null && it.teamBScreenshotUrl != null &&
+                (it.winnerTeamId != null || it.adminOverrideWinnerId != null) &&
+                !it.isAwaitingAdmin
+            }
+            if (!allGamesValid) return false
+            return clinchReached || gameResults.size == totalGames
+        }
 
     /** Series winner: team that won majority of games (uses admin override if present) */
     val seriesWinnerTeamId: String?
@@ -129,6 +136,12 @@ data class Scrim(
     /** Substitute roster for Team B (no pts change) */
     val teamBSubstitutes: List<ScrimRosterEntry>
         get() = teamBRoster.filter { !it.isActive }
+
+    val displayCurrentPlayers: Int
+        get() = teamARoster.size + teamBRoster.size
+
+    val displayMaxPlayers: Int
+        get() = 10
 }
 
 /** Entry in a scrim roster — captain assigns players as active or substitute */
@@ -181,6 +194,7 @@ enum class BestOf(val games: Int, val displayName: String) {
     BO1(1, "Best of 1"),
     BO2(2, "Best of 2"),
     BO3(3, "Best of 3"),
+    BO4(4, "Best of 4"),
     BO5(5, "Best of 5");
 
     companion object {

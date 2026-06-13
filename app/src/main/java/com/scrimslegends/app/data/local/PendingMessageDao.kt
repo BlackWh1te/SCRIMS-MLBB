@@ -11,8 +11,16 @@ interface PendingMessageDao {
     @Query("SELECT * FROM pending_messages WHERE status IN ('PENDING','SENDING','FAILED') ORDER BY createdAt ASC")
     fun getPendingMessages(): Flow<List<PendingMessageEntity>>
 
-    @Query("SELECT * FROM pending_messages WHERE status IN ('PENDING','FAILED') AND nextRetryAt <= :now ORDER BY createdAt ASC")
-    suspend fun getMessagesReadyForRetry(now: Long = System.currentTimeMillis()): List<PendingMessageEntity>
+    @Query(
+        "SELECT * FROM pending_messages WHERE " +
+        "(status IN ('PENDING','FAILED') AND nextRetryAt <= :now) " +
+        "OR (status = 'SENDING' AND createdAt < :staleThreshold) " +
+        "ORDER BY createdAt ASC"
+    )
+    suspend fun getMessagesReadyForRetry(
+        now: Long = System.currentTimeMillis(),
+        staleThreshold: Long = System.currentTimeMillis() - 300_000
+    ): List<PendingMessageEntity>
 
     @Query("SELECT * FROM pending_messages WHERE clientMessageId = :clientMessageId LIMIT 1")
     suspend fun getByClientId(clientMessageId: String): PendingMessageEntity?

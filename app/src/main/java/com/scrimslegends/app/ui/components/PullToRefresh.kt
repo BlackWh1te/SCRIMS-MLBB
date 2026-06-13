@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,7 +22,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.scrimslegends.app.ui.theme.iOSBlue
-import com.scrimslegends.app.ui.theme.SurfaceElevated
 import com.scrimslegends.app.ui.utils.HapticFeedback
 import kotlinx.coroutines.delay
 
@@ -80,7 +80,7 @@ fun PullToRefreshContainer(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp),
-                containerColor = SurfaceElevated,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = iOSBlue
             )
         }

@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -32,10 +33,11 @@ import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.NotificationListSkeleton
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.components.SwipeToAction
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun NotificationScreen(
-    notifications: List<Notification>,
+    notifications: ImmutableList<Notification>,
     isLoading: Boolean,
     isRefreshing: Boolean = false,
     error: String?,
@@ -68,20 +70,18 @@ fun NotificationScreen(
                     GlassBackButton(onClick = onNavigateBack)
 
                     Text(
-                        text = stringResource(R.string.notifications),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = appTextPrimary
-                        )
+                        text  = stringResource(R.string.notifications),
+                        style = iOSTitle3.copy(color = appTextPrimary)
                     )
 
                     if (notifications.any { !it.isRead }) {
                         TextButton(onClick = onMarkAllAsRead) {
                             Text(
-                                text = stringResource(R.string.mark_all_read),
-                                color = BluePrimary,
-                                fontSize = 13.sp
+                                text  = stringResource(R.string.mark_all_read),
+                                style = iOSCaption1.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             )
                         }
                     } else {
@@ -98,7 +98,7 @@ fun NotificationScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 8.dp),
                         colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(14.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -116,9 +116,8 @@ fun NotificationScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = error,
-                                    color = appTextPrimary,
-                                    fontSize = 13.sp
+                                    text  = error,
+                                    style = iOSCaption1.copy(color = appTextPrimary)
                                 )
                             }
                             IconButton(
@@ -230,18 +229,18 @@ private fun NotificationRow(
     val (icon, iconColor, bgColor) = when (notification.type) {
         // ── Scrim ────────────────────────────────────────────────────────
         NotificationType.SCRIM_INVITE ->
-            Triple(Icons.Default.SportsEsports, BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.SportsEsports, MaterialTheme.colorScheme.primary,   MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
         NotificationType.SCRIM_APPLICATION_NEW ->
-            Triple(Icons.Default.SportsEsports, BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.SportsEsports, MaterialTheme.colorScheme.primary,   MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
         NotificationType.SCRIM_APPLICATION_APPROVED ->
             Triple(Icons.Default.CheckCircle,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
         NotificationType.SCRIM_APPLICATION_REJECTED ->
             Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
         NotificationType.SCRIM_OPPONENT_FOUND ->
-            Triple(Icons.Default.SportsEsports,  BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.SportsEsports,  MaterialTheme.colorScheme.primary,   MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
         // ── Match ────────────────────────────────────────────────────────
         NotificationType.MATCH_RESULT ->
-            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.EmojiEvents,   MaterialTheme.colorScheme.secondary,   MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
         // ── Team ─────────────────────────────────────────────────────────
         NotificationType.TEAM_INVITE ->
             Triple(Icons.Default.Group,         SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
@@ -257,7 +256,7 @@ private fun NotificationRow(
             Triple(Icons.Default.Star,          Grandmaster,   Grandmaster.copy(alpha = 0.12f))
         // ── Tournament (DB-generated) ────────────────────────────────────
         NotificationType.TOURNAMENT_APPLICATION_NEW ->
-            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.EmojiEvents,   MaterialTheme.colorScheme.secondary,   MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_APPLICATION_ACCEPTED ->
             Triple(Icons.Default.CheckCircle,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_APPLICATION_REJECTED ->
@@ -267,9 +266,9 @@ private fun NotificationRow(
         NotificationType.TOURNAMENT_CANCELLED ->
             Triple(Icons.Default.Cancel,        ErrorRed,      ErrorRed.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_COMPLETED ->
-            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.EmojiEvents,   MaterialTheme.colorScheme.secondary,   MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_ROUND_ADVANCED ->
-            Triple(Icons.Default.PlayArrow,     BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.PlayArrow,     MaterialTheme.colorScheme.primary,   MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_TEAM_DISQUALIFIED ->
             Triple(Icons.Default.PersonOff,     ErrorRed,      ErrorRed.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_ROSTER_LOCKED ->
@@ -278,9 +277,9 @@ private fun NotificationRow(
             Triple(Icons.Default.EmojiEvents,   SuccessGreen,  SuccessGreen.copy(alpha = 0.12f))
         // ── Tournament (legacy app-generated names) ──────────────────────
         NotificationType.TOURNAMENT_APPLICATION_STATUS ->
-            Triple(Icons.Default.EmojiEvents,   GoldPrimary,   GoldPrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.EmojiEvents,   MaterialTheme.colorScheme.secondary,   MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_MATCH_SCHEDULED ->
-            Triple(Icons.Default.Schedule,      BluePrimary,   BluePrimary.copy(alpha = 0.12f))
+            Triple(Icons.Default.Schedule,      MaterialTheme.colorScheme.primary,   MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_ROUND_START ->
             Triple(Icons.Default.PlayArrow,     ErrorRed,      ErrorRed.copy(alpha = 0.12f))
         NotificationType.TOURNAMENT_HOST_REQUEST_STATUS ->
@@ -298,15 +297,15 @@ private fun NotificationRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = if (notification.isRead) 2.dp else 4.dp,
-                spotColor = if (!notification.isRead) iconColor.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
+            .border(
+                width = if (notification.isRead) 1.dp else 1.5.dp,
+                color = if (!notification.isRead) iconColor.copy(alpha = 0.30f) else appBorderColor().copy(alpha = 0.55f),
+                shape = RoundedCornerShape(18.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (notification.isRead) appSurface else appElevatedSurface
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         onClick = onClick
     ) {
         Row(
@@ -330,8 +329,8 @@ private fun NotificationRow(
             // Icon
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(bgColor, shape = RoundedCornerShape(12.dp)),
+                    .size(46.dp)
+                    .background(bgColor, shape = RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -348,22 +347,21 @@ private fun NotificationRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = notification.title,
-                    fontSize = 15.sp,
-                    fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
-                    color = appTextPrimary
+                    style = iOSCallout.copy(
+                        fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
+                        color = appTextPrimary
+                    )
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = notification.message,
-                    fontSize = 13.sp,
-                    color = appTextSecondary,
+                    style = iOSCaption1.copy(color = appTextSecondary),
                     maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatNotificationTime(notification.timestamp),
-                    fontSize = 11.sp,
-                    color = appTextSecondary.copy(alpha = 0.86f)
+                    style = iOSCaption2.copy(color = appTextSecondary.copy(alpha = 0.80f))
                 )
             }
 

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -29,17 +30,20 @@ import com.scrimslegends.app.ui.components.AchievementCard
 import com.scrimslegends.app.ui.components.AchievementBadge
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
+import com.scrimslegends.app.ui.components.LottieLoadingIndicator
 import com.scrimslegends.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AchievementsScreen(
-    achievements: PlayerAchievements,
+    achievements: PlayerAchievements?,
+    isLoading: Boolean = false,
+    error: String? = null,
     onNavigateBack: () -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf<AchievementCategory?>(null) }
     val allAchievements = Achievement.values().toList()
-    val unlockedCount = allAchievements.count { achievements.isUnlocked(it) }
+    val unlockedCount = if (achievements != null) allAchievements.count { achievements.isUnlocked(it) } else 0
     val progress = if (allAchievements.isNotEmpty()) unlockedCount.toFloat() / allAchievements.size else 0f
 
     val displayAchievements = if (selectedCategory == null) {
@@ -49,9 +53,16 @@ fun AchievementsScreen(
     }
 
     // Find closest achievement
-    val closestAchievement = allAchievements
-        .filter { !achievements.isUnlocked(it) && it.condition.maxProgress > 1 }
-        .maxByOrNull { achievements.getProgressPercentage(it) } ?: allAchievements.first()
+    val closestAchievement = if (achievements != null) {
+        allAchievements
+            .filter { !achievements.isUnlocked(it) && it.condition.maxProgress > 1 }
+            .maxByOrNull { 
+                val pct = achievements.getProgressPercentage(it)
+                if (pct.isNaN()) 0f else pct
+            } ?: allAchievements.firstOrNull()
+    } else {
+        allAchievements.firstOrNull()
+    }
 
     Box(
         modifier = Modifier
@@ -73,19 +84,32 @@ fun AchievementsScreen(
 
                     Text(
                         text = "Trophy Room",
-                        style = iOSTitle2.copy(color = White)
+                        style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onSurface)
                     )
 
                     Text(
                         text = "$unlockedCount / ${allAchievements.size}",
-                        style = iOSTitle3.copy(color = GoldPrimary)
+                        style = iOSTitle3.copy(color = MaterialTheme.colorScheme.secondary)
                     )
                 }
             }
 
             // Up Next Hero Card
             AnimatedEntrance(delayMillis = 50) {
-                UpNextCard(closestAchievement, achievements)
+                if (closestAchievement != null && achievements != null && !isLoading && error == null) {
+                    UpNextCard(closestAchievement, achievements)
+                } else if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                        LottieLoadingIndicator(size = 80.dp)
+                    }
+                } else if (error != null) {
+                    Text(
+                        text = error,
+                        color = ErrorRed,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -117,20 +141,26 @@ fun AchievementsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Achievement list
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(displayAchievements, key = { it.id }) { achievement ->
-                    AnimatedEntrance(delayMillis = 150) {
-                        AchievementCard(
-                            achievement = achievement,
-                            stats = achievements
-                        )
+            if (achievements != null && !isLoading) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(displayAchievements, key = { it.id }) { achievement ->
+                        AnimatedEntrance(delayMillis = 150) {
+                            AchievementCard(
+                                achievement = achievement,
+                                stats = achievements
+                            )
+                        }
                     }
+                }
+            } else if (!isLoading && error == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No achievements available", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -139,7 +169,8 @@ fun AchievementsScreen(
 
 @Composable
 fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
-    val percentage = stats.getProgressPercentage(achievement)
+    val rawPercentage = stats.getProgressPercentage(achievement)
+    val percentage = if (rawPercentage.isNaN()) 0f else rawPercentage.coerceIn(0f, 1f)
     val current = stats.getProgress(achievement)
     val max = achievement.condition.maxProgress
 
@@ -148,17 +179,17 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(DarkSurface.copy(alpha=0.8f), DarkNavy.copy(alpha=0.6f))))
+            .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface.copy(alpha=0.8f), MaterialTheme.colorScheme.background.copy(alpha=0.6f))))
             .padding(2.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(DarkSurface)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "🌟 UP NEXT",
-                    color = GoldPrimary,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -166,7 +197,7 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "${(percentage * 100).toInt()}%",
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -179,8 +210,8 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = achievement.displayName, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(text = achievement.description, color = LightGray, fontSize = 13.sp)
+                    Text(text = achievement.displayName, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(text = achievement.description, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), fontSize = 13.sp)
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -190,7 +221,7 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
             ) {
                 Box(
                     modifier = Modifier
@@ -205,7 +236,7 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "$current / $max ${if(max > 1) "Progress" else "Completed"}",
-                color = LightGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.End
@@ -216,8 +247,8 @@ fun UpNextCard(achievement: Achievement, stats: PlayerAchievements) {
 
 @Composable
 fun CategoryChip(title: String, isSelected: Boolean, onClick: () -> Unit) {
-    val bgColor = if (isSelected) BluePrimary else DarkSurface
-    val textColor = if (isSelected) White else LightGray
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+    val textColor = if (isSelected) White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
 
     Box(
         modifier = Modifier

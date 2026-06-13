@@ -13,6 +13,8 @@ import com.scrimslegends.app.data.service.PostgrestFilter
 import com.scrimslegends.app.data.service.SupabaseConfig
 import com.scrimslegends.app.data.service.SupabaseRealtimeClient
 import com.scrimslegends.app.data.service.SupabaseService
+import com.scrimslegends.app.data.service.SendMessageRpcRequest
+import com.scrimslegends.app.util.ContentModerationUtils
 import com.scrimslegends.app.util.DateUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +42,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.currentCoroutineContext
+import androidx.paging.map
 
 import java.util.*
 
@@ -50,13 +54,15 @@ import com.scrimslegends.app.data.local.MessageEntity
 import com.scrimslegends.app.data.local.PendingMessageDao
 import com.scrimslegends.app.data.local.PendingMessageEntity
 import com.scrimslegends.app.data.cache.UnifiedCacheManager
+import com.scrimslegends.app.data.local.ScrimsLegendsDatabase
 
 class SupabaseMessageRepository(
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
     private val pendingMessageDao: PendingMessageDao,
     private val realtimeClient: SupabaseRealtimeClient,
-    private val cacheManager: UnifiedCacheManager
+    private val cacheManager: UnifiedCacheManager,
+    private val database: ScrimsLegendsDatabase
 ) : MessageRepositoryInterface {
 
     private val api = SupabaseService.api
@@ -190,6 +196,7 @@ class SupabaseMessageRepository(
                     }
                 },
                 roomSaver = { conversations ->
+                    conversationDao.deleteAll()
                     conversationDao.insertConversations(conversations.map { mapConversationToEntity(it) })
                     conversations.forEach { cacheConversation(it) }
                 },
@@ -415,8 +422,6 @@ class SupabaseMessageRepository(
 
     override suspend fun sendMessage(
         conversationId: String,
-        senderId: String,
-        senderName: String,
         content: String,
         type: MessageType,
         clientMessageId: String,
@@ -431,8 +436,8 @@ class SupabaseMessageRepository(
         val pending = PendingMessageEntity(
             clientMessageId = clientMessageId,
             conversationId = conversationId,
-            senderId = senderId,
-            senderName = senderName,
+            senderId = "", // Spoofing prevented: handled by backend auth.uid()
+            senderName = "",
             content = content,
             type = type.name,
             imageUrl = imageUrl,
@@ -468,52 +473,72 @@ class SupabaseMessageRepository(
             pendingMessageDao.updateStatus(pending.clientMessageId, DeliveryStatus.SENDING.name)
 
             try {
-                // Chat gate
-                val cachedConv = getCachedConversation(pending.conversationId)
-                if (cachedConv != null) {
-                    if (cachedConv.chatOpensAt > 0L && System.currentTimeMillis() < cachedConv.chatOpensAt) {
-                        val reason = "Chat is locked"
-                        pendingMessageDao.markFailed(pending.clientMessageId, reason)
-                        return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
-                    }
+                // Chat gate — check cache then Room; default to blocked if unknown
+                val convForGate = getCachedConversation(pending.conversationId)
+                    ?: try {
+                        conversationDao.getConversationById(pending.conversationId).firstOrNull()?.toDomainModel()
+                    } catch (_: Exception) { null }
+                if (convForGate != null && convForGate.chatOpensAt > 0L && System.currentTimeMillis() < convForGate.chatOpensAt) {
+                    val reason = "Chat is locked"
+                    pendingMessageDao.markFailed(pending.clientMessageId, reason)
+                    return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                 }
 
                 // Content validation
-                if (pending.content.isBlank() && pending.imageUrl.isNullOrBlank() && pending.voiceUrl.isNullOrBlank()) {
+                val sanitized = pending.content.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
+
+                if (sanitized.isBlank() && pending.imageUrl.isNullOrBlank() && pending.voiceUrl.isNullOrBlank()) {
                     val reason = "Message cannot be empty"
                     pendingMessageDao.markFailed(pending.clientMessageId, reason)
                     return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                 }
-                if (pending.content.length > MAX_MESSAGE_LENGTH) {
+                if (sanitized.length > MAX_MESSAGE_LENGTH) {
                     val reason = "Message too long (max $MAX_MESSAGE_LENGTH)"
                     pendingMessageDao.markFailed(pending.clientMessageId, reason)
                     return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
                 }
-                val sanitized = pending.content.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
+                if (pending.type.equals(MessageType.TEXT.name, ignoreCase = true)) {
+                    when (val validation = ContentModerationUtils.validateChatMessage(sanitized)) {
+                        is ContentModerationUtils.ValidationResult.Valid -> Unit
+                        is ContentModerationUtils.ValidationResult.Blocked -> {
+                            val reason = validation.reason
+                            pendingMessageDao.markFailed(pending.clientMessageId, reason)
+                            return@withLock pending.copy(status = DeliveryStatus.FAILED.name, errorReason = reason).toDomainModel()
+                        }
+                    }
+                }
 
-                val dto = MessageDto(
-                    id = null, // server generates
-                    conversationId = pending.conversationId,
-                    senderId = pending.senderId,
-                    senderName = pending.senderName,
-                    content = sanitized,
-                    type = pending.type,
-                    imageUrl = pending.imageUrl,
-                    voice_url = pending.voiceUrl,
-                    voiceDuration = pending.voiceDuration,
-                    clientMessageId = pending.clientMessageId,
-                    deliveryStatus = DeliveryStatus.PENDING.name.lowercase(),
-                    replyToId = replyToId,
-                    replyToSnippet = replyToSnippet,
-                    replyToSenderName = replyToSenderName
+                val request = SendMessageRpcRequest(
+                    p_conversation_id = pending.conversationId,
+                    p_content = sanitized,
+                    p_client_message_id = pending.clientMessageId,
+                    p_type = pending.type,
+                    p_image_url = pending.imageUrl,
+                    p_voice_url = pending.voiceUrl,
+                    p_voice_duration = pending.voiceDuration,
+                    p_reply_to_id = replyToId
                 )
-                val response = api.sendMessage(dto)
+
+                Timber.d("sendMessage: sending RPC request for clientMsgId=${pending.clientMessageId}")
+                val response = api.rpcSendMessageSecure(request)
                 if (response.isSuccessful) {
-                    val sent = response.body()?.firstOrNull()
-                    if (sent != null) {
-                        val message = mapDtoToMessage(sent).copy(
-                            // Preserve client id for deduplication
-                            // Server doesn't know about clientMessageId, but we map it locally
+                    val sentId = response.body()
+                    if (sentId != null) {
+                        // Create a local domain model to update UI, Realtime will push the true DB row later
+                        val message = Message(
+                            id = sentId,
+                            conversationId = pending.conversationId,
+                            senderId = pending.senderId,
+                            senderName = pending.senderName,
+                            content = sanitized,
+                            type = MessageType.valueOf(pending.type),
+                            imageUrl = pending.imageUrl,
+                            voiceUrl = pending.voiceUrl,
+                            voiceDuration = pending.voiceDuration,
+                            replyToId = replyToId,
+                            replyToSnippet = replyToSnippet,
+                            replyToSenderName = replyToSenderName,
+                            timestamp = System.currentTimeMillis()
                         )
                         // Persist as SENT in Room
                         try {
@@ -532,17 +557,6 @@ class SupabaseMessageRepository(
 
                         // Remove from outbox
                         pendingMessageDao.delete(pending.clientMessageId)
-
-                        // Best-effort server patch
-                        try {
-                            api.updateConversation(
-                                pending.conversationId,
-                                mapOf(
-                                    "last_message" to sanitized,
-                                    "last_message_time" to DateUtils.formatIsoUtc(message.timestamp)
-                                )
-                            )
-                        } catch (e: Exception) { Timber.w(TAG, "Failed to update conversation last_message", e) }
 
                         return@withLock MessageWithDelivery(
                             message = message,
@@ -583,6 +597,8 @@ class SupabaseMessageRepository(
                 // Retryable failure
                 return@withLock handleRetryableFailure(pending, "HTTP ${response.code()}")
             } catch (e: CancellationException) {
+                // Roll back to PENDING so syncOutbox can retry later
+                pendingMessageDao.updateStatus(pending.clientMessageId, DeliveryStatus.PENDING.name)
                 throw e
             } catch (e: Exception) {
                 Timber.e(TAG, "Send exception", e)
@@ -687,35 +703,24 @@ class SupabaseMessageRepository(
         }
     }
 
-    override suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int): Result<List<Message>> {
-        return try {
-            val beforeIso = DateUtils.formatIsoUtc(beforeTimestamp)
-            val response = api.getMessages(
-                conversationId = PostgrestFilter.eq(conversationId),
-                createdAfter = "lt.$beforeIso",
-                order = "created_at.desc",
-                limit = limit
-            )
-            if (response.isSuccessful) {
-                val messages = response.body()?.map { mapDtoToMessage(it) }?.reversed() ?: emptyList()
-                if (messages.isNotEmpty()) {
-                    try { messageDao.insertMessages(messages.map { mapMessageToEntity(it) }) } catch (e: Exception) { Timber.w(TAG, "Failed to persist messages to Room", e) }
-                }
-                Result.success(messages)
-            } else {
-                Result.failure(Exception("Failed to load older messages: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            // Fallback to Room cache
-            try {
-                val roomMessages = messageDao.getMessagesPage(conversationId, limit, 0)
-                    .filter { it.timestamp < beforeTimestamp }
-                    .map { it.toDomainModel() }
-                if (roomMessages.isNotEmpty()) Result.success(roomMessages)
-                else Result.failure(e)
-            } catch (_: Exception) {
-                Result.failure(e)
-            }
+    @OptIn(androidx.paging.ExperimentalPagingApi::class)
+    override fun getMessagesPaged(conversationId: String): Flow<androidx.paging.PagingData<Message>> {
+        return androidx.paging.Pager(
+            config = androidx.paging.PagingConfig(
+                pageSize = 50,
+                prefetchDistance = 15,
+                enablePlaceholders = false
+            ),
+            remoteMediator = MessageRemoteMediator(
+                conversationId = conversationId,
+                api = api,
+                database = database,
+                mapDtoToMessage = ::mapDtoToMessage,
+                mapMessageToEntity = ::mapMessageToEntity
+            ),
+            pagingSourceFactory = { messageDao.getMessagesPaged(conversationId) }
+        ).flow.map { pagingData ->
+            pagingData.map { it.toDomainModel() }
         }
     }
 
@@ -835,7 +840,7 @@ class SupabaseMessageRepository(
             }
             if (conv != null) {
                 val field = if (userId == conv.participantAId) "participant_a_typing" else "participant_b_typing"
-                api.updateConversation(conversationId, mapOf(field to isTyping))
+                api.updateConversation(PostgrestFilter.eq(conversationId), mapOf(field to isTyping))
                 emit(Result.success(Unit))
             } else {
                 emit(Result.failure(Exception("Conversation not found for typing status")))
@@ -868,7 +873,8 @@ class SupabaseMessageRepository(
             try {
                 val latestResponse = api.getMessages(
                     conversationId = PostgrestFilter.eq(conversationId),
-                    order = "created_at.asc"
+                    order = "created_at.desc",
+                    limit = 100
                 )
                 if (latestResponse.isSuccessful) {
                     val serverMessages = latestResponse.body()?.map { mapDtoToMessage(it) } ?: emptyList()
@@ -885,78 +891,57 @@ class SupabaseMessageRepository(
             } catch (e: Exception) { Timber.w(TAG, "Bridge fetch failed", e) }
         }
 
-        // Phase 3: Realtime (primary) with fallback polling only if WebSocket dies
-        try {
-            realtimeClient.connect()
-            val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
-            realtimeClient.subscribe(
-                channelName = channelName,
-                configs = listOf(
-                    SupabaseRealtimeClient.PostgresChangeConfig(
-                        event = "INSERT",
-                        table = SupabaseConfig.TABLE_MESSAGES,
-                        filter = "conversation_id=eq.$conversationId"
-                    )
+        // [V2 REMEDIATION]: Individual Realtime subscriptions are REMOVED.
+        // Multiplexing is now handled globally by RealtimeManager. 
+        // This repository function now only yields the bridge fetch and terminates.
+        
+        // (Polling fallback retained temporarily until Day 3 Paging migration)
+        var isRealtimeActive = false
+        // Polling loop fallback (legacy)
+        while (currentCoroutineContext().isActive && !isRealtimeActive) {
+            delay(5000)
+            try {
+                val response = api.getMessages(
+                    conversationId = PostgrestFilter.eq(conversationId),
+                    order = "created_at.desc",
+                    limit = 20
                 )
-            ).filter { event ->
-                event.eventType == SupabaseRealtimeClient.EVENT_INSERT && event.record != null
-            }.collect { event ->
-                try {
-                    val dto = parseRealtimeRecordToMessageDto(event.record ?: return@collect)
-                    if (dto.conversationId == conversationId) {
-                        val message = mapDtoToMessage(dto)
-                        if (message.id !in cachedIds) {
-                            cachedIds.add(message.id)
-                            try {
-                                messageDao.insertMessage(mapMessageToEntity(message))
-                            } catch (e: Exception) { Timber.w(TAG, "Failed to persist realtime message", e) }
-                            emit(message)
+                if (response.isSuccessful) {
+                    val msgs = response.body()?.map { mapDtoToMessage(it) } ?: emptyList()
+                    msgs.forEach { msg ->
+                        if (msg.id !in cachedIds) {
+                            cachedIds.add(msg.id)
+                            emit(msg)
                         }
                     }
-                } catch (e: Exception) {
-                    Timber.w(TAG, "Failed to parse Realtime INSERT: ${e.message}")
                 }
-            }
-        } catch (e: Exception) {
-            Timber.w(TAG, "Realtime ended for $conversationId: ${e.message}")
-        } finally {
-            activeSubscriptions.remove(conversationId)
+            } catch (e: Exception) { Timber.w(TAG, "Polling fetch failed", e) }
         }
+
+        activeSubscriptions.remove(conversationId)
     }
 
     override fun unsubscribeFromMessages(conversationId: String) {
         activeSubscriptions.remove(conversationId)
-        val channelName = "public:${SupabaseConfig.TABLE_MESSAGES}:conv_$conversationId"
-        try { realtimeClient.unsubscribe(channelName) } catch (e: Exception) { Timber.w(TAG, "Failed to unsubscribe from messages", e) }
+    }
+
+    override fun cleanupConversation(conversationId: String) {
+        sendLocks.remove(conversationId)
+        activeSubscriptions.remove(conversationId)
     }
 
     override fun subscribeToConversation(conversationId: String): Flow<Conversation> = flow {
-        try {
-            realtimeClient.connect()
-            val channelName = "public:conversations:conv_$conversationId"
-            realtimeClient.subscribe(
-                channelName = channelName,
-                configs = listOf(
-                    SupabaseRealtimeClient.PostgresChangeConfig(
-                        event = "UPDATE",
-                        table = "conversations",
-                        filter = "id=eq.$conversationId"
-                    )
-                )
-            ).filter { event ->
-                event.eventType == SupabaseRealtimeClient.EVENT_UPDATE && event.record != null
-            }.collect { event ->
-                try {
-                    val dto = parseRealtimeRecordToConversationDto(event.record ?: return@collect)
-                    if (dto.id == conversationId) {
-                        emit(mapDtoToConversation(dto))
-                    }
-                } catch (e: Exception) {
-                    Timber.w(TAG, "Failed to parse Realtime UPDATE for conversation: ${e.message}")
+        // [V2 REMEDIATION]: Individual Realtime subscriptions are REMOVED.
+        // Multiplexing is now handled globally by RealtimeManager. 
+        // Returning local cache/API fetch loop for now.
+        while (currentCoroutineContext().isActive) {
+            delay(10000)
+            try {
+                val response = api.getConversations(idFilter = "eq.$conversationId")
+                if (response.isSuccessful) {
+                    response.body()?.firstOrNull()?.let { emit(mapDtoToConversation(it)) }
                 }
-            }
-        } catch (e: Exception) {
-            Timber.w(TAG, "Realtime subscription ended for conversation: ${e.message}")
+            } catch (e: Exception) { Timber.w(TAG, "Conv polling failed", e) }
         }
     }
 
@@ -1088,6 +1073,7 @@ class SupabaseMessageRepository(
             senderId = dto.senderId,
             senderTeamId = dto.senderTeamId,
             senderName = dto.senderName ?: "Unknown",
+            senderAvatarUrl = dto.senderAvatarUrl,
             content = dto.content,
             timestamp = DateUtils.parseIsoToMillis(dto.createdAt),
             isRead = dto.isRead,
@@ -1099,7 +1085,7 @@ class SupabaseMessageRepository(
             replyToId = dto.replyToId,
             replyToSnippet = dto.replyToSnippet,
             replyToSenderName = dto.replyToSenderName,
-            isDeleted = dto.isDeleted
+            isDeleted = dto.isDeleted ?: false
         )
     }
 
@@ -1113,11 +1099,13 @@ class SupabaseMessageRepository(
             participantATeamId = dto.participantATeamId ?: "",
             participantATeamName = dto.participantATeamName ?: "",
             participantAAvatarUrl = dto.participantAAvatarUrl,
+            participantALastSeen = dto.participantALastSeen?.let { DateUtils.parseIsoToMillis(it, 0L) }?.takeIf { it > 0L },
             participantBId = dto.participantBId ?: "",
             participantBName = dto.participantBName ?: "",
             participantBTeamId = dto.participantBTeamId ?: "",
             participantBTeamName = dto.participantBTeamName ?: "",
             participantBAvatarUrl = dto.participantBAvatarUrl,
+            participantBLastSeen = dto.participantBLastSeen?.let { DateUtils.parseIsoToMillis(it, 0L) }?.takeIf { it > 0L },
             lastMessage = dto.lastMessage ?: "",
             lastMessageTime = DateUtils.parseIsoToMillis(dto.lastMessageTime),
             unreadCount = dto.unreadCount ?: 0,
@@ -1143,6 +1131,7 @@ class SupabaseMessageRepository(
             senderId = record.get("sender_id")?.asString ?: "",
             senderTeamId = record.get("sender_team_id")?.asString,
             senderName = record.get("sender_name")?.asString,
+            senderAvatarUrl = record.get("sender_avatar_url")?.takeIf { !it.isJsonNull }?.asString,
             content = record.get("content")?.asString ?: "",
             type = record.get("type")?.asString ?: "TEXT",
             createdAt = record.get("created_at")?.asString ?: "",
@@ -1170,11 +1159,13 @@ class SupabaseMessageRepository(
             participantATeamId = record.get("participant_a_team_id")?.asString ?: "",
             participantATeamName = record.get("participant_a_team_name")?.asString ?: "",
             participantAAvatarUrl = record.get("participant_a_avatar_url")?.takeIf { !it.isJsonNull }?.asString,
+            participantALastSeen = record.get("participant_a_last_seen")?.takeIf { !it.isJsonNull }?.asString,
             participantBId = record.get("participant_b_id")?.asString ?: "",
             participantBName = record.get("participant_b_name")?.asString ?: "",
             participantBTeamId = record.get("participant_b_team_id")?.asString ?: "",
             participantBTeamName = record.get("participant_b_team_name")?.asString ?: "",
             participantBAvatarUrl = record.get("participant_b_avatar_url")?.takeIf { !it.isJsonNull }?.asString,
+            participantBLastSeen = record.get("participant_b_last_seen")?.takeIf { !it.isJsonNull }?.asString,
             lastMessage = record.get("last_message")?.asString ?: "",
             lastMessageTime = record.get("last_message_time")?.asString ?: "",
             chatOpensAt = record.get("chat_opens_at")?.asString ?: "",
@@ -1244,5 +1235,62 @@ class SupabaseMessageRepository(
             replyToSenderName = msg.replyToSenderName,
             isDeleted = msg.isDeleted
         )
+    }
+
+    override suspend fun blockUser(blockerId: String, blockedId: String): Result<Unit> {
+        return try {
+            val params = mapOf(
+                "p_blocker_id" to blockerId,
+                "p_blocked_id" to blockedId
+            )
+            val response = api.blockUserRpc(params)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Unknown error"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun unblockUser(blockerId: String, blockedId: String): Result<Unit> {
+        return try {
+            val params = mapOf(
+                "p_blocker_id" to blockerId,
+                "p_blocked_id" to blockedId
+            )
+            val response = api.unblockUserRpc(params)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Unknown error"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun checkBlockStatus(user1Id: String, user2Id: String): Result<com.scrimslegends.app.data.model.BlockStatus> {
+        return try {
+            val params = mapOf(
+                "user1_id" to user1Id,
+                "user2_id" to user2Id
+            )
+            val response = api.checkIfBlockedRpc(params)
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                Result.success(
+                    com.scrimslegends.app.data.model.BlockStatus(
+                        isBlockedByCurrentUser = body["is_blocked_by_user1"] == true,
+                        isBlockedByOtherUser = body["is_blocked_by_user2"] == true
+                    )
+                )
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Unknown error"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

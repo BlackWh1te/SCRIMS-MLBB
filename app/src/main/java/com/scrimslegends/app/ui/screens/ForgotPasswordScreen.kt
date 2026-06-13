@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
@@ -60,18 +62,9 @@ import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.PremiumFadeIn
 import com.scrimslegends.app.ui.components.iOSInput
 import com.scrimslegends.app.ui.theme.BlueGradient
-import com.scrimslegends.app.ui.theme.BluePrimary
-import com.scrimslegends.app.ui.theme.DarkNavy
-import com.scrimslegends.app.ui.theme.DimGray
 import com.scrimslegends.app.ui.theme.ErrorRed
-import com.scrimslegends.app.ui.theme.GlassBorder
-import com.scrimslegends.app.ui.theme.GoldGradient
-import com.scrimslegends.app.ui.theme.GoldPrimary
-import com.scrimslegends.app.ui.theme.Separator
+import com.scrimslegends.app.ui.theme.PremiumBlueGradient
 import com.scrimslegends.app.ui.theme.SuccessGreen
-import com.scrimslegends.app.ui.theme.SurfaceCard
-import com.scrimslegends.app.ui.theme.TextPrimary
-import com.scrimslegends.app.ui.theme.TextSecondary
 import com.scrimslegends.app.ui.theme.White
 import com.scrimslegends.app.ui.theme.iOSBlue
 import com.scrimslegends.app.ui.theme.iOSBody
@@ -125,7 +118,7 @@ fun ForgotPasswordScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
@@ -134,7 +127,7 @@ fun ForgotPasswordScreen(
                 .offset(x = 100.dp, y = (-50).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(GoldPrimary.copy(alpha = 0.12f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
         )
@@ -145,7 +138,7 @@ fun ForgotPasswordScreen(
                 .offset(x = (-60).dp, y = 80.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.10f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), Color.Transparent)
                     )
                 )
         )
@@ -154,6 +147,7 @@ fun ForgotPasswordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
         ) {
             PremiumFadeIn(delayMillis = 0) {
@@ -167,7 +161,7 @@ fun ForgotPasswordScreen(
                     GlassBackButton(onClick = onNavigateBack)
                     Text(
                         text = stringResource(R.string.reset_password),
-                        style = iOSTitle2.copy(color = TextPrimary)
+                        style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onSurface)
                     )
                     Spacer(modifier = Modifier.size(44.dp))
                 }
@@ -186,14 +180,14 @@ fun ForgotPasswordScreen(
                         modifier = Modifier
                             .size(90.dp)
                             .clip(RoundedCornerShape(26.dp))
-                            .background(Brush.verticalGradient(BlueGradient))
-                            .border(1.dp, GlassBorder, RoundedCornerShape(26.dp)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(26.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Email,
                             contentDescription = null,
-                            tint = White,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(38.dp)
                         )
                     }
@@ -204,7 +198,7 @@ fun ForgotPasswordScreen(
                 PremiumFadeIn(delayMillis = 150) {
                     Text(
                         text = stringResource(R.string.forgot_password),
-                        style = iOSTitle1.copy(color = TextPrimary, textAlign = TextAlign.Center)
+                        style = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
                     )
                 }
 
@@ -213,7 +207,7 @@ fun ForgotPasswordScreen(
                 PremiumFadeIn(delayMillis = 200) {
                     Text(
                         text = stringResource(R.string.forgot_password_otp_hint),
-                        style = iOSCallout.copy(color = TextSecondary, textAlign = TextAlign.Center),
+                        style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center),
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )
                 }
@@ -304,8 +298,8 @@ private fun ResetPasswordFormCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(SurfaceCard)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
                 .padding(24.dp)
         ) {
             Column {
@@ -338,7 +332,8 @@ private fun ResetPasswordFormCard(
                             value = newPassword,
                             onValueChange = onNewPasswordChange,
                             placeholder = stringResource(R.string.new_password),
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -346,7 +341,8 @@ private fun ResetPasswordFormCard(
                             value = confirmPassword,
                             onValueChange = onConfirmPasswordChange,
                             placeholder = stringResource(R.string.confirm_new_password),
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
                         )
                     }
                 }
@@ -373,13 +369,13 @@ private fun ResetPasswordFormCard(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.verticalGradient(GoldGradient))
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable { onSubmit() },
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            color = DarkNavy,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(22.dp)
                         )
@@ -390,7 +386,7 @@ private fun ResetPasswordFormCard(
                             } else {
                                 stringResource(R.string.reset_password)
                             },
-                            style = iOSHeadline.copy(color = DarkNavy)
+                            style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onPrimary)
                         )
                     }
                 }
@@ -404,7 +400,7 @@ private fun ResetPasswordFormCard(
                     ) {
                         Text(
                             stringResource(R.string.resend_email),
-                            color = BluePrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -419,28 +415,29 @@ private fun PasswordResetField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    enabled: Boolean
+    enabled: Boolean,
+    imeAction: androidx.compose.ui.text.input.ImeAction = androidx.compose.ui.text.input.ImeAction.Done
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder, color = DimGray) },
+        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
         leadingIcon = {
-            Icon(Icons.Default.Lock, null, tint = DimGray, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         },
         enabled = enabled,
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
         shape = iOSInputShape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = iOSBlue,
-            unfocusedBorderColor = Separator,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
             errorBorderColor = ErrorRed,
             cursorColor = iOSBlue,
-            focusedTextColor = White,
-            unfocusedTextColor = White
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
         textStyle = iOSBody
     )
@@ -483,7 +480,7 @@ private fun ResetPasswordDoneCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.password_reset_complete, email),
-                    style = iOSBody.copy(color = TextSecondary, textAlign = TextAlign.Center)
+                    style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -493,13 +490,13 @@ private fun ResetPasswordDoneCard(
                         .height(50.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(Brush.verticalGradient(BlueGradient))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
                         .clickable { onNavigateBack() },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         stringResource(R.string.back_to_login),
-                        style = iOSHeadline.copy(color = White)
+                        style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                     )
                 }
             }

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -40,28 +41,22 @@ fun OnboardingScreen(
 ) {
     val pages = listOf(
         OnboardingPage(
-            icon = Icons.Default.SportsEsports,
-            title = stringResource(R.string.find_scrims),
-            description = stringResource(R.string.find_scrims_desc),
+            icon = Icons.Default.Search,
+            title = stringResource(R.string.onboarding_find_scrims_title),
+            description = stringResource(R.string.onboarding_find_scrims_desc),
             gradient = BlueGradient
         ),
         OnboardingPage(
-            icon = Icons.Default.Group,
-            title = stringResource(R.string.build_team),
-            description = stringResource(R.string.build_team_desc),
-            gradient = GoldGradient
+            icon = Icons.Default.Groups,
+            title = stringResource(R.string.onboarding_team_title),
+            description = stringResource(R.string.onboarding_team_desc),
+            gradient = PremiumBlueGradient
         ),
         OnboardingPage(
             icon = Icons.Default.EmojiEvents,
-            title = stringResource(R.string.climb_ranks),
-            description = stringResource(R.string.climb_ranks_desc),
+            title = stringResource(R.string.onboarding_results_title),
+            description = stringResource(R.string.onboarding_results_desc),
             gradient = PurpleGradient
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Chat,
-            title = stringResource(R.string.connect_compete),
-            description = stringResource(R.string.connect_compete_desc),
-            gradient = SuccessGradient
         )
     )
 
@@ -70,7 +65,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Background Glow Orbs ──────────────────────────────────
         Box(
@@ -80,7 +75,7 @@ fun OnboardingScreen(
                 .offset(y = (-50).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.12f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
         )
@@ -91,7 +86,7 @@ fun OnboardingScreen(
                 .offset(y = 100.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(GoldPrimary.copy(alpha = 0.10f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f), Color.Transparent)
                     )
                 )
         )
@@ -124,8 +119,8 @@ fun OnboardingScreen(
                         modifier = Modifier
                             .size(160.dp)
                             .clip(CircleShape)
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, CircleShape),
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
@@ -138,7 +133,7 @@ fun OnboardingScreen(
                             Icon(
                                 imageVector = pageData.icon,
                                 contentDescription = null,
-                                tint = White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(48.dp)
                             )
                         }
@@ -148,7 +143,7 @@ fun OnboardingScreen(
 
                     Text(
                         text = pageData.title,
-                        style = iOSTitle1.copy(color = TextPrimary),
+                        style = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface),
                         textAlign = TextAlign.Center
                     )
 
@@ -156,7 +151,7 @@ fun OnboardingScreen(
 
                     Text(
                         text = pageData.description,
-                        style = iOSBody.copy(color = TextSecondary),
+                        style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -179,7 +174,7 @@ fun OnboardingScreen(
                             .width(width)
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (isSelected) GoldPrimary else GlassBorder)
+                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     )
                 }
             }
@@ -198,14 +193,14 @@ fun OnboardingScreen(
                             .weight(1f)
                             .height(54.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
                             .clickable { currentPage-- },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             stringResource(R.string.back),
-                            style = iOSHeadline.copy(color = TextPrimary)
+                            style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                         )
                     }
                 } else {
@@ -218,7 +213,7 @@ fun OnboardingScreen(
                         .weight(1f)
                         .height(54.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.verticalGradient(if (isLast) BlueGradient else GoldGradient))
+                        .background(Brush.verticalGradient(if (isLast) BlueGradient else PremiumBlueGradient))
                         .clickable {
                             if (isLast) onFinish() else currentPage++
                         },
@@ -226,7 +221,7 @@ fun OnboardingScreen(
                 ) {
                     Text(
                         if (isLast) stringResource(R.string.get_started) else stringResource(R.string.next),
-                        style = iOSHeadline.copy(color = if (isLast) White else DarkNavy)
+                        style = iOSHeadline.copy(color = if (isLast) White else MaterialTheme.colorScheme.background)
                     )
                 }
             }

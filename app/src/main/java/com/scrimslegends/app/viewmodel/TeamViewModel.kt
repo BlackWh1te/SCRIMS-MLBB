@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,8 +45,8 @@ class TeamViewModel @Inject constructor(
     private var loadTeamRatingsJob: Job? = null
     private var submitRatingJob: Job? = null
 
-    private val _teams = MutableStateFlow<List<Team>>(emptyList())
-    val teams: StateFlow<List<Team>> = _teams.asStateFlow()
+    private val _teams = MutableStateFlow<ImmutableList<Team>>(persistentListOf())
+    val teams: StateFlow<ImmutableList<Team>> = _teams.asStateFlow()
     
     private var currentUserId: String? = null
     
@@ -63,18 +66,18 @@ class TeamViewModel @Inject constructor(
     val createSuccess: StateFlow<Team?> = _createSuccess.asStateFlow()
 
     // ── Invite state ──
-    private val _pendingInvites = MutableStateFlow<List<TeamInvite>>(emptyList())
-    val pendingInvites: StateFlow<List<TeamInvite>> = _pendingInvites.asStateFlow()
+    private val _pendingInvites = MutableStateFlow<ImmutableList<TeamInvite>>(persistentListOf())
+    val pendingInvites: StateFlow<ImmutableList<TeamInvite>> = _pendingInvites.asStateFlow()
 
-    private val _teamInvites = MutableStateFlow<List<TeamInvite>>(emptyList())
-    val teamInvites: StateFlow<List<TeamInvite>> = _teamInvites.asStateFlow()
+    private val _teamInvites = MutableStateFlow<ImmutableList<TeamInvite>>(persistentListOf())
+    val teamInvites: StateFlow<ImmutableList<TeamInvite>> = _teamInvites.asStateFlow()
 
     // ── Application state ──
-    private val _openTeams = MutableStateFlow<List<Team>>(emptyList())
-    val openTeams: StateFlow<List<Team>> = _openTeams.asStateFlow()
+    private val _openTeams = MutableStateFlow<ImmutableList<Team>>(persistentListOf())
+    val openTeams: StateFlow<ImmutableList<Team>> = _openTeams.asStateFlow()
 
-    private val _teamApplications = MutableStateFlow<List<com.scrimslegends.app.data.model.TeamApplication>>(emptyList())
-    val teamApplications: StateFlow<List<com.scrimslegends.app.data.model.TeamApplication>> = _teamApplications.asStateFlow()
+    private val _teamApplications = MutableStateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamApplication>>(persistentListOf())
+    val teamApplications: StateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamApplication>> = _teamApplications.asStateFlow()
 
     private val _applicationSuccess = MutableStateFlow(false)
     val applicationSuccess: StateFlow<Boolean> = _applicationSuccess.asStateFlow()
@@ -83,8 +86,8 @@ class TeamViewModel @Inject constructor(
     private val _teamStats = MutableStateFlow<Map<String, Any>>(emptyMap())
     val teamStats: StateFlow<Map<String, Any>> = _teamStats.asStateFlow()
 
-    private val _teamRatings = MutableStateFlow<List<com.scrimslegends.app.data.model.TeamRating>>(emptyList())
-    val teamRatings: StateFlow<List<com.scrimslegends.app.data.model.TeamRating>> = _teamRatings.asStateFlow()
+    private val _teamRatings = MutableStateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamRating>>(persistentListOf())
+    val teamRatings: StateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamRating>> = _teamRatings.asStateFlow()
 
     private val _averageRating = MutableStateFlow(0.0)
     val averageRating: StateFlow<Double> = _averageRating.asStateFlow()
@@ -102,7 +105,7 @@ class TeamViewModel @Inject constructor(
                     _isLoading.value = false
                     _isRefreshing.value = false
                     result.onSuccess { teamsList ->
-                        _teams.value = teamsList
+                        _teams.value = teamsList.toPersistentList()
                     }.onFailure { error ->
                         _errorMessage.value = error.message
                     }
@@ -112,7 +115,7 @@ class TeamViewModel @Inject constructor(
                     _isLoading.value = false
                     _isRefreshing.value = false
                     result.onSuccess { teamsList ->
-                        _teams.value = teamsList
+                        _teams.value = teamsList.toPersistentList()
                     }.onFailure { error ->
                         _errorMessage.value = error.message
                     }
@@ -125,8 +128,8 @@ class TeamViewModel @Inject constructor(
      *  Clears stale cached data when the user changes to prevent flashing
      *  another user's teams after reinstall or account switch. */
     fun setUserId(userId: String?) {
-        if (currentUserId != userId) {
-            _teams.value = emptyList()
+        if (userId != currentUserId) {
+            _teams.value = persistentListOf()
             _currentTeam.value = null
         }
         currentUserId = userId
@@ -331,7 +334,7 @@ class TeamViewModel @Inject constructor(
                 _isLoading.value = false
                 result.onSuccess {
                     // Refresh pending invites
-                    _pendingInvites.value = _pendingInvites.value.filter { it.id != inviteId }
+                    _pendingInvites.value = _pendingInvites.value.filter { it.id != inviteId }.toPersistentList()
                 }.onFailure { error ->
                     _errorMessage.value = error.message
                 }
@@ -345,7 +348,7 @@ class TeamViewModel @Inject constructor(
         loadInvitesJob = viewModelScope.launch {
             teamRepository.getInvitesForPlayer(userId).collect { result ->
                 result.onSuccess { invites ->
-                    _pendingInvites.value = invites
+                    _pendingInvites.value = invites.toPersistentList()
                 }.onFailure { error ->
                     _errorMessage.value = error.message
                 }
@@ -358,7 +361,7 @@ class TeamViewModel @Inject constructor(
         viewModelScope.launch {
             teamRepository.getInvitesForTeam(teamId).collect { result ->
                 result.onSuccess { invites ->
-                    _teamInvites.value = invites
+                    _teamInvites.value = invites.toPersistentList()
                 }.onFailure { error ->
                     _errorMessage.value = error.message
                 }
@@ -375,7 +378,7 @@ class TeamViewModel @Inject constructor(
             teamRepository.getOpenTeams().collect { result ->
                 _isLoading.value = false
                 result.onSuccess { teams ->
-                    _openTeams.value = teams
+                    _openTeams.value = teams.toPersistentList()
                 }.onFailure { error ->
                     _errorMessage.value = error.message
                 }
@@ -407,7 +410,7 @@ class TeamViewModel @Inject constructor(
             teamRepository.getTeamApplications(teamId).collect { result ->
                 _isLoading.value = false
                 result.onSuccess { apps ->
-                    _teamApplications.value = apps
+                    _teamApplications.value = apps.toPersistentList()
                 }.onFailure { error ->
                     _errorMessage.value = error.message
                 }
@@ -484,7 +487,7 @@ class TeamViewModel @Inject constructor(
         loadTeamRatingsJob?.cancel()
         loadTeamRatingsJob = viewModelScope.launch {
             teamRepository.getTeamRatings(teamId).collect { result ->
-                result.onSuccess { _teamRatings.value = it }
+                result.onSuccess { _teamRatings.value = it.toPersistentList() }
             }
         }
     }
@@ -507,7 +510,7 @@ class TeamViewModel @Inject constructor(
 
     fun clearTeamStats() {
         _teamStats.value = emptyMap()
-        _teamRatings.value = emptyList()
+        _teamRatings.value = persistentListOf()
         _averageRating.value = 0.0
     }
 
@@ -542,7 +545,7 @@ class TeamViewModel @Inject constructor(
                 val current = _pendingInvites.value.toMutableList()
                 if (current.none { it.id == newInvite.id }) {
                     current.add(0, newInvite)
-                    _pendingInvites.value = current
+                    _pendingInvites.value = current.toPersistentList()
                 }
             }
         }

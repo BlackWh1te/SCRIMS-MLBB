@@ -88,7 +88,7 @@ class LeaderboardRepository {
             wins = 15,
             losses = 20,
             totalMatches = 35,
-            currentTier = RankTier.GOLD
+            currentTier = RankTier.MASTER
         ),
         LeaderboardEntry(
             rank = 8,
@@ -99,19 +99,19 @@ class LeaderboardRepository {
             wins = 12,
             losses = 18,
             totalMatches = 30,
-            currentTier = RankTier.GOLD
+            currentTier = RankTier.MASTER
         ),
-        // SOLVER tier (1000-2499)
+        // SILVER tier (1000-2499)
         LeaderboardEntry(
             rank = 9,
             playerId = "p9",
-            username = "SolverAce",
+            username = "SilverAce",
             teamName = "New Bloods",
             xp = 1500,
             wins = 8,
             losses = 12,
             totalMatches = 20,
-            currentTier = RankTier.SOLVER
+            currentTier = RankTier.ELITE
         ),
         // BRONZE tier (0-999)
         LeaderboardEntry(
@@ -123,7 +123,7 @@ class LeaderboardRepository {
             wins = 4,
             losses = 8,
             totalMatches = 12,
-            currentTier = RankTier.BRONZE
+            currentTier = RankTier.WARRIOR
         )
     )
 

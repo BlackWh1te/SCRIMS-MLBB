@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -65,8 +66,32 @@ fun TournamentListScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf<String?>(null) }
     var selectedTab by remember { mutableStateOf(0) }
+    var showComingSoonDialog by remember { mutableStateOf(true) }
     val focusManager = LocalFocusManager.current
     val tabs = if (isTournamentHost) listOf(R.string.all_tournaments, R.string.my_tournaments) else listOf(R.string.all_tournaments)
+
+    if (showComingSoonDialog) {
+        AlertDialog(
+            onDismissRequest = { showComingSoonDialog = false },
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            title = {
+                Text(
+                    text = "Coming Soon",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text("Tournaments are currently under development and will be available in a future update. Stay tuned!")
+            },
+            confirmButton = {
+                TextButton(onClick = { showComingSoonDialog = false }) {
+                    Text("OK", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     val baseList = if (selectedTab == 1 && isTournamentHost) hostedTournaments else tournaments
     val displayTournaments = baseList
@@ -101,7 +126,7 @@ fun TournamentListScreen(
             AnimatedEntrance(delayMillis = 0) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = DarkNavy.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                 ) {
                     Column(
                         modifier = Modifier
@@ -124,11 +149,7 @@ fun TournamentListScreen(
 
                             Text(
                                 text = stringResource(R.string.tournaments_title),
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = White
-                                )
+                                style = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface)
                             )
 
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -141,14 +162,14 @@ fun TournamentListScreen(
                                     modifier = Modifier
                                         .size(44.dp)
                                         .background(
-                                            color = if (showSearch) BluePrimary.copy(alpha = 0.2f) else White.copy(alpha = 0.1f),
+                                            color = if (showSearch) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                             shape = RoundedCornerShape(12.dp)
                                         )
                                 ) {
                                     Icon(
                                         imageVector = if (showSearch) Icons.Default.SearchOff else Icons.Default.Search,
                                         contentDescription = "Search",
-                                        tint = if (showSearch) BluePrimary else LightGray,
+                                        tint = if (showSearch) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -158,9 +179,9 @@ fun TournamentListScreen(
                                         onClick = onNavigateToCreateTournament,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .background(color = GoldPrimary.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
+                                            .background(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
                                     ) {
-                                        Icon(Icons.Default.Add, "Create", tint = GoldPrimary, modifier = Modifier.size(22.dp))
+                                        Icon(Icons.Default.Add, "Create", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(22.dp))
                                     }
                                 } else {
                                     IconButton(
@@ -178,9 +199,9 @@ fun TournamentListScreen(
                                         onClick = onNavigateToHostManagement,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .background(color = GoldPrimary.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
+                                            .background(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
                                     ) {
-                                        Icon(Icons.Default.Settings, "Host Management", tint = GoldPrimary, modifier = Modifier.size(22.dp))
+                                        Icon(Icons.Default.Settings, "Host Management", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(22.dp))
                                     }
                                 }
 
@@ -189,14 +210,14 @@ fun TournamentListScreen(
                                     modifier = Modifier
                                         .size(44.dp)
                                         .background(
-                                            color = if (showFilters || selectedStatusFilter != null) GoldPrimary.copy(alpha = 0.2f) else White.copy(alpha = 0.1f),
+                                            color = if (showFilters || selectedStatusFilter != null) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                             shape = RoundedCornerShape(12.dp)
                                         )
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.FilterList,
                                         contentDescription = "Filters",
-                                        tint = if (showFilters || selectedStatusFilter != null) GoldPrimary else LightGray,
+                                        tint = if (showFilters || selectedStatusFilter != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -215,27 +236,27 @@ fun TournamentListScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 20.dp, vertical = 6.dp),
-                                placeholder = { Text("Search tournaments...", color = TextTertiary) },
+                                placeholder = { Text("Search tournaments...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                                 singleLine = true,
                                 shape = RoundedCornerShape(14.dp),
-                                leadingIcon = { Icon(Icons.Default.Search, null, tint = TextTertiary, modifier = Modifier.size(18.dp)) },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(18.dp)) },
                                 trailingIcon = {
                                     if (searchQuery.isNotBlank()) {
                                         IconButton(onClick = { searchQuery = "" }) {
-                                            Icon(Icons.Default.Clear, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+                                            Icon(Icons.Default.Clear, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
                                         }
                                     }
                                 },
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BluePrimary,
-                                    unfocusedBorderColor = Separator,
-                                    focusedContainerColor = SurfaceElevated,
-                                    unfocusedContainerColor = SurfaceElevated,
-                                    cursorColor = BluePrimary,
-                                    focusedTextColor = White,
-                                    unfocusedTextColor = White
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                 )
                             )
                         }
@@ -250,7 +271,7 @@ fun TournamentListScreen(
                             PremiumChip(
                                 text = "${baseList.size} TOTAL",
                                 icon = Icons.Default.EmojiEvents,
-                                color = GoldPrimary,
+                                color = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.weight(1f)
                             )
                             PremiumChip(
@@ -275,8 +296,8 @@ fun TournamentListScreen(
                 TabRow(
                     selectedTabIndex = selectedTab,
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = DarkNavy.copy(alpha = 0.5f),
-                    contentColor = White,
+                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     divider = {}
                 ) {
                     tabs.forEachIndexed { index, titleRes ->
@@ -286,13 +307,13 @@ fun TournamentListScreen(
                             text = {
                                 Text(
                                     text = stringResource(titleRes),
-                                    style = MaterialTheme.typography.labelLarge.copy(
+                                    style = iOSCallout.copy(
                                         fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium
                                     )
                                 )
                             },
-                            selectedContentColor = GoldPrimary,
-                            unselectedContentColor = LightGray.copy(alpha = 0.6f)
+                            selectedContentColor = MaterialTheme.colorScheme.secondary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -325,17 +346,17 @@ fun TournamentListScreen(
                                     selectedStatusFilter = value
                                     onSetStatusFilter(value)
                                 },
-                                label = { Text(label, fontSize = 12.sp) },
+                                label = { Text(label, style = iOSCaption1) },
                                 modifier = Modifier.height(36.dp),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                    selectedLabelColor = GoldPrimary,
-                                    containerColor = SurfaceElevated,
-                                    labelColor = LightGray
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = Separator,
-                                    selectedBorderColor = GoldPrimary,
+                                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    selectedBorderColor = MaterialTheme.colorScheme.secondary,
                                     enabled = true,
                                     selected = selectedStatusFilter == value
                                 )
@@ -351,9 +372,8 @@ fun TournamentListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(
-                        color = GoldPrimary,
-                        modifier = Modifier.size(48.dp)
+                    LottieLoadingIndicator(
+                        size = 48.dp
                     )
                 }
             } else if (displayTournaments.isEmpty()) {
@@ -369,7 +389,7 @@ fun TournamentListScreen(
                             imageVector = Icons.Default.EmojiEvents,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = TextTertiary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
@@ -377,10 +397,7 @@ fun TournamentListScreen(
                                 stringResource(R.string.my_tournaments_empty)
                             else
                                 stringResource(R.string.tournament_no_tournaments),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = TextSecondary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -388,7 +405,8 @@ fun TournamentListScreen(
                                 stringResource(R.string.my_tournaments_empty_desc)
                             else
                                 stringResource(R.string.tournament_no_tournaments_desc),
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextTertiary)
+                            style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
                 }
@@ -421,11 +439,11 @@ fun TournamentListScreen(
                 containerColor = ErrorRed,
                 action = {
                     TextButton(onClick = onDismissError) {
-                        Text("OK", color = White)
+                        Text("OK", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             ) {
-                Text(it, color = White)
+                Text(it, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -459,9 +477,9 @@ private fun TournamentCard(
         TournamentStatus.REGISTRATION -> SuccessGreen
         TournamentStatus.CHECK_IN -> WarningOrange
         TournamentStatus.IN_PROGRESS -> ErrorRed
-        TournamentStatus.COMPLETED -> BluePrimary
-        TournamentStatus.CANCELLED -> TextTertiary
-        else -> TextTertiary
+        TournamentStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+        TournamentStatus.CANCELLED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
     }
 
     val statusLabel = when (tournament.status) {
@@ -494,18 +512,13 @@ private fun TournamentCard(
     val borderColor = when {
         tournament.status == TournamentStatus.REGISTRATION -> SuccessGreen.copy(alpha = glowAlpha)
         tournament.isLive -> ErrorRed.copy(alpha = 0.5f)
-        else -> Separator
+        else -> MaterialTheme.colorScheme.outlineVariant
     }
     val borderWidth = if (tournament.status == TournamentStatus.REGISTRATION || tournament.isLive) 1.5.dp else 0.5.dp
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(
-            elevation = if (tournament.status == TournamentStatus.REGISTRATION) 8.dp else 0.dp,
-            shape = RoundedCornerShape(20.dp),
-            ambientColor = if (tournament.status == TournamentStatus.REGISTRATION) SuccessGreen else Color.Black,
-            spotColor = if (tournament.status == TournamentStatus.REGISTRATION) SuccessGreen else Color.Black
-        ),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
         border = androidx.compose.foundation.BorderStroke(
             width = borderWidth,
@@ -557,7 +570,6 @@ private fun TournamentCard(
                                         modifier = Modifier
                                             .size(7.dp)
                                             .background(SuccessGreen.copy(alpha = glowAlpha), CircleShape)
-                                            .shadow(4.dp, CircleShape, ambientColor = SuccessGreen, spotColor = SuccessGreen)
                                     )
                                 } else if (tournament.isLive) {
                                     Box(
@@ -568,10 +580,9 @@ private fun TournamentCard(
                                 }
                                 Text(
                                     text = statusLabel,
-                                    style = MaterialTheme.typography.labelSmall.copy(
+                                    style = iOSCaption2.copy(
                                         color = statusColor,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
+                                        fontWeight = FontWeight.Bold
                                     )
                                 )
                             }
@@ -585,10 +596,9 @@ private fun TournamentCard(
                             ) {
                                 Text(
                                     text = "REGISTERED",
-                                    style = MaterialTheme.typography.labelSmall.copy(
+                                    style = iOSCaption2.copy(
                                         color = PurplePrimary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
+                                        fontWeight = FontWeight.Bold
                                     ),
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                 )
@@ -611,9 +621,8 @@ private fun TournamentCard(
                             )
                             Text(
                                 text = formatTimeRemaining(remaining),
-                                style = MaterialTheme.typography.labelSmall.copy(
+                                style = iOSCaption2.copy(
                                     color = if (remaining < 3600000) ErrorRed else WarningOrange,
-                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             )
@@ -635,7 +644,7 @@ private fun TournamentCard(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(SurfaceElevated),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     } else {
@@ -643,19 +652,17 @@ private fun TournamentCard(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(GoldPrimary.copy(alpha = 0.15f)),
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                         }
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = tournament.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                color = White,
-                                fontSize = 19.sp,
+                            style = iOSTitle3.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
                                 letterSpacing = 0.3.sp
                             ),
                             maxLines = 1,
@@ -668,10 +675,7 @@ private fun TournamentCard(
                         ) {
                             Text(
                                 text = stringResource(R.string.tournament_hosted_by, tournament.hostUsername),
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
+                                style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             if (tournament.hostTrustScore > 0) {
                                 val trustColor = when {
@@ -697,9 +701,8 @@ private fun TournamentCard(
                                         )
                                         Text(
                                             text = "%.1f".format(tournament.hostTrustScore),
-                                            style = MaterialTheme.typography.labelSmall.copy(
+                                            style = iOSCaption2.copy(
                                                 color = trustColor,
-                                                fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         )
@@ -716,7 +719,7 @@ private fun TournamentCard(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = GoldPrimary.copy(alpha = 0.08f)
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
                 ) {
                     Row(
                         modifier = Modifier
@@ -729,31 +732,29 @@ private fun TournamentCard(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(GoldPrimary.copy(alpha = 0.2f)),
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = prizeTypeIcon,
                                 contentDescription = null,
-                                tint = GoldPrimary,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         Column {
                             Text(
                                 text = stringResource(R.string.tournament_prize_pool),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextTertiary,
-                                    fontSize = 10.sp,
+                                style = iOSCaption2.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     fontWeight = FontWeight.Medium
                                 )
                             )
                             Text(
                                 text = tournament.prizeDisplay.replaceFirstChar { it.uppercase() },
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = GoldPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                                style = iOSCallout.copy(
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -817,15 +818,11 @@ private fun TournamentCard(
                         ) {
                             Text(
                                 text = "${tournament.teamCount}/${tournament.maxTeams} teams",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextSecondary, fontSize = 11.sp
-                                )
+                                style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             Text(
                                 text = "${(fillFraction * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = barColor, fontWeight = FontWeight.Bold, fontSize = 11.sp
-                                )
+                                style = iOSCaption1.copy(color = barColor, fontWeight = FontWeight.Bold)
                             )
                         }
                         Box(
@@ -833,7 +830,7 @@ private fun TournamentCard(
                                 .fillMaxWidth()
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(Separator)
+                                .background(MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -862,23 +859,23 @@ private fun TournamentCard(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        HorizontalDivider(thickness = 0.5.dp, color = Separator.copy(alpha = 0.5f))
+                        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         // Description
                         if (tournament.description.isNotBlank()) {
                             Column {
                                 Text(
                                     text = stringResource(R.string.description),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = TextTertiary,
+                                    style = iOSCaption2.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = tournament.description,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary,
+                                    style = iOSCaption1.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         lineHeight = 18.sp
                                     )
                                 )
@@ -931,7 +928,7 @@ private fun TournamentCard(
                                 )
                                 Text(
                                     text = stringResource(R.string.tournament_livestream),
-                                    style = MaterialTheme.typography.labelSmall.copy(
+                                    style = iOSCaption2.copy(
                                         color = ErrorRed,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -956,23 +953,24 @@ private fun TournamentCard(
                         Icon(
                             imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
-                            tint = LightGray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (expanded) stringResource(R.string.tournament_hide_details) else stringResource(R.string.tournament_details),
-                            color = LightGray,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            style = iOSCaption1.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Medium
+                            )
                         )
                     }
 
                     iOSPrimaryButton(
                         text = stringResource(R.string.tournament_view_full),
                         onClick = onClick,
-                        backgroundColor = GoldPrimary.copy(alpha = 0.15f),
-                        contentColor = GoldPrimary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1.2f)
                     )
                 }
@@ -1010,7 +1008,7 @@ private fun InfoPill(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceElevated.copy(alpha = 0.5f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1019,13 +1017,12 @@ private fun InfoPill(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(13.dp),
-            tint = TextTertiary
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = TextSecondary,
-                fontSize = 11.sp,
+            style = iOSCaption2.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium
             )
         )
@@ -1047,19 +1044,19 @@ private fun DetailRow(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(15.dp),
-            tint = TextTertiary
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
         Text(
             text = "$label: ",
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = TextTertiary,
+            style = iOSCaption2.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 fontWeight = FontWeight.Medium
             )
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = LightGray,
+            style = iOSCaption2.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 fontWeight = FontWeight.SemiBold
             )
         )

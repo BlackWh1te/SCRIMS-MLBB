@@ -122,7 +122,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
         )
     }
 
-    override suspend fun getAllMatchResults(): Flow<Result<List<MatchResult>>> = flow {
+    override suspend fun getAllMatchResults(forceRefresh: Boolean): Flow<Result<List<MatchResult>>> = flow {
         try {
             // Try Supabase API first
             kotlinx.coroutines.delay(300)
@@ -150,7 +150,7 @@ class MatchResultRepository : MatchResultRepositoryInterface {
         }
     }
 
-    override suspend fun getMatchResultsForTeam(teamId: String): Flow<Result<List<MatchResult>>> = flow {
+    override suspend fun getMatchResultsForTeam(teamId: String, forceRefresh: Boolean): Flow<Result<List<MatchResult>>> = flow {
         try {
             kotlinx.coroutines.delay(300)
             val results = matchResults.filter {

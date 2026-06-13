@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -100,7 +101,7 @@ fun TournamentCreateScreen(
             // ── Header ──
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = DarkNavy.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
             ) {
                 Row(
                     modifier = Modifier
@@ -115,7 +116,7 @@ fun TournamentCreateScreen(
                         text = stringResource(R.string.tournament_create),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -127,6 +128,7 @@ fun TournamentCreateScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -150,7 +152,7 @@ fun TournamentCreateScreen(
                         value = description,
                         onValueChange = { description = it },
                         modifier = Modifier.fillMaxWidth().height(100.dp),
-                        placeholder = { Text("Describe your tournament…", color = TextTertiary) },
+                        placeholder = { Text("Describe your tournament…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                         shape = RoundedCornerShape(12.dp),
                         colors = inputColors()
                     )
@@ -169,8 +171,8 @@ fun TournamentCreateScreen(
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
-                                .background(SurfaceElevated, RoundedCornerShape(12.dp))
-                                .border(1.dp, if (selectedLogoUri != null) GoldPrimary else Separator, RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                                .border(1.dp, if (selectedLogoUri != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                                 .clickable { logoPicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
@@ -182,18 +184,18 @@ fun TournamentCreateScreen(
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             } else {
-                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Add logo", tint = TextTertiary, modifier = Modifier.size(28.dp))
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Add logo", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(28.dp))
                             }
                         }
                         Column {
                             Text(
                                 if (selectedLogoUri != null) "Logo selected" else "Tap to choose a logo",
-                                style = MaterialTheme.typography.bodySmall.copy(color = if (selectedLogoUri != null) GoldPrimary else TextSecondary)
+                                style = MaterialTheme.typography.bodySmall.copy(color = if (selectedLogoUri != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             if (selectedLogoUri != null) {
                                 Text(
                                     "Tap to change",
-                                    style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary),
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)),
                                     modifier = Modifier.clickable { logoPicker.launch("image/*") }
                                 )
                             }
@@ -221,10 +223,10 @@ fun TournamentCreateScreen(
                                 },
                                 modifier = Modifier.height(32.dp),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                    selectedLabelColor = GoldPrimary,
-                                    containerColor = SurfaceElevated,
-                                    labelColor = LightGray
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             )
                         }
@@ -281,10 +283,10 @@ fun TournamentCreateScreen(
                                     label = { Text("BO$bo", fontSize = 12.sp) },
                                     modifier = Modifier.height(32.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                        selectedLabelColor = GoldPrimary,
-                                        containerColor = SurfaceElevated,
-                                        labelColor = LightGray
+                                        selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                        selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                     )
                                 )
                             }
@@ -307,10 +309,10 @@ fun TournamentCreateScreen(
                                 label = { Text(r, fontSize = 10.sp) },
                                 modifier = Modifier.height(32.dp),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BluePrimary.copy(alpha = 0.2f),
-                                    selectedLabelColor = BluePrimary,
-                                    containerColor = SurfaceElevated,
-                                    labelColor = LightGray
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             )
                         }
@@ -334,8 +336,8 @@ fun TournamentCreateScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = PurplePrimary.copy(alpha = 0.2f),
                                     selectedLabelColor = PurplePrimary,
-                                    containerColor = SurfaceElevated,
-                                    labelColor = LightGray
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             )
                         }
@@ -366,25 +368,25 @@ fun TournamentCreateScreen(
                             value = registrationDeadline,
                             onValueChange = {},
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("24h from now (default)", color = TextTertiary, fontSize = 12.sp) },
+                            placeholder = { Text("24h from now (default)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                             readOnly = true,
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarToday,
                                     contentDescription = null,
-                                    tint = GoldPrimary,
+                                    tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(18.dp).clickable { showRegDatePicker = true }
                                 )
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = inputColors(),
-                            textStyle = TextStyle(color = White, fontSize = 13.sp)
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                         )
                     }
                     if (registrationDeadline.isNotEmpty()) {
                         Text(
                             text = registrationDeadline,
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -402,25 +404,25 @@ fun TournamentCreateScreen(
                             value = checkInDeadline,
                             onValueChange = {},
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Pick date & time", color = TextTertiary, fontSize = 12.sp) },
+                            placeholder = { Text("Pick date & time", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                             readOnly = true,
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarToday,
                                     contentDescription = null,
-                                    tint = BluePrimary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp).clickable { showCheckInDatePicker = true }
                                 )
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = inputColors(),
-                            textStyle = TextStyle(color = White, fontSize = 13.sp)
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                         )
                     }
                     if (checkInDeadline.isNotEmpty()) {
                         Text(
                             text = checkInDeadline,
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -439,13 +441,13 @@ fun TournamentCreateScreen(
                         Icon(
                             imageVector = Icons.Default.Videocam,
                             contentDescription = null,
-                            tint = if (isLiveStreamEnabled) ErrorRed else TextTertiary,
+                            tint = if (isLiveStreamEnabled) ErrorRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = stringResource(R.string.tournament_livestream),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = if (isLiveStreamEnabled) White else TextSecondary
+                                color = if (isLiveStreamEnabled) White else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
@@ -453,10 +455,10 @@ fun TournamentCreateScreen(
                         checked = isLiveStreamEnabled,
                         onCheckedChange = { isLiveStreamEnabled = it },
                         colors = SwitchDefaults.colors(
-                            checkedTrackColor = GoldPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
                             checkedThumbColor = White,
-                            uncheckedTrackColor = SurfaceElevated,
-                            uncheckedThumbColor = TextTertiary
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     )
                 }
@@ -472,7 +474,7 @@ fun TournamentCreateScreen(
                             Label(text = "Entry Requirements (optional)")
                             Text(
                                 text = "Up to 5 requirements players must complete before applying",
-                                style = MaterialTheme.typography.labelSmall.copy(color = TextTertiary)
+                                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                             )
                         }
                         if (requirements.size < 5) {
@@ -482,7 +484,7 @@ fun TournamentCreateScreen(
                                 newReqUrl = ""
                                 showAddReqDialog = true
                             }) {
-                                Icon(Icons.Default.AddCircleOutline, contentDescription = "Add requirement", tint = GoldPrimary)
+                                Icon(Icons.Default.AddCircleOutline, contentDescription = "Add requirement", tint = MaterialTheme.colorScheme.secondary)
                             }
                         }
                     }
@@ -503,12 +505,12 @@ fun TournamentCreateScreen(
                                         else                               -> Icons.Default.CheckCircle
                                     },
                                     contentDescription = null,
-                                    tint = GoldPrimary,
+                                    tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = req.label,
-                                    style = MaterialTheme.typography.bodySmall.copy(color = White),
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
                                     modifier = Modifier.weight(1f)
                                 )
                                 IconButton(
@@ -578,16 +580,16 @@ fun TournamentCreateScreen(
                     },
                     enabled = title.isNotBlank() && description.isNotBlank() && !isLoading,
                     isLoading = isLoading,
-                    backgroundColor = GoldPrimary,
-                    contentColor = DarkNavy
+                    backgroundColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.background
                 )
 
                 // ── Add Requirement dialog ──
                 if (showAddReqDialog) {
                     AlertDialog(
                         onDismissRequest = { showAddReqDialog = false },
-                        containerColor = SurfaceCard,
-                        title = { Text("Add Requirement", color = White, fontWeight = FontWeight.Bold) },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        title = { Text("Add Requirement", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 // Type selector
@@ -608,10 +610,10 @@ fun TournamentCreateScreen(
                                             },
                                             modifier = Modifier.height(30.dp),
                                             colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = GoldPrimary.copy(alpha = 0.2f),
-                                                selectedLabelColor = GoldPrimary,
-                                                containerColor = SurfaceElevated,
-                                                labelColor = LightGray
+                                                selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                                selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                             )
                                         )
                                     }
@@ -620,7 +622,7 @@ fun TournamentCreateScreen(
                                     value = newReqLabel,
                                     onValueChange = { newReqLabel = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("Label (e.g. Subscribe to our channel)", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("Label (e.g. Subscribe to our channel)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(10.dp),
                                     colors = inputColors()
@@ -629,7 +631,7 @@ fun TournamentCreateScreen(
                                     value = newReqUrl,
                                     onValueChange = { newReqUrl = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("URL (optional)", color = TextTertiary, fontSize = 12.sp) },
+                                    placeholder = { Text("URL (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp) },
                                     singleLine = true,
                                     shape = RoundedCornerShape(10.dp),
                                     colors = inputColors()
@@ -648,10 +650,10 @@ fun TournamentCreateScreen(
                                         showAddReqDialog = false
                                     }
                                 }
-                            ) { Text("Add", color = GoldPrimary, fontWeight = FontWeight.Bold) }
+                            ) { Text("Add", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showAddReqDialog = false }) { Text("Cancel", color = TextSecondary) }
+                            TextButton(onClick = { showAddReqDialog = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
                     )
                 }
@@ -671,24 +673,24 @@ fun TournamentCreateScreen(
                             // Temporarily store date millis for combining with time
                             pendingRegDateMillis = dateMillis
                         }
-                    }) { Text("Next", color = GoldPrimary) }
+                    }) { Text("Next", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showRegDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showRegDatePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             ) {
                 DatePicker(state = regDatePickerState,
                     colors = DatePickerDefaults.colors(
-                        containerColor = DarkNavy,
-                        titleContentColor = White,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
                         headlineContentColor = White,
-                        navigationContentColor = GoldPrimary,
-                        yearContentColor = LightGray,
-                        currentYearContentColor = GoldPrimary,
-                        selectedDayContentColor = DarkNavy,
-                        selectedDayContainerColor = GoldPrimary,
+                        navigationContentColor = MaterialTheme.colorScheme.secondary,
+                        yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        currentYearContentColor = MaterialTheme.colorScheme.secondary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.background,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.secondary,
                         dayContentColor = White,
-                        weekdayContentColor = TextSecondary
+                        weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -698,7 +700,7 @@ fun TournamentCreateScreen(
         if (showRegTimePicker) {
             AlertDialog(
                 onDismissRequest = { showRegTimePicker = false },
-                containerColor = DarkNavy,
+                containerColor = MaterialTheme.colorScheme.background,
                 confirmButton = {
                     TextButton(onClick = {
                         val cal = java.util.Calendar.getInstance().apply {
@@ -709,14 +711,14 @@ fun TournamentCreateScreen(
                         }
                         registrationDeadline = formatTimestamp(cal.timeInMillis)
                         showRegTimePicker = false
-                    }) { Text("OK", color = GoldPrimary) }
+                    }) { Text("OK", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showRegTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showRegTimePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Select Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Text("Select Time", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
                         TimePicker(state = regTimePickerState)
                     }
@@ -735,24 +737,24 @@ fun TournamentCreateScreen(
                             showCheckInTimePicker = true
                             pendingCheckInDateMillis = dateMillis
                         }
-                    }) { Text("Next", color = GoldPrimary) }
+                    }) { Text("Next", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showCheckInDatePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             ) {
                 DatePicker(state = checkInDatePickerState,
                     colors = DatePickerDefaults.colors(
-                        containerColor = DarkNavy,
-                        titleContentColor = White,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
                         headlineContentColor = White,
-                        navigationContentColor = GoldPrimary,
-                        yearContentColor = LightGray,
-                        currentYearContentColor = GoldPrimary,
-                        selectedDayContentColor = DarkNavy,
-                        selectedDayContainerColor = GoldPrimary,
+                        navigationContentColor = MaterialTheme.colorScheme.secondary,
+                        yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        currentYearContentColor = MaterialTheme.colorScheme.secondary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.background,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.secondary,
                         dayContentColor = White,
-                        weekdayContentColor = TextSecondary
+                        weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -762,7 +764,7 @@ fun TournamentCreateScreen(
         if (showCheckInTimePicker) {
             AlertDialog(
                 onDismissRequest = { showCheckInTimePicker = false },
-                containerColor = DarkNavy,
+                containerColor = MaterialTheme.colorScheme.background,
                 confirmButton = {
                     TextButton(onClick = {
                         val cal = java.util.Calendar.getInstance().apply {
@@ -773,14 +775,14 @@ fun TournamentCreateScreen(
                         }
                         checkInDeadline = formatTimestamp(cal.timeInMillis)
                         showCheckInTimePicker = false
-                    }) { Text("OK", color = GoldPrimary) }
+                    }) { Text("OK", color = MaterialTheme.colorScheme.secondary) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = TextSecondary) }
+                    TextButton(onClick = { showCheckInTimePicker = false }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Select Check-In Time", color = White, fontWeight = FontWeight.SemiBold)
+                        Text("Select Check-In Time", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
                         TimePicker(state = checkInTimePickerState)
                     }
@@ -795,8 +797,8 @@ fun TournamentCreateScreen(
                     .align(Alignment.BottomCenter)
                     .padding(16.dp),
                 containerColor = ErrorRed,
-                action = { TextButton(onClick = onDismissError) { Text("OK", color = White) } }
-            ) { Text(it, color = White) }
+                action = { TextButton(onClick = onDismissError) { Text("OK", color = MaterialTheme.colorScheme.onSurface) } }
+            ) { Text(it, color = MaterialTheme.colorScheme.onSurface) }
         }
     }
 }
@@ -806,7 +808,7 @@ fun Label(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium.copy(
-            color = LightGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             fontWeight = FontWeight.SemiBold
         )
     )
@@ -824,7 +826,7 @@ fun StyledInput(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder, color = TextTertiary) },
+        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
@@ -835,13 +837,13 @@ fun StyledInput(
 
 @Composable
 fun inputColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = GoldPrimary,
-    unfocusedBorderColor = Separator,
-    focusedContainerColor = SurfaceElevated,
-    unfocusedContainerColor = SurfaceElevated,
-    cursorColor = GoldPrimary,
-    focusedTextColor = White,
-    unfocusedTextColor = White
+    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    cursorColor = MaterialTheme.colorScheme.secondary,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
 )
 
 private fun formatTimestamp(millis: Long): String {

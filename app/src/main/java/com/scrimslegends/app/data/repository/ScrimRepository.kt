@@ -178,8 +178,34 @@ class ScrimRepository : ScrimRepositoryInterface {
                 emit(Result.failure(Exception("Scrim is no longer open for applications")))
                 return@flow
             }
-            val newApp = application.copy(id = java.util.UUID.randomUUID().toString())
-            val updatedApps = scrim.applications + newApp
+            val existingIndex = scrim.applications.indexOfFirst {
+                it.applicantTeamId == application.applicantTeamId
+            }
+            val updatedApps = if (existingIndex >= 0) {
+                scrim.applications.mapIndexed { appIndex, existing ->
+                    if (appIndex == existingIndex) {
+                        existing.copy(
+                            applicantTeamName = application.applicantTeamName.ifBlank { existing.applicantTeamName },
+                            applicantTeamLeader = application.applicantTeamLeader.ifBlank { existing.applicantTeamLeader },
+                            applicantTeamLeaderName = application.applicantTeamLeaderName.ifBlank { existing.applicantTeamLeaderName },
+                            applicantTeamAvatarUrl = application.applicantTeamAvatarUrl ?: existing.applicantTeamAvatarUrl,
+                            applicantTeamPlayers = if (application.applicantTeamPlayers.isNotEmpty()) {
+                                application.applicantTeamPlayers
+                            } else {
+                                existing.applicantTeamPlayers
+                            },
+                            status = ApplicationStatus.PENDING,
+                            appliedAt = System.currentTimeMillis(),
+                            respondedAt = null,
+                            notes = application.notes ?: existing.notes
+                        )
+                    } else {
+                        existing
+                    }
+                }
+            } else {
+                scrim.applications + application.copy(id = java.util.UUID.randomUUID().toString())
+            }
             scrims[index] = scrim.copy(applications = updatedApps)
             emit(Result.success(scrims[index]))
         } else {
@@ -197,9 +223,12 @@ class ScrimRepository : ScrimRepositoryInterface {
                 emit(Result.failure(Exception("Application not found")))
                 return@flow
             }
+            if (app.status != ApplicationStatus.PENDING) {
+                emit(Result.failure(Exception("Application is not pending")))
+                return@flow
+            }
             val updatedApps = scrim.applications.map {
                 if (it.id == applicationId) it.copy(status = ApplicationStatus.APPROVED, respondedAt = System.currentTimeMillis())
-                else if (it.status == ApplicationStatus.PENDING) it.copy(status = ApplicationStatus.CANCELLED)
                 else it
             }
             scrims[index] = scrim.copy(
@@ -208,7 +237,9 @@ class ScrimRepository : ScrimRepositoryInterface {
                 opponentTeamName = app.applicantTeamName,
                 opponentTeamLeader = app.applicantTeamLeader,
                 applications = updatedApps,
-                conversationId = conversationId
+                conversationId = conversationId,
+                maxPlayers = 10,
+                currentPlayers = 10
             )
             emit(Result.success(scrims[index]))
         } else {
@@ -267,27 +298,27 @@ class ScrimRepository : ScrimRepositoryInterface {
         val scrim = scrims[index]
         val isTeamA = scrim.teamId == teamId
 
-        // Validate: minimum 5 active players
+        // Validate: MLBB scrims use exactly 5 active players per team.
         val activeCount = roster.count { it.isActive }
-        if (activeCount < 5) {
-            emit(Result.failure(Exception("Minimum 5 active players required for scrim")))
+        if (activeCount != 5) {
+            emit(Result.failure(Exception("Exactly 5 active players are required for scrim")))
             return@flow
         }
 
         val updatedScrim = if (isTeamA) {
-            scrim.copy(teamARoster = roster)
+            scrim.copy(teamARoster = roster, maxPlayers = 10, currentPlayers = if (scrim.opponentTeamId == null) 5 else 10)
         } else {
-            scrim.copy(teamBRoster = roster)
+            scrim.copy(teamBRoster = roster, maxPlayers = 10, currentPlayers = 10)
         }
         scrims[index] = updatedScrim
         emit(Result.success(updatedScrim))
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // READY FLOW — Captains press Ready at match start time
+    // READY FLOW — Captains press Ready after the host starts ready check
     // ═══════════════════════════════════════════════════════════════
 
-    /** Transition scrim to READY_CHECK status at match time */
+    /** Transition scrim to READY_CHECK status; can be started early by the host */
     override suspend fun transitionToReadyCheck(scrimId: String): Flow<Result<Scrim>> = flow {
         delay(300)
         val index = scrims.indexOfFirst { it.id == scrimId }
@@ -298,6 +329,10 @@ class ScrimRepository : ScrimRepositoryInterface {
         val scrim = scrims[index]
         if (scrim.status != ScrimStatus.FILLED) {
             emit(Result.failure(Exception("Scrim must be in FILLED status to start ready check")))
+            return@flow
+        }
+        if (scrim.teamAActiveRoster.size != 5 || scrim.teamBActiveRoster.size != 5) {
+            emit(Result.failure(Exception("Both teams must assign exactly 5 active players before starting ready check")))
             return@flow
         }
         scrims[index] = scrim.copy(status = ScrimStatus.READY_CHECK)
@@ -532,11 +567,51 @@ class ScrimRepository : ScrimRepositoryInterface {
         val index = scrims.indexOfFirst { it.id == scrimId }
         if (index != -1) {
             val scrim = scrims[index]
-            scrims[index] = scrim.copy(
-                status = ScrimStatus.CANCELLED,
-                cancellationReason = reason,
-                cancelledBy = cancelledBy
-            )
+            if (scrim.status == ScrimStatus.FILLED && scrim.opponentTeamId != null) {
+                val updatedApps = scrim.applications.map { app ->
+                    if (app.status == ApplicationStatus.APPROVED && app.applicantTeamId == scrim.opponentTeamId) {
+                        app.copy(status = ApplicationStatus.REJECTED)
+                    } else {
+                        app
+                    }
+                }
+                scrims[index] = scrim.copy(
+                    status = ScrimStatus.OPEN,
+                    opponentTeamId = null,
+                    opponentTeamName = null,
+                    opponentTeamLeader = null,
+                    applications = updatedApps,
+                    conversationId = null,
+                    teamBRoster = emptyList(),
+                    teamAReady = false,
+                    teamBReady = false,
+                    teamAReadyAt = null,
+                    teamBReadyAt = null,
+                    teamAScreenshotUrl = null,
+                    teamBScreenshotUrl = null,
+                    teamAScreenshotUploadedAt = null,
+                    teamBScreenshotUploadedAt = null,
+                    winnerTeamId = null,
+                    resultSubmittedAt = null,
+                    cancellationReason = null,
+                    cancelledBy = null,
+                    currentPlayers = 5
+                )
+            } else {
+                val updatedApps = scrim.applications.map { app ->
+                    if (app.status == ApplicationStatus.PENDING || app.status == ApplicationStatus.APPROVED) {
+                        app.copy(status = ApplicationStatus.REJECTED)
+                    } else {
+                        app
+                    }
+                }
+                scrims[index] = scrim.copy(
+                    status = ScrimStatus.CANCELLED,
+                    applications = updatedApps,
+                    cancellationReason = reason,
+                    cancelledBy = cancelledBy
+                )
+            }
             emit(Result.success(Unit))
         } else {
             emit(Result.failure(Exception("Scrim not found")))

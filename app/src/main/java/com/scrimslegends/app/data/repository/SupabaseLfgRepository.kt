@@ -72,6 +72,11 @@ class SupabaseLfgRepository(
 
     override fun createPost(post: LfgPost): Flow<Result<LfgPost>> = flow {
         try {
+            validatePost(post)?.let { message ->
+                emit(Result.failure(IllegalArgumentException(message)))
+                return@flow
+            }
+
             // Ensure player_id matches the authenticated user (required by RLS)
             val authUserId = SupabaseSession.getUserIdOrNull()
             if (authUserId != null && post.playerId != authUserId) {
@@ -126,6 +131,22 @@ class SupabaseLfgRepository(
         } catch (e: Exception) {
             Timber.e("LfgRepo", "LFG post creation exception", e)
             emit(Result.failure(e))
+        }
+    }
+
+    private fun validatePost(post: LfgPost): String? {
+        return when {
+            post.playerId.isBlank() -> "Profile is still loading. Try again in a moment."
+            post.playerName.isBlank() -> "Username is required before posting."
+            post.city.isBlank() -> "Select your city before posting."
+            post.inGameId.isBlank() -> "In-game ID is required."
+            post.totalMatches <= 0 -> "Total games must be greater than 0."
+            post.winRate.isBlank() -> "Win rate is required."
+            post.rankedWinRate.isBlank() -> "Ranked win rate is required."
+            post.rank.isBlank() -> "Current rank is required."
+            post.mainHeroes.isEmpty() -> "Add at least one main hero."
+            post.message.isBlank() && post.bio.isBlank() -> "Bio/message is required."
+            else -> null
         }
     }
 

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +34,7 @@ fun InvitePlayerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(20.dp),
         title = {
             Text(
@@ -41,7 +42,7 @@ fun InvitePlayerDialog(
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -53,7 +54,7 @@ fun InvitePlayerDialog(
             ) {
                 Text(
                     text = stringResource(R.string.invite_code_share_hint),
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
@@ -65,7 +66,7 @@ fun InvitePlayerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(White.copy(alpha = 0.06f))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -73,7 +74,7 @@ fun InvitePlayerDialog(
                         text = inviteCode.uppercase(),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GoldPrimary,
+                        color = MaterialTheme.colorScheme.secondary,
                         letterSpacing = 4.sp
                     )
                 }
@@ -91,10 +92,10 @@ fun InvitePlayerDialog(
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = GoldPrimary
+                            contentColor = MaterialTheme.colorScheme.secondary
                         ),
                         border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(GoldPrimary)
+                            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.secondary)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -118,10 +119,10 @@ fun InvitePlayerDialog(
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = BluePrimary
+                            contentColor = MaterialTheme.colorScheme.primary
                         ),
                         border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(BluePrimary)
+                            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {

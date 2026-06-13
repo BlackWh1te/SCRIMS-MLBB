@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -34,7 +35,7 @@ import com.scrimslegends.app.ui.theme.*
 fun PremiumGlassCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    accentColor: Color = GoldPrimary.copy(alpha = 0.12f),
+    accentColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
     elevation: Float = 12f,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -50,12 +51,6 @@ fun PremiumGlassCard(
         label = "glassCardScale"
     )
     
-    val cardElevation by animateFloatAsState(
-        targetValue = if (isPressed) elevation * 0.6f else elevation,
-        animationSpec = tween(200),
-        label = "glassCardElevation"
-    )
-    
     val borderAlpha by animateFloatAsState(
         targetValue = if (isPressed) 0.2f else 0.12f,
         animationSpec = tween(200),
@@ -67,7 +62,6 @@ fun PremiumGlassCard(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                shadowElevation = cardElevation
                 shape = RoundedCornerShape(24.dp)
                 clip = true
             }
@@ -90,13 +84,7 @@ fun PremiumGlassCard(
             )
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        appBorderColor().copy(alpha = borderAlpha.coerceAtLeast(0.35f)),
-                        accentColor,
-                        appBorderColor().copy(alpha = borderAlpha.coerceAtLeast(0.35f) * 0.5f)
-                    )
-                ),
+                color = appBorderColor().copy(alpha = borderAlpha.coerceAtLeast(0.35f)),
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(1.dp)
@@ -135,7 +123,7 @@ fun PremiumGlassCard(
 fun PremiumElevatedCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    shadowColor: Color = BluePrimary.copy(alpha = 0.15f),
+    shadowColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -166,7 +154,7 @@ fun PremiumElevatedCard(
             defaultElevation = elevation,
             hoveredElevation = elevation
         ),
-        colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(
             modifier = Modifier
@@ -209,7 +197,7 @@ fun PremiumPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    accentColor: Color = BluePrimary,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     icon: ImageVector? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -230,6 +218,7 @@ fun PremiumPrimaryButton(
         label = "buttonAlpha"
     )
     
+    val highlightColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
     Box(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -255,7 +244,7 @@ fun PremiumPrimaryButton(
                     drawRoundRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                White.copy(alpha = 0.15f),
+                                highlightColor,
                                 Color.Transparent
                             ),
                             startY = 0f,
@@ -275,14 +264,14 @@ fun PremiumPrimaryButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = White,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Text(
                 text = text,
                 style = PremiumButton,
-                color = White.copy(alpha = alpha),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
                 maxLines = 1
             )
         }
@@ -300,7 +289,7 @@ fun PremiumSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    accentColor: Color = GoldPrimary
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -363,7 +352,7 @@ fun PremiumTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    textColor: Color = BluePrimary
+    textColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -404,7 +393,7 @@ fun PremiumInput(
     leadingIcon: ImageVector? = null,
     trailingIcon: ImageVector? = null,
     onTrailingIconClick: (() -> Unit)? = null,
-    accentColor: Color = GoldPrimary,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -416,7 +405,7 @@ fun PremiumInput(
     )
     
     val backgroundColor by animateColorAsState(
-        targetValue = if (isFocused) SurfaceOverlay else SurfaceElevated,
+        targetValue = if (isFocused) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant,
         animationSpec = tween(200),
         label = "inputBackground"
     )
@@ -449,7 +438,7 @@ fun PremiumInput(
                 Icon(
                     imageVector = it,
                     contentDescription = null,
-                    tint = MidGray,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -461,7 +450,7 @@ fun PremiumInput(
                     Text(
                         text = placeholder,
                         style = iOSBody,
-                        color = DimGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 modifier = Modifier
@@ -470,8 +459,8 @@ fun PremiumInput(
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = White,
-                    unfocusedTextColor = White,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     cursorColor = accentColor,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
@@ -489,7 +478,7 @@ fun PremiumInput(
                     Icon(
                         imageVector = it,
                         contentDescription = null,
-                        tint = if (onTrailingIconClick != null) accentColor else DimGray,
+                        tint = if (onTrailingIconClick != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -509,7 +498,7 @@ fun PremiumChip(
     selected: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    accentColor: Color = GoldPrimary
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val scale by animateFloatAsState(
         targetValue = if (selected) 1.05f else 1f,
@@ -527,7 +516,7 @@ fun PremiumChip(
     )
     
     val textColor by animateColorAsState(
-        targetValue = if (selected) accentColor else LightGray,
+        targetValue = if (selected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
         animationSpec = tween(200),
         label = "chipTextColor"
     )
@@ -583,7 +572,7 @@ fun PremiumChip(
 fun PremiumAvatar(
     initials: String,
     size: androidx.compose.ui.unit.Dp = 48.dp,
-    accentColor: Color = GoldPrimary,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -591,20 +580,15 @@ fun PremiumAvatar(
             .size(size)
             .border(
                 width = 2.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        accentColor,
-                        accentColor.copy(alpha = 0.6f)
-                    )
-                ),
+                color = accentColor,
                 shape = CircleShape
             )
             .padding(2.dp)
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        SurfaceOverlay,
-                        SurfaceElevated
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        MaterialTheme.colorScheme.surfaceVariant
                     )
                 ),
                 shape = CircleShape
@@ -617,7 +601,7 @@ fun PremiumAvatar(
                 fontSize = (size.value * 0.4).sp,
                 fontWeight = FontWeight.Bold
             ),
-            color = White
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

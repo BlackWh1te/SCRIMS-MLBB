@@ -1,9 +1,12 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +31,7 @@ import com.scrimslegends.app.R
 import androidx.compose.ui.res.stringResource
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
+import com.scrimslegends.app.ui.components.LottieCelebrationOverlay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -42,6 +46,16 @@ fun MatchResultDetailScreen(
             (matchResult.teamAId == currentUserTeamId || matchResult.teamBId == currentUserTeamId) &&
             matchResult.verificationStatus != VerificationStatus.CONFIRMED &&
             matchResult.pendingReporterTeamId == currentUserTeamId
+
+    var showCelebration by remember { mutableStateOf(false) }
+
+    LaunchedEffect(matchResult.verificationStatus, matchResult.confirmedWinnerId) {
+        if (matchResult.verificationStatus == VerificationStatus.CONFIRMED &&
+            matchResult.confirmedWinnerId == currentUserTeamId
+        ) {
+            showCelebration = true
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -70,7 +84,7 @@ fun MatchResultDetailScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
 
@@ -81,23 +95,23 @@ fun MatchResultDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 120.dp)
             ) {
                 // Match Header Card
                 AnimatedEntrance(delayMillis = 100) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(
-                                elevation = 8.dp,
-                                spotColor = when (matchResult.verificationStatus) {
-                                    VerificationStatus.CONFIRMED -> SuccessGreen.copy(alpha = 0.3f)
-                                    VerificationStatus.DISPUTED -> ErrorRed.copy(alpha = 0.3f)
-                                    else -> BluePrimary.copy(alpha = 0.3f)
+                            .border(
+                                width = 1.dp,
+                                color = when (matchResult.verificationStatus) {
+                                    VerificationStatus.CONFIRMED -> SuccessGreen.copy(alpha = 0.30f)
+                                    VerificationStatus.DISPUTED  -> ErrorRed.copy(alpha = 0.30f)
+                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
                                 },
                                 shape = RoundedCornerShape(20.dp)
                             ),
-                        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Column(
@@ -110,7 +124,7 @@ fun MatchResultDetailScreen(
                                 text = stringResource(R.string.match_result),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = 14.sp,
-                                    color = MidGray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
 
@@ -134,7 +148,7 @@ fun MatchResultDetailScreen(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontSize = 20.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = GoldPrimary
+                                            color = MaterialTheme.colorScheme.secondary
                                         )
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -161,7 +175,7 @@ fun MatchResultDetailScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = GoldPrimary
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                 )
                             }
@@ -177,12 +191,8 @@ fun MatchResultDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = Color.Black.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(
@@ -195,7 +205,7 @@ fun MatchResultDetailScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
 
@@ -242,12 +252,8 @@ fun MatchResultDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = Color.Black.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(
@@ -260,7 +266,7 @@ fun MatchResultDetailScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
 
@@ -270,22 +276,16 @@ fun MatchResultDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(180.dp)
-                                        .background(
-                                            brush = Brush.verticalGradient(
-                                                colors = listOf(
-                                                    DarkSurface,
-                                                    DarkNavy
-                                                )
-                                            ),
-                                            shape = RoundedCornerShape(12.dp)
-                                        ),
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.50f))
+                                        .border(1.dp, appBorderColor(), RoundedCornerShape(12.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
                                             imageVector = Icons.Default.Image,
                                             contentDescription = null,
-                                            tint = MidGray,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(48.dp)
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -293,7 +293,7 @@ fun MatchResultDetailScreen(
                                             text = stringResource(R.string.screenshot_placeholder),
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontSize = 14.sp,
-                                                color = MidGray
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         )
                                     }
@@ -311,12 +311,8 @@ fun MatchResultDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = Purple.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                .border(1.dp, Purple.copy(alpha = 0.22f), RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Row(
@@ -358,7 +354,7 @@ fun MatchResultDetailScreen(
                                         text = matchResult.adminNotes,
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = 14.sp,
-                                            color = LightGray
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                         )
                                     )
                                 }
@@ -374,12 +370,8 @@ fun MatchResultDetailScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(
-                                elevation = 4.dp,
-                                spotColor = Color.Black.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(
@@ -392,7 +384,7 @@ fun MatchResultDetailScreen(
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             )
 
@@ -418,20 +410,20 @@ fun MatchResultDetailScreen(
                             onClick = { onNavigateToReport(matchResult) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = GoldPrimary
+                                containerColor = MaterialTheme.colorScheme.secondary
                             ),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = null,
-                                tint = DarkBlue,
+                                tint = MaterialTheme.colorScheme.background,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = stringResource(R.string.report_result),
-                                color = DarkBlue,
+                                color = MaterialTheme.colorScheme.background,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -445,12 +437,8 @@ fun MatchResultDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 6.dp,
-                                    spotColor = Color.Black.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(
@@ -463,7 +451,7 @@ fun MatchResultDetailScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
 
@@ -476,7 +464,7 @@ fun MatchResultDetailScreen(
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = BluePrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -497,7 +485,7 @@ fun MatchResultDetailScreen(
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = GoldPrimary
+                                            color = MaterialTheme.colorScheme.secondary
                                         )
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -519,6 +507,11 @@ fun MatchResultDetailScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
+
+        LottieCelebrationOverlay(
+            isVisible = showCelebration,
+            onAnimationFinished = { showCelebration = false }
+        )
     }
 }
 
@@ -548,9 +541,9 @@ private fun RosterPlayerItem(
                     .size(28.dp)
                     .background(
                         color = if (player.isActive) 
-                            BluePrimary.copy(alpha = 0.2f) 
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
                         else 
-                            MidGray.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(6.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -560,7 +553,7 @@ private fun RosterPlayerItem(
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (player.isActive) BluePrimary else MidGray
+                        color = if (player.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -573,7 +566,7 @@ private fun RosterPlayerItem(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
                 if (!player.isActive) {
@@ -581,7 +574,7 @@ private fun RosterPlayerItem(
                         text = stringResource(R.string.substitute),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 10.sp,
-                            color = MidGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -602,7 +595,7 @@ private fun RosterPlayerItem(
             Icon(
                 imageVector = Icons.Default.EmojiEvents,
                 contentDescription = "Winner",
-                tint = GoldPrimary,
+                tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -622,12 +615,12 @@ private fun TeamBlock(
                 .size(64.dp)
                 .background(
                     brush = if (isWinner)
-                        Brush.verticalGradient(colors = GoldGradient)
+                        Brush.verticalGradient(colors = PremiumBlueGradient)
                     else
                         Brush.verticalGradient(
                             colors = listOf(
-                                DarkSurface,
-                                DarkNavy
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.background
                             )
                         ),
                     shape = RoundedCornerShape(16.dp)
@@ -638,7 +631,7 @@ private fun TeamBlock(
                 text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = White
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -649,7 +642,7 @@ private fun TeamBlock(
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 14.sp,
                 fontWeight = if (isWinner) FontWeight.Bold else FontWeight.Medium,
-                color = if (isWinner) GoldPrimary else White
+                color = if (isWinner) MaterialTheme.colorScheme.secondary else White
             )
         )
 
@@ -705,7 +698,7 @@ private fun VerificationStatusChip(status: VerificationStatus) {
         )
         VerificationStatus.ADMIN_RESOLVED -> Triple(
             Icons.Default.CheckCircle,
-            LightGray,
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             "Resolved"
         )
     }
@@ -748,7 +741,7 @@ private fun ReportItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = DarkSurface.copy(alpha = 0.6f)
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -763,14 +756,14 @@ private fun ReportItem(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
                 Text(
                     text = formatTimestamp(reportedAt),
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 11.sp,
-                        color = MidGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -781,7 +774,7 @@ private fun ReportItem(
                 text = stringResource(R.string.reporter_label, reporterName),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
-                    color = LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             )
 
@@ -791,7 +784,7 @@ private fun ReportItem(
                 text = stringResource(R.string.claimed_winner, reportedWinner),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
-                    color = BluePrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
                 )
             )
@@ -802,7 +795,7 @@ private fun ReportItem(
                     text = stringResource(R.string.notes_label, notes),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 12.sp,
-                        color = MidGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -822,14 +815,14 @@ private fun InfoRow(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 13.sp,
-                color = MidGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 13.sp,
-                color = LightGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         )
     }

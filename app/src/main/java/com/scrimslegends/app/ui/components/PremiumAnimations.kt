@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -154,8 +155,9 @@ fun Modifier.premiumPress(pressState: PressState): Modifier = pointerInput(Unit)
 // ============================================
 // Custom ripple effect with gradient colors
 
+@Composable
 fun Modifier.premiumRipple(
-    color: Color = GoldPrimary.copy(alpha = 0.3f),
+    color: Color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
     radius: Float = 100f
 ): Modifier = this.then(
     PremiumRippleElement(color, radius)
@@ -209,8 +211,8 @@ private class PremiumRippleNode(
 @Composable
 fun Modifier.premiumShimmer(
     isShimmering: Boolean = true,
-    baseColor: Color = SurfaceElevated,
-    highlightColor: Color = White.copy(alpha = 0.08f)
+    baseColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    highlightColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
 ): Modifier {
     if (!isShimmering) return this
     
@@ -253,7 +255,7 @@ fun Modifier.premiumShimmer(
 @Composable
 fun Modifier.premiumPulse(
     isPulsing: Boolean = true,
-    pulseColor: Color = GoldPrimary.copy(alpha = 0.2f),
+    pulseColor: Color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
     pulseRadius: Float = 20f
 ): Modifier {
     if (!isPulsing) return this
@@ -285,8 +287,9 @@ fun Modifier.premiumPulse(
 // ============================================
 // Subtle glow for emphasis and depth
 
+@Composable
 fun Modifier.premiumGlow(
-    color: Color = GoldPrimary.copy(alpha = 0.15f),
+    color: Color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
     radius: Float = 16f
 ): Modifier = this.drawWithContent {
     drawContent()

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import android.net.Uri
 import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -10,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -61,6 +63,8 @@ import java.util.concurrent.TimeUnit
 fun ScrimDetailScreen(
     scrim: Scrim,
     currentUserId: String,
+    isLoading: Boolean = false,
+    error: String? = null,
     teams: List<Team> = emptyList(),                          // All user's teams (for multi-team apply)
     onNavigateBack: () -> Unit,
     onJoinScrim: (String) -> Unit = {},
@@ -120,7 +124,7 @@ fun ScrimDetailScreen(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
 
@@ -128,11 +132,40 @@ fun ScrimDetailScreen(
                 }
             }
 
+            AnimatedVisibility(
+                visible = error != null,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ErrorRed.copy(alpha = 0.15f))
+                        .border(1.dp, ErrorRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = "Error",
+                            tint = ErrorRed,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = error ?: "",
+                            color = ErrorRed,
+                            style = iOSCaption1.copy(fontWeight = FontWeight.Medium)
+                        )
+                    }
+                }
+            }
+
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
-                contentPadding = PaddingValues(vertical = 24.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 120.dp)
             ) {
                 // Team Header Card
                 item {
@@ -140,13 +173,9 @@ fun ScrimDetailScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(
-                                    elevation = 8.dp,
-                                    spotColor = BluePrimary.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ),
+                                .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
                             colors = CardDefaults.cardColors(
-                                containerColor = DarkNavy
+                                containerColor = MaterialTheme.colorScheme.background
                             ),
                             shape = RoundedCornerShape(20.dp)
                         ) {
@@ -160,24 +189,16 @@ fun ScrimDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(90.dp)
-                                        .shadow(
-                                            elevation = 12.dp,
-                                            spotColor = BluePrimary.copy(alpha = 0.3f),
-                                            shape = CircleShape
-                                        )
                                         .clip(CircleShape)
-                                        .background(
-                                            brush = Brush.verticalGradient(
-                                                colors = BlueGradient
-                                            )
-                                        ),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                                        .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = scrim.teamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                                         fontSize = 40.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = White
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
 
@@ -189,7 +210,7 @@ fun ScrimDetailScreen(
                                     style = MaterialTheme.typography.headlineLarge.copy(
                                         fontSize = 24.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
 
@@ -210,8 +231,8 @@ fun ScrimDetailScreen(
                                         ScrimStatus.OPEN -> SuccessGreen
                                         ScrimStatus.FILLED -> WarningOrange
                                         ScrimStatus.READY_CHECK -> WarningOrange
-                                        ScrimStatus.IN_PROGRESS -> BluePrimary
-                                        ScrimStatus.COMPLETED -> LightGray
+                                        ScrimStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
+                                        ScrimStatus.COMPLETED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                         ScrimStatus.CANCELLED -> ErrorRed
                                         else -> SuccessGreen
                                     }
@@ -223,7 +244,6 @@ fun ScrimDetailScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Scrim Info
                 item {
                     AnimatedEntrance(delayMillis = 40) {
                         Text(
@@ -231,7 +251,7 @@ fun ScrimDetailScreen(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -323,13 +343,12 @@ fun ScrimDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Description
                 if (scrim.description.isNotBlank()) {
                     item {
                         AnimatedEntrance(delayMillis = 110) {
                             Text(
                                 text = stringResource(R.string.description),
-                                style = iOSTitle2.copy(color = TextPrimary)
+                                style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onSurface)
                             )
                         }
 
@@ -341,13 +360,13 @@ fun ScrimDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(SurfaceCard)
-                                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
                             ) {
                                 Text(
                                     text = scrim.description,
-                                    style = iOSBody.copy(color = TextSecondary),
+                                    style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                                     modifier = Modifier.padding(20.dp)
                                 )
                             }
@@ -359,19 +378,17 @@ fun ScrimDetailScreen(
                     }
                 }
 
-                // Rosters
                 if (scrim.teamARoster.isNotEmpty() || scrim.teamBRoster.isNotEmpty()) {
                     item {
                         AnimatedEntrance(delayMillis = 130) {
                             Text(
                                 text = stringResource(R.string.rosters),
-                                style = iOSTitle2.copy(color = TextPrimary)
+                                style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onSurface)
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Team A Roster
                     if (scrim.teamARoster.isNotEmpty()) {
                         item {
                             AnimatedEntrance(delayMillis = 140) {
@@ -384,7 +401,6 @@ fun ScrimDetailScreen(
                         item { Spacer(modifier = Modifier.height(12.dp)) }
                     }
 
-                    // Team B Roster
                     if (scrim.teamBRoster.isNotEmpty()) {
                         item {
                             AnimatedEntrance(delayMillis = 150) {
@@ -398,31 +414,23 @@ fun ScrimDetailScreen(
                     }
                 }
 
-                // ═══════════════════════════════════════════════════════
-                // ACTION AREA — Team vs Team Application Flow + Ready/Screenshot/Complete
-                // ═══════════════════════════════════════════════════════
                 item {
-                    // Derive role from ALL user's teams (not just first)
                     val userTeamIds = teams.map { it.id }.toSet()
                     val isHost = teams.any { it.id == scrim.teamId && it.leaderId == currentUserId }
-                    // Only find PENDING applications — rejected/cancelled ones should not block re-apply
                     val myPendingApplication = scrim.applications.find {
                         it.applicantTeamId in userTeamIds && it.status == ApplicationStatus.PENDING
                     }
                     val isOpponent = scrim.opponentTeamId in userTeamIds
                     val myOpponentTeam = teams.find { it.id == scrim.opponentTeamId }
-                    val hasPendingApps = scrim.applications.any { it.status == ApplicationStatus.PENDING }
 
                     AnimatedEntrance(delayMillis = 150) {
                         when {
-                            // ── HOST VIEW ──
                             isHost -> HostActions(
                                 scrim = scrim,
                                 currentTeamId = scrim.teamId,
+                                isLoading = isLoading,
                                 onCancelScrim = { showCancelDialog = true },
-                                onApprove = { appId ->
-                                    onApproveApplication(scrim.id, appId)
-                                },
+                                onApprove = { appId -> onApproveApplication(scrim.id, appId) },
                                 onReject = { appId -> onRejectApplication(scrim.id, appId) },
                                 onNavigateToChat = onNavigateToChat,
                                 onNavigateToRoster = onNavigateToRoster,
@@ -434,12 +442,10 @@ fun ScrimDetailScreen(
                                 onCompleteScrim = onCompleteScrim
                             )
 
-                            // ── OPPONENT VIEW: Approved applicant ──
-                            // Must be checked BEFORE pending application so approved users
-                            // see the full opponent action set (roster, ready, screenshot, complete)
                             isOpponent -> OpponentActions(
                                 scrim = scrim,
                                 currentTeamId = myOpponentTeam?.id ?: "",
+                                isLoading = isLoading,
                                 onNavigateToChat = onNavigateToChat,
                                 onNavigateToRoster = onNavigateToRoster,
                                 onMarkReady = onMarkReady,
@@ -450,7 +456,6 @@ fun ScrimDetailScreen(
                                 onCompleteScrim = onCompleteScrim
                             )
 
-                            // ── APPLICANT VIEW: Has pending application ──
                             myPendingApplication != null -> ApplicantStatusCard(
                                 application = myPendingApplication,
                                 scrim = scrim,
@@ -462,7 +467,6 @@ fun ScrimDetailScreen(
                                 onCompleteScrim = onCompleteScrim
                             )
 
-                            // ── VISITOR VIEW: Can apply ──
                             canApply -> {
                                 val firstTeam = leaderTeams.first()
                                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -470,12 +474,10 @@ fun ScrimDetailScreen(
                                         text = stringResource(R.string.apply_with_team),
                                         onClick = {
                                             if (leaderTeams.size == 1) {
-                                                // Single team — skip picker, go straight to player picker
                                                 selectedApplyTeam = firstTeam
                                                 selectedPlayerIds = firstTeam.players.take(5).map { it.id }.toSet()
                                                 showPlayerPicker = true
                                             } else {
-                                                // Multiple teams — show picker
                                                 showTeamPicker = true
                                             }
                                         },
@@ -487,14 +489,13 @@ fun ScrimDetailScreen(
                                         Text(
                                             text = stringResource(R.string.applying_as, firstTeam.name),
                                             fontSize = 13.sp,
-                                            color = LightGray.copy(alpha = 0.6f),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f),
                                             modifier = Modifier.align(Alignment.CenterHorizontally)
                                         )
                                     }
                                 }
                             }
 
-                            // ── VISITOR: Has teams but not enough players ──
                             (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) && teams.any { it.leaderId == currentUserId && !it.meetsMinPlayers } -> {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     GradientButton(
@@ -513,7 +514,6 @@ fun ScrimDetailScreen(
                                 }
                             }
 
-                            // ── VISITOR: Not a leader of any team ──
                             (scrim.status == ScrimStatus.OPEN || scrim.status == ScrimStatus.PENDING) -> {
                                 GradientButton(
                                     text = stringResource(R.string.team_leaders_only),
@@ -524,7 +524,6 @@ fun ScrimDetailScreen(
                                 )
                             }
 
-                            // ── DEFAULT ──
                             else -> ScrimStatusCard(scrim = scrim)
                         }
                     }
@@ -537,22 +536,21 @@ fun ScrimDetailScreen(
         }
     }
 
-    // Cancel Scrim Dialog
     if (showCancelDialog) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             title = {
                 Text(
                     text = stringResource(R.string.cancel_scrim),
-                    color = White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.cancel_scrim_confirm),
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
             },
@@ -568,13 +566,12 @@ fun ScrimDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showCancelDialog = false }) {
-                    Text(stringResource(R.string.keep_scrim), color = MidGray)
+                    Text(stringResource(R.string.keep_scrim), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
     }
 
-    // Team Picker Dialog
     if (showTeamPicker) {
         TeamPickerDialog(
             teams = leaderTeams,
@@ -588,7 +585,6 @@ fun ScrimDetailScreen(
         )
     }
 
-    // Player Picker Dialog
     if (showPlayerPicker && selectedApplyTeam != null) {
         PlayerPickerDialog(
             team = selectedApplyTeam!!,
@@ -631,9 +627,9 @@ fun InfoCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
     ) {
         Row(
             modifier          = Modifier
@@ -644,14 +640,14 @@ fun InfoCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                    .border(1.dp, BluePrimary.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector        = icon,
                     contentDescription = label,
-                    tint               = BluePrimary,
+                    tint               = MaterialTheme.colorScheme.primary,
                     modifier           = Modifier.size(20.dp)
                 )
             }
@@ -661,26 +657,23 @@ fun InfoCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text  = label,
-                    style = iOSCaption1.copy(color = TextSecondary, fontWeight = FontWeight.Medium)
+                    style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text  = value,
-                    style = iOSHeadline.copy(color = TextPrimary)
+                    style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                 )
             }
         }
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// HOST ACTIONS — Approve/Reject applications, view opponent
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun HostActions(
     scrim: Scrim,
     currentTeamId: String?,
+    isLoading: Boolean,
     onCancelScrim: () -> Unit,
     onApprove: (String) -> Unit,
     onReject: (String) -> Unit,
@@ -696,19 +689,19 @@ private fun HostActions(
     Column(modifier = Modifier.fillMaxWidth()) {
         when (scrim.status) {
             ScrimStatus.OPEN, ScrimStatus.PENDING -> {
-                // Show pending applications
                 val pendingApps = scrim.applications.filter { it.status == ApplicationStatus.PENDING }
                 if (pendingApps.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.pending_applications, pendingApps.size),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     pendingApps.forEach { app ->
                         ApplicationCard(
                             application = app,
+                            isLoading = isLoading,
                             onApprove = { onApprove(app.id) },
                             onReject = { onReject(app.id) }
                         )
@@ -727,20 +720,20 @@ private fun HostActions(
                 GradientButton(
                     text = stringResource(R.string.cancel_scrim),
                     onClick = onCancelScrim,
+                    isLoading = isLoading,
                     gradient = listOf(ErrorRed, ErrorRed.copy(alpha = 0.7f)),
                     height = 56.dp
                 )
             }
 
             ScrimStatus.FILLED -> {
-                // Opponent accepted — show roster selection + chat
                 scrim.opponentTeamName?.let { opponentName ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(16.dp)),
-                        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-                        shape = RoundedCornerShape(16.dp)
+                            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+                        shape = RoundedCornerShape(20.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -754,19 +747,18 @@ private fun HostActions(
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(stringResource(R.string.opponent_label), fontSize = 13.sp, color = LightGray)
-                                    Text(opponentName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                                    Text(stringResource(R.string.opponent_label), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+                                    Text(opponentName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
-                                // Add to Calendar button
                                 val context = LocalContext.current
                                 IconButton(
                                     onClick = { CalendarIntentHelper.addScrimToCalendar(context, scrim) },
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CalendarMonth,
                                         contentDescription = "Add to calendar",
-                                        tint = BluePrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -774,7 +766,6 @@ private fun HostActions(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Select roster button
                             if (currentTeamId != null && onNavigateToRoster != null) {
                                 GradientButton(
                                     text = stringResource(R.string.select_roster),
@@ -785,12 +776,11 @@ private fun HostActions(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
 
-                            // Chat gate countdown
                             if (scrim.isChatOpen) {
                                 GradientButton(
                                     text = stringResource(R.string.open_chat),
                                     onClick = { scrim.conversationId?.let { onNavigateToChat?.invoke(it) } },
-                                    gradient = GoldGradient,
+                                    gradient = PremiumBlueGradient,
                                     height = 48.dp
                                 )
                             } else {
@@ -802,20 +792,20 @@ private fun HostActions(
             }
 
             ScrimStatus.READY_CHECK -> {
-                // Ready button appears at match time
                 ReadyCheckSection(
                     scrim = scrim,
                     currentTeamId = currentTeamId,
+                    isLoading = isLoading,
                     onMarkReady = onMarkReady,
                     onNavigateToChat = onNavigateToChat
                 )
             }
 
             ScrimStatus.IN_PROGRESS -> {
-                // Both ready — show screenshot + complete
                 InProgressSection(
                     scrim = scrim,
                     currentTeamId = currentTeamId,
+                    isLoading = isLoading,
                     onUploadScreenshot = onUploadScreenshot,
                     onUploadGameScreenshot = onUploadGameScreenshot,
                     onSelectGameWinner = onSelectGameWinner,
@@ -831,26 +821,22 @@ private fun HostActions(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// APPLICATION CARD — Shows a pending application with approve/reject
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun ApplicationCard(
     application: ScrimApplication,
+    isLoading: Boolean = false,
     onApprove  : () -> Unit,
     onReject   : () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Team avatar
                 if (!application.applicantTeamAvatarUrl.isNullOrBlank()) {
                     SubcomposeAsyncImage(
                         model = application.applicantTeamAvatarUrl,
@@ -863,12 +849,12 @@ private fun ApplicationCard(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(SurfaceCard, RoundedCornerShape(12.dp)),
+                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = BluePrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     strokeWidth = 2.dp
                                 )
                             }
@@ -877,14 +863,14 @@ private fun ApplicationCard(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(Brush.linearGradient(BlueGradient), RoundedCornerShape(12.dp)),
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -894,14 +880,14 @@ private fun ApplicationCard(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.linearGradient(BlueGradient)),
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             application.applicantTeamName.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                             fontSize   = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -909,26 +895,25 @@ private fun ApplicationCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         application.applicantTeamName,
-                        style = iOSHeadline.copy(color = TextPrimary)
+                        style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                     )
                     Text(
                         stringResource(R.string.leader_name, application.applicantTeamLeaderName),
-                        style = iOSCaption1.copy(color = TextSecondary)
+                        style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                     Text(
                         stringResource(R.string.team_players_count, application.applicantTeamPlayers.size, application.applicantTeamPlayers.size.coerceAtLeast(5)),
-                        style = iOSCaption1.copy(color = TextSecondary)
+                        style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                 }
             }
 
-            // Applicant roster preview
             if (application.applicantTeamPlayers.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = stringResource(R.string.applicant_roster),
                     fontSize = 13.sp,
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
                 Row(
@@ -944,7 +929,7 @@ private fun ApplicationCard(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = GlassBorder)
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
             Spacer(Modifier.height(12.dp))
 
             Row(
@@ -954,6 +939,7 @@ private fun ApplicationCard(
                 GradientButton(
                     text     = stringResource(R.string.approve),
                     onClick  = onApprove,
+                    isLoading = isLoading,
                     gradient = SuccessGradient,
                     modifier = Modifier.weight(1f),
                     height   = 44.dp
@@ -961,6 +947,7 @@ private fun ApplicationCard(
                 GradientButton(
                     text     = stringResource(R.string.reject),
                     onClick  = onReject,
+                    isLoading = isLoading,
                     gradient = ErrorGradient,
                     modifier = Modifier.weight(1f),
                     height   = 44.dp
@@ -970,17 +957,13 @@ private fun ApplicationCard(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// PLAYER CHIP — Small avatar + name chip for roster preview
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun PlayerChip(name: String, avatarUrl: String?) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(DarkSurface)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -998,14 +981,14 @@ private fun PlayerChip(name: String, avatarUrl: String?) {
                 modifier = Modifier
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(BluePrimary.copy(alpha = 0.3f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -1013,15 +996,11 @@ private fun PlayerChip(name: String, avatarUrl: String?) {
         Text(
             text = name,
             fontSize = 12.sp,
-            color = LightGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             maxLines = 1
         )
     }
 }
-
-// ═════════════════════════════════════════════════════════════════
-// APPLICANT STATUS CARD — Shows current application status
-// ═════════════════════════════════════════════════════════════════
 
 @Composable
 private fun ApplicantStatusCard(
@@ -1038,7 +1017,7 @@ private fun ApplicantStatusCard(
         ApplicationStatus.PENDING -> WarningOrange
         ApplicationStatus.APPROVED -> SuccessGreen
         ApplicationStatus.REJECTED -> ErrorRed
-        ApplicationStatus.CANCELLED -> MidGray
+        ApplicationStatus.CANCELLED -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     val statusText = when (application.status) {
@@ -1051,9 +1030,9 @@ private fun ApplicantStatusCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(16.dp)
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1079,7 +1058,7 @@ private fun ApplicantStatusCard(
                 Column {
                     Text(statusText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = statusColor)
                     if (application.status == ApplicationStatus.APPROVED) {
-                        Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = LightGray)
+                        Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                     }
                 }
             }
@@ -1090,7 +1069,7 @@ private fun ApplicantStatusCard(
                     GradientButton(
                         text = stringResource(R.string.open_chat),
                         onClick = { scrim.conversationId?.let { onNavigateToChat?.invoke(it) } },
-                        gradient = GoldGradient,
+                        gradient = PremiumBlueGradient,
                         height = 48.dp
                     )
                 } else {
@@ -1108,27 +1087,23 @@ private fun ApplicantStatusCard(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// SCRIM STATUS CARD — Read-only status display
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun ScrimStatusCard(scrim: Scrim) {
     val (label, color) = when (scrim.status) {
         ScrimStatus.OPEN, ScrimStatus.PENDING -> stringResource(R.string.scrim_status_open) to SuccessGreen
         ScrimStatus.FILLED -> stringResource(R.string.scrim_status_filled) to WarningOrange
         ScrimStatus.READY_CHECK -> stringResource(R.string.ready_check) to WarningOrange
-        ScrimStatus.IN_PROGRESS -> stringResource(R.string.scrim_status_in_progress) to BluePrimary
-        ScrimStatus.COMPLETED -> stringResource(R.string.scrim_status_completed) to LightGray
+        ScrimStatus.IN_PROGRESS -> stringResource(R.string.scrim_status_in_progress) to MaterialTheme.colorScheme.primary
+        ScrimStatus.COMPLETED -> stringResource(R.string.scrim_status_completed) to MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
         ScrimStatus.CANCELLED -> stringResource(R.string.scrim_status_cancelled) to ErrorRed
         else -> stringResource(R.string.scrim_status_open) to SuccessGreen
     }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(16.dp)
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
@@ -1153,14 +1128,11 @@ private fun ScrimStatusCard(scrim: Scrim) {
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// OPPONENT ACTIONS — For the team that applied and was accepted
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun OpponentActions(
     scrim: Scrim,
     currentTeamId: String?,
+    isLoading: Boolean = false,
     onNavigateToChat: ((String) -> Unit)?,
     onNavigateToRoster: ((String, String) -> Unit)?,
     onMarkReady: ((String, String) -> Unit)?,
@@ -1176,9 +1148,9 @@ private fun OpponentActions(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(16.dp)),
-                    colors = CardDefaults.cardColors(containerColor = DarkNavy),
-                    shape = RoundedCornerShape(16.dp)
+                        .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1192,8 +1164,8 @@ private fun OpponentActions(
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = LightGray)
-                                Text(stringResource(R.string.application_approved), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
+                                Text(stringResource(R.string.scrim_team_label, scrim.teamName), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+                                Text(stringResource(R.string.application_approved), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
@@ -1213,7 +1185,7 @@ private fun OpponentActions(
                             GradientButton(
                                 text = stringResource(R.string.open_chat),
                                 onClick = { scrim.conversationId?.let { onNavigateToChat?.invoke(it) } },
-                                gradient = GoldGradient,
+                                gradient = PremiumBlueGradient,
                                 height = 48.dp
                             )
                         } else {
@@ -1227,6 +1199,7 @@ private fun OpponentActions(
                 ReadyCheckSection(
                     scrim = scrim,
                     currentTeamId = currentTeamId,
+                    isLoading = isLoading,
                     onMarkReady = onMarkReady,
                     onNavigateToChat = onNavigateToChat
                 )
@@ -1236,6 +1209,7 @@ private fun OpponentActions(
                 InProgressSection(
                     scrim = scrim,
                     currentTeamId = currentTeamId,
+                    isLoading = isLoading,
                     onUploadScreenshot = onUploadScreenshot,
                     onUploadGameScreenshot = onUploadGameScreenshot,
                     onSelectGameWinner = onSelectGameWinner,
@@ -1252,10 +1226,6 @@ private fun OpponentActions(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// TEAM PICKER DIALOG — Choose which team to apply with
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun TeamPickerDialog(
     teams: List<Team>,
@@ -1264,23 +1234,23 @@ private fun TeamPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = MaterialTheme.colorScheme.background,
         title = {
             Text(
                 text = stringResource(R.string.select_team_apply),
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 teams.forEach { team ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp)
                             .clickable { onTeamSelected(team) },
-                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
@@ -1293,14 +1263,14 @@ private fun TeamPickerDialog(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Brush.linearGradient(BlueGradient)),
+                                    .background(MaterialTheme.colorScheme.primary),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     team.name.firstOrNull()?.uppercaseChar()?.toString() ?: "T",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
@@ -1309,18 +1279,18 @@ private fun TeamPickerDialog(
                                     text = team.name,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = stringResource(R.string.team_players_count, team.currentPlayerCount, team.maxPlayers),
                                     fontSize = 13.sp,
-                                    color = LightGray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             }
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = LightGray,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -1331,15 +1301,11 @@ private fun TeamPickerDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel), color = MidGray)
+                Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
 }
-
-// ═════════════════════════════════════════════════════════════════
-// PLAYER PICKER DIALOG — Select roster players before applying
-// ═════════════════════════════════════════════════════════════════
 
 @Composable
 private fun PlayerPickerDialog(
@@ -1352,20 +1318,20 @@ private fun PlayerPickerDialog(
     val minPlayers = team.minPlayers
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = MaterialTheme.colorScheme.background,
         title = {
             Text(
                 text = stringResource(R.string.select_roster_players, team.name),
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = stringResource(R.string.select_at_least_players, minPlayers),
                     fontSize = 13.sp,
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 team.players.forEach { player ->
@@ -1374,7 +1340,7 @@ private fun PlayerPickerDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) BluePrimary.copy(alpha = 0.15f) else Color.Transparent)
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                             .clickable { onPlayerToggle(player.id) }
                             .padding(horizontal = 8.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1383,8 +1349,8 @@ private fun PlayerPickerDialog(
                             checked = isSelected,
                             onCheckedChange = { onPlayerToggle(player.id) },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = BluePrimary,
-                                uncheckedColor = MidGray,
+                                checkedColor = MaterialTheme.colorScheme.primary,
+                                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 checkmarkColor = White
                             )
                         )
@@ -1394,12 +1360,12 @@ private fun PlayerPickerDialog(
                                 text = player.name,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = player.role.name.lowercase().replaceFirstChar { it.uppercase() },
                                 fontSize = 12.sp,
-                                color = LightGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -1413,21 +1379,17 @@ private fun PlayerPickerDialog(
             ) {
                 Text(
                     stringResource(R.string.confirm_players, selectedPlayerIds.size),
-                    color = if (selectedPlayerIds.size >= minPlayers) BluePrimary else MidGray
+                    color = if (selectedPlayerIds.size >= minPlayers) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel), color = MidGray)
+                Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
 }
-
-// ═════════════════════════════════════════════════════════════════
-// CHAT GATE COUNTDOWN — Shows timer until chat opens (2h before)
-// ═════════════════════════════════════════════════════════════════
 
 @Composable
 private fun ChatGateCountdown(timeUntilOpens: Long) {
@@ -1447,7 +1409,7 @@ private fun ChatGateCountdown(timeUntilOpens: Long) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -1466,7 +1428,7 @@ private fun ChatGateCountdown(timeUntilOpens: Long) {
             Text(
                 text = stringResource(R.string.chat_opens_in),
                 fontSize = 13.sp,
-                color = LightGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -1480,7 +1442,7 @@ private fun ChatGateCountdown(timeUntilOpens: Long) {
             Text(
                 text = stringResource(R.string.chat_unlocks_2h),
                 fontSize = 11.sp,
-                color = LightGray.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f)
             )
         }
     }
@@ -1501,14 +1463,11 @@ fun formatDetailedTime(
     return if (regionDisplayName != null) "$formatted ($regionDisplayName)" else formatted
 }
 
-// ═════════════════════════════════════════════════════════════════
-// READY CHECK SECTION — Both captains must press Ready
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun ReadyCheckSection(
     scrim: Scrim,
     currentTeamId: String?,
+    isLoading: Boolean,
     onMarkReady: ((String, String) -> Unit)?,
     onNavigateToChat: ((String) -> Unit)?
 ) {
@@ -1519,9 +1478,9 @@ private fun ReadyCheckSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(16.dp)
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
@@ -1529,15 +1488,14 @@ private fun ReadyCheckSection(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Pulsing ready icon
-            val infiniteTransition = rememberInfiniteTransition()
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
             val pulseAlpha by infiniteTransition.animateFloat(
                 initialValue = 0.4f,
                 targetValue = 1f,
                 animationSpec = infiniteRepeatable(
                     animation = tween(800, easing = LinearEasing),
                     repeatMode = RepeatMode.Reverse
-                )
+                ), label = "pulseAlpha"
             )
 
             Box(
@@ -1560,7 +1518,7 @@ private fun ReadyCheckSection(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                    text = stringResource(R.string.match_time),
+                text = stringResource(R.string.match_time),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = WarningOrange
@@ -1568,7 +1526,6 @@ private fun ReadyCheckSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Ready status indicators
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -1585,12 +1542,13 @@ private fun ReadyCheckSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Ready button (only if not already ready)
             if (!myTeamReady && currentTeamId != null && onMarkReady != null) {
                 GradientButton(
                     text = stringResource(R.string.ready),
                     onClick = { onMarkReady(scrim.id, currentTeamId) },
-                    gradient = GoldGradient,
+                    isLoading = isLoading,
+                    gradient = PremiumBlueGradient,
+                    enabled = !isLoading,
                     height = 56.dp
                 )
             } else if (myTeamReady) {
@@ -1616,13 +1574,12 @@ private fun ReadyCheckSection(
                 Text(
                     text = stringResource(R.string.waiting_opponent_ready),
                     fontSize = 13.sp,
-                    color = LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Chat button
             if (scrim.isChatOpen) {
                 GradientButton(
                     text = stringResource(R.string.open_chat),
@@ -1645,7 +1602,7 @@ private fun ReadyIndicator(
             modifier = Modifier
                 .size(40.dp)
                 .background(
-                    color = if (isReady) SuccessGreen.copy(alpha = 0.15f) else MidGray.copy(alpha = 0.1f),
+                    color = if (isReady) SuccessGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -1653,7 +1610,7 @@ private fun ReadyIndicator(
             Icon(
                 imageVector = if (isReady) Icons.Default.Check else Icons.Default.Close,
                 contentDescription = null,
-                tint = if (isReady) SuccessGreen else MidGray,
+                tint = if (isReady) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1661,20 +1618,17 @@ private fun ReadyIndicator(
         Text(
             text = teamName.take(10),
             fontSize = 11.sp,
-            color = if (isReady) SuccessGreen else MidGray,
+            color = if (isReady) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
         )
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// IN PROGRESS SECTION — Per-game screenshot upload + series result
-// ═════════════════════════════════════════════════════════════════
-
 @Composable
 private fun InProgressSection(
     scrim: Scrim,
     currentTeamId: String?,
+    isLoading: Boolean,
     onUploadScreenshot: ((String, String, String) -> Unit)?,
     onUploadGameScreenshot: ((String, String, Int, String) -> Unit)?,
     onSelectGameWinner: ((String, Int, String) -> Unit)?,
@@ -1684,23 +1638,17 @@ private fun InProgressSection(
 ) {
     val isTeamA = currentTeamId == scrim.teamId
     val totalGames = scrim.bestOf.games
-    val gamesReady = scrim.gameResults.size
     val gamesWithBothScreenshots = scrim.gamesWithBothScreenshots
     val gamesWithWinner = scrim.gamesWithWinner
     val canCompleteSeries = scrim.canCompleteScrim
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Track which game is being uploaded
     var activeUploadGame by remember { mutableStateOf<Int?>(null) }
     var isUploading by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
     var showSeriesWinnerDialog by remember { mutableStateOf(false) }
     var showChangeFormatDialog by remember { mutableStateOf(false) }
-
-    // Create game result rows if they don't exist yet (BO1 legacy or newly-filled scrims)
-    // In a real app this is handled by the backend on scrim creation/fill.
-    // Here we just show the UI based on what the backend provides.
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1750,28 +1698,27 @@ private fun InProgressSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
-        shape = RoundedCornerShape(16.dp)
+            .border(1.dp, appBorderColor(), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // Header: Match in progress + series progress
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .background(BluePrimary, CircleShape)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.match_in_progress),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = BluePrimary
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -1843,7 +1790,8 @@ private fun InProgressSection(
                     }
                 },
                 enabled = canCompleteSeries && seriesWinner != null,
-                gradient = if (canCompleteSeries && seriesWinner != null) GoldGradient else listOf(Color.Gray, Color.DarkGray),
+                isLoading = isLoading,
+                gradient = if (canCompleteSeries && seriesWinner != null) PremiumBlueGradient else listOf(Color.Gray, Color.DarkGray),
                 height = 48.dp
             )
 
@@ -1895,15 +1843,15 @@ private fun InProgressSection(
     if (showChangeFormatDialog) {
         AlertDialog(
             onDismissRequest = { showChangeFormatDialog = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             title = {
-                Text("Change Series Format?", color = White, fontWeight = FontWeight.Bold)
+                Text("Change Series Format?", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column {
                     Text(
                         "Teams can't continue playing. Choose a smaller format that includes the games already played.",
-                        color = LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -1939,7 +1887,7 @@ private fun InProgressSection(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showChangeFormatDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
@@ -1951,11 +1899,11 @@ private fun InProgressSection(
         val isTie = finalWinner == null && scrim.bestOf == BestOf.BO2
         AlertDialog(
             onDismissRequest = { showSeriesWinnerDialog = false },
-            containerColor = DarkNavy,
+            containerColor = MaterialTheme.colorScheme.background,
             title = {
                 Text(
                     text = if (isTie) "Complete Series?" else "Complete Series?",
-                    color = White, fontWeight = FontWeight.Bold
+                    color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold
                 )
             },
             text = {
@@ -1966,7 +1914,7 @@ private fun InProgressSection(
                         } else {
                             "All ${scrim.bestOf.games} games have results. The series winner is ${if (finalWinner == scrim.teamId) scrim.teamName else (scrim.opponentTeamName ?: "Opponent")}."
                         },
-                        color = LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                 }
@@ -1981,7 +1929,7 @@ private fun InProgressSection(
             },
             dismissButton = {
                 TextButton(onClick = { showSeriesWinnerDialog = false }) {
-                    Text("Cancel", color = MidGray)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
@@ -2007,12 +1955,12 @@ private fun SeriesProgressBar(
                 text = "Series Progress",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = White
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "$gamesWithWinner/$totalGames decided",
                 fontSize = 12.sp,
-                color = if (gamesWithWinner == totalGames) SuccessGreen else LightGray
+                color = if (gamesWithWinner == totalGames) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -2026,8 +1974,8 @@ private fun SeriesProgressBar(
                 val hasScreenshots = index < gamesWithBothScreenshots
                 val color = when {
                     hasWinner -> SuccessGreen
-                    hasScreenshots -> BluePrimary
-                    else -> White.copy(alpha = 0.15f)
+                    hasScreenshots -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                 }
                 Box(
                     modifier = Modifier
@@ -2061,9 +2009,9 @@ private fun GameResultCard(
         gameResult.isDisputed -> ErrorRed
         gameResult.winnerTeamId != null || gameResult.adminOverrideWinnerId != null -> SuccessGreen
         gameResult.status == ScrimGameStatus.WINNER_SELECTED -> WarningOrange
-        gameResult.bothScreenshotsUploaded -> BluePrimary
+        gameResult.bothScreenshotsUploaded -> MaterialTheme.colorScheme.primary
         myScreenshot != null -> WarningOrange
-        else -> MidGray
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     val statusText = when {
@@ -2079,8 +2027,8 @@ private fun GameResultCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(14.dp)),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -2109,7 +2057,7 @@ private fun GameResultCard(
                         text = "Game ${gameResult.gameNumber}",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
@@ -2168,7 +2116,7 @@ private fun GameResultCard(
                     Text(
                         text = "Winner:",
                         fontSize = 13.sp,
-                        color = LightGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         modifier = Modifier.align(Alignment.CenterVertically)
                     )
                     WinnerChip(
@@ -2259,13 +2207,13 @@ private fun GameResultCard(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "$winnerName won${if (gameResult.adminOverrideWinnerId != null) " (admin)" else ""}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GoldPrimary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
             }
@@ -2292,7 +2240,7 @@ private fun ScreenshotSlot(
             .height(90.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (screenshotUrl != null) SuccessGreen.copy(alpha = 0.06f)
-            else White.copy(alpha = 0.04f)
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f)
         ),
         shape = RoundedCornerShape(10.dp),
         onClick = { if (canUpload && !isUploading) onUploadClick() }
@@ -2304,9 +2252,9 @@ private fun ScreenshotSlot(
             when {
                 isUploading -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BluePrimary, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Uploading…", fontSize = 11.sp, color = LightGray)
+                        Text("Uploading…", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                     }
                 }
                 screenshotUrl != null -> {
@@ -2314,23 +2262,23 @@ private fun ScreenshotSlot(
                         Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(label, fontSize = 11.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
-                        Text("Uploaded", fontSize = 10.sp, color = TextTertiary)
+                        Text("Uploaded", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     }
                 }
                 canUpload -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.PhotoCamera, null, tint = BluePrimary, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.PhotoCamera, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(label, fontSize = 11.sp, color = LightGray)
-                        Text("Tap to upload", fontSize = 10.sp, color = TextTertiary)
+                        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+                        Text("Tap to upload", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     }
                 }
                 isReadOnly -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.HourglassEmpty, null, tint = MidGray, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.HourglassEmpty, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(label, fontSize = 11.sp, color = MidGray)
-                        Text("Waiting…", fontSize = 10.sp, color = TextTertiary)
+                        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Waiting…", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     }
                 }
             }
@@ -2386,9 +2334,9 @@ private fun LegacyScreenshotUpload(
 
     if (!myScreenshotUploaded && currentTeamId != null && onUploadScreenshot != null) {
         if (localUploading) {
-            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BluePrimary, strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Uploading…", color = LightGray, fontSize = 13.sp)
+            Text("Uploading…", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), fontSize = 13.sp)
         } else {
             GradientButton(
                 text = "Attach Screenshot",
@@ -2426,14 +2374,14 @@ private fun RosterDisplayCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = teamName,
-                style = iOSHeadline.copy(color = TextPrimary)
+                style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -2448,12 +2396,17 @@ private fun RosterDisplayCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 activePlayers.forEach { entry ->
                     Row(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(18.dp)
+                                .size(24.dp)
                                 .clip(CircleShape)
                                 .background(SuccessGreen.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
@@ -2462,11 +2415,11 @@ private fun RosterDisplayCard(
                                 Icons.Default.Check,
                                 contentDescription = null,
                                 tint = SuccessGreen,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(entry.playerName, style = iOSBody.copy(color = TextPrimary, fontSize = 14.sp))
+                        Text(entry.playerName, style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium))
                     }
                 }
             }
@@ -2475,22 +2428,35 @@ private fun RosterDisplayCard(
                 if (activePlayers.isNotEmpty()) Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "SUBSTITUTES (${substitutes.size})",
-                    style = iOSCaption2.copy(color = TextTertiary, fontWeight = FontWeight.Bold)
+                    style = iOSCaption2.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontWeight = FontWeight.Bold)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 substitutes.forEach { entry ->
                     Row(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.PersonOutline,
-                            contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.PersonOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(entry.playerName, style = iOSBody.copy(color = TextSecondary, fontSize = 14.sp))
+                        Text(entry.playerName, style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.Medium))
                     }
                 }
             }

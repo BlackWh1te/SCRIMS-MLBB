@@ -37,11 +37,13 @@ data class Conversation(
     val participantATeamId: String = "",
     val participantATeamName: String = "",
     val participantAAvatarUrl: String? = null,
+    val participantALastSeen: Long? = null,
     val participantBId: String = "",
     val participantBName: String = "",
     val participantBTeamId: String = "",
     val participantBTeamName: String = "",
     val participantBAvatarUrl: String? = null,
+    val participantBLastSeen: Long? = null,
     val lastMessage: String = "",
     val lastMessageTime: Long = System.currentTimeMillis(),
     val unreadCount: Int = 0,
@@ -68,13 +70,26 @@ data class Conversation(
     val historyClearedAt: Long = 0L
 ) {
     val timeUntilChatOpens: Long
-        get() = (chatOpensAt - System.currentTimeMillis()).coerceAtLeast(0)
+        get() = (chatOpensAt - com.scrimslegends.app.util.ServerTimeProvider.getSynchronizedTime()).coerceAtLeast(0)
 
     val isChatOpenNow: Boolean
-        get() = System.currentTimeMillis() >= chatOpensAt
+        get() = com.scrimslegends.app.util.ServerTimeProvider.getSynchronizedTime() >= chatOpensAt
 
     fun isOtherTyping(currentUserId: String): Boolean {
         return if (currentUserId == participantAId) isParticipantBTyping else isParticipantATyping
+    }
+
+    fun otherLastSeen(currentUserId: String): Long? {
+        return if (currentUserId == participantAId) participantBLastSeen else participantALastSeen
+    }
+
+    fun isOtherOnline(currentUserId: String, now: Long = System.currentTimeMillis()): Boolean {
+        val lastSeen = otherLastSeen(currentUserId) ?: return false
+        return now - lastSeen <= ONLINE_WINDOW_MS
+    }
+
+    companion object {
+        private const val ONLINE_WINDOW_MS = 5 * 60 * 1000L
     }
 }
 

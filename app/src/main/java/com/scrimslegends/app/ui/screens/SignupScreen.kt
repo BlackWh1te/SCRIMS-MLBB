@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -34,6 +35,8 @@ import androidx.compose.ui.res.stringResource
 import com.scrimslegends.app.ui.theme.*
 import com.scrimslegends.app.ui.components.PremiumFadeIn
 import com.scrimslegends.app.ui.components.PremiumCaptcha
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 
 @Composable
 fun SignupScreen(
@@ -55,7 +58,7 @@ fun SignupScreen(
     val captchaError = stringResource(R.string.captcha_verify_human)
     val termsError = stringResource(R.string.terms_required)
 
-    val authState by viewModel.authState.collectAsState()
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -80,7 +83,7 @@ fun SignupScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Background Glow Orbs ──────────────────────────────────
         Box(
@@ -90,7 +93,7 @@ fun SignupScreen(
                 .offset(x = (-80).dp, y = (-40).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.15f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), Color.Transparent)
                     )
                 )
         )
@@ -101,7 +104,7 @@ fun SignupScreen(
                 .offset(x = 60.dp, y = 60.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(GoldPrimary.copy(alpha = 0.12f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
         )
@@ -133,7 +136,7 @@ fun SignupScreen(
             PremiumFadeIn(delayMillis = 80) {
                 Text(
                     stringResource(R.string.create_account),
-                    style     = iOSTitle1.copy(color = TextPrimary),
+                    style     = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface),
                     textAlign = TextAlign.Center
                 )
             }
@@ -141,7 +144,7 @@ fun SignupScreen(
             PremiumFadeIn(delayMillis = 130) {
                 Text(
                     stringResource(R.string.join_community),
-                    style     = iOSCallout.copy(color = TextSecondary),
+                    style     = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                     textAlign = TextAlign.Center
                 )
             }
@@ -154,15 +157,10 @@ fun SignupScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
-                        .background(SurfaceCard)
+                        .background(MaterialTheme.colorScheme.surface)
                         .border(
                             width  = 1.dp,
-                            brush  = Brush.linearGradient(
-                                colors = listOf(
-                                    GlassBorder.copy(alpha = 0.8f),
-                                    GlassBorder.copy(alpha = 0.2f)
-                                )
-                            ),
+                            color  = MaterialTheme.colorScheme.primary,
                             shape  = RoundedCornerShape(24.dp)
                         )
                         .padding(20.dp)
@@ -272,8 +270,8 @@ fun SignupScreen(
                                 checked = termsAgreed,
                                 onCheckedChange = { termsAgreed = it; errorMessage = "" },
                                 colors = CheckboxDefaults.colors(
-                                    checkedColor = GoldPrimary,
-                                    uncheckedColor = TextTertiary
+                                    checkedColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                             )
                             Spacer(Modifier.width(4.dp))
@@ -284,12 +282,12 @@ fun SignupScreen(
                             val privacyLink = stringResource(R.string.privacy_policy_link)
                             Text(
                                 text = "$termsLabel ",
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 13.sp
                             )
                             Text(
                                 text = termsLink,
-                                color = GoldPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.clickable {
@@ -302,12 +300,12 @@ fun SignupScreen(
                             )
                             Text(
                                 text = " $andText ",
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 13.sp
                             )
                             Text(
                                 text = privacyLink,
-                                color = GoldPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.clickable {
@@ -333,11 +331,7 @@ fun SignupScreen(
                                 .fillMaxWidth()
                                 .height(52.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = BlueGradient
-                                    )
-                                )
+                                .background(color = MaterialTheme.colorScheme.primary)
                                 .clickable(enabled = !isLoading) {
                                     when {
                                         username.isBlank() || email.isBlank() || inGameId.isBlank() ||
@@ -356,14 +350,14 @@ fun SignupScreen(
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
-                                    color = White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(24.dp)
                                 )
                             } else {
                                 Text(
                                     stringResource(R.string.create_account),
-                                    style = iOSHeadline.copy(color = White)
+                                    style = iOSHeadline.copy(color = MaterialTheme.colorScheme.onSurface)
                                 )
                             }
                         }
@@ -382,12 +376,12 @@ fun SignupScreen(
                 ) {
                     Text(
                         stringResource(R.string.already_have_account) + " ",
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 15.sp
                     )
                     Text(
                         stringResource(R.string.sign_in),
-                        color = GoldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { onNavigateToLogin() }
@@ -417,14 +411,14 @@ private fun SignupField(
         value                = value,
         onValueChange        = onValueChange,
         placeholder          = {
-            Text(placeholder, color = TextTertiary, fontSize = 15.sp)
+            Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 15.sp)
         },
         leadingIcon          = {
-            Icon(leadingIcon, null, tint = if (isFocused.value) BluePrimary else TextTertiary, modifier = Modifier.size(20.dp))
+            Icon(leadingIcon, null, tint = if (isFocused.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
         },
         trailingIcon         = if (trailingIcon != null) {{
             IconButton(onClick = onTrailingClick) {
-                Icon(trailingIcon, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                Icon(trailingIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
         }} else null,
         visualTransformation = visualTransformation,
@@ -435,13 +429,13 @@ private fun SignupField(
         keyboardOptions      = KeyboardOptions(keyboardType = keyboardType),
         shape                = RoundedCornerShape(14.dp),
         colors               = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor      = BluePrimary.copy(alpha = 0.7f),
-            unfocusedBorderColor    = GlassBorder,
-            focusedContainerColor   = SurfaceOverlay,
-            unfocusedContainerColor = SurfaceOverlay,
-            focusedTextColor        = TextPrimary,
-            unfocusedTextColor      = TextPrimary,
-            cursorColor             = BluePrimary
+            focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            unfocusedBorderColor    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor        = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
+            cursorColor             = MaterialTheme.colorScheme.primary
         ),
         textStyle = iOSBody.copy(fontSize = 15.sp)
     )

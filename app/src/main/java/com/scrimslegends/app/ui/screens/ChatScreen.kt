@@ -74,7 +74,7 @@ fun ChatScreen(
     teamInfo        : Team? = null,
     isRefreshing    : Boolean = false,
     onRefresh       : () -> Unit = {},
-    messagesWithDelivery: List<MessageWithDelivery> = emptyList(),
+    messagesPaged: androidx.paging.compose.LazyPagingItems<com.scrimslegends.app.data.model.Message>? = null,
     onRetryMessage  : (String) -> Unit = {},
     onCancelMessage : (String) -> Unit = {},
     // ── New features ──
@@ -92,19 +92,15 @@ fun ChatScreen(
     val listState   = rememberLazyListState()
     val scope       = rememberCoroutineScope()
 
-    // Use derivedStateOf for efficient recomposition
-    val displayedMessages by remember { derivedStateOf { messagesWithDelivery } }
-
-    // Auto-scroll: only scroll to bottom if user is already near the bottom
-    // (within last 3 visible items). Prevents jumping when reading old messages.
+    // Auto-scroll logic could be simplified since Paging 3 preserves scroll state natively.
+    // We will just keep it simple.
     val shouldAutoScroll by remember { derivedStateOf {
-        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-        val total = displayedMessages.size
-        total > 0 && lastVisible >= total - 4
+        val firstVisible = listState.firstVisibleItemIndex
+        firstVisible <= 3
     }}
-    LaunchedEffect(displayedMessages.size) {
-        if (displayedMessages.isNotEmpty() && shouldAutoScroll) {
-            listState.animateScrollToItem(displayedMessages.size - 1)
+    LaunchedEffect(messagesPaged?.itemCount) {
+        if ((messagesPaged?.itemCount ?: 0) > 0 && shouldAutoScroll) {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -136,6 +132,7 @@ fun ChatScreen(
     val headerSubtitle = if (isTeamChat) {
         stringResource(R.string.team_chat_members, conversation.participantCount)
     } else otherTeam
+    val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
 
     Box(
         modifier = Modifier
@@ -152,13 +149,13 @@ fun ChatScreen(
                     .drawBehind {
                         // Bottom separator line
                         drawLine(
-                            color       = GlassBorder,
+                            color       = outlineColor,
                             start       = Offset(0f, size.height),
                             end         = Offset(size.width, size.height),
                             strokeWidth = 1f
                         )
                     }
-                    .background(DarkNavy.copy(alpha = 0.92f))
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.92f))
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -264,7 +261,7 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .size(12.dp)
                                     .align(Alignment.BottomEnd)
-                                    .background(DarkNavy, CircleShape)
+                                    .background(MaterialTheme.colorScheme.background, CircleShape)
                                     .padding(2.dp)
                             ) {
                                 Box(
@@ -284,7 +281,7 @@ fun ChatScreen(
                                 text     = headerName,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color    = TextPrimary,
+                                color    = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
@@ -328,7 +325,7 @@ fun ChatScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Person,
                                                 contentDescription = null,
-                                                tint = TextTertiary,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                                 modifier = Modifier.size(10.dp)
                                             )
                                             Spacer(Modifier.width(3.dp))
@@ -336,7 +333,7 @@ fun ChatScreen(
                                         Text(
                                             text     = headerSubtitle,
                                             fontSize = 12.sp,
-                                            color    = TextSecondary,
+                                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -352,8 +349,8 @@ fun ChatScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(SurfaceOverlay)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                                 .clickable { onReportUser(otherUserId, otherName) },
                             contentAlignment = Alignment.Center
                         ) {
@@ -372,8 +369,8 @@ fun ChatScreen(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceOverlay)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                             .clickable {
                                 val teamId = if (isTeamChat) conversation.teamId else otherTeamId
                                 val teamName = if (isTeamChat) headerName else otherTeam
@@ -383,7 +380,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             Icons.Default.Info, null,
-                            tint     = TextSecondary,
+                            tint     = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -397,21 +394,21 @@ fun ChatScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(SurfaceOverlay)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                                 .clickable { showOptionsMenu = true },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.MoreVert, null,
-                                tint     = TextSecondary,
+                                tint     = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                         androidx.compose.material3.DropdownMenu(
                             expanded = showOptionsMenu,
                             onDismissRequest = { showOptionsMenu = false },
-                            modifier = Modifier.background(DarkNavy)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.background)
                         ) {
                             androidx.compose.material3.DropdownMenuItem(
                                 text = { Text("Clear History", color = ErrorRed) },
@@ -432,7 +429,7 @@ fun ChatScreen(
                     onRefresh = onRefresh,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (displayedMessages.isEmpty()) {
+                    if ((messagesPaged?.itemCount ?: 0) == 0 && !isLoading) {
                         EmptyChatState(
                             otherTeamName = otherTeam,
                             isTeamChat = isTeamChat,
@@ -444,76 +441,69 @@ fun ChatScreen(
                             modifier       = Modifier.fillMaxSize(),
                             state          = listState,
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            reverseLayout  = true // Paging 3 chat standard
                         ) {
-                            // ── Pagination trigger at top ──
-                            if (hasMoreMessages) {
-                                item(key = "load_older") {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (isLoadingOlder) {
+                            if (messagesPaged != null) {
+                                items(count = messagesPaged.itemCount, key = { i -> messagesPaged.peek(i)?.id ?: i }) { index ->
+                                    val rawMessage = messagesPaged[index] ?: return@items
+                                    val item = com.scrimslegends.app.data.model.MessageWithDelivery(
+                                        message = rawMessage,
+                                        status = com.scrimslegends.app.data.model.DeliveryStatus.SENT
+                                    )
+                                    val message = item.message
+                                    val isFromMe = message.senderId == currentUserId
+
+                                    // Because reverseLayout = true, the newer messages are at lower indices.
+                                    val prevMessage = if (index < messagesPaged.itemCount - 1) messagesPaged.peek(index + 1) else null
+                                    val nextMessage = if (index > 0) messagesPaged.peek(index - 1) else null
+
+                                    val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
+                                    val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
+                                    val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
+
+                                    // New-messages separator: show after the last seen message
+                                    val showNewMessagesSeparator = conversation.lastSeenMessageId != null &&
+                                        prevMessage?.id == conversation.lastSeenMessageId
+
+                                    if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
+                                    if (showNewMessagesSeparator) NewMessagesSeparator()
+
+                                    MessageBubble(
+                                        message        = message,
+                                        isFromMe       = isFromMe,
+                                        isFirstInGroup = isFirstInGroup,
+                                        isLastInGroup  = isLastInGroup,
+                                        deliveryStatus = item.status,
+                                        clientMessageId = item.clientMessageId,
+                                        isTeamChat     = isTeamChat,
+                                        onRetryMessage = onRetryMessage,
+                                        onCancelMessage = onCancelMessage,
+                                        onViewTeamInfo = {
+                                            val tid = if (isTeamChat) conversation.teamId else otherTeamId
+                                            val tname = if (isTeamChat) headerName else otherTeam
+                                            if (tid != null) onViewTeamInfo(tid, tname)
+                                        },
+                                        onSetReplyTarget = { onSetReplyTarget(item) },
+                                        onDeleteMessage = { onDeleteMessage(message.id) },
+                                        currentUserId = currentUserId
+                                    )
+                                }
+
+                                if (messagesPaged.loadState.append is androidx.paging.LoadState.Loading) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
                                             CircularProgressIndicator(
                                                 modifier = Modifier.size(20.dp),
                                                 color = GoldPrimary,
                                                 strokeWidth = 2.dp
                                             )
-                                        } else {
-                                            // Trigger load when this item becomes visible
-                                            val isVisible by remember {
-                                                derivedStateOf {
-                                                    listState.layoutInfo.visibleItemsInfo.any { it.key == "load_older" }
-                                                }
-                                            }
-                                            if (isVisible && !isLoadingOlder && hasMoreMessages) {
-                                                LaunchedEffect(Unit) { onLoadOlder() }
-                                            }
                                         }
                                     }
                                 }
-                            }
-
-                            itemsIndexed(
-                                displayedMessages,
-                                key = { _, item -> item.clientMessageId ?: item.message.id }
-                            ) { index, item ->
-                                val message = item.message
-                                val isFromMe = message.senderId == currentUserId
-
-                                val prevMessage = if (index > 0) displayedMessages[index - 1].message else null
-                                val nextMessage = if (index < displayedMessages.size - 1) displayedMessages[index + 1].message else null
-
-                                val showDateSeparator = prevMessage == null || !isSameDay(prevMessage.timestamp, message.timestamp)
-                                val isFirstInGroup = prevMessage == null || prevMessage.senderId != message.senderId || showDateSeparator
-                                val isLastInGroup  = nextMessage == null || nextMessage.senderId != message.senderId || !isSameDay(nextMessage.timestamp, message.timestamp)
-
-                                // New-messages separator: show after the last seen message
-                                val showNewMessagesSeparator = conversation.lastSeenMessageId != null &&
-                                    prevMessage?.id == conversation.lastSeenMessageId
-
-                                if (showDateSeparator) DateSeparator(timestamp = message.timestamp)
-                                if (showNewMessagesSeparator) NewMessagesSeparator()
-
-                                MessageBubble(
-                                    message        = message,
-                                    isFromMe       = isFromMe,
-                                    isFirstInGroup = isFirstInGroup,
-                                    isLastInGroup  = isLastInGroup,
-                                    deliveryStatus = item.status,
-                                    clientMessageId = item.clientMessageId,
-                                    isTeamChat     = isTeamChat,
-                                    onRetryMessage = onRetryMessage,
-                                    onCancelMessage = onCancelMessage,
-                                    onViewTeamInfo = {
-                                        val tid = if (isTeamChat) conversation.teamId else otherTeamId
-                                        val tname = if (isTeamChat) headerName else otherTeam
-                                        if (tid != null) onViewTeamInfo(tid, tname)
-                                    },
-                                    onSetReplyTarget = { onSetReplyTarget(item) },
-                                    onDeleteMessage = { onDeleteMessage(message.id) },
-                                    currentUserId = currentUserId
-                                )
                             }
                         }
                     }
@@ -530,7 +520,7 @@ fun ChatScreen(
                         .padding(bottom = 12.dp, end = 16.dp)
                 ) {
                     SmallFloatingActionButton(
-                        onClick        = { scope.launch { listState.animateScrollToItem(displayedMessages.size - 1) } },
+                        onClick        = { scope.launch { listState.animateScrollToItem(0) } },
                         containerColor = GoldPrimary,
                         contentColor   = DarkBlue,
                         shape          = CircleShape,
@@ -548,13 +538,13 @@ fun ChatScreen(
                         .fillMaxWidth()
                         .drawBehind {
                             drawLine(
-                                color       = GlassBorder,
+                                color       = outlineColor,
                                 start       = Offset(0f, 0f),
                                 end         = Offset(size.width, 0f),
                                 strokeWidth = 1f
                             )
                         }
-                        .background(DarkNavy.copy(alpha = 0.97f))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.97f))
                         .navigationBarsPadding()
                         .imePadding()
                         .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -592,7 +582,7 @@ fun ChatScreen(
                                     )
                                     Text(
                                         text = reply.message.content.take(50),
-                                        color = TextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 11.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -604,7 +594,7 @@ fun ChatScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.Close, null,
-                                        tint = TextTertiary, modifier = Modifier.size(14.dp)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
@@ -648,12 +638,12 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(SurfaceOverlay)
-                                    .border(1.dp, GlassBorder, CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape)
                                     .clickable { onSendImage() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Outlined.Image, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Outlined.Image, "Send image", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                             }
                         }
 
@@ -667,17 +657,17 @@ fun ChatScreen(
                                 Text(
                                     if (isTeamChat) stringResource(R.string.team_chat_placeholder)
                                     else stringResource(R.string.message_placeholder),
-                                    color = TextTertiary, fontSize = 15.sp
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 15.sp
                                 )
                             },
                             modifier      = Modifier.weight(1f),
                             colors        = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
-                                unfocusedBorderColor    = GlassBorder,
-                                focusedContainerColor   = SurfaceOverlay,
-                                unfocusedContainerColor = SurfaceOverlay,
-                                focusedTextColor        = TextPrimary,
-                                unfocusedTextColor      = TextPrimary,
+                                unfocusedBorderColor    = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedTextColor        = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
                                 cursorColor             = GoldPrimary
                             ),
                             shape         = RoundedCornerShape(22.dp),
@@ -708,7 +698,7 @@ fun ChatScreen(
                         // Send button
                         val sendEnabled = messageText.isNotBlank()
                         val sendBg by animateColorAsState(
-                            targetValue   = if (sendEnabled) GoldPrimary else SurfaceOverlay,
+                            targetValue   = if (sendEnabled) GoldPrimary else MaterialTheme.colorScheme.surfaceVariant,
                             animationSpec = tween(200),
                             label         = "sendBg"
                         )
@@ -735,8 +725,8 @@ fun ChatScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.AutoMirrored.Filled.Send, null,
-                                tint     = if (sendEnabled) DarkBlue else TextTertiary,
+                                Icons.AutoMirrored.Filled.Send, "Send message",
+                                tint     = if (sendEnabled) DarkBlue else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -811,7 +801,7 @@ private fun MessageBubble(
 
     // Sent: blue→navy gradient with subtle gold shimmer at top
     val myBubbleBrush = Brush.linearGradient(
-        colors = listOf(Color(0xFF1E6FD9), Color(0xFF1250A0), Color(0xFF0D3B7A)),
+        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary),
         start  = Offset(0f, 0f),
         end    = Offset(0f, Float.POSITIVE_INFINITY)
     )
@@ -841,7 +831,7 @@ private fun MessageBubble(
                                 .size(28.dp)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop,
-                            loading = { Box(modifier = Modifier.size(28.dp).background(SurfaceElevated, CircleShape)) },
+                            loading = { Box(modifier = Modifier.size(28.dp).background(MaterialTheme.colorScheme.surface, CircleShape)) },
                             error = {
                                 Box(
                                     modifier = Modifier.size(28.dp).background(brush = Brush.linearGradient(BlueGradient), shape = CircleShape),
@@ -896,13 +886,13 @@ private fun MessageBubble(
                     .clip(bubbleShape)
                     .background(
                         brush = if (message.isDeleted) Brush.linearGradient(
-                            listOf(SurfaceOverlay.copy(alpha = 0.5f), SurfaceOverlay.copy(alpha = 0.5f))
+                            listOf(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         ) else if (isFromMe) myBubbleBrush
-                        else Brush.linearGradient(listOf(SurfaceElevated, SurfaceCard))
+                        else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
                     )
                     .then(
                         if (!isFromMe && !message.isDeleted) Modifier.border(
-                            0.5.dp, GlassBorder, bubbleShape
+                            0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), bubbleShape
                         ) else Modifier
                     )
                     .combinedClickable(
@@ -914,7 +904,7 @@ private fun MessageBubble(
                 if (message.isDeleted) {
                     Text(
                         text = "Message deleted",
-                        color = TextTertiary.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f).copy(alpha = 0.6f),
                         fontSize = 13.sp,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                     )
@@ -928,13 +918,13 @@ private fun MessageBubble(
                             MessageType.IMAGE -> ImageContent(url = message.imageUrl ?: "")
                             MessageType.VOICE -> Text(
                                 text = "🎤 Voice Note",
-                                color = if (isFromMe) White.copy(alpha = 0.7f) else TextSecondary,
+                                color = if (isFromMe) White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                             MessageType.APPLY -> ApplyContent(message.content, onViewTeamInfo)
                             else              -> Text(
                                 text       = message.content,
-                                color      = if (isFromMe) White else TextPrimary,
+                                color      = if (isFromMe) White else MaterialTheme.colorScheme.onSurface,
                                 fontSize   = 15.sp,
                                 lineHeight = 21.sp
                             )
@@ -952,7 +942,7 @@ private fun MessageBubble(
                     Text(
                         formatChatTime(message.timestamp),
                         fontSize = 10.sp,
-                        color    = TextTertiary
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                     if (isFromMe) {
                         Spacer(Modifier.width(4.dp))
@@ -970,7 +960,7 @@ private fun MessageBubble(
                                 deliveryStatus == DeliveryStatus.SENDING ||
                                 deliveryStatus == DeliveryStatus.PENDING -> WarningOrange.copy(alpha = 0.8f)
                                 message.isRead                           -> GoldPrimary.copy(alpha = 0.85f)
-                                else                                     -> TextTertiary.copy(alpha = 0.7f)
+                                else                                     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f).copy(alpha = 0.7f)
                             },
                             modifier           = Modifier.size(12.dp)
                         )
@@ -996,7 +986,7 @@ private fun MessageBubble(
                     Text(
                         "Cancel",
                         fontSize = 10.sp,
-                        color = TextTertiary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         modifier = Modifier.clickable { onCancelMessage(clientMessageId) }
                     )
                 }
@@ -1062,7 +1052,7 @@ private fun MessageContextMenu(
     androidx.compose.material3.DropdownMenu(
         expanded = true,
         onDismissRequest = onDismiss,
-        modifier = Modifier.background(SurfaceCard, RoundedCornerShape(12.dp))
+        modifier = Modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
     ) {
         DropdownMenuItem(
             text = {
@@ -1070,7 +1060,7 @@ private fun MessageContextMenu(
                     @Suppress("DEPRECATION")
                     Icon(Icons.Default.Reply, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Reply", color = TextPrimary, fontSize = 14.sp)
+                    Text("Reply", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                 }
             },
             onClick = onReply
@@ -1106,7 +1096,7 @@ private fun ImageContent(url: String) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(SurfaceOverlay),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = GoldPrimary, strokeWidth = 2.dp)
@@ -1124,7 +1114,7 @@ private fun ApplyContent(content: String, onView: () -> Unit) {
             Text(stringResource(R.string.scrim_application), fontWeight = FontWeight.Bold, color = GoldPrimary, fontSize = 13.sp)
         }
         Spacer(Modifier.height(6.dp))
-        Text(content, color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
+        Text(content, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, lineHeight = 18.sp)
         Spacer(Modifier.height(10.dp))
         Box(
             Modifier
@@ -1163,7 +1153,7 @@ private fun NewMessagesSeparator() {
         )
         Box(
             modifier = Modifier
-                .background(SurfaceCard, RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                 .border(1.dp, GoldPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 10.dp, vertical = 2.dp)
         ) {
@@ -1190,15 +1180,15 @@ private fun DateSeparator(timestamp: Long) {
     ) {
         Box(
             modifier = Modifier
-                .background(SurfaceOverlay, CircleShape)
-                .border(1.dp, GlassBorder, CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), CircleShape)
                 .padding(horizontal = 16.dp, vertical = 5.dp)
         ) {
             Text(
                 formatDateHeader(timestamp),
                 fontSize   = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color      = TextSecondary,
+                color      = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 0.5.sp
             )
         }
@@ -1224,7 +1214,7 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
     Box(
         Modifier
             .fillMaxWidth()
-            .background(DarkNavy.copy(alpha = 0.98f))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.98f))
             .navigationBarsPadding()
             .padding(24.dp),
         contentAlignment = Alignment.Center
@@ -1240,7 +1230,7 @@ private fun ChatLockedOverlay(timeUntilOpens: Long) {
                 Icon(Icons.Default.Lock, null, tint = WarningOrange, modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.chat_opens_in), fontSize = 13.sp, color = TextSecondary)
+            Text(stringResource(R.string.chat_opens_in), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 String.format("%02d:%02d:%02d", hours, minutes, seconds),
                 fontSize   = 34.sp,
@@ -1301,20 +1291,20 @@ private fun EmptyChatState(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .background(SurfaceOverlay.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.People,
                     contentDescription = null,
-                    tint = TextTertiary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.team_chat_members, memberCount),
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

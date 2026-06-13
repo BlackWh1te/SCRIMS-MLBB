@@ -16,6 +16,6 @@ data class LeaderboardEntity(
     val wins: Int = 0,
     val losses: Int = 0,
     val matchesPlayed: Int = 0,
-    val tier: String = "BRONZE",
+    val tier: String = "WARRIOR",
     val lastUpdated: Long = System.currentTimeMillis()
 )

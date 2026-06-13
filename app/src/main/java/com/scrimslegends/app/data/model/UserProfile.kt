@@ -4,6 +4,7 @@ data class UserProfile(
     val id: String = "",
     val username: String = "",
     val email: String = "",
+    val shortId: String = "",
     val inGameId: String = "",
     val avatarUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -12,7 +13,7 @@ data class UserProfile(
     val totalMatches: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,
-    val currentTier: RankTier = RankTier.BRONZE,
+    val currentTier: RankTier = RankTier.WARRIOR,
     val emailVerified: Boolean = false,
     val isBanned: Boolean = false,
     val banReason: String? = null,
@@ -27,6 +28,8 @@ data class UserProfile(
     val tournamentsHosted: Int = 0,
     val tournamentsCompleted: Int = 0,
     val tournamentsCancelled: Int = 0,
+    // Freeze/penalty fields
+    val frozenUntil: String? = null,
 ) {
     val winRate: String
         get() = if (totalMatches > 0) "${(wins * 100 / totalMatches)}%" else "0%"
@@ -45,4 +48,12 @@ data class UserProfile(
 
     val ptsDisplay: String
         get() = if (pts >= 0) "+$pts" else "$pts"
+
+    val isFrozen: Boolean
+        get() {
+            val until = frozenUntil ?: return false
+            return try {
+                java.time.Instant.parse(until).isAfter(java.time.Instant.now())
+            } catch (_: Exception) { false }
+        }
 }

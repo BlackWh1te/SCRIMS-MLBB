@@ -33,8 +33,9 @@ class TeamRepository : TeamRepositoryInterface {
         kotlinx.coroutines.delay(500) // Simulate network delay
         
         try {
+            val teamId = java.util.UUID.randomUUID().toString()
             val team = Team(
-                id = java.util.UUID.randomUUID().toString(),
+                id = teamId,
                 name = name,
                 leaderId = leaderId,
                 players = listOf(
@@ -45,6 +46,7 @@ class TeamRepository : TeamRepositoryInterface {
                         email = leaderId
                     )
                 ),
+                inviteCode = "SL-${teamId.replace("-", "").take(8).uppercase()}",
                 isOpenForApplications = isOpenForApplications
             )
             teams.add(team)
@@ -390,6 +392,19 @@ class TeamRepository : TeamRepositoryInterface {
         )
         applications.add(application)
         emit(Result.success(application))
+    }
+
+    override suspend fun applyToTeamByInviteCode(inviteCode: String, applicantUserId: String, message: String?): Flow<Result<TeamApplication>> = flow {
+        kotlinx.coroutines.delay(500)
+        val normalizedCode = inviteCode.filter { it.isLetterOrDigit() }.uppercase()
+        val team = teams.find { team ->
+            team.inviteCode.filter { it.isLetterOrDigit() }.uppercase() == normalizedCode
+        }
+        if (team == null) {
+            emit(Result.failure(Exception("Invite code not found")))
+            return@flow
+        }
+        applyToTeam(team.id, applicantUserId, message).collect { emit(it) }
     }
 
     override suspend fun getTeamApplications(teamId: String): Flow<Result<List<TeamApplication>>> = flow {

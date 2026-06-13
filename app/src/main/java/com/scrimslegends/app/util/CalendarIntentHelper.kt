@@ -15,6 +15,7 @@ object CalendarIntentHelper {
     private const val DURATION_BO1_MIN = 30L
     private const val DURATION_BO2_MIN = 45L
     private const val DURATION_BO3_MIN = 60L
+    private const val DURATION_BO4_MIN = 75L
     private const val DURATION_BO5_MIN = 90L
 
     fun addScrimToCalendar(context: Context, scrim: Scrim): Boolean {
@@ -22,6 +23,7 @@ object CalendarIntentHelper {
             1 -> DURATION_BO1_MIN
             2 -> DURATION_BO2_MIN
             3 -> DURATION_BO3_MIN
+            4 -> DURATION_BO4_MIN
             5 -> DURATION_BO5_MIN
             else -> DURATION_BO3_MIN
         }

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -31,6 +32,8 @@ import com.scrimslegends.app.ui.theme.*
 import com.scrimslegends.app.ui.components.PremiumFadeIn
 import com.scrimslegends.app.R
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 
 @Composable
 fun LoginScreen(
@@ -46,7 +49,7 @@ fun LoginScreen(
     var isLoading      by remember { mutableStateOf(false) }
     var errorMessage   by remember { mutableStateOf("") }
 
-    val authState by viewModel.authState.collectAsState()
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -84,7 +87,7 @@ fun LoginScreen(
                 .offset(x = (-60).dp, y = (-60).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(BluePrimary.copy(alpha = 0.18f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), Color.Transparent)
                     )
                 )
         )
@@ -95,7 +98,7 @@ fun LoginScreen(
                 .offset(x = 60.dp, y = 60.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(GoldPrimary.copy(alpha = 0.12f), Color.Transparent)
+                        colors = listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
         )
@@ -127,7 +130,7 @@ fun LoginScreen(
             PremiumFadeIn(delayMillis = 80) {
                 Text(
                     stringResource(R.string.app_title),
-                    style     = iOSTitle1.copy(color = TextPrimary),
+                    style     = iOSTitle1.copy(color = MaterialTheme.colorScheme.onSurface),
                     textAlign = TextAlign.Center
                 )
             }
@@ -135,7 +138,7 @@ fun LoginScreen(
             PremiumFadeIn(delayMillis = 130) {
                 Text(
                     stringResource(R.string.welcome_back),
-                    style     = iOSCallout.copy(color = TextSecondary),
+                    style     = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                     textAlign = TextAlign.Center
                 )
             }
@@ -148,15 +151,10 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
-                        .background(SurfaceCard)
+                        .background(MaterialTheme.colorScheme.surface)
                         .border(
                             width  = 1.dp,
-                            brush  = Brush.linearGradient(
-                                colors = listOf(
-                                    GlassBorder.copy(alpha = 0.8f),
-                                    GlassBorder.copy(alpha = 0.2f)
-                                )
-                            ),
+                            color  = MaterialTheme.colorScheme.primary,
                             shape  = RoundedCornerShape(24.dp)
                         )
                         .padding(20.dp)
@@ -208,7 +206,7 @@ fun LoginScreen(
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text(errorMessage, color = ErrorRed, fontSize = 13.sp)
+                                    Text(errorMessage, style = iOSCallout.copy(color = ErrorRed))
                                 }
                             }
                         }
@@ -222,7 +220,7 @@ fun LoginScreen(
                         ) {
                             Text(
                                 stringResource(R.string.forgot_password),
-                                color      = BluePrimary,
+                                color      = MaterialTheme.colorScheme.primary,
                                 fontSize   = 13.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -255,10 +253,10 @@ fun LoginScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
-                                        brush = if (!isLoading)
-                                            Brush.horizontalGradient(GoldGradient)
+                                        color = if (!isLoading)
+                                            MaterialTheme.colorScheme.primary
                                         else
-                                            Brush.linearGradient(listOf(SurfaceOverlay, SurfaceOverlay)),
+                                            MaterialTheme.colorScheme.surfaceVariant,
                                         shape = RoundedCornerShape(14.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -269,16 +267,16 @@ fun LoginScreen(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         CircularProgressIndicator(
-                                            color       = White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             modifier    = Modifier.size(18.dp),
                                             strokeWidth = 2.dp
                                         )
-                                        Text(stringResource(R.string.signing_in), color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.signing_in), color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 } else {
                                     Text(
                                         stringResource(R.string.sign_in),
-                                        color         = White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize      = 16.sp,
                                         fontWeight    = FontWeight.Bold,
                                         letterSpacing = 0.sp
@@ -301,8 +299,7 @@ fun LoginScreen(
                 ) {
                     Text(
                         stringResource(R.string.dont_have_account) + " ",
-                        color    = TextSecondary,
-                        fontSize = 15.sp
+                        style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                     TextButton(
                         onClick          = onNavigateToSignup,
@@ -310,9 +307,10 @@ fun LoginScreen(
                     ) {
                         Text(
                             stringResource(R.string.signup),
-                            color      = GoldPrimary,
-                            fontSize   = 15.sp,
-                            fontWeight = FontWeight.Bold
+                            style      = iOSCallout.copy(
+                                color      = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
                     }
                 }
@@ -328,14 +326,13 @@ fun LoginScreen(
                 ) {
                     Icon(
                         Icons.Default.PlayCircleOutline, null,
-                        tint     = TextSecondary,
+                        tint     = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         stringResource(R.string.take_tour),
-                        color    = TextSecondary,
-                        fontSize = 14.sp
+                        style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                 }
             }
@@ -360,7 +357,7 @@ private fun LoginField(
 ) {
     val isFocused = remember { mutableStateOf(false) }
     val borderColor by animateColorAsState(
-        targetValue   = if (isFocused.value) BluePrimary.copy(alpha = 0.7f) else GlassBorder,
+        targetValue   = if (isFocused.value) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
         animationSpec = tween(200),
         label         = "fieldBorder"
     )
@@ -369,14 +366,14 @@ private fun LoginField(
         value                = value,
         onValueChange        = onValueChange,
         placeholder          = {
-            Text(placeholder, color = TextTertiary, fontSize = 15.sp)
+            Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 15.sp)
         },
         leadingIcon          = {
-            Icon(leadingIcon, null, tint = if (isFocused.value) BluePrimary else TextTertiary, modifier = Modifier.size(20.dp))
+            Icon(leadingIcon, null, tint = if (isFocused.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
         },
         trailingIcon         = if (trailingIcon != null) {{
             IconButton(onClick = onTrailingClick) {
-                Icon(trailingIcon, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                Icon(trailingIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
         }} else null,
         visualTransformation = visualTransformation,
@@ -386,13 +383,13 @@ private fun LoginField(
         keyboardOptions      = KeyboardOptions(keyboardType = keyboardType),
         shape                = RoundedCornerShape(14.dp),
         colors               = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor      = BluePrimary.copy(alpha = 0.7f),
-            unfocusedBorderColor    = GlassBorder,
-            focusedContainerColor   = SurfaceOverlay,
-            unfocusedContainerColor = SurfaceOverlay,
-            focusedTextColor        = TextPrimary,
-            unfocusedTextColor      = TextPrimary,
-            cursorColor             = BluePrimary
+            focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            unfocusedBorderColor    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor        = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
+            cursorColor             = MaterialTheme.colorScheme.primary
         ),
         textStyle = iOSBody.copy(fontSize = 15.sp)
     )

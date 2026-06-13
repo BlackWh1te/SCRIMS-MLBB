@@ -280,6 +280,35 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
+/**
+ * Migration from version 19 to 20.
+ * Adds missing cached stats columns to the profiles table and the message
+ * outbox table. A duplicate MIGRATION_19_20 used to shadow this migration,
+ * so keep all v20 schema changes together here.
+ */
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.ensureProfileStatsColumns()
+        db.ensureMessageOutboxTable()
+    }
+}
+
+/**
+ * Migration from version 20 to 21.
+ *
+ * Repairs installs that already reached version 20 with the wrong schema
+ * identity because the previous migration registration was shadowed. This is
+ * intentionally idempotent so it handles both possible v20 shapes:
+ * - stats columns present, outbox missing
+ * - outbox present, stats columns missing
+ */
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.ensureProfileStatsColumns()
+        db.ensureMessageOutboxTable()
+    }
+}
+
 private fun SupportSQLiteDatabase.hasColumn(tableName: String, columnName: String): Boolean {
     query("PRAGMA table_info(`$tableName`)").use { cursor ->
         val nameIndex = cursor.getColumnIndex("name")
@@ -288,4 +317,35 @@ private fun SupportSQLiteDatabase.hasColumn(tableName: String, columnName: Strin
         }
     }
     return false
+}
+
+private fun SupportSQLiteDatabase.ensureProfileStatsColumns() {
+    if (!hasColumn("profiles", "wins")) {
+        execSQL("ALTER TABLE profiles ADD COLUMN wins INTEGER NOT NULL DEFAULT 0")
+    }
+    if (!hasColumn("profiles", "losses")) {
+        execSQL("ALTER TABLE profiles ADD COLUMN losses INTEGER NOT NULL DEFAULT 0")
+    }
+    if (!hasColumn("profiles", "totalMatches")) {
+        execSQL("ALTER TABLE profiles ADD COLUMN totalMatches INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+private fun SupportSQLiteDatabase.ensureMessageOutboxTable() {
+    execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `message_outbox` (
+            `clientMessageId` TEXT NOT NULL,
+            `conversationId` TEXT NOT NULL,
+            `content` TEXT NOT NULL,
+            `isTeamMessage` INTEGER NOT NULL,
+            `isScrimMessage` INTEGER NOT NULL,
+            `status` TEXT NOT NULL,
+            `retryCount` INTEGER NOT NULL,
+            `nextRetryAt` INTEGER NOT NULL,
+            `createdAt` INTEGER NOT NULL,
+            PRIMARY KEY(`clientMessageId`)
+        )
+        """.trimIndent()
+    )
 }

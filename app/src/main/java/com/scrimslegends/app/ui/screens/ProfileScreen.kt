@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -15,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.AnnotatedString
 import android.content.Intent
 import android.net.Uri
 import coil.compose.AsyncImage
+import com.scrimslegends.app.ui.components.LottieLoadingIndicator
 import com.scrimslegends.app.ui.theme.*
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
@@ -154,7 +157,7 @@ fun ProfileScreen(
 
                         Text(
                             text = stringResource(R.string.my_profile),
-                            style = iOSTitle2.copy(color = TextPrimary),
+                            style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onBackground),
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -167,8 +170,8 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isEditing) BluePrimary else SurfaceOverlay)
-                                .border(1.dp, if (isEditing) Color.Transparent else GlassBorder, RoundedCornerShape(12.dp))
+                                .background(if (isEditing) MaterialTheme.colorScheme.primary else appElevatedSurfaceColor())
+                                .border(1.dp, if (isEditing) Color.Transparent else appBorderColor(), RoundedCornerShape(12.dp))
                                 .clickable {
                                     if (isEditing) {
                                         val heroesList = mainHeroesInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(3)
@@ -181,7 +184,7 @@ fun ProfileScreen(
                             Icon(
                                 imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
                                 contentDescription = if (isEditing) stringResource(R.string.save) else stringResource(R.string.edit),
-                                tint = White,
+                                tint = if (isEditing) White else appTextPrimaryColor(),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -195,6 +198,7 @@ fun ProfileScreen(
                     .widthIn(max = responsive.contentMaxWidth)
                     .align(Alignment.CenterHorizontally)
                     .weight(1f)
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = responsive.horizontalPadding, vertical = 20.dp)
             ) {
@@ -222,12 +226,13 @@ fun ProfileScreen(
                             bio = bio,
                             role = role,
                             responsive = responsive,
-                            onAvatarClick = { imagePicker.launch("image/*") }
+                            onAvatarClick = { imagePicker.launch("image/*") },
+                            isUploadingAvatar = authResult is com.scrimslegends.app.data.model.AuthResult.Loading
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Profile Info Cards
                 AnimatedEntrance(delayMillis = 250) {
@@ -237,7 +242,7 @@ fun ProfileScreen(
                                 icon = Icons.Default.Email,
                                 label = stringResource(R.string.email),
                                 value = userProfile?.email ?: stringResource(R.string.not_set),
-                                color = BluePrimary
+                                color = MaterialTheme.colorScheme.primary
                             ),
                             ProfileInfoItem(
                                 icon = Icons.Default.CalendarToday,
@@ -245,7 +250,7 @@ fun ProfileScreen(
                                 value = userProfile?.createdAt?.let {
                                     java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(it)
                                 } ?: stringResource(R.string.not_set),
-                                color = GoldPrimary
+                                color = MaterialTheme.colorScheme.secondary
                             ),
                             ProfileInfoItem(
                                 icon = Icons.Default.SportsEsports,
@@ -257,13 +262,13 @@ fun ProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Stats Section
                 AnimatedEntrance(delayMillis = 375) {
                     Text(
                         text = stringResource(R.string.player_stats),
-                        style = iOSTitle3.copy(color = White)
+                        style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onBackground)
                     )
                 }
 
@@ -275,7 +280,7 @@ fun ProfileScreen(
                             ProfileStatItem(
                                 label = stringResource(R.string.matches),
                                 value = (userProfile?.totalMatches ?: 0).toString(),
-                                color = GoldPrimary
+                                color = MaterialTheme.colorScheme.secondary
                             ),
                             ProfileStatItem(
                                 label = stringResource(R.string.wins),
@@ -290,7 +295,7 @@ fun ProfileScreen(
                             ProfileStatItem(
                                 label = stringResource(R.string.win_rate),
                                 value = userProfile?.winRate ?: "0%",
-                                color = BluePrimary
+                                color = MaterialTheme.colorScheme.primary
                             ),
                             ProfileStatItem(
                                 label = stringResource(R.string.xp_label),
@@ -314,7 +319,7 @@ fun ProfileScreen(
                     AnimatedEntrance(delayMillis = 386) {
                         Text(
                             text = stringResource(R.string.host_stats),
-                            style = iOSTitle3.copy(color = White)
+                            style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onBackground)
                         )
                     }
 
@@ -326,7 +331,7 @@ fun ProfileScreen(
                                 ProfileStatItem(
                                     label = stringResource(R.string.hosted),
                                     value = userProfile.tournamentsHosted.toString(),
-                                    color = GoldPrimary
+                                    color = MaterialTheme.colorScheme.secondary
                                 ),
                                 ProfileStatItem(
                                     label = stringResource(R.string.host_stat_completed),
@@ -344,7 +349,7 @@ fun ProfileScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Achievements Section
                 AnimatedEntrance(delayMillis = 388) {
@@ -355,12 +360,12 @@ fun ProfileScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.achievements),
-                            style = iOSTitle3.copy(color = White)
+                            style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onBackground)
                         )
                         TextButton(onClick = onNavigateToAchievements) {
                             Text(
                                 text = stringResource(R.string.view_all),
-                                color = BluePrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -379,20 +384,19 @@ fun ProfileScreen(
                     } else {
                         Text(
                             text = stringResource(R.string.no_achievements_yet),
-                            fontSize = 13.sp,
-                            color = LightGray.copy(alpha = 0.6f),
+                            style = iOSCaption1.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f)),
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // App Settings Section
                 AnimatedEntrance(delayMillis = 390) {
                     Text(
                         text = stringResource(R.string.app_settings),
-                        style = iOSTitle3.copy(color = White)
+                        style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onBackground)
                     )
                 }
 
@@ -403,7 +407,7 @@ fun ProfileScreen(
                         icon = Icons.Default.Settings,
                         title = stringResource(R.string.settings),
                         subtitle = stringResource(R.string.settings_sub),
-                        color = BluePrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         onClick = onNavigateToSettings
                     )
                 }
@@ -421,8 +425,8 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .border(1.dp, GoldPrimary.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                                .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.cardColors(containerColor = appSurfaceColor()),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -433,22 +437,22 @@ fun ProfileScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .background(GoldPrimary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                                            .border(1.dp, GoldPrimary.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
+                                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Default.Dashboard, null, tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                                        Icon(Icons.Default.Dashboard, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                                     }
                                     Spacer(Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             stringResource(R.string.host_credentials),
-                                            style = iOSHeadline.copy(color = TextPrimary)
+                                            style = iOSHeadline.copy(color = appTextPrimaryColor())
                                         )
                                         Spacer(Modifier.height(2.dp))
                                         Text(
                                             stringResource(R.string.host_credentials_sub),
-                                            style = iOSCaption1.copy(color = TextSecondary),
+                                            style = iOSCaption1.copy(color = appTextSecondaryColor()),
                                             maxLines = 1,
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
@@ -465,12 +469,12 @@ fun ProfileScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             stringResource(R.string.host_email_label),
-                                            style = iOSCaption1.copy(color = TextSecondary)
+                                            style = iOSCaption1.copy(color = appTextSecondaryColor())
                                         )
                                         Spacer(Modifier.height(2.dp))
                                         Text(
                                             text = userProfile.email,
-                                            style = iOSBody.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                            style = iOSBody.copy(color = appTextPrimaryColor(), fontWeight = FontWeight.SemiBold)
                                         )
                                     }
                                     TextButton(
@@ -482,13 +486,13 @@ fun ProfileScreen(
                                         Icon(
                                             Icons.Default.ContentCopy,
                                             contentDescription = stringResource(R.string.copy_email),
-                                            tint = if (emailCopied) SuccessGreen else GoldPrimary,
+                                            tint = if (emailCopied) SuccessGreen else MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Text(
                                             if (emailCopied) stringResource(R.string.email_copied) else stringResource(R.string.copy_email),
-                                            color = if (emailCopied) SuccessGreen else GoldPrimary,
+                                            color = if (emailCopied) SuccessGreen else MaterialTheme.colorScheme.secondary,
                                             fontSize = 13.sp
                                         )
                                     }
@@ -499,7 +503,7 @@ fun ProfileScreen(
                                 // Password hint
                                 Text(
                                     stringResource(R.string.host_password_hint),
-                                    style = iOSCaption1.copy(color = TextSecondary.copy(alpha = 0.8f))
+                                    style = iOSCaption1.copy(color = appTextSecondaryColor().copy(alpha = 0.8f))
                                 )
 
                                 Spacer(Modifier.height(12.dp))
@@ -524,7 +528,7 @@ fun ProfileScreen(
                 AnimatedEntrance(delayMillis = 398) {
                     val context = LocalContext.current
                     AccountActionCard(
-                        icon = Icons.Default.HelpOutline,
+                        icon = Icons.AutoMirrored.Filled.HelpOutline,
                         title = stringResource(R.string.support),
                         subtitle = stringResource(R.string.support_sub),
                         color = SuccessGreen,
@@ -535,13 +539,13 @@ fun ProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Account Security Section
                 AnimatedEntrance(delayMillis = 400) {
                     Text(
                         text = stringResource(R.string.account_security),
-                        style = iOSTitle3.copy(color = White)
+                        style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onBackground)
                     )
                 }
 
@@ -553,7 +557,7 @@ fun ProfileScreen(
                         icon = Icons.Default.Email,
                         title = stringResource(R.string.change_email),
                         subtitle = userProfile?.email ?: stringResource(R.string.not_set),
-                        color = BluePrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         onClick = { showEmailDialog = true }
                     )
                 }
@@ -566,12 +570,12 @@ fun ProfileScreen(
                         icon = Icons.Default.Lock,
                         title = stringResource(R.string.change_password),
                         subtitle = stringResource(R.string.update_password_sub),
-                        color = GoldPrimary,
+                        color = MaterialTheme.colorScheme.secondary,
                         onClick = { showPasswordDialog = true }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Sign Out Section
                 AnimatedEntrance(delayMillis = 550) {
@@ -622,17 +626,17 @@ fun ProfileScreen(
     if (showLogoutConfirm) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirm = false },
-            containerColor = DarkNavy,
+            containerColor = appSurfaceColor(),
             title = {
                 Text(
                     text = stringResource(R.string.sign_out),
-                    style = iOSTitle3.copy(color = White, fontWeight = FontWeight.Bold)
+                    style = iOSTitle3.copy(color = appTextPrimaryColor(), fontWeight = FontWeight.Bold)
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.sign_out_confirm_message),
-                    style = iOSBody.copy(color = LightGray)
+                    style = iOSBody.copy(color = appTextSecondaryColor())
                 )
             },
             confirmButton = {
@@ -647,11 +651,11 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirm = false }) {
-                    Text(stringResource(R.string.cancel_btn), color = LightGray)
+                    Text(stringResource(R.string.cancel_btn), color = appTextSecondaryColor())
                 }
             },
             shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            modifier = Modifier.border(1.dp, appBorderColor(), RoundedCornerShape(20.dp))
         )
     }
 }
@@ -679,45 +683,34 @@ private fun ProfileHeroCard(
     bio: String,
     role: String,
     responsive: ResponsiveMetrics,
-    onAvatarClick: () -> Unit
+    onAvatarClick: () -> Unit,
+    isUploadingAvatar: Boolean = false
 ) {
+    val cardColor = appSurfaceColor()
+    val elevatedColor = appElevatedSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 14.dp,
-                spotColor = BluePrimary.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(24.dp)
-            )
             .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        SurfaceElevated.copy(alpha = 0.96f),
-                        SurfaceCard.copy(alpha = 0.98f),
-                        DarkSurface.copy(alpha = 0.96f)
-                    )
-                )
-            )
-            .border(1.dp, GlassBorder.copy(alpha = 0.9f), RoundedCornerShape(24.dp))
+            .background(appSurfaceColor())
+            .border(1.dp, borderColor, RoundedCornerShape(24.dp))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
                     .size(responsive.profileAvatarSize)
-                    .shadow(
-                        elevation = 18.dp,
-                        spotColor = GoldPrimary.copy(alpha = 0.28f),
-                        shape = CircleShape
-                    )
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(colors = BlueGradient))
-                    .border(2.dp, White.copy(alpha = 0.12f), CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), CircleShape)
                     .clickable { onAvatarClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -731,9 +724,9 @@ private fun ProfileHeroCard(
                 } else {
                     Text(
                         text = username.firstOrNull()?.uppercaseChar()?.toString() ?: "P",
-                        fontSize = if (responsive.isCompact) 38.sp else 46.sp,
+                        style = if (responsive.isCompact) iOSTitle1 else iOSTitle1.copy(fontSize = 46.sp),
                         fontWeight = FontWeight.Bold,
-                        color = White
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -742,16 +735,27 @@ private fun ProfileHeroCard(
                         .align(Alignment.BottomEnd)
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(SurfaceOverlay)
-                        .border(1.dp, GlassBorder, CircleShape),
+                        .background(elevatedColor)
+                        .border(1.dp, borderColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = stringResource(R.string.content_desc_change_avatar),
-                        tint = White,
+                        tint = primaryText,
                         modifier = Modifier.size(17.dp)
                     )
+                }
+
+                if (isUploadingAvatar) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LottieLoadingIndicator(size = 30.dp)
+                    }
                 }
             }
 
@@ -759,7 +763,7 @@ private fun ProfileHeroCard(
 
             Text(
                 text = username.ifBlank { stringResource(R.string.username) },
-                style = iOSTitle1.copy(color = TextPrimary),
+                style = iOSTitle1.copy(color = primaryText),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -770,12 +774,39 @@ private fun ProfileHeroCard(
 
             Text(
                 text = stringResource(R.string.in_game_id_label, inGameId.ifBlank { stringResource(R.string.not_set) }),
-                style = iOSCallout.copy(color = TextSecondary),
+                style = iOSCallout.copy(color = secondaryText),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (userProfile?.shortId?.isNotBlank() == true) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val clipboardManager = LocalClipboardManager.current
+                var idCopied by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { 
+                        clipboardManager.setText(AnnotatedString(userProfile.shortId))
+                        idCopied = true 
+                    }.padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ID: ${userProfile.shortId}",
+                        style = iOSCallout.copy(color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (idCopied) Icons.Default.Check else Icons.Default.ContentCopy,
+                        contentDescription = "Copy ID",
+                        tint = if (idCopied) SuccessGreen else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
 
             if (userProfile != null) {
                 Spacer(modifier = Modifier.height(14.dp))
@@ -786,7 +817,7 @@ private fun ProfileHeroCard(
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = bio,
-                    style = iOSCallout.copy(color = LightGray),
+                    style = iOSCallout.copy(color = secondaryText),
                     textAlign = TextAlign.Center,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -798,13 +829,13 @@ private fun ProfileHeroCard(
 
             val chips = buildList {
                 if (role.isNotBlank()) {
-                    add(ProfileHeroChipData(role.uppercase(), GoldPrimary, Icons.Default.Person))
+                    add(ProfileHeroChipData(role.uppercase(), MaterialTheme.colorScheme.secondary, Icons.Default.Person))
                 }
                 if (userProfile?.isTournamentHost == true) {
-                    add(ProfileHeroChipData(stringResource(R.string.tournament_host_badge), GoldPrimary, Icons.Default.EmojiEvents))
+                    add(ProfileHeroChipData(stringResource(R.string.tournament_host_badge), MaterialTheme.colorScheme.secondary, Icons.Default.EmojiEvents))
                 }
                 userProfile?.mainHeroes?.take(3)?.forEach {
-                    add(ProfileHeroChipData(it, BluePrimary, Icons.Default.SportsEsports))
+                    add(ProfileHeroChipData(it, MaterialTheme.colorScheme.primary, Icons.Default.SportsEsports))
                 }
             }
 
@@ -851,7 +882,7 @@ private fun ProfileHeroChip(chip: ProfileHeroChipData) {
         Text(
             text = chip.text,
             style = iOSCaption1.copy(
-                color = TextPrimary,
+                color = appTextPrimaryColor(),
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.sp
             ),
@@ -875,18 +906,23 @@ private fun ProfileEditCard(
     mainHeroesInput: String,
     onMainHeroesChange: (String) -> Unit
 ) {
+    val cardColor = appSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(22.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = stringResource(R.string.edit),
-            style = iOSTitle3.copy(color = TextPrimary)
+            style = iOSTitle3.copy(color = primaryText)
         )
         com.scrimslegends.app.ui.components.iOSInput(
             value = username,
@@ -921,13 +957,13 @@ private fun ProfileEditCard(
             label = { Text(stringResource(R.string.top_3_main_heroes_hint)) },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoldPrimary,
-                unfocusedBorderColor = GlassBorder,
-                focusedLabelColor = GoldPrimary,
-                unfocusedLabelColor = TextSecondary,
-                cursorColor = GoldPrimary,
-                focusedTextColor = White,
-                unfocusedTextColor = White
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                unfocusedBorderColor = borderColor,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                unfocusedLabelColor = secondaryText,
+                cursorColor = MaterialTheme.colorScheme.secondary,
+                focusedTextColor = primaryText,
+                unfocusedTextColor = primaryText
             ),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -937,19 +973,22 @@ private fun ProfileEditCard(
 
 @Composable
 private fun ProfileInfoPanel(items: List<ProfileInfoItem>) {
+    val cardColor = appSurfaceColor()
+    val borderColor = appBorderColor()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
     ) {
         items.forEachIndexed { index, item ->
             ProfileInfoRow(item)
             if (index != items.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 72.dp),
-                    color = GlassBorder
+                    color = borderColor
                 )
             }
         }
@@ -958,6 +997,9 @@ private fun ProfileInfoPanel(items: List<ProfileInfoItem>) {
 
 @Composable
 private fun ProfileInfoRow(item: ProfileInfoItem) {
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -979,14 +1021,14 @@ private fun ProfileInfoRow(item: ProfileInfoItem) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 item.label,
-                style = iOSCaption1.copy(color = TextSecondary, fontWeight = FontWeight.Medium),
+                style = iOSCaption1.copy(color = secondaryText, fontWeight = FontWeight.Medium),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 item.value,
-                style = iOSHeadline.copy(color = TextPrimary),
+                style = iOSHeadline.copy(color = primaryText),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -1029,12 +1071,17 @@ fun ProfileInfoCard(
     label: String,
     value: String
 ) {
+    val cardColor = appSurfaceColor()
+    val borderColor = appBorderColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .background(cardColor)
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
     ) {
         Row(
             modifier          = Modifier
@@ -1045,11 +1092,11 @@ fun ProfileInfoCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(BluePrimary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                    .border(1.dp, BluePrimary.copy(alpha = 0.20f), RoundedCornerShape(12.dp)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, label, tint = BluePrimary, modifier = Modifier.size(20.dp))
+                Icon(icon, label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
 
             Spacer(Modifier.width(14.dp))
@@ -1057,14 +1104,14 @@ fun ProfileInfoCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     label,
-                    style = iOSCaption1.copy(color = TextSecondary, fontWeight = FontWeight.Medium),
+                    style = iOSCaption1.copy(color = secondaryText, fontWeight = FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     value,
-                    style = iOSHeadline.copy(color = TextPrimary),
+                    style = iOSHeadline.copy(color = primaryText),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1082,6 +1129,10 @@ fun AccountActionCard(
     color   : Color,
     onClick : () -> Unit
 ) {
+    val cardColor = appSurfaceColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1089,8 +1140,8 @@ fun AccountActionCard(
             .background(
                 Brush.linearGradient(
                     listOf(
-                        SurfaceCard,
-                        SurfaceCard.copy(alpha = 0.92f),
+                        cardColor,
+                        cardColor.copy(alpha = 0.92f),
                         color.copy(alpha = 0.06f)
                     )
                 )
@@ -1119,14 +1170,14 @@ fun AccountActionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = iOSHeadline.copy(color = TextPrimary),
+                    style = iOSHeadline.copy(color = primaryText),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     subtitle,
-                    style = iOSCaption1.copy(color = TextSecondary),
+                    style = iOSCaption1.copy(color = secondaryText),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
@@ -1134,7 +1185,7 @@ fun AccountActionCard(
 
             Icon(
                 Icons.Default.ChevronRight, null,
-                tint     = DimGray,
+                tint     = secondaryText,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -1147,6 +1198,10 @@ fun ChangeEmailDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
+    val surfaceColor = appSurfaceColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+    val borderColor = appBorderColor()
     val errorEnterNewEmail = stringResource(R.string.error_enter_new_email)
     val errorEnterValidEmail = stringResource(R.string.error_enter_valid_email)
     val errorEnterCurrentPassword = stringResource(R.string.error_enter_current_password)
@@ -1156,25 +1211,18 @@ fun ChangeEmailDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = surfaceColor,
         title = {
             Text(
                 text = stringResource(R.string.change_email),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White
-                )
+                style = iOSTitle3.copy(color = primaryText)
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = stringResource(R.string.current_email, currentEmail),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
-                        color = LightGray
-                    ),
+                    style = iOSCallout.copy(color = secondaryText),
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -1187,16 +1235,16 @@ fun ChangeEmailDialog(
                     label = { Text(stringResource(R.string.new_email)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        cursorColor = GoldPrimary,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = secondaryText,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                     singleLine = true
                 )
 
@@ -1211,13 +1259,13 @@ fun ChangeEmailDialog(
                     label = { Text(stringResource(R.string.current_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        cursorColor = GoldPrimary,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = secondaryText,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText
                     ),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -1253,9 +1301,11 @@ fun ChangeEmailDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel_btn), color = LightGray)
+                Text(stringResource(R.string.cancel_btn), color = secondaryText)
             }
-        }
+        },
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.border(1.dp, borderColor, RoundedCornerShape(20.dp))
     )
 }
 
@@ -1264,6 +1314,10 @@ fun ChangePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String, String) -> Unit
 ) {
+    val surfaceColor = appSurfaceColor()
+    val primaryText = appTextPrimaryColor()
+    val secondaryText = appTextSecondaryColor()
+    val borderColor = appBorderColor()
     val errorPasswordMinLength = stringResource(R.string.error_password_min_length)
     val errorPasswordsNotMatch = stringResource(R.string.error_passwords_not_match)
     val errorPasswordMustDiffer = stringResource(R.string.error_password_must_differ)
@@ -1275,19 +1329,15 @@ fun ChangePasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkNavy,
+        containerColor = surfaceColor,
         title = {
             Text(
                 text = stringResource(R.string.change_password),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White
-                )
+                style = iOSTitle3.copy(color = primaryText)
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = currentPassword,
                     onValueChange = {
@@ -1297,13 +1347,13 @@ fun ChangePasswordDialog(
                     label = { Text(stringResource(R.string.current_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        cursorColor = GoldPrimary,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = secondaryText,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText
                     ),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -1322,13 +1372,13 @@ fun ChangePasswordDialog(
                     label = { Text(stringResource(R.string.new_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        cursorColor = GoldPrimary,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = secondaryText,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText
                     ),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -1347,13 +1397,13 @@ fun ChangePasswordDialog(
                     label = { Text(stringResource(R.string.confirm_new_password)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
-                        unfocusedBorderColor = White.copy(alpha = 0.3f),
-                        focusedLabelColor = GoldPrimary,
-                        unfocusedLabelColor = LightGray,
-                        cursorColor = GoldPrimary,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedLabelColor = secondaryText,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText
                     ),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -1384,15 +1434,17 @@ fun ChangePasswordDialog(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                gradient = GoldGradient,
+                gradient = PremiumBlueGradient,
                 height = 48.dp
             )
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel_btn), color = LightGray)
+                Text(stringResource(R.string.cancel_btn), color = secondaryText)
             }
-        }
+        },
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.border(1.dp, borderColor, RoundedCornerShape(20.dp))
     )
 }
 
@@ -1403,15 +1455,13 @@ fun ProfileStatBox(
     color: Color,
     modifier: Modifier = Modifier
 ) {
+    val cardColor = appSurfaceColor()
+    val secondaryText = appTextSecondaryColor()
+
     Box(
         modifier = modifier
-            .shadow(
-                elevation = 6.dp,
-                spotColor = color.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(16.dp)
-            )
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
+            .background(cardColor)
             .border(1.dp, color.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
     ) {
         Column(
@@ -1438,7 +1488,7 @@ fun ProfileStatBox(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
-                style = iOSCaption1.copy(color = MidGray),
+                style = iOSCaption1.copy(color = secondaryText),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

@@ -76,6 +76,21 @@ object DatabaseModule {
         return database.notificationDao()
     }
 
+    @Provides
+    fun provideMatchResultDao(database: ScrimsLegendsDatabase): MatchResultDao {
+        return database.matchResultDao()
+    }
+
+    @Provides
+    fun provideTournamentDao(database: ScrimsLegendsDatabase): TournamentDao {
+        return database.tournamentDao()
+    }
+
+    @Provides
+    fun provideMessageOutboxDao(database: ScrimsLegendsDatabase): MessageOutboxDao {
+        return database.messageOutboxDao()
+    }
+
     // ─── Cache Infrastructure ───
 
     @Provides

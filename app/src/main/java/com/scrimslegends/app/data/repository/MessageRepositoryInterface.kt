@@ -4,6 +4,7 @@ import com.scrimslegends.app.data.model.Conversation
 import com.scrimslegends.app.data.model.Message
 import com.scrimslegends.app.data.model.MessageType
 import kotlinx.coroutines.flow.Flow
+import androidx.paging.PagingData
 
 interface MessageRepositoryInterface {
     suspend fun getConversationsForUser(userId: String, forceRefresh: Boolean = false): Flow<Result<List<Conversation>>>
@@ -29,8 +30,6 @@ interface MessageRepositoryInterface {
      */
     suspend fun sendMessage(
         conversationId: String,
-        senderId: String,
-        senderName: String,
         content: String,
         type: MessageType,
         clientMessageId: String,
@@ -64,9 +63,9 @@ interface MessageRepositoryInterface {
 
     /**
      * Load older messages for pagination (before the given timestamp).
-     * Returns messages older than `beforeTimestamp`, limited to `limit` count.
+     * Returns a stream of PagingData driven by Room and RemoteMediator.
      */
-    suspend fun loadOlderMessages(conversationId: String, beforeTimestamp: Long, limit: Int = 50): Result<List<Message>>
+    fun getMessagesPaged(conversationId: String): Flow<PagingData<Message>>
 
     suspend fun sendApplyMessage(
         scrimId: String,
@@ -115,6 +114,7 @@ interface MessageRepositoryInterface {
      * Explicitly unsubscribe from a message stream and clean up resources.
      */
     fun unsubscribeFromMessages(conversationId: String)
+    fun cleanupConversation(conversationId: String)
 
     /**
      * Sync all pending outbox messages immediately (called by WorkManager).
@@ -125,4 +125,19 @@ interface MessageRepositoryInterface {
      * Observe connection state of the messaging transport.
      */
     fun observeConnectionState(): Flow<com.scrimslegends.app.data.service.ChatConnectionState>
+
+    /**
+     * Block a user so they cannot send messages to the current user.
+     */
+    suspend fun blockUser(blockerId: String, blockedId: String): Result<Unit>
+
+    /**
+     * Unblock a previously blocked user.
+     */
+    suspend fun unblockUser(blockerId: String, blockedId: String): Result<Unit>
+
+    /**
+     * Check if a block exists between two users.
+     */
+    suspend fun checkBlockStatus(user1Id: String, user2Id: String): Result<com.scrimslegends.app.data.model.BlockStatus>
 }

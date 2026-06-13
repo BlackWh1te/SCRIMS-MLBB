@@ -546,7 +546,8 @@ class SupabaseMatchResultRepository(
                 ?: scrimDto.resultSubmittedAt?.let { DateUtils.parseIsoToMillis(it) },
             createdAt = scrimDto.createdAt?.let { DateUtils.parseIsoToMillis(it) } ?: System.currentTimeMillis(),
             teamARoster = teamARoster,
-            teamBRoster = teamBRoster
+            teamBRoster = teamBRoster,
+            bestOf = scrimDto.bestOf
         )
     }
 

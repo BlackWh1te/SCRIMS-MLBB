@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -51,7 +52,7 @@ fun LevelUpCelebration(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 newTier.tierColor.copy(alpha = 0.2f),
-                                DarkNavy.copy(alpha = 0.95f)
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                             )
                         ),
                         shape = RoundedCornerShape(24.dp)
@@ -83,7 +84,7 @@ fun LevelUpCelebration(
                         text = stringResource(R.string.rank_up),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -91,7 +92,7 @@ fun LevelUpCelebration(
                     Text(
                         text = stringResource(R.string.you_reached),
                         fontSize = 16.sp,
-                        color = LightGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConversationDao {
-    @Query("SELECT * FROM conversations WHERE participantAId = :userId OR participantBId = :userId OR isTeamChat = 1 ORDER BY isPinned DESC, lastMessageTime DESC")
+    @Query("SELECT * FROM conversations WHERE participantAId = :userId OR participantBId = :userId OR (isTeamChat = 1 AND teamId IS NOT NULL) ORDER BY isPinned DESC, lastMessageTime DESC")
     fun getConversationsForUser(userId: String): Flow<List<ConversationEntity>>
 
     @Query("SELECT * FROM conversations WHERE id = :conversationId")
@@ -19,6 +19,9 @@ interface ConversationDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversation(conversation: ConversationEntity)
+
+    @Query("DELETE FROM conversations")
+    suspend fun deleteAll()
 
     @Query("UPDATE conversations SET lastMessage = :lastMessage, lastMessageTime = :time WHERE id = :conversationId")
     suspend fun updateLastMessage(conversationId: String, lastMessage: String, time: Long)

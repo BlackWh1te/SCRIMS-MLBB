@@ -95,7 +95,7 @@ fun BannedScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(DarkBlue, DarkNavy)
+                    colors = listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)
                 )
             )
             .imePadding()
@@ -187,7 +187,7 @@ fun BannedScreen(
             // Appeal section
             if (isLoadingAppeal) {
                 CircularProgressIndicator(
-                    color = GoldPrimary,
+                    color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(24.dp)
                 )
             } else if (hasPendingAppeal) {
@@ -263,10 +263,10 @@ fun BannedScreen(
                     minLines = 4,
                     maxLines = 8,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoldPrimary,
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                        cursorColor = GoldPrimary,
-                        focusedLabelColor = GoldPrimary,
+                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
                     ),
                     shape = RoundedCornerShape(12.dp),
                     isError = errorMessage.isNotEmpty()
@@ -298,13 +298,13 @@ fun BannedScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GoldPrimary,
-                        contentColor = DarkNavy
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.background
                     )
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(
-                            color = DarkNavy,
+                            color = MaterialTheme.colorScheme.background,
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp
                         )
@@ -380,7 +380,7 @@ fun BannedScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = DarkNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.background)
                 ) {
                     Text(stringResource(R.string.accept))
                 }
@@ -407,7 +407,7 @@ fun BannedScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSuccessDialog = false }) {
-                    Text(stringResource(R.string.ready), color = GoldPrimary)
+                    Text(stringResource(R.string.ready), color = MaterialTheme.colorScheme.secondary)
                 }
             }
         )

@@ -14,6 +14,7 @@ data class Team(
     val completedScrims: Int = 0,
     val noShows: Int = 0,
     val logoUrl: String? = null,
+    val inviteCode: String = "",
     val isOpenForApplications: Boolean = false
 ) {
     val currentPlayerCount: Int

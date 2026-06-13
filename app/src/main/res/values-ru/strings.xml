@@ -139,7 +139,7 @@
     <string name="account_deleted_title">Account Deleted</string>
     <string name="account_deleted_subtitle">Your unverified account has been automatically deleted. Please sign up again to create a new account.</string>
     <string name="achievements">Достижения</string>
-    <string name="lfg_board">Доска LFG</string>
+    <string name="lfg_board">Набор в клан</string>
     <string name="invite">Пригласить</string>
     <string name="no_lfg_posts">Нет игроков в поиске команды</string>
     <string name="be_first_to_post">Будьте первым!</string>
@@ -175,7 +175,6 @@
     <string name="approve">Одобрить</string>
     <string name="reject">Отклонить</string>
     <string name="chat_opens_in">Чат откроется через</string>
-    <string name="chat_unlocks_2h">Чат разблокируется за 2 часа до скрама</string>
     <string name="report_result">Сообщить Результат</string>
     <string name="match_label">Матч</string>
     <string name="who_won">Кто победил?</string>
@@ -399,4 +398,56 @@
     <string name="complete_scrim_to_see_results">Complete a scrim to see match results here.</string>
     <string name="no_scrims_found">No scrims found</string>
     <string name="keep_scrim">Keep Scrim</string>
+
+    <!-- P0-4: Empty teams guard -->
+    <string name="no_team_warning">Нет доступных команд</string>
+    <string name="create_team_first_hint">Создайте или присоединитесь к команде перед созданием скрима.</string>
+    <string name="go_back">Назад</string>
+    <string name="no_app_found">Нет приложения для открытия этого действия.</string>
+    <string name="error_loading_data">Ошибка загрузки данных</string>
+    <string name="retry">Повторить</string>
+    <string name="delete_post_title">Удалить пост</string>
+    <string name="delete_post_confirmation">Вы уверены, что хотите удалить этот пост?</string>
+    <string name="delete_action">Удалить</string>
+    <string name="apply_to_team">Подать заявку в команду</string>
+    <string name="apply_to_join">Подать заявку</string>
+    <string name="filters_and_search">Фильтры и поиск</string>
+    <string name="join_team_sub">Найдите команду и вступите в нее</string>
+    <string name="join_discord">Discord</string>
+    <string name="join_discord_sub">Сообщество и поддержка</string>
+
+    <!-- Обучение нового игрока -->
+    <string name="player_finder_title">Поиск игроков</string>
+    <string name="all_roles">Все роли</string>
+    <string name="home_scrims_title">MLBB-скримы</string>
+    <string name="home_scrims_subtitle">Находите тренировочные матчи Mobile Legends, вступайте в команды, отправляйте результаты и поднимайтесь в рейтинге.</string>
+    <string name="find_scrim_action">Найти скрим</string>
+    <string name="create_scrim_action">Создать скрим</string>
+    <string name="find_team_action">Найти команду</string>
+    <string name="start_find_team_action">Начать: найти команду</string>
+    <string name="create_team_action">Создать команду</string>
+    <string name="what_is_scrim_title">Что такое скрим?</string>
+    <string name="what_is_scrim_body">Скрим — это тренировочный матч между командами Mobile Legends. Это не официальный турнирный матч, но подтвержденные результаты могут влиять на ваш рейтинг в приложении и историю матчей.</string>
+    <string name="how_scrims_work_title">Как это работает</string>
+    <string name="how_scrims_work_step_team">Вступите в команду или создайте свою.</string>
+    <string name="how_scrims_work_step_apply">Подавайте заявки на открытые скримы или публикуйте свои.</string>
+    <string name="how_scrims_work_step_results">После игры отправьте результат матча и скриншот.</string>
+    <string name="home_no_team_title">Вы пока не в команде</string>
+    <string name="home_no_team_subtitle">Создайте команду или вступите в существующую перед заявкой на скримы.</string>
+    <string name="home_no_scrims_title">Нет ближайших скримов</string>
+    <string name="home_no_scrims_subtitle">Скримы — это тренировочные матчи между MLBB-командами. Нажмите, чтобы найти или запланировать скрим.</string>
+    <string name="no_scrims_found_explainer">Скримы — это тренировочные матчи между MLBB-командами. Создайте скрим для своей команды или проверьте позже.</string>
+    <string name="no_open_teams_explainer">Для большинства скримов нужна команда. Открытые команды появятся здесь, когда лидеры будут искать игроков.</string>
+    <string name="onboarding_find_scrims_title">Найдите MLBB-скримы</string>
+    <string name="onboarding_find_scrims_desc">Скримы — это тренировочные матчи между командами Mobile Legends. Находите открытые матчи и подавайте заявку со своей командой.</string>
+    <string name="onboarding_team_title">Создайте команду или вступите в нее</string>
+    <string name="onboarding_team_desc">Для большинства скримов нужна команда. Соберите свой состав, пригласите игроков или вступите в открытую команду.</string>
+    <string name="onboarding_results_title">Отправляйте результаты</string>
+    <string name="onboarding_results_desc">После скрима укажите победителя и приложите скриншот. Подтвержденные результаты формируют историю матчей и рейтинг.</string>
+    <string name="no_matching_players">Подходящие игроки не найдены</string>
+    <string name="no_matching_players_hint">Сбросьте фильтры, чтобы увидеть больше solo-игроков.</string>
+    <string name="no_solo_players_active">Активных solo-игроков пока нет</string>
+    <string name="no_solo_players_team_leader_hint">Solo-игроки появятся здесь после публикации своего MLBB-профиля для поиска команды.</string>
+    <string name="no_solo_players_solo_hint">Опубликуйте свою MLBB-статистику, чтобы лидеры команд могли найти и пригласить вас.</string>
+    <string name="reset_filters">Сбросить фильтры</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -34,7 +35,7 @@ fun PremiumGradientIcon(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
-    gradient: List<Color> = GoldGradient,
+    gradient: List<Color> = PremiumBlueGradient,
     iconTint: Color = White
 ) {
     Box(
@@ -62,8 +63,8 @@ fun PremiumGlowIcon(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 24.dp,
-    iconColor: Color = GoldPrimary,
-    glowColor: Color = GoldPrimary.copy(alpha = 0.3f),
+    iconColor: Color = MaterialTheme.colorScheme.secondary,
+    glowColor: Color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
     glowRadius: Float = 20f
 ) {
     Box(
@@ -90,9 +91,9 @@ fun PremiumCircleIcon(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
-    backgroundColor: Color = SurfaceOverlay,
-    iconColor: Color = GoldPrimary,
-    borderColor: Color = GoldPrimary
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    iconColor: Color = MaterialTheme.colorScheme.secondary,
+    borderColor: Color = MaterialTheme.colorScheme.secondary
 ) {
     Box(
         modifier = modifier
@@ -122,8 +123,8 @@ fun PremiumIconButton(
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
     backgroundColor: Color = SurfaceGlass,
-    iconColor: Color = LightGray,
-    accentColor: Color = GoldPrimary
+    iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+    accentColor: Color = MaterialTheme.colorScheme.secondary
 ) {
     IconButton(
         onClick = onClick,
@@ -211,8 +212,8 @@ fun PremiumSearchIcon(modifier: Modifier = Modifier, size: Dp = 24.dp) {
         icon = Icons.Default.Search,
         modifier = modifier,
         size = size,
-        iconColor = BluePrimary,
-        glowColor = BluePrimary.copy(alpha = 0.3f),
+        iconColor = MaterialTheme.colorScheme.primary,
+        glowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
         glowRadius = 15f
     )
 }
@@ -223,8 +224,8 @@ fun PremiumAddIcon(modifier: Modifier = Modifier, size: Dp = 24.dp) {
         icon = Icons.Default.Add,
         modifier = modifier,
         size = size,
-        iconColor = GoldPrimary,
-        glowColor = GoldPrimary.copy(alpha = 0.3f),
+        iconColor = MaterialTheme.colorScheme.secondary,
+        glowColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
         glowRadius = 15f
     )
 }
@@ -239,7 +240,7 @@ fun PremiumFavoriteIcon(
         icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
         modifier = modifier,
         size = size,
-        iconColor = if (isFavorite) iOSRed else LightGray,
+        iconColor = if (isFavorite) iOSRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
         glowColor = if (isFavorite) iOSRed.copy(alpha = 0.3f) else Color.Transparent,
         glowRadius = 15f
     )
@@ -251,8 +252,8 @@ fun PremiumSettingsIcon(modifier: Modifier = Modifier, size: Dp = 24.dp) {
         icon = Icons.Default.Settings,
         modifier = modifier,
         size = size,
-        iconColor = MidGray,
-        glowColor = MidGray.copy(alpha = 0.2f),
+        iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        glowColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
         glowRadius = 15f
     )
 }
@@ -267,8 +268,8 @@ fun PremiumNotificationIcon(
         icon = Icons.Default.Notifications,
         modifier = modifier,
         size = size,
-        iconColor = if (hasNotification) GoldPrimary else LightGray,
-        glowColor = if (hasNotification) GoldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+        iconColor = if (hasNotification) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+        glowColor = if (hasNotification) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else Color.Transparent,
         glowRadius = 15f
     )
 }
@@ -283,8 +284,8 @@ fun PremiumTrophyIcon(modifier: Modifier = Modifier, size: Dp = 24.dp) {
         icon = Icons.Default.EmojiEvents,
         modifier = modifier,
         size = size,
-        gradient = GoldGradient,
-        iconTint = White
+        gradient = PremiumBlueGradient,
+        iconTint = MaterialTheme.colorScheme.onSurface
     )
 }
 
@@ -306,8 +307,8 @@ fun PremiumPersonIcon(modifier: Modifier = Modifier, size: Dp = 24.dp) {
         icon = Icons.Default.Person,
         modifier = modifier,
         size = size,
-        iconColor = BluePrimary,
-        glowColor = BluePrimary.copy(alpha = 0.3f),
+        iconColor = MaterialTheme.colorScheme.primary,
+        glowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
         glowRadius = 15f
     )
 }

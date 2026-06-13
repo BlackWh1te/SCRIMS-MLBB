@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,10 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import com.scrimslegends.app.ui.theme.BluePrimary
 import com.scrimslegends.app.ui.theme.ErrorRed
 import com.scrimslegends.app.ui.theme.SuccessGreen
-import com.scrimslegends.app.ui.theme.TextSecondary
 import com.scrimslegends.app.ui.theme.WarningOrange
 import kotlinx.coroutines.delay
 
@@ -29,7 +28,7 @@ import kotlinx.coroutines.delay
 fun ScrimCountdown(
     targetTime: Long,
     style: TextStyle = TextStyle.Default,
-    baseColor: Color = TextSecondary
+    baseColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     var remaining by remember { mutableStateOf(targetTime - System.currentTimeMillis()) }
 

@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import java.util.UUID
 import javax.inject.Inject
 
@@ -27,8 +30,8 @@ class LfgViewModel @Inject constructor(
 
     private val appSettings = AppSettings(application.applicationContext)
 
-    private val _posts = MutableStateFlow<List<LfgPost>>(emptyList())
-    val posts: StateFlow<List<LfgPost>> = _posts.asStateFlow()
+    private val _posts = MutableStateFlow<ImmutableList<LfgPost>>(persistentListOf())
+    val posts: StateFlow<ImmutableList<LfgPost>> = _posts.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -54,7 +57,7 @@ class LfgViewModel @Inject constructor(
             
             lfgRepository.getAllPosts().collect { result ->
                 result.onSuccess { list ->
-                    _posts.value = list
+                    _posts.value = list.toPersistentList()
                     _isLoading.value = false
                     _isRefreshing.value = false
                 }.onFailure { exception ->
@@ -126,7 +129,7 @@ class LfgViewModel @Inject constructor(
             )
 
             // Optimistically add to local list so it appears instantly
-            _posts.value = _posts.value + post
+            _posts.value = (_posts.value + post).toPersistentList()
 
             _isLoading.value = true
             lfgRepository.createPost(post).collect { result ->
@@ -134,12 +137,12 @@ class LfgViewModel @Inject constructor(
                     // Replace the optimistic post with the real one from server
                     _posts.value = _posts.value.map {
                         if (it.id == post.id) created else it
-                    }
+                    }.toPersistentList()
                     // Also do a full refresh to get the complete list
                     loadPosts()
                 }.onFailure { exception ->
                     // Remove the optimistic post on failure
-                    _posts.value = _posts.value.filter { it.id != post.id }
+                    _posts.value = _posts.value.filter { it.id != post.id }.toPersistentList()
                     _error.value = exception.message
                     _isLoading.value = false
                 }
@@ -177,7 +180,7 @@ class LfgViewModel @Inject constructor(
             // Optimistic local update
             _posts.value = _posts.value.map { post ->
                 if (post.id == postId) post.copy(viewCount = post.viewCount + 1) else post
-            }
+            }.toPersistentList()
 
             // Sync to server
             lfgRepository.incrementViewCount(postId)

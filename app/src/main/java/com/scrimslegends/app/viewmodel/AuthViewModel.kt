@@ -333,6 +333,7 @@ class AuthViewModel @Inject constructor(
         _authState.value = AuthResult.Loading
         deleteAccountJob = viewModelScope.launch {
             authRepository.deleteAccount().collect { result ->
+                _authState.value = result
                 if (result is AuthResult.Success) {
                     // Disconnect Realtime WebSocket — account no longer exists
                     realtimeClient.disconnect()
@@ -395,7 +396,17 @@ class AuthViewModel @Inject constructor(
                     _authState.value = AuthResult.Error("Image is too large. Max size is 3MB.")
                     return@launch
                 }
-                authRepository.uploadAndSetAvatar(bytes, "image/jpeg").collect { result ->
+                val contentType = context.contentResolver.getType(uri)?.lowercase()
+                val supportedContentType = when (contentType) {
+                    "image/jpeg", "image/jpg" -> "image/jpeg"
+                    "image/png" -> "image/png"
+                    else -> null
+                }
+                if (supportedContentType == null) {
+                    _authState.value = AuthResult.Error("Please choose a JPG or PNG image.")
+                    return@launch
+                }
+                authRepository.uploadAndSetAvatar(bytes, supportedContentType).collect { result ->
                     _authState.value = result
                     if (result is AuthResult.Success) {
                         handleProfileFetch(authRepository.getUserProfile())
@@ -415,7 +426,7 @@ class AuthViewModel @Inject constructor(
                 authRepository.invalidateProfileCache()
             }
             val profile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                authRepository.getUserProfile()
+                authRepository.getUserProfile(forceRefresh = true)
             }
             handleProfileFetch(profile)
             _isProfileRefreshing.value = false

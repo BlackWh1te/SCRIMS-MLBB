@@ -6,10 +6,13 @@ import com.scrimslegends.app.data.local.LeaderboardDao
 import com.scrimslegends.app.data.local.LeaderboardEntity
 import com.scrimslegends.app.data.model.LeaderboardEntry
 import com.scrimslegends.app.data.model.RankTier
+import com.scrimslegends.app.data.model.TeamLeaderboardEntry
 import com.scrimslegends.app.data.service.LeaderboardEntryDto
+import com.scrimslegends.app.data.service.PostgrestFilter
 import com.scrimslegends.app.data.service.SupabaseConfig
 import com.scrimslegends.app.data.service.SupabaseRealtimeClient
 import com.scrimslegends.app.data.service.SupabaseService
+import com.scrimslegends.app.data.service.TeamDto
 import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -101,6 +104,50 @@ class SupabaseLeaderboardRepository(
         }
     }
 
+    override suspend fun getTeamLeaderboard(): Flow<Result<List<TeamLeaderboardEntry>>> = flow {
+        try {
+            val teamsResponse = api.getTeams()
+            if (!teamsResponse.isSuccessful) {
+                emit(Result.failure(Exception("Failed to fetch team leaderboard")))
+                return@flow
+            }
+
+            val teamDtos = teamsResponse.body() ?: emptyList()
+            if (teamDtos.isEmpty()) {
+                emit(Result.success(emptyList()))
+                return@flow
+            }
+
+            val teamIds = teamDtos.map { it.id }.filter { it.isNotBlank() }
+            val memberCounts = mutableMapOf<String, Int>()
+            if (teamIds.isNotEmpty()) {
+                try {
+                    val membersResponse = api.getTeamMembers(teamId = PostgrestFilter.inList(teamIds))
+                    if (membersResponse.isSuccessful) {
+                        val members = membersResponse.body() ?: emptyList()
+                        memberCounts.putAll(members.groupingBy { it.teamId }.eachCount())
+                    }
+                } catch (e: Exception) {
+                    Timber.w("LeaderboardRepo", "Failed to fetch team member counts: ${e.message}")
+                }
+            }
+
+            val rankedTeams = teamDtos
+                .map { dto -> mapTeamDtoToLeaderboardEntry(dto, memberCounts[dto.id] ?: 0) }
+                .sortedWith(
+                    compareByDescending<TeamLeaderboardEntry> { it.points }
+                        .thenByDescending { it.totalMatches }
+                        .thenByDescending { it.reputation }
+                        .thenBy { it.teamName.lowercase() }
+                )
+                .mapIndexed { index, entry -> entry.copy(rank = index + 1) }
+
+            emit(Result.success(rankedTeams))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
     private fun mapDtoToModel(dto: LeaderboardEntryDto, rank: Int): LeaderboardEntry {
         val pts = dto.pts
         val tier = when {
@@ -108,9 +155,9 @@ class SupabaseLeaderboardRepository(
             pts >= 12000 -> RankTier.LEGEND
             pts >= 8000 -> RankTier.EPIC
             pts >= 5000 -> RankTier.GRANDMASTER
-            pts >= 2500 -> RankTier.GOLD
-            pts >= 1000 -> RankTier.SOLVER
-            else -> RankTier.BRONZE
+            pts >= 2500 -> RankTier.MASTER
+            pts >= 1000 -> RankTier.ELITE
+            else -> RankTier.WARRIOR
         }
 
         return LeaderboardEntry(
@@ -125,6 +172,29 @@ class SupabaseLeaderboardRepository(
             totalMatches = dto.matchesPlay,
             currentTier = tier
         )
+    }
+
+    private fun mapTeamDtoToLeaderboardEntry(dto: TeamDto, memberCount: Int): TeamLeaderboardEntry {
+        val completed = dto.completedScrims.coerceAtLeast(0)
+        return TeamLeaderboardEntry(
+            teamId = dto.id,
+            teamName = dto.name.ifBlank { "Team" },
+            logoUrl = dto.logoUrl,
+            memberCount = memberCount,
+            points = dto.totalXp,
+            wins = 0,
+            losses = 0,
+            totalMatches = completed,
+            reputation = dto.reputation,
+            currentTier = parseTeamTier(dto.currentTier, dto.totalXp)
+        )
+    }
+
+    private fun parseTeamTier(tierName: String, points: Int): RankTier {
+        return RankTier.values().firstOrNull {
+            it.name.equals(tierName, ignoreCase = true) ||
+                it.displayName.equals(tierName, ignoreCase = true)
+        } ?: RankTier.fromXp(points)
     }
 
     private fun mapModelToEntity(entry: LeaderboardEntry): LeaderboardEntity {
@@ -153,7 +223,7 @@ class SupabaseLeaderboardRepository(
             wins = entity.wins,
             losses = entity.losses,
             totalMatches = entity.matchesPlayed,
-            currentTier = try { RankTier.valueOf(entity.tier) } catch (_: Exception) { RankTier.BRONZE }
+            currentTier = try { RankTier.valueOf(entity.tier) } catch (_: Exception) { RankTier.WARRIOR }
         )
     }
 
@@ -196,9 +266,9 @@ class SupabaseLeaderboardRepository(
             pts >= 12000 -> RankTier.LEGEND
             pts >= 8000 -> RankTier.EPIC
             pts >= 5000 -> RankTier.GRANDMASTER
-            pts >= 2500 -> RankTier.GOLD
-            pts >= 1000 -> RankTier.SOLVER
-            else -> RankTier.BRONZE
+            pts >= 2500 -> RankTier.MASTER
+            pts >= 1000 -> RankTier.ELITE
+            else -> RankTier.WARRIOR
         }
         return LeaderboardEntry(
             rank = 0, // Rank is positional, will be recalculated on full refresh

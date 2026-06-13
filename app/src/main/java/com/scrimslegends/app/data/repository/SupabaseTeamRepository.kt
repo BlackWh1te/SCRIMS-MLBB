@@ -87,27 +87,17 @@ class SupabaseTeamRepository(
                         } catch (e: Exception) {
                             Timber.w("getTeams: failed to load team members: ${e.message}")
                         }
-                        val allUserIds = membersByTeamId.values.flatten().map { it.userId }.distinct()
-                        val profilesById = if (allUserIds.isNotEmpty()) {
-                            try { profileCache.getProfiles(allUserIds) } catch (_: Exception) { emptyMap() }
-                        } else emptyMap()
                         dtos.map { dto ->
                             val members = membersByTeamId[dto.id] ?: emptyList()
                             Team(
                                 id = dto.id, name = dto.name, leaderId = dto.leaderId,
-                                players = members.map { m ->
-                                    val profile = profilesById[m.userId]
-                                    Player(
-                                        id = m.userId, name = profile?.username ?: m.userId.take(8),
-                                        role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER,
-                                        email = profile?.email ?: "", avatarUrl = profile?.avatarUrl
-                                    )
-                                },
+                                players = buildPlayers(members),
                                 maxPlayers = dto.maxPlayers, minPlayers = dto.minPlayers,
                                 totalScrims = dto.completedScrims, completedScrims = dto.completedScrims,
                                 reputation = dto.reputation, noShows = dto.noShows,
                                 canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil),
-                                logoUrl = dto.logoUrl, isOpenForApplications = dto.isOpenForApplications,
+                                logoUrl = dto.logoUrl, inviteCode = dto.inviteCode ?: "",
+                                isOpenForApplications = dto.isOpenForApplications,
                                 createdAt = parseCreatedAt(dto.createdAt)
                             )
                         }
@@ -169,28 +159,13 @@ class SupabaseTeamRepository(
                 }
             }
 
-            // Step 4: Batch fetch profiles for all member user IDs via cache
-            val allUserIds = membersByTeamId.values.flatten().map { it.userId }.distinct()
-            val profilesById = if (allUserIds.isNotEmpty()) {
-                try { profileCache.getProfiles(allUserIds) } catch (_: Exception) { emptyMap() }
-            } else emptyMap()
-
             val teams = teamDtos.map { dto ->
                 val members = membersByTeamId[dto.id] ?: emptyList()
                 Team(
                     id = dto.id,
                     name = dto.name,
                     leaderId = dto.leaderId,
-                    players = members.map { m ->
-                        val profile = profilesById[m.userId]
-                        Player(
-                            id = m.userId,
-                            name = profile?.username ?: m.userId.take(8),
-                            role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER,
-                            email = profile?.email ?: "",
-                            avatarUrl = profile?.avatarUrl
-                        )
-                    },
+                    players = buildPlayers(members),
                     maxPlayers = dto.maxPlayers,
                     minPlayers = dto.minPlayers,
                     totalScrims = dto.completedScrims,
@@ -199,6 +174,7 @@ class SupabaseTeamRepository(
                     noShows = dto.noShows,
                     canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil),
                     logoUrl = dto.logoUrl,
+                    inviteCode = dto.inviteCode ?: "",
                     isOpenForApplications = dto.isOpenForApplications,
                     createdAt = parseCreatedAt(dto.createdAt)
                 )
@@ -239,7 +215,7 @@ class SupabaseTeamRepository(
     override suspend fun addPlayer(teamId: String, playerName: String, playerEmail: String): Flow<Result<Team>> = flow {
         try {
             // Look up user by email
-            val profileResponse = api.getProfileByEmail(email = playerEmail)
+            val profileResponse = api.getProfileByEmail(email = PostgrestFilter.eq(playerEmail))
             if (!profileResponse.isSuccessful) {
                 emit(Result.failure(Exception("Failed to look up user by email")))
                 return@flow
@@ -324,7 +300,10 @@ class SupabaseTeamRepository(
 
             val r = api.deleteTeam(PostgrestFilter.eq(teamId))
             if (r.isSuccessful) { invalidateTeamCaches(); teamDao.deleteById(teamId); emit(Result.success(Unit)) }
-            else emit(Result.failure(Exception("Failed to delete team")))
+            else {
+                val errStr = r.errorBody()?.string() ?: "Failed to delete team"
+                emit(Result.failure(Exception(errStr)))
+            }
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
@@ -480,12 +459,7 @@ class SupabaseTeamRepository(
         val membersResponse = api.getTeamMembers(teamId = PostgrestFilter.eq(dto.id))
         val members = membersResponse.body() ?: emptyList()
         // N+1 FIX: batch profile fetch via ProfileCacheRepository
-        val userIds = members.map { it.userId }
-        val profilesByUserId = profileCache.getProfiles(userIds)
-        return Team(id = dto.id, name = dto.name, leaderId = dto.leaderId, players = members.map { m ->
-            val profile = profilesByUserId[m.userId]
-            Player(id = m.userId, name = profile?.username ?: m.userId.take(8), role = if (m.role == TeamRole.LEADER) PlayerRole.LEADER else PlayerRole.MEMBER, email = profile?.email ?: "", avatarUrl = profile?.avatarUrl)
-        }, maxPlayers = dto.maxPlayers, minPlayers = dto.minPlayers, totalScrims = dto.completedScrims, completedScrims = dto.completedScrims, reputation = dto.reputation, noShows = dto.noShows, canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil), logoUrl = dto.logoUrl, isOpenForApplications = dto.isOpenForApplications, createdAt = parseCreatedAt(dto.createdAt))
+        return Team(id = dto.id, name = dto.name, leaderId = dto.leaderId, players = buildPlayers(members), maxPlayers = dto.maxPlayers, minPlayers = dto.minPlayers, totalScrims = dto.completedScrims, completedScrims = dto.completedScrims, reputation = dto.reputation, noShows = dto.noShows, canPostScrimsUntil = parseCanPostScrimsUntil(dto.canPostScrimsUntil), logoUrl = dto.logoUrl, inviteCode = dto.inviteCode ?: "", isOpenForApplications = dto.isOpenForApplications, createdAt = parseCreatedAt(dto.createdAt))
     }
 
     private fun mapTeamToEntity(team: Team): TeamEntity {
@@ -495,6 +469,43 @@ class SupabaseTeamRepository(
     private fun mapEntityToTeam(e: TeamEntity): Team {
         val memberIds = e.memberIdsJson?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         return Team(id = e.id, name = e.name, leaderId = e.leaderId, players = memberIds.map { Player(id = it, name = it.take(8), role = PlayerRole.MEMBER, email = "") }, maxPlayers = e.maxPlayers, minPlayers = e.minPlayers, completedScrims = e.completedScrims, reputation = e.reputation, noShows = e.noShows, isOpenForApplications = e.isOpenForApplications)
+    }
+
+    private suspend fun buildPlayers(members: List<TeamMemberDto>): List<Player> {
+        val userIds = members.map { it.userId }.distinct()
+        val profilesByUserId = if (userIds.isNotEmpty()) {
+            try { profileCache.getProfiles(userIds) } catch (_: Exception) { emptyMap() }
+        } else emptyMap()
+        val statsByUserId = if (userIds.isNotEmpty()) {
+            try {
+                val response = api.getPlayerStats(PostgrestFilter.inList(userIds))
+                if (response.isSuccessful) {
+                    (response.body() ?: emptyList()).associateBy { it.userId }
+                } else emptyMap()
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        } else emptyMap()
+
+        return members.map { member ->
+            val profile = profilesByUserId[member.userId]
+            val stats = statsByUserId[member.userId]
+            Player(
+                id = member.userId,
+                name = profile?.username ?: member.userId.take(8),
+                role = when (member.role) {
+                    TeamRole.LEADER -> PlayerRole.LEADER
+                    TeamRole.CO_LEADER -> PlayerRole.CO_LEADER
+                    else -> PlayerRole.MEMBER
+                },
+                email = profile?.email ?: "",
+                avatarUrl = profile?.avatarUrl,
+                pts = stats?.pts ?: 0,
+                wins = stats?.wins ?: 0,
+                losses = stats?.losses ?: 0,
+                matchesPlayed = stats?.matchesPlay ?: 0
+            )
+        }
     }
 
     private fun parseCanPostScrimsUntil(raw: String?): Long = DateUtils.parseIsoToMillis(raw, fallback = 0L)
@@ -534,22 +545,84 @@ class SupabaseTeamRepository(
 
     override suspend fun applyToTeam(teamId: String, applicantUserId: String, message: String?): Flow<Result<TeamApplication>> = flow {
         try {
-            val request = TeamApplicationDto(teamId = teamId, applicantUserId = applicantUserId, message = message, status = "Pending")
-            val r = api.createTeamApplication(request)
+            val r = api.applyToTeamByTeamIdRpc(
+                mapOf(
+                    "p_team_id" to teamId,
+                    "p_message" to (message ?: "")
+                )
+            )
             if (r.isSuccessful) {
-                val created = r.body()?.firstOrNull()
-                if (created != null) {
-                    emit(Result.success(mapTeamApplicationDtoToModel(created)))
-                } else emit(Result.failure(Exception("Application failed")))
+                val body = r.body()
+                val success = body?.get("success") as? Boolean ?: false
+                if (success) {
+                    val appMap = body?.get("application") as? Map<*, *>
+                    val teamMap = body?.get("team") as? Map<*, *>
+                    val profileMap = body?.get("applicant") as? Map<*, *>
+                    emit(Result.success(
+                        TeamApplication(
+                            id = appMap?.get("id") as? String ?: "",
+                            teamId = appMap?.get("team_id") as? String ?: teamId,
+                            teamName = teamMap?.get("name") as? String ?: "",
+                            applicantUserId = applicantUserId,
+                            applicantName = profileMap?.get("username") as? String ?: "",
+                            status = TeamApplicationStatus.PENDING,
+                            message = appMap?.get("message") as? String
+                        )
+                    ))
+                } else {
+                    emit(Result.failure(Exception(body?.get("error") as? String ?: "Application failed")))
+                }
             } else emit(Result.failure(Exception("Failed to apply: ${r.errorBody()?.string()}")))
+        } catch (e: Exception) { emit(Result.failure(e)) }
+    }
+
+    override suspend fun applyToTeamByInviteCode(inviteCode: String, applicantUserId: String, message: String?): Flow<Result<TeamApplication>> = flow {
+        try {
+            val r = api.applyToTeamByInviteCodeRpc(
+                mapOf(
+                    "p_invite_code" to inviteCode.trim(),
+                    "p_message" to (message ?: "")
+                )
+            )
+            if (!r.isSuccessful) {
+                emit(Result.failure(Exception("Failed to request team join: ${r.errorBody()?.string() ?: r.code()}")))
+                return@flow
+            }
+            val body = r.body()
+            val success = body?.get("success") as? Boolean ?: false
+            if (!success) {
+                emit(Result.failure(Exception(body?.get("error") as? String ?: "Failed to request team join")))
+                return@flow
+            }
+            val appMap = body?.get("application") as? Map<*, *>
+            val teamMap = body?.get("team") as? Map<*, *>
+            val profileMap = body?.get("applicant") as? Map<*, *>
+            val application = TeamApplication(
+                id = appMap?.get("id") as? String ?: "",
+                teamId = appMap?.get("team_id") as? String ?: "",
+                teamName = teamMap?.get("name") as? String ?: "",
+                applicantUserId = applicantUserId,
+                applicantName = profileMap?.get("username") as? String ?: "",
+                message = appMap?.get("message") as? String,
+                status = TeamApplicationStatus.PENDING
+            )
+            emit(Result.success(application))
         } catch (e: Exception) { emit(Result.failure(e)) }
     }
 
     override suspend fun getTeamApplications(teamId: String): Flow<Result<List<TeamApplication>>> = flow {
         try {
-            val r = api.getTeamApplications(teamId = teamId, status = "Pending")
+            val r = api.getTeamApplications(teamId = PostgrestFilter.eq(teamId), status = PostgrestFilter.eq("Pending"))
             if (r.isSuccessful) {
-                val apps = (r.body() ?: emptyList()).map { mapTeamApplicationDtoToModel(it) }
+                val dtos = r.body() ?: emptyList()
+                val userIds = dtos.map { it.applicantUserId }.distinct()
+                val profiles = if (userIds.isNotEmpty()) profileCache.getProfiles(userIds) else emptyMap()
+                val apps = dtos.map { dto ->
+                    mapTeamApplicationDtoToModel(dto).copy(
+                        applicantName = profiles[dto.applicantUserId]?.username ?: dto.applicantUserId.take(8),
+                        applicantAvatarUrl = profiles[dto.applicantUserId]?.avatarUrl
+                    )
+                }
                 emit(Result.success(apps))
             } else emit(Result.failure(Exception("Failed to fetch applications")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -557,7 +630,7 @@ class SupabaseTeamRepository(
 
     override suspend fun getMyApplications(userId: String): Flow<Result<List<TeamApplication>>> = flow {
         try {
-            val r = api.getTeamApplications(applicantUserId = userId)
+            val r = api.getTeamApplications(applicantUserId = PostgrestFilter.eq(userId))
             if (r.isSuccessful) {
                 val apps = (r.body() ?: emptyList()).map { mapTeamApplicationDtoToModel(it) }
                 emit(Result.success(apps))
@@ -568,7 +641,7 @@ class SupabaseTeamRepository(
     override suspend fun acceptApplication(applicationId: String): Flow<Result<Team>> = flow {
         try {
             // Fetch application first to determine team and verify ownership
-            val appResponse = api.getTeamApplicationById(applicationId)
+            val appResponse = api.getTeamApplicationById(PostgrestFilter.eq(applicationId))
             if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
                 emit(Result.failure(Exception("Application not found")))
                 return@flow
@@ -580,7 +653,7 @@ class SupabaseTeamRepository(
             AuthorizationUtils.requireLeader(team.leaderId, "accept applications for this team")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
-            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Accepted", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
+            val r = api.updateTeamApplication(PostgrestFilter.eq(applicationId), mapOf("status" to "Accepted", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) {
                 val updatedApp = r.body()?.firstOrNull()
                 if (updatedApp != null) {
@@ -596,7 +669,7 @@ class SupabaseTeamRepository(
     override suspend fun declineApplication(applicationId: String): Flow<Result<Unit>> = flow {
         try {
             // Fetch application first to determine team and verify ownership
-            val appResponse = api.getTeamApplicationById(applicationId)
+            val appResponse = api.getTeamApplicationById(PostgrestFilter.eq(applicationId))
             if (!appResponse.isSuccessful || appResponse.body().isNullOrEmpty()) {
                 emit(Result.failure(Exception("Application not found")))
                 return@flow
@@ -608,7 +681,7 @@ class SupabaseTeamRepository(
             AuthorizationUtils.requireLeader(team.leaderId, "decline applications for this team")
                 .onFailure { emit(Result.failure(it)); return@flow }
 
-            val r = api.updateTeamApplication(applicationId, mapOf("status" to "Declined", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
+            val r = api.updateTeamApplication(PostgrestFilter.eq(applicationId), mapOf("status" to "Declined", "responded_at" to DateUtils.formatIsoUtc(System.currentTimeMillis())))
             if (r.isSuccessful) emit(Result.success(Unit))
             else emit(Result.failure(Exception("Failed to decline application")))
         } catch (e: Exception) { emit(Result.failure(e)) }
@@ -753,6 +826,7 @@ class SupabaseTeamRepository(
             availableTimeStart = record.get("available_time_start")?.asString,
             availableTimeEnd = record.get("available_time_end")?.asString,
             timezone = record.get("timezone")?.asString,
+            inviteCode = record.get("invite_code")?.asString ?: "",
             isOpenForApplications = record.get("is_open_for_applications")?.asBoolean ?: false,
             createdAt = record.get("created_at")?.asString ?: ""
         )
@@ -835,3 +909,4 @@ class SupabaseTeamRepository(
         )
     }
 }
+

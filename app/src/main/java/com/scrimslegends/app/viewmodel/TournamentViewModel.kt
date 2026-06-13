@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -22,44 +25,44 @@ class TournamentViewModel @Inject constructor(
 ) : ViewModel() {
 
     // ── Tournament list ──
-    private val _tournaments = MutableStateFlow<List<Tournament>>(emptyList())
-    val tournaments: StateFlow<List<Tournament>> = _tournaments.asStateFlow()
+    private val _tournaments = MutableStateFlow<ImmutableList<Tournament>>(persistentListOf())
+    val tournaments: StateFlow<ImmutableList<Tournament>> = _tournaments.asStateFlow()
 
     // ── Hosted tournaments (filtered from main list) ──
-    private val _hostedTournaments = MutableStateFlow<List<Tournament>>(emptyList())
-    val hostedTournaments: StateFlow<List<Tournament>> = _hostedTournaments.asStateFlow()
+    private val _hostedTournaments = MutableStateFlow<ImmutableList<Tournament>>(persistentListOf())
+    val hostedTournaments: StateFlow<ImmutableList<Tournament>> = _hostedTournaments.asStateFlow()
 
     // ── Selected tournament detail ──
     private val _selectedTournament = MutableStateFlow<Tournament?>(null)
     val selectedTournament: StateFlow<Tournament?> = _selectedTournament.asStateFlow()
 
     // ── Tournament requirements ──
-    private val _requirements = MutableStateFlow<List<TournamentRequirement>>(emptyList())
-    val requirements: StateFlow<List<TournamentRequirement>> = _requirements.asStateFlow()
+    private val _requirements = MutableStateFlow<ImmutableList<TournamentRequirement>>(persistentListOf())
+    val requirements: StateFlow<ImmutableList<TournamentRequirement>> = _requirements.asStateFlow()
 
     // ── Tournament teams (standings) ──
-    private val _tournamentTeams = MutableStateFlow<List<TournamentTeam>>(emptyList())
-    val tournamentTeams: StateFlow<List<TournamentTeam>> = _tournamentTeams.asStateFlow()
+    private val _tournamentTeams = MutableStateFlow<ImmutableList<TournamentTeam>>(persistentListOf())
+    val tournamentTeams: StateFlow<ImmutableList<TournamentTeam>> = _tournamentTeams.asStateFlow()
 
     // ── Swiss matches ──
-    private val _matches = MutableStateFlow<List<TournamentSwissMatch>>(emptyList())
-    val matches: StateFlow<List<TournamentSwissMatch>> = _matches.asStateFlow()
+    private val _matches = MutableStateFlow<ImmutableList<TournamentSwissMatch>>(persistentListOf())
+    val matches: StateFlow<ImmutableList<TournamentSwissMatch>> = _matches.asStateFlow()
 
     // ── My applications ──
-    private val _myApplications = MutableStateFlow<List<TournamentApplication>>(emptyList())
-    val myApplications: StateFlow<List<TournamentApplication>> = _myApplications.asStateFlow()
+    private val _myApplications = MutableStateFlow<ImmutableList<TournamentApplication>>(persistentListOf())
+    val myApplications: StateFlow<ImmutableList<TournamentApplication>> = _myApplications.asStateFlow()
 
     // ── My host request ──
     private val _myHostRequest = MutableStateFlow<TournamentHostRequest?>(null)
     val myHostRequest: StateFlow<TournamentHostRequest?> = _myHostRequest.asStateFlow()
 
     // ── Match roster ──
-    private val _matchRoster = MutableStateFlow<List<TournamentMatchRoster>>(emptyList())
-    val matchRoster: StateFlow<List<TournamentMatchRoster>> = _matchRoster.asStateFlow()
+    private val _matchRoster = MutableStateFlow<ImmutableList<TournamentMatchRoster>>(persistentListOf())
+    val matchRoster: StateFlow<ImmutableList<TournamentMatchRoster>> = _matchRoster.asStateFlow()
 
     // ── Tournament player stats ──
-    private val _playerStats = MutableStateFlow<List<TournamentPlayerStats>>(emptyList())
-    val playerStats: StateFlow<List<TournamentPlayerStats>> = _playerStats.asStateFlow()
+    private val _playerStats = MutableStateFlow<ImmutableList<TournamentPlayerStats>>(persistentListOf())
+    val playerStats: StateFlow<ImmutableList<TournamentPlayerStats>> = _playerStats.asStateFlow()
 
     // ── Room secret ──
     private val _roomSecret = MutableStateFlow<TournamentMatchRoomSecret?>(null)
@@ -118,16 +121,16 @@ class TournamentViewModel @Inject constructor(
     val skillLevelFilter: StateFlow<String?> = _skillLevelFilter.asStateFlow()
 
     // ── User's team IDs (set from navigation layer) ──
-    private val _myTeamIds = MutableStateFlow<List<String>>(emptyList())
-    val myTeamIds: StateFlow<List<String>> = _myTeamIds.asStateFlow()
+    private val _myTeamIds = MutableStateFlow<ImmutableList<String>>(persistentListOf())
+    val myTeamIds: StateFlow<ImmutableList<String>> = _myTeamIds.asStateFlow()
 
     fun setMyTeamIds(teamIds: List<String>) {
-        _myTeamIds.value = teamIds
+        _myTeamIds.value = teamIds.toPersistentList()
         // Re-apply isMyMatch flag to existing matches
         if (_matches.value.isNotEmpty()) {
             _matches.value = _matches.value.map { match ->
                 match.copy(isMyMatch = match.teamAId in teamIds || match.teamBId in teamIds)
-            }
+            }.toPersistentList()
         }
     }
 
@@ -147,9 +150,9 @@ class TournamentViewModel @Inject constructor(
                 region = _regionFilter.value,
                 skillLevel = _skillLevelFilter.value
             ).onSuccess { list ->
-                _tournaments.value = list
+                _tournaments.value = list.toPersistentList()
                 val userId = SupabaseSession.getUserIdOrNull()
-                _hostedTournaments.value = if (userId != null) list.filter { it.hostUserId == userId } else emptyList()
+                _hostedTournaments.value = (if (userId != null) list.filter { it.hostUserId == userId } else emptyList()).toPersistentList()
                 _isLoading.value = false
                 _isRefreshing.value = false
             }.onFailure { e ->
@@ -205,7 +208,7 @@ class TournamentViewModel @Inject constructor(
     private fun loadRequirements(tournamentId: String) {
         viewModelScope.launch {
             tournamentRepository.getTournamentRequirements(tournamentId)
-                .onSuccess { _requirements.value = it }
+                .onSuccess { _requirements.value = it.toPersistentList() }
                 .onFailure { _error.value = it.message }
         }
     }
@@ -213,7 +216,7 @@ class TournamentViewModel @Inject constructor(
     private fun loadTournamentTeams(tournamentId: String) {
         viewModelScope.launch {
             tournamentRepository.getTournamentTeams(tournamentId)
-                .onSuccess { _tournamentTeams.value = it }
+                .onSuccess { _tournamentTeams.value = it.toPersistentList() }
                 .onFailure { _error.value = it.message }
         }
     }
@@ -229,7 +232,7 @@ class TournamentViewModel @Inject constructor(
             _isLoading.value = true
             tournamentRepository.getMyApplications(userId)
                 .onSuccess { apps ->
-                    _myApplications.value = apps
+                    _myApplications.value = apps.toPersistentList()
                     _isLoading.value = false
                 }.onFailure { e ->
                     _error.value = e.message
@@ -400,11 +403,11 @@ class TournamentViewModel @Inject constructor(
         loadMatchesJob = viewModelScope.launch {
             _isLoading.value = true
             tournamentRepository.getTournamentMatches(tournamentId)
-                .onSuccess { matches ->
-                    val teamIds = _myTeamIds.value
-                    _matches.value = matches.map { match ->
-                        match.copy(isMyMatch = match.teamAId in teamIds || match.teamBId in teamIds)
-                    }
+                .onSuccess { 
+                    val myIds = _myTeamIds.value
+                    _matches.value = it.map { match ->
+                        match.copy(isMyMatch = match.teamAId in myIds || match.teamBId in myIds)
+                    }.toPersistentList()
                     _isLoading.value = false
                 }.onFailure { e ->
                     _error.value = e.message
@@ -416,7 +419,7 @@ class TournamentViewModel @Inject constructor(
     fun loadTournamentPlayerStats(tournamentId: String) {
         viewModelScope.launch {
             tournamentRepository.getTournamentPlayerStats(tournamentId)
-                .onSuccess { _playerStats.value = it }
+                .onSuccess { _playerStats.value = it.toPersistentList() }
                 .onFailure { _error.value = it.message }
         }
     }
@@ -428,7 +431,7 @@ class TournamentViewModel @Inject constructor(
     fun loadMatchRoster(matchId: String, teamId: String, gameNumber: Int = 1) {
         viewModelScope.launch {
             tournamentRepository.getMatchRoster(matchId, teamId, gameNumber)
-                .onSuccess { _matchRoster.value = it }
+                .onSuccess { _matchRoster.value = it.toPersistentList() }
                 .onFailure { _error.value = it.message }
         }
     }

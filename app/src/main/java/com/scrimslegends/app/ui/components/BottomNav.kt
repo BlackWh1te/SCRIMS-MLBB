@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -149,13 +150,15 @@ fun AppBottomNav(
                     val neonStartX = centerX - (lineLength / 2f)
                     val neonEndX = centerX + (lineLength / 2f)
 
+                    val primaryColor = colors.primary
+                    
                     // Draw the neon glow
                     drawLine(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                GoldPrimary,
-                                GoldPrimary,
+                                primaryColor,
+                                primaryColor,
                                 Color.Transparent
                             ),
                             startX = neonStartX - (tabWidth * 0.2f),
@@ -168,7 +171,7 @@ fun AppBottomNav(
                     
                     // Draw the sharp neon core
                     drawLine(
-                        color = GoldPrimary,
+                        color = primaryColor,
                         start = Offset(neonStartX, 0f),
                         end = Offset(neonEndX, 0f),
                         strokeWidth = 2.dp.toPx(),
@@ -179,7 +182,7 @@ fun AppBottomNav(
                     drawRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                GoldPrimary.copy(alpha = 0.25f),
+                                primaryColor.copy(alpha = 0.25f),
                                 Color.Transparent
                             ),
                             startY = 0f,
@@ -243,7 +246,7 @@ private fun CyberNavItem(
     )
 
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) GoldPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
         animationSpec = tween(250),
         label = "iconColor"
     )
@@ -283,7 +286,7 @@ private fun CyberNavItem(
                             .size(if (responsive.isCompact) 40.dp else 44.dp)
                             .background(
                                 brush = Brush.radialGradient(
-                                    colors = listOf(GoldPrimary.copy(alpha = 0.2f), Color.Transparent)
+                                    colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), Color.Transparent)
                                 ),
                                 shape = CircleShape
                             )
@@ -316,7 +319,7 @@ private fun CyberNavItem(
                     ) {
                         Text(
                             text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                            color = White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = if (badgeCount > 9) 8.sp else 9.sp,
                             fontWeight = FontWeight.ExtraBold,
                             lineHeight = 9.sp
@@ -330,8 +333,8 @@ private fun CyberNavItem(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = stringResource(item.labelRes),
-                    color = GoldPrimary,
-                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Visible,

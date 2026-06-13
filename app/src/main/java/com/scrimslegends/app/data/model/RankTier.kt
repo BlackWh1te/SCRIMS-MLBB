@@ -16,29 +16,29 @@ enum class RankTier(
     val badgeGradient: List<Color>,
     val textColor: Color = Color.White
 ) {
-    BRONZE(
-        displayName = "Bronze",
-        shortName = "B",
+    WARRIOR(
+        displayName = "Warrior",
+        shortName = "W",
         minXp = 0,
         maxXp = 999,
-        tierColor = Bronze,
-        badgeGradient = listOf(Color(0xFFCD7F32), Color(0xFF8B4513)),
+        tierColor = WarriorBrown,
+        badgeGradient = WarriorGradient,
     ),
-    SOLVER(
-        displayName = "Solver",
-        shortName = "S",
+    ELITE(
+        displayName = "Elite",
+        shortName = "E",
         minXp = 1000,
         maxXp = 2499,
-        tierColor = SolverBlue,
-        badgeGradient = listOf(Color(0xFF4A90D9), Color(0xFF1A5490)),
+        tierColor = EliteSilver,
+        badgeGradient = EliteGradient,
     ),
-    GOLD(
-        displayName = "Gold",
-        shortName = "G",
+    MASTER(
+        displayName = "Master",
+        shortName = "M",
         minXp = 2500,
         maxXp = 4999,
-        tierColor = GoldRank,
-        badgeGradient = listOf(Color(0xFFFFD700), Color(0xFFFF8C00)),
+        tierColor = MasterGold,
+        badgeGradient = MasterGoldGradient,
         textColor = DarkBlue
     ),
     GRANDMASTER(
@@ -47,15 +47,15 @@ enum class RankTier(
         minXp = 5000,
         maxXp = 7999,
         tierColor = GrandmasterPurple,
-        badgeGradient = listOf(Color(0xFF9B59B6), Color(0xFF6C3483)),
+        badgeGradient = GrandmasterGradient,
     ),
     EPIC(
         displayName = "Epic",
-        shortName = "E",
+        shortName = "EP",
         minXp = 8000,
         maxXp = 11999,
         tierColor = EpicCyan,
-        badgeGradient = listOf(Color(0xFF00CED1), Color(0xFF008B8B)),
+        badgeGradient = EpicGradient,
     ),
     LEGEND(
         displayName = "Legend",
@@ -63,20 +63,44 @@ enum class RankTier(
         minXp = 12000,
         maxXp = 16999,
         tierColor = LegendRed,
-        badgeGradient = listOf(Color(0xFFFF4757), Color(0xFF8B0000)),
+        badgeGradient = LegendGradient,
     ),
     MYTHIC(
         displayName = "Mythic",
-        shortName = "M",
+        shortName = "MY",
         minXp = 17000,
-        maxXp = Int.MAX_VALUE,
+        maxXp = 24999,
         tierColor = MythicCrimson,
-        badgeGradient = listOf(Color(0xFFFF1B1B), Color(0xFF0A0A0A), Color(0xFFFFD700)),
+        badgeGradient = MythicGradient,
+    ),
+    MYTHICAL_HONOR(
+        displayName = "Mythical Honor",
+        shortName = "MH",
+        minXp = 25000,
+        maxXp = 34999,
+        tierColor = HonorBlue,
+        badgeGradient = MythicalHonorGradient,
+    ),
+    MYTHICAL_GLORY(
+        displayName = "Mythical Glory",
+        shortName = "MG",
+        minXp = 35000,
+        maxXp = 49999,
+        tierColor = GloryPink,
+        badgeGradient = MythicalGloryGradient,
+    ),
+    MYTHICAL_IMMORTAL(
+        displayName = "Mythical Immortal",
+        shortName = "MI",
+        minXp = 50000,
+        maxXp = Int.MAX_VALUE,
+        tierColor = ImmortalRed,
+        badgeGradient = MythicalImmortalGradient,
     );
 
     companion object {
         fun fromXp(xp: Int): RankTier {
-            return values().find { xp in it.minXp..it.maxXp } ?: BRONZE
+            return values().find { xp in it.minXp..it.maxXp } ?: WARRIOR
         }
 
         fun nextTier(current: RankTier): RankTier? {
@@ -104,7 +128,7 @@ enum class RankTier(
  * Tracks TOP1, TOP2, TOP3 in RU scrims (KRD, MSK, EKB).
  */
 enum class RegionalRank(val displayPrefix: String, val rank: Int, val badgeColor: Color) {
-    TOP1("TOP 1", 1, GoldPrimary),
+    TOP1("TOP 1", 1, BluePrimary),
     TOP2("TOP 2", 2, Silver),
     TOP3("TOP 3", 3, Bronze);
 

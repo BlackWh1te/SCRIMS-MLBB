@@ -6,7 +6,7 @@ package com.scrimslegends.app.util
  * These checks run locally before content reaches the server.
  * They are a first-line defense; the backend also enforces rules.
  *
- * - Profanity filter: blocks or masks common offensive words in chat
+ * - Profanity filter: blocks usernames and can mask content for moderation UI
  * - Spam detection: caps lock, excessive repetition
  */
 object ContentModerationUtils {
@@ -17,17 +17,28 @@ object ContentModerationUtils {
         "pussy", "whore", "slut", "nigger", "faggot", "retard", "kill yourself",
         "kys", "stupid", "idiot", "moron", "dumbass", "bastard", "hell"
     )
+    private val PROFANITY_PATTERNS = PROFANITY_LIST.map { term -> buildProfanityPattern(term) }
+
+    private fun buildProfanityPattern(term: String): Regex {
+        val body = term.trim()
+            .lowercase()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .joinToString("[^a-z0-9]*") { token ->
+                token.map { char -> Regex.escape(char.toString()) }
+                    .joinToString("[^a-z0-9]*")
+            }
+
+        return Regex("(?<![a-z0-9])$body(?![a-z0-9])", RegexOption.IGNORE_CASE)
+    }
 
     /**
      * Checks if [text] contains any profanity.
      * Comparison is case-insensitive and catches simple obfuscation like
-     * "f*ck", "f u c k", "fck".
+     * "f*ck", "f u c k", and avoids substring hits like "hello".
      */
     fun containsProfanity(text: String): Boolean {
-        val normalized = text.lowercase()
-            .replace(Regex("[^a-z\\s]"), "") // strip symbols
-            .replace(Regex("\\s+"), "")      // strip spaces
-        return PROFANITY_LIST.any { normalized.contains(it) }
+        return PROFANITY_PATTERNS.any { it.containsMatchIn(text) }
     }
 
     /**
@@ -36,9 +47,8 @@ object ContentModerationUtils {
      */
     fun maskProfanity(text: String): String {
         var result = text
-        PROFANITY_LIST.forEach { word ->
-            val regex = Regex("(?i)\\b${Regex.escape(word)}\\b")
-            result = regex.replace(result, "*".repeat(word.length))
+        PROFANITY_PATTERNS.forEach { regex ->
+            result = regex.replace(result) { match -> "*".repeat(match.value.length) }
         }
         return result
     }
@@ -54,9 +64,6 @@ object ContentModerationUtils {
         }
         if (trimmed.length > 2000) {
             return ValidationResult.Blocked("Message is too long (max 2000 characters)")
-        }
-        if (containsProfanity(trimmed)) {
-            return ValidationResult.Blocked("Message contains inappropriate language")
         }
         // Spam: more than 80% caps
         val letters = trimmed.filter { it.isLetter() }
@@ -78,6 +85,16 @@ object ContentModerationUtils {
         if (trimmed.length < 2) return ValidationResult.Blocked("Too short")
         if (trimmed.length > 30) return ValidationResult.Blocked("Too long (max 30)")
         if (containsProfanity(trimmed)) return ValidationResult.Blocked("Inappropriate language")
+        return ValidationResult.Valid
+    }
+
+    /**
+     * Validates an in-game ID before it is stored.
+     */
+    fun validateInGameId(text: String): ValidationResult {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) return ValidationResult.Blocked("In-game ID cannot be empty")
+        if (trimmed.length > 30) return ValidationResult.Blocked("In-game ID is too long (max 30 characters)")
         return ValidationResult.Valid
     }
 

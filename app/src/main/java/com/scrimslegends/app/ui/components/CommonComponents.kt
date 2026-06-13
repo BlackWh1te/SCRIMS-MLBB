@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -10,8 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +35,8 @@ import androidx.compose.ui.res.stringResource
 import com.scrimslegends.app.ui.theme.*
 import com.scrimslegends.app.ui.utils.HapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 
 // ============================================
 // iOS-Style Primary Button
@@ -45,9 +49,9 @@ fun iOSPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isLoading: Boolean = false,
-    backgroundColor: Color = iOSBlue,
-    contentColor: Color = White,
-    height: androidx.compose.ui.unit.Dp = 50.dp
+    backgroundColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    height: androidx.compose.ui.unit.Dp = 56.dp
 ) {
     val scale by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.98f,
@@ -105,9 +109,9 @@ fun iOSSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    borderColor: Color = iOSBlue,
-    contentColor: Color = iOSBlue,
-    height: androidx.compose.ui.unit.Dp = 50.dp
+    borderColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.primary,
+    height: androidx.compose.ui.unit.Dp = 56.dp
 ) {
     val context = LocalContext.current
     OutlinedButton(
@@ -147,7 +151,7 @@ fun iOSTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    textColor: Color = iOSBlue
+    textColor: Color = MaterialTheme.colorScheme.primary
 ) {
     TextButton(
         onClick = onClick,
@@ -177,15 +181,29 @@ fun GradientButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isLoading: Boolean = false,
-    gradient: List<Color> = GoldGradient,
-    contentColor: Color = DarkBlue,
-    height: androidx.compose.ui.unit.Dp = 52.dp
+    gradient: List<Color> = PremiumBlueGradient,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    height: androidx.compose.ui.unit.Dp = 56.dp
 ) {
-    val brush = Brush.horizontalGradient(colors = gradient)
+    // Use the first gradient color as a flat solid fill (no gradients per design mandate)
+    val fillColor = gradient.firstOrNull() ?: MaterialTheme.colorScheme.primary
     val alpha by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.5f,
         label = "buttonAlpha"
     )
+    
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "buttonScale"
+    )
+    
     val context = LocalContext.current
 
     Button(
@@ -193,24 +211,28 @@ fun GradientButton(
             HapticFeedback.performClick(context)
             onClick()
         },
+        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
-            .height(height),
+            .height(height)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         enabled = enabled && !isLoading,
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
+            containerColor = fillColor,
             contentColor = contentColor,
-            disabledContainerColor = Color.Transparent,
-            disabledContentColor = LightGray
+            disabledContainerColor = fillColor.copy(alpha = 0.5f),
+            disabledContentColor = contentColor.copy(alpha = 0.8f)
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = iOSButtonShape,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
         contentPadding = PaddingValues(0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(brush = brush, shape = RoundedCornerShape(12.dp))
                 .graphicsLayer { this.alpha = alpha },
             contentAlignment = Alignment.Center
         ) {
@@ -242,18 +264,35 @@ fun GhostButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    borderColor: Color = GoldPrimary,
-    contentColor: Color = GoldPrimary
+    borderColor: Color = MaterialTheme.colorScheme.secondary,
+    contentColor: Color = MaterialTheme.colorScheme.secondary
 ) {
     val context = LocalContext.current
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "ghostButtonScale"
+    )
+
     OutlinedButton(
         onClick = {
             HapticFeedback.performClick(context)
             onClick()
         },
+        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .height(56.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         enabled = enabled,
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = contentColor
@@ -261,7 +300,7 @@ fun GhostButton(
         border = ButtonDefaults.outlinedButtonBorder.copy(
             brush = SolidColor(borderColor)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = iOSButtonShape
     ) {
         Text(
             text = text,
@@ -427,10 +466,10 @@ fun AnimatedEntrance(
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(
-            animationSpec = tween(durationMillis = 300, delayMillis = 0)
+            animationSpec = tween(durationMillis = 200, delayMillis = 0)
         ) + slideInVertically(
-            animationSpec = tween(durationMillis = 300, easing = AppEaseOutCubic),
-            initialOffsetY = { it / 8 }
+            animationSpec = tween(durationMillis = 200, easing = AppEaseOutCubic),
+            initialOffsetY = { it / 12 }
         ),
         exit = fadeOut() + slideOutVertically(),
         modifier = modifier
@@ -522,7 +561,7 @@ fun iOSInput(
 ) {
     val borderColor = when {
         isError -> ErrorRed
-        else -> Separator
+        else -> MaterialTheme.colorScheme.outlineVariant
     }
 
     OutlinedTextField(
@@ -530,11 +569,11 @@ fun iOSInput(
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .background(SurfaceElevated, shape = iOSInputShape),
+            .background(MaterialTheme.colorScheme.surfaceVariant, shape = iOSInputShape),
         placeholder = {
             Text(
                 text = placeholder,
-                style = iOSBody.copy(color = DimGray)
+                style = iOSBody.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
             )
         },
         leadingIcon = if (leadingIcon != null) {
@@ -542,7 +581,7 @@ fun iOSInput(
                 Icon(
                     imageVector = leadingIcon,
                     contentDescription = null,
-                    tint = DimGray,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -553,7 +592,7 @@ fun iOSInput(
                     Icon(
                         imageVector = trailingIcon,
                         contentDescription = null,
-                        tint = DimGray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -567,12 +606,12 @@ fun iOSInput(
         ),
         shape = iOSInputShape,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = iOSBlue,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = borderColor,
             errorBorderColor = ErrorRed,
-            cursorColor = iOSBlue,
-            focusedTextColor = White,
-            unfocusedTextColor = White
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
         textStyle = iOSBody
     )
@@ -586,7 +625,7 @@ fun iOSInput(
 fun EnhancedInfoChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String,
-    tint: Color = LightGray,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
     backgroundColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
 ) {
     Surface(
@@ -701,7 +740,7 @@ fun SectionHeader(
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = White
+                color = MaterialTheme.colorScheme.onSurface
             )
         )
         action?.invoke()
@@ -729,11 +768,12 @@ fun EmptyState(
             verticalArrangement = Arrangement.Center
         ) {
             // Icon box
+            val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f).toArgb()
             Box(
                 modifier = Modifier
                     .size(96.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(SurfaceOverlay)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .drawWithContent {
                         drawContent()
                         drawIntoCanvas { canvas ->
@@ -741,7 +781,7 @@ fun EmptyState(
                                 isAntiAlias  = true
                                 style        = android.graphics.Paint.Style.STROKE
                                 strokeWidth  = 1f
-                                color        = GlassBorder.toArgb()
+                                color        = borderColor
                             }
                             canvas.nativeCanvas.drawRoundRect(
                                 android.graphics.RectF(0f, 0f, size.width, size.height),
@@ -756,7 +796,7 @@ fun EmptyState(
                 Icon(
                     imageVector        = icon,
                     contentDescription = title,
-                    tint               = DimGray,
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier           = Modifier.size(44.dp)
                 )
             }
@@ -765,7 +805,7 @@ fun EmptyState(
 
             Text(
                 text       = title,
-                style      = iOSTitle3.copy(color = TextPrimary),
+                style      = iOSTitle3.copy(color = MaterialTheme.colorScheme.onSurface),
                 textAlign  = androidx.compose.ui.text.style.TextAlign.Center
             )
 
@@ -773,7 +813,7 @@ fun EmptyState(
 
             Text(
                 text      = subtitle,
-                style     = iOSCallout.copy(color = TextSecondary),
+                style     = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
@@ -810,7 +850,7 @@ fun iOSNavigationBar(
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -820,7 +860,7 @@ fun iOSNavigationBar(
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
@@ -830,7 +870,7 @@ fun iOSNavigationBar(
             if (showBackButton) {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = iOSBlue,
                         modifier = Modifier.size(22.dp)
@@ -841,7 +881,7 @@ fun iOSNavigationBar(
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent,
-            titleContentColor = White,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
             navigationIconContentColor = iOSBlue,
             actionIconContentColor = iOSBlue
         ),
@@ -869,7 +909,7 @@ fun iOSLargeTitleHeader(
             style = MaterialTheme.typography.displayLarge.copy(
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 letterSpacing = (-0.5).sp
             )
         )
@@ -879,7 +919,7 @@ fun iOSLargeTitleHeader(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = 15.sp,
-                    color = MidGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -936,7 +976,7 @@ fun GlassBackButton(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector        = Icons.Default.ArrowBack,
+            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Back",
             tint               = iconTint,
             modifier           = Modifier.size(20.dp)
@@ -961,7 +1001,7 @@ fun iOSBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
         shape = iOSSheetShape,
-        containerColor = SurfaceElevated,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         dragHandle = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -972,7 +1012,7 @@ fun iOSBottomSheet(
                         .width(36.dp)
                         .height(5.dp)
                         .background(
-                            color = Separator,
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             shape = RoundedCornerShape(9999.dp)
                         )
                 )
@@ -1005,15 +1045,15 @@ fun iOSActionSheet(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 13.sp,
-                    color = MidGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             )
-            Divider(
-                color = Separator,
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
                 thickness = 0.5.dp,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
@@ -1054,30 +1094,21 @@ fun GradientFAB(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
-    gradient: List<Color> = BlueGradient
+    gradient: List<Color> = BlueGradient // Kept for API compatibility
 ) {
-    val brush = Brush.linearGradient(colors = gradient)
-
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier.size(56.dp),
         shape = RoundedCornerShape(16.dp),
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.primary,
         elevation = FloatingActionButtonDefaults.elevation(8.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(brush = brush),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -1091,9 +1122,9 @@ fun ShimmerBox(
     shape: RoundedCornerShape = RoundedCornerShape(8.dp)
 ) {
     val shimmerColors = listOf(
-        MidGray.copy(alpha = 0.15f),
-        MidGray.copy(alpha = 0.3f),
-        MidGray.copy(alpha = 0.15f)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     )
 
     val transition = rememberInfiniteTransition(label = "shimmer")
@@ -1136,7 +1167,7 @@ fun ScrimListSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -1199,7 +1230,7 @@ fun TeamListSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -1254,7 +1285,7 @@ fun NotificationListSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(76.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkNavy),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -1302,7 +1333,7 @@ fun NotificationListSkeleton(
  *
  * Usage: Collect ViewModel error state and pass it here.
  * ```
- * val error by viewModel.error.collectAsState()
+ * val error by viewModel.error.collectAsStateWithLifecycle()
  * ErrorSnackbar(error = error, onDismiss = { viewModel.clearError() })
  * ```
  */
@@ -1334,19 +1365,19 @@ fun ErrorSnackbar(
                     Icon(
                         Icons.Default.ErrorOutline,
                         contentDescription = null,
-                        tint = White,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = error,
-                        color = White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = onDismiss) {
-                        Text("OK", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("OK", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }

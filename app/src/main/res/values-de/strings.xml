@@ -176,7 +176,6 @@
     <string name="approve">Genehmigen</string>
     <string name="reject">Ablehnen</string>
     <string name="chat_opens_in">Chat öffnet in</string>
-    <string name="chat_unlocks_2h">Chat öffnet 2 Stunden vor dem Scrim</string>
     <string name="report_result">Ergebnis melden</string>
     <string name="match_label">Match</string>
     <string name="who_won">Wer hat gewonnen?</string>

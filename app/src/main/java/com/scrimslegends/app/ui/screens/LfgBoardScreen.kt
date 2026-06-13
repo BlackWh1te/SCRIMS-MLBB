@@ -1,8 +1,11 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,8 +39,11 @@ fun LfgBoardScreen(
     onCreatePost: () -> Unit = {},
     onInvitePlayer: (LfgPost) -> Unit = {},
     isRefreshing: Boolean = false,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    error: String? = null,
+    onDismissError: () -> Unit = {}
 ) {
+    var invitingPostIds by remember { mutableStateOf(setOf<String>()) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -58,7 +64,7 @@ fun LfgBoardScreen(
 
                     Text(
                         text = stringResource(R.string.lfg_board),
-                        style = iOSTitle2.copy(color = White)
+                        style = iOSTitle2.copy(color = MaterialTheme.colorScheme.onSurface)
                     )
 
                     IconButton(
@@ -73,7 +79,7 @@ fun LfgBoardScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = stringResource(R.string.create_post),
-                            tint = White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -92,7 +98,20 @@ fun LfgBoardScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = GoldPrimary)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
+                    error != null && posts.isEmpty() -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.ErrorOutline, null, tint = ErrorRed, modifier = Modifier.size(48.dp))
+                                Spacer(Modifier.height(16.dp))
+                                Text(stringResource(R.string.error_loading_data), color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(8.dp))
+                                Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), fontSize = 13.sp)
+                                Spacer(Modifier.height(16.dp))
+                                OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.onSurface) }
+                            }
                         }
                     }
                     posts.isEmpty() -> {
@@ -107,7 +126,15 @@ fun LfgBoardScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(posts, key = { it.id }) { post ->
-                                LfgPostCard(post = post, onInvite = { onInvitePlayer(post) })
+                                val isInviting = invitingPostIds.contains(post.id)
+                                LfgPostCard(
+                                    post = post, 
+                                    isInviting = isInviting,
+                                    onInvite = { 
+                                        invitingPostIds = invitingPostIds + post.id
+                                        onInvitePlayer(post) 
+                                    }
+                                )
                             }
                         }
                     }
@@ -120,27 +147,17 @@ fun LfgBoardScreen(
 @Composable
 private fun LfgPostCard(
     post: LfgPost,
+    isInviting: Boolean,
     onInvite: () -> Unit
 ) {
-    val roleColor = when (post.role) {
-        GameRole.TANK -> Color(0xFF4CAF50)
-        GameRole.FIGHTER -> Color(0xFFFF9800)
-        GameRole.ASSASSIN -> Color(0xFFF44336)
-        GameRole.MAGE -> Color(0xFF9C27B0)
-        GameRole.MARKSMAN -> Color(0xFF2196F3)
-        GameRole.SUPPORT -> Color(0xFF00BCD4)
-        GameRole.FLEX -> Color(0xFF607D8B)
-    }
+    val roleColor = roleColor(post.role)
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                spotColor = Color.Black.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(containerColor = DarkNavy),
+            .border(1.dp, appBorderColor(), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -171,20 +188,20 @@ private fun LfgPostCard(
                         text = post.playerName,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
                 // Region
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = White.copy(alpha = 0.08f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                 ) {
                     Text(
                         text = post.region.displayName,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontSize = 11.sp,
-                        color = LightGray.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.7f),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -196,9 +213,10 @@ private fun LfgPostCard(
                 Text(
                     text = post.message,
                     fontSize = 14.sp,
-                    color = LightGray.copy(alpha = 0.85f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.85f),
                     lineHeight = 20.sp,
-                    maxLines = 2
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                    modifier = Modifier.clickable { expanded = !expanded }
                 )
                 Spacer(modifier = Modifier.height(10.dp))
             }
@@ -212,28 +230,33 @@ private fun LfgPostCard(
                 Text(
                     text = post.skillLevel.name,
                     fontSize = 12.sp,
-                    color = LightGray.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f),
                     fontWeight = FontWeight.Medium
                 )
 
                 // Invite button
                 TextButton(
                     onClick = onInvite,
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp),
+                    enabled = !isInviting
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonAdd,
-                        contentDescription = null,
-                        tint = SuccessGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.invite),
-                        color = SuccessGreen,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (isInviting) {
+                        CircularProgressIndicator(color = SuccessGreen, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.invite),
+                            color = SuccessGreen,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -250,20 +273,20 @@ private fun EmptyLfgState(onCreatePost: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = LightGray.copy(alpha = 0.4f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.4f),
                 modifier = Modifier.size(64.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.no_lfg_posts),
-                color = LightGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.be_first_to_post),
-                color = LightGray.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f).copy(alpha = 0.6f),
                 fontSize = 14.sp
             )
             Spacer(modifier = Modifier.height(24.dp))

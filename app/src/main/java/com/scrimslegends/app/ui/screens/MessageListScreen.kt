@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +52,10 @@ import com.scrimslegends.app.ui.components.UserReportReason
 import java.text.SimpleDateFormat
 import java.util.*
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
+
 // ─── Filter Tabs ─────────────────────────────────────────────
 
 private enum class MessageFilter { ALL, UNREAD }
@@ -57,7 +63,7 @@ private enum class MessageFilter { ALL, UNREAD }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageListScreen(
-    conversations   : List<Conversation>,
+    conversations   : ImmutableList<Conversation>,
     isLoading       : Boolean,
     currentUserId   : String,
     onNavigateBack  : () -> Unit = {},
@@ -68,7 +74,7 @@ fun MessageListScreen(
     error           : String? = null,
     onDismissError  : () -> Unit = {},
     onReportUser    : (userId: String, username: String) -> Unit = { _, _ -> },
-    teamConversations: List<Conversation> = emptyList()
+    teamConversations: ImmutableList<Conversation> = persistentListOf()
 ) {
     val totalUnread = conversations.sumOf { it.unreadCount } + teamConversations.sumOf { it.unreadCount }
     val hasAnyConversation = conversations.isNotEmpty() || teamConversations.isNotEmpty()
@@ -90,17 +96,17 @@ fun MessageListScreen(
     // Filtered conversations
     val filteredConversations = remember(conversations, searchQuery, activeFilter) {
         var list = conversations
-        if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }
+        if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }.toPersistentList()
         if (searchQuery.isNotBlank()) {
-            list = list.filter { conv -> conversationMatchesSearch(conv, currentUserId, searchQuery) }
+            list = list.filter { conv -> conversationMatchesSearch(conv, currentUserId, searchQuery) }.toPersistentList()
         }
         list
     }
     val visibleTeamConversations = remember(teamConversations, searchQuery, activeFilter, currentUserId) {
         var list = teamConversations
-        if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }
+        if (activeFilter == MessageFilter.UNREAD) list = list.filter { it.unreadCount > 0 }.toPersistentList()
         if (searchQuery.isNotBlank()) {
-            list = list.filter { conversationMatchesSearch(it, currentUserId, searchQuery) }
+            list = list.filter { conversationMatchesSearch(it, currentUserId, searchQuery) }.toPersistentList()
         }
         list
     }
@@ -169,7 +175,7 @@ fun MessageListScreen(
                                         .widthIn(min = 20.dp)
                                         .background(
                                             brush = Brush.horizontalGradient(
-                                                listOf(GoldPrimary, Color(0xFFFF9500))
+                                                listOf(MaterialTheme.colorScheme.secondary, Color(0xFFFF9500))
                                             ),
                                             shape = CircleShape
                                         )
@@ -180,7 +186,7 @@ fun MessageListScreen(
                                         totalUnread.coerceAtMost(99).toString(),
                                         fontSize   = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color      = DarkBlue
+                                        color      = MaterialTheme.colorScheme.background
                                     )
                                 }
                             }
@@ -192,12 +198,12 @@ fun MessageListScreen(
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (isSearchActive) GoldPrimary.copy(alpha = 0.15f)
+                                    if (isSearchActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                                     else appElevatedSurface
                                 )
                                 .border(
                                     1.dp,
-                                    if (isSearchActive) GoldPrimary.copy(alpha = 0.4f) else appBorder,
+                                    if (isSearchActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f) else appBorder,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
@@ -211,7 +217,7 @@ fun MessageListScreen(
                         ) {
                             Icon(
                                 Icons.Default.Search, null,
-                                tint     = if (isSearchActive) GoldPrimary else appTextSecondary,
+                                tint     = if (isSearchActive) MaterialTheme.colorScheme.secondary else appTextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -265,13 +271,13 @@ fun MessageListScreen(
                                     .focusRequester(focusRequester)
                                     .height(48.dp),
                                 colors        = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
+                                    focusedBorderColor      = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                                     unfocusedBorderColor    = appBorder,
                                     focusedContainerColor   = appElevatedSurface,
                                     unfocusedContainerColor = appElevatedSurface,
                                     focusedTextColor        = appTextPrimary,
                                     unfocusedTextColor      = appTextPrimary,
-                                    cursorColor             = GoldPrimary
+                                    cursorColor             = MaterialTheme.colorScheme.secondary
                                 ),
                                 shape         = RoundedCornerShape(14.dp),
                                 textStyle     = iOSBody.copy(fontSize = 14.sp),
@@ -305,12 +311,12 @@ fun MessageListScreen(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(
-                                            if (isActive) GoldPrimary.copy(alpha = 0.18f)
+                                            if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
                                             else appElevatedSurface
                                         )
                                         .border(
                                             1.dp,
-                                            if (isActive) GoldPrimary.copy(alpha = 0.45f) else appBorder,
+                                            if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f) else appBorder,
                                             RoundedCornerShape(20.dp)
                                         )
                                         .clickable { activeFilter = filter }
@@ -321,7 +327,7 @@ fun MessageListScreen(
                                         text       = tabLabel,
                                         fontSize   = 12.sp,
                                         fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                                        color      = if (isActive) GoldPrimary else appTextSecondary
+                                        color      = if (isActive) MaterialTheme.colorScheme.secondary else appTextSecondary
                                     )
                                 }
                             }
@@ -341,7 +347,7 @@ fun MessageListScreen(
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator(
-                                    color       = GoldPrimary,
+                                    color       = MaterialTheme.colorScheme.secondary,
                                     modifier    = Modifier.size(36.dp),
                                     strokeWidth = 3.dp
                                 )
@@ -580,8 +586,16 @@ private fun ConversationCard(
     val otherUserId    = if (isCurrentUserParticipantA) conversation.participantBId else conversation.participantAId
     val otherTeam      = if (isCurrentUserParticipantA) conversation.participantBTeamName else conversation.participantATeamName
     val otherAvatarUrl = if (isCurrentUserParticipantA) conversation.participantBAvatarUrl else conversation.participantAAvatarUrl
+    val otherLastSeen = if (!conversation.isTeamChat) conversation.otherLastSeen(currentUserId) else null
+    val isOtherOnline = !conversation.isTeamChat && conversation.isOtherOnline(currentUserId)
+    val statusText = when {
+        conversation.isTeamChat -> otherTeam
+        isOtherOnline -> stringResource(R.string.online_status)
+        otherLastSeen != null -> stringResource(R.string.last_seen_status, formatLastSeenCompact(otherLastSeen))
+        else -> stringResource(R.string.offline_status)
+    }
     val hasUnread = conversation.unreadCount > 0
-    val isScrimChat = conversation.scrimId != null
+    val isScrimChat = conversation.scrimId.isNotBlank()
     val appSurface = appSurfaceColor()
     val appElevatedSurface = appElevatedSurfaceColor()
     val appTextPrimary = appTextPrimaryColor()
@@ -601,7 +615,7 @@ private fun ConversationCard(
     }
 
     val cardBg by animateColorAsState(
-        targetValue   = if (hasUnread) appSurface else appSurface.copy(alpha = 0.92f),
+        targetValue   = if (hasUnread) MaterialTheme.colorScheme.secondary.copy(alpha = 0.04f).compositeOver(appSurface) else appSurface.copy(alpha = 0.92f),
         animationSpec = tween(200),
         label         = "cardBg"
     )
@@ -613,7 +627,7 @@ private fun ConversationCard(
             .background(cardBg)
             .border(
                 width  = if (hasUnread) 1.dp else 0.5.dp,
-                color  = if (hasUnread) GoldPrimary.copy(alpha = 0.35f) else appBorder,
+                color  = if (hasUnread) MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f) else appBorder,
                 shape  = RoundedCornerShape(18.dp)
             )
             .combinedClickable(
@@ -629,7 +643,7 @@ private fun ConversationCard(
                     .width(3.dp)
                     .height(48.dp)
                     .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
-                    .background(Brush.verticalGradient(GoldGradient))
+                    .background(Brush.verticalGradient(PremiumBlueGradient))
             )
         }
 
@@ -661,7 +675,7 @@ private fun ConversationCard(
                                     text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                     fontSize   = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color      = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         },
@@ -677,7 +691,7 @@ private fun ConversationCard(
                                     text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                     fontSize   = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color      = White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -694,24 +708,22 @@ private fun ConversationCard(
                             text       = otherName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                             fontSize   = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color      = White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
-                // Online dot placeholder (gray = offline/unknown)
-                Box(
-                    modifier = Modifier
-                        .size(13.dp)
-                        .align(Alignment.BottomEnd)
-                        .background(appSurface, CircleShape)
-                        .padding(2.dp)
-                ) {
+
+                if (!conversation.isTeamChat) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(appTextSecondary.copy(alpha = 0.7f), CircleShape)
+                            .align(Alignment.BottomEnd)
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(if (isOtherOnline) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant)
+                            .border(2.dp, appSurface, CircleShape)
                     )
                 }
+
             }
 
             Spacer(Modifier.width(13.dp))
@@ -737,7 +749,7 @@ private fun ConversationCard(
                         Icon(
                             imageVector = Icons.Default.Bookmark,
                             contentDescription = null,
-                            tint = GoldPrimary.copy(alpha = 0.55f),
+                            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f),
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(Modifier.width(4.dp))
@@ -746,7 +758,7 @@ private fun ConversationCard(
                         Icon(
                             imageVector = Icons.Default.EmojiEvents,
                             contentDescription = null,
-                            tint = GoldPrimary.copy(alpha = 0.8f),
+                            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(Modifier.width(4.dp))
@@ -754,19 +766,18 @@ private fun ConversationCard(
                     Text(
                         text  = formatMessageTime(conversation.lastMessageTime),
                         fontSize   = 11.sp,
-                        color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else appTextSecondary,
+                        color      = if (hasUnread) MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f) else appTextSecondary,
                         fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
 
                 Spacer(Modifier.height(2.dp))
 
-                // Team tag
-                if (otherTeam.isNotBlank()) {
+                if (statusText.isNotBlank()) {
                     Text(
-                        text     = otherTeam,
+                        text     = if (!conversation.isTeamChat && otherTeam.isNotBlank()) "$statusText - $otherTeam" else statusText,
                         fontSize = 11.sp,
-                        color    = BluePrimary.copy(alpha = 0.8f),
+                        color    = if (isOtherOnline) SuccessGreen else MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -796,7 +807,7 @@ private fun ConversationCard(
                                 .height(20.dp)
                                 .widthIn(min = 20.dp)
                                 .background(
-                                    brush = Brush.horizontalGradient(GoldGradient),
+                                    brush = Brush.horizontalGradient(PremiumBlueGradient),
                                     shape = CircleShape
                                 )
                                 .padding(horizontal = 5.dp),
@@ -806,7 +817,7 @@ private fun ConversationCard(
                                 conversation.unreadCount.coerceAtMost(9).toString(),
                                 fontSize   = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = DarkBlue
+                                color      = MaterialTheme.colorScheme.background
                             )
                         }
                     }
@@ -839,7 +850,7 @@ private fun TeamChatCard(
             .background(appSurface)
             .border(
                 width = 1.5.dp,
-                brush = Brush.horizontalGradient(GoldGradient),
+                brush = Brush.horizontalGradient(PremiumBlueGradient),
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable { onClick() }
@@ -851,7 +862,7 @@ private fun TeamChatCard(
                 .fillMaxWidth(0.6f)
                 .height(1.dp)
                 .background(
-                    brush = Brush.horizontalGradient(GoldGlowGradient),
+                    brush = Brush.horizontalGradient(BlueGlowGradient),
                     shape = RoundedCornerShape(2.dp)
                 )
         )
@@ -863,7 +874,7 @@ private fun TeamChatCard(
                 .width(3.dp)
                 .height(52.dp)
                 .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
-                .background(Brush.verticalGradient(GoldGradient))
+                .background(Brush.verticalGradient(PremiumBlueGradient))
         )
 
         Row(
@@ -891,13 +902,13 @@ private fun TeamChatCard(
                         .offset(x = (-4).dp, y = 2.dp)
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(Brush.radialGradient(GoldGradient)),
+                        .background(Brush.radialGradient(PremiumBlueGradient)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector        = Icons.Default.Group,
                         contentDescription = null,
-                        tint               = DarkBlue,
+                        tint               = MaterialTheme.colorScheme.background,
                         modifier           = Modifier.size(20.dp)
                     )
                 }
@@ -930,7 +941,7 @@ private fun TeamChatCard(
                             modifier = Modifier
                                 .height(17.dp)
                                 .background(
-                                    brush = Brush.horizontalGradient(GoldGradient),
+                                    brush = Brush.horizontalGradient(PremiumBlueGradient),
                                     shape = RoundedCornerShape(4.dp)
                                 )
                                 .padding(horizontal = 6.dp),
@@ -940,7 +951,7 @@ private fun TeamChatCard(
                                 text       = stringResource(R.string.team_badge),
                                 fontSize   = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color      = DarkBlue
+                                color      = MaterialTheme.colorScheme.background
                             )
                         }
                         Spacer(Modifier.width(4.dp))
@@ -974,14 +985,14 @@ private fun TeamChatCard(
                         Icon(
                             imageVector = Icons.Default.Bookmark,
                             contentDescription = null,
-                            tint       = GoldPrimary.copy(alpha = 0.5f),
+                            tint       = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                             modifier   = Modifier.size(12.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text       = formatMessageTime(conversation.lastMessageTime),
                             fontSize   = 11.sp,
-                            color      = if (hasUnread) GoldPrimary.copy(alpha = 0.85f) else appTextSecondary,
+                            color      = if (hasUnread) MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f) else appTextSecondary,
                             fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
@@ -1012,7 +1023,7 @@ private fun TeamChatCard(
                                 .height(20.dp)
                                 .widthIn(min = 20.dp)
                                 .background(
-                                    brush = Brush.horizontalGradient(GoldGradient),
+                                    brush = Brush.horizontalGradient(PremiumBlueGradient),
                                     shape = CircleShape
                                 )
                                 .padding(horizontal = 5.dp),
@@ -1022,7 +1033,7 @@ private fun TeamChatCard(
                                 conversation.unreadCount.coerceAtMost(9).toString(),
                                 fontSize   = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = DarkBlue
+                                color      = MaterialTheme.colorScheme.background
                             )
                         }
                     }
@@ -1049,6 +1060,17 @@ private fun formatMessageTime(timestamp: Long): String {
         diff < 86_400_000L      -> "${diff / 3_600_000}h"
         diff < 604_800_000L     -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))
         else                    -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
+private fun formatLastSeenCompact(timestamp: Long): String {
+    val diff = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+    return when {
+        diff < 60_000L -> "just now"
+        diff < 3_600_000L -> "${diff / 60_000L}m ago"
+        diff < 86_400_000L -> "${diff / 3_600_000L}h ago"
+        diff < 604_800_000L -> "${diff / 86_400_000L}d ago"
+        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
     }
 }
 

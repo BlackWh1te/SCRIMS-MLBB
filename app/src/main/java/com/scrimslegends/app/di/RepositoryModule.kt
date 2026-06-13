@@ -33,9 +33,10 @@ object RepositoryModule {
         messageDao: MessageDao,
         pendingMessageDao: PendingMessageDao,
         realtimeClient: SupabaseRealtimeClient,
-        cacheManager: UnifiedCacheManager
+        cacheManager: UnifiedCacheManager,
+        database: ScrimsLegendsDatabase
     ): MessageRepositoryInterface {
-        return SupabaseMessageRepository(conversationDao, messageDao, pendingMessageDao, realtimeClient, cacheManager)
+        return SupabaseMessageRepository(conversationDao, messageDao, pendingMessageDao, realtimeClient, cacheManager, database)
     }
 
     @Provides
@@ -92,25 +93,43 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideMatchResultRepository(
+        cacheManager: UnifiedCacheManager,
+        matchResultDao: MatchResultDao,
         profileCache: ProfileCacheRepository
     ): MatchResultRepositoryInterface {
-        return SupabaseMatchResultRepository(profileCache)
+        return SupabaseMatchResultRepository(cacheManager, matchResultDao, profileCache)
     }
 
     @Provides
     @Singleton
     fun provideAuthRepository(
         @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
-        cacheManager: UnifiedCacheManager
+        cacheManager: UnifiedCacheManager,
+        realtimeManager: com.scrimslegends.app.data.service.RealtimeManager
     ): AuthRepositoryInterface {
-        return SupabaseAuthRepository(context, cacheManager)
+        return SupabaseAuthRepository(context, cacheManager, realtimeManager)
     }
 
     @Provides
     @Singleton
     fun provideTournamentRepository(
-        cacheManager: UnifiedCacheManager
+        cacheManager: UnifiedCacheManager,
+        tournamentDao: TournamentDao
     ): TournamentRepositoryInterface {
-        return SupabaseTournamentRepository(cacheManager)
+        return SupabaseTournamentRepository(cacheManager, tournamentDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFcmTokenRepository(): FcmTokenRepositoryInterface {
+        return FcmTokenRepository()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageOutboxRepository(
+        dao: MessageOutboxDao
+    ): MessageOutboxRepositoryInterface {
+        return MessageOutboxRepository(dao)
     }
 }

@@ -1,5 +1,6 @@
 package com.scrimslegends.app.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,8 +12,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.scrimslegends.app.ui.theme.SurfaceBase
-import com.scrimslegends.app.ui.theme.SurfaceElevated
 
 /**
  * Premium shimmer loading effect for skeleton screens.
@@ -25,9 +24,9 @@ fun ShimmerBrush(
 ): Brush {
     return if (showShimmer) {
         val shimmerColors = listOf(
-            SurfaceBase.copy(alpha = 0.6f),
-            SurfaceElevated.copy(alpha = 0.3f),
-            SurfaceBase.copy(alpha = 0.6f),
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
         )
 
         val transition = rememberInfiniteTransition(label = "shimmer")

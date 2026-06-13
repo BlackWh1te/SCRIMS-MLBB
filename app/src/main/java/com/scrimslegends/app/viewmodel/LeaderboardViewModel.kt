@@ -9,8 +9,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import javax.inject.Inject
 
 @HiltViewModel
@@ -21,8 +25,11 @@ class LeaderboardViewModel @Inject constructor(
     private var loadLeaderboardJob: Job? = null
     private var filterByTierJob: Job? = null
 
-    private val _leaderboard = MutableStateFlow<List<LeaderboardEntry>>(emptyList())
-    val leaderboard: StateFlow<List<LeaderboardEntry>> = _leaderboard.asStateFlow()
+    private val _leaderboard = MutableStateFlow<ImmutableList<LeaderboardEntry>>(persistentListOf())
+    val leaderboard: StateFlow<ImmutableList<LeaderboardEntry>> = _leaderboard.asStateFlow()
+
+    private val _teamLeaderboard = MutableStateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamLeaderboardEntry>>(persistentListOf())
+    val teamLeaderboard: StateFlow<ImmutableList<com.scrimslegends.app.data.model.TeamLeaderboardEntry>> = _teamLeaderboard.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -46,15 +53,26 @@ class LeaderboardViewModel @Inject constructor(
             if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
-            repository.getLeaderboard().collect { result ->
-                result.onSuccess { entries ->
-                    _leaderboard.value = entries
+
+            launch {
+                repository.getLeaderboard().collect { playersResult ->
+                    playersResult.onSuccess { entries ->
+                        _leaderboard.value = entries.toPersistentList()
+                    }.onFailure { exception ->
+                        _error.value = exception.message
+                    }
                     _isLoading.value = false
                     _isRefreshing.value = false
-                }.onFailure { exception ->
-                    _error.value = exception.message
-                    _isLoading.value = false
-                    _isRefreshing.value = false
+                }
+            }
+
+            launch {
+                repository.getTeamLeaderboard().collect { teamsResult ->
+                    teamsResult.onSuccess { entries ->
+                        _teamLeaderboard.value = entries.toPersistentList()
+                    }.onFailure { exception ->
+                        if (_error.value == null) _error.value = exception.message
+                    }
                 }
             }
         }
@@ -66,24 +84,32 @@ class LeaderboardViewModel @Inject constructor(
         filterByTierJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            if (tier == null) {
-                repository.getLeaderboard().collect { result ->
-                    result.onSuccess { _leaderboard.value = it }
-                        .onFailure { exception ->
-                            _error.value = exception.message
-                            _isLoading.value = false
-                        }
+
+            launch {
+                val playersFlow = if (tier == null) {
+                    repository.getLeaderboard()
+                } else {
+                    repository.getLeaderboardForTier(tier)
                 }
-            } else {
-                repository.getLeaderboardForTier(tier).collect { result ->
-                    result.onSuccess { _leaderboard.value = it }
-                        .onFailure { exception ->
-                            _error.value = exception.message
-                            _isLoading.value = false
-                        }
+                playersFlow.collect { playersResult ->
+                    playersResult.onSuccess { _leaderboard.value = it.toPersistentList() }
+                        .onFailure { exception -> _error.value = exception.message }
+                    _isLoading.value = false
                 }
             }
-            _isLoading.value = false
+
+            launch {
+                repository.getTeamLeaderboard().collect { teamsResult ->
+                    teamsResult.onSuccess { entries ->
+                        val filteredTeams = if (tier != null) {
+                            entries.filter { it.currentTier == tier }
+                        } else entries
+                        _teamLeaderboard.value = filteredTeams.toPersistentList()
+                    }.onFailure { exception ->
+                        if (_error.value == null) _error.value = exception.message
+                    }
+                }
+            }
         }
     }
 
