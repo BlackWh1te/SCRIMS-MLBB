@@ -8,6 +8,23 @@
 
 ---
 
+## 2026-06-13 19:35 +04:00 — checkpoint: snapshot in-progress UI redesign before design pass
+
+### Commits
+- `6cd9e44` — checkpoint: snapshot in-progress UI redesign and new source before design pass
+
+### Context
+User requested a full UI/UX audit + design improvements across both light and dark themes. The working tree contained a large uncommitted UI redesign (56 modified UI files) plus many untracked source files (notably `ui/theme/Color.kt`, `Dimens.kt`, `Shape.kt` were never tracked, and several new ViewModels, DAOs, screens, and Supabase migrations).
+
+### Action
+Created a safety checkpoint committing only application source under `app/src` (177 files) so there is a clean restore point before the design pass begins. Intentionally **excluded** from this checkpoint: scratch scripts (`*.py`), logs/dumps (`*.txt`), `*.sqlite`, separate subprojects (`AdminPanel/`, `HermesBot/`, `discord_manager/`, etc.), audit `.md` reports, and `.devin/config.local.json` (possible secrets).
+
+### Notes
+- `[INTENTIONAL]` — `ui/theme/Color.kt`, `Dimens.kt`, `Shape.kt` are now tracked as of this checkpoint; they are required for the app to compile.
+- No behavioral or visual change in this commit; it is purely a version-control snapshot.
+
+---
+
 ## 2026-06-03 12:40 +04:00 — feat(assets): replace tier badge images with new Adobe Express designs
 
 ### Commits
