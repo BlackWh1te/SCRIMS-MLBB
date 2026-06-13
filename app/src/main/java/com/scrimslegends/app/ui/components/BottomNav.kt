@@ -111,7 +111,7 @@ fun AppBottomNav(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (responsive.isCompact) 65.dp else 75.dp)
+                .height(responsive.bottomNavHeight)
                 .background(
                     color = navSurface
                 )
@@ -131,15 +131,15 @@ fun AppBottomNav(
                                 Color.Transparent
                             )
                         ),
-                        topLeft = Offset(0f, -8.dp.toPx()),
-                        size = Size(size.width, 8.dp.toPx())
+                        topLeft = Offset(0f, -Dimens.bottomNavShadowHeight.toPx()),
+                        size = Size(size.width, Dimens.bottomNavShadowHeight.toPx())
                     )
                     
                     drawLine(
                         color = navBorder,
                         start = Offset(0f, 0f),
                         end = Offset(size.width, 0f),
-                        strokeWidth = 1.25.dp.toPx()
+                        strokeWidth = Dimens.bottomNavBorderWidth.toPx()
                     )
 
                     // Sliding Neon Line
@@ -166,7 +166,7 @@ fun AppBottomNav(
                         ),
                         start = Offset(neonStartX - (tabWidth * 0.2f), 0f),
                         end = Offset(neonEndX + (tabWidth * 0.2f), 0f),
-                        strokeWidth = 3.dp.toPx()
+                        strokeWidth = Dimens.bottomNavIndicatorGlowWidth.toPx()
                     )
                     
                     // Draw the sharp neon core
@@ -174,7 +174,7 @@ fun AppBottomNav(
                         color = primaryColor,
                         start = Offset(neonStartX, 0f),
                         end = Offset(neonEndX, 0f),
-                        strokeWidth = 2.dp.toPx(),
+                        strokeWidth = Dimens.bottomNavIndicatorCoreWidth.toPx(),
                         cap = StrokeCap.Round
                     )
                     
@@ -261,7 +261,7 @@ private fun CyberNavItem(
     )
     
     val labelHeight by animateDpAsState(
-        targetValue = if (isSelected) 14.dp else 0.dp,
+        targetValue = if (isSelected) Dimens.bottomNavLabelHeight else 0.dp,
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy),
         label = "labelHeight"
     )
@@ -286,7 +286,7 @@ private fun CyberNavItem(
                 if (isSelected) {
                     Box(
                         modifier = Modifier
-                            .size(if (responsive.isCompact) 40.dp else 44.dp)
+                            .size(Dimens.bottomNavSelectedHaloSize)
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), Color.Transparent)
@@ -300,7 +300,7 @@ private fun CyberNavItem(
                     imageVector = if (isSelected) item.selectedIcon else item.icon,
                     contentDescription = stringResource(item.labelRes),
                     tint = iconColor,
-                    modifier = Modifier.size(if (responsive.isCompact) 26.dp else 28.dp)
+                    modifier = Modifier.size(responsive.bottomNavIconSize)
                 )
 
                 // ── Badge ──
@@ -308,9 +308,9 @@ private fun CyberNavItem(
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .offset(x = 6.dp, y = (-4).dp)
-                            .size(if (badgeCount > 9) 18.dp else 16.dp)
-                            .shadow(4.dp, CircleShape, spotColor = ErrorRed)
+                            .offset(x = Dimens.bottomNavBadgeOffsetX, y = Dimens.bottomNavBadgeOffsetY)
+                            .size(if (badgeCount > 9) Dimens.bottomNavBadgeWideSize else Dimens.bottomNavBadgeSize)
+                            .shadow(Dimens.bottomNavBadgeElevation, CircleShape, spotColor = ErrorRed)
                             .background(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(Color(0xFFFF5252), Color(0xFFFF1744))

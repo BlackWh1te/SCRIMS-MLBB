@@ -9,16 +9,21 @@ import androidx.compose.ui.unit.dp
 // ============================================
 
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small      = RoundedCornerShape(12.dp),
-    medium     = RoundedCornerShape(20.dp),
-    large      = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(Dimens.radiusXSmall),
+    small      = RoundedCornerShape(Dimens.radiusSmall),
+    medium     = RoundedCornerShape(Dimens.radiusMedium),
+    large      = RoundedCornerShape(Dimens.radiusLarge),
+    extraLarge = RoundedCornerShape(Dimens.radiusXLarge)
 )
 
 // Semantic shape tokens
-val iOSButtonShape  = RoundedCornerShape(16.dp)
-val iOSCardShape    = RoundedCornerShape(22.dp)
-val iOSSheetShape   = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
-val iOSChipShape    = RoundedCornerShape(9999.dp)
-val iOSInputShape   = RoundedCornerShape(14.dp)
+val iOSButtonShape  = RoundedCornerShape(Dimens.radiusLarge)
+val iOSCardShape    = RoundedCornerShape(Dimens.radiusIOSCard)
+val iOSSheetShape   = RoundedCornerShape(
+    topStart = Dimens.radiusXLarge,
+    topEnd = Dimens.radiusXLarge,
+    bottomStart = 0.dp,
+    bottomEnd = 0.dp
+)
+val iOSChipShape    = RoundedCornerShape(Dimens.radiusPill)
+val iOSInputShape   = RoundedCornerShape(Dimens.radiusMedium)

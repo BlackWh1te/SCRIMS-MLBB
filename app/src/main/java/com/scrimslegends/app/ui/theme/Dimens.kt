@@ -17,10 +17,14 @@ object Dimens {
     val paddingXXLarge = 48.dp
 
     // Corner Radii (For custom shapes outside Material3)
+    val radiusXSmall = 4.dp
     val radiusSmall = 8.dp
     val radiusMedium = 12.dp
     val radiusLarge = 16.dp
-    val radiusXLarge = 20.dp
+    val radiusXLarge = 24.dp
+    val radiusXXLarge = 32.dp
+    val radiusIOSCard = 22.dp
+    val radiusBottomNav = 28.dp
     val radiusPill = 9999.dp
 
     // Component Sizes
@@ -34,7 +38,20 @@ object Dimens {
     val avatarSizeMedium = 48.dp
     val avatarSizeLarge = 64.dp
     val avatarSizeExtraLarge = 96.dp
-    val bottomNavHeight = 64.dp
+    val bottomNavHeight = 72.dp
+    val bottomNavGlowHeight = 80.dp
+    val bottomNavIconSize = 26.dp
+    val bottomNavSelectedHaloSize = 44.dp
+    val bottomNavLabelHeight = 14.dp
+    val bottomNavShadowHeight = 8.dp
+    val bottomNavBadgeSize = 16.dp
+    val bottomNavBadgeWideSize = 18.dp
+    val bottomNavBadgeOffsetX = 6.dp
+    val bottomNavBadgeOffsetY = (-4).dp
+    val bottomNavBadgeElevation = 4.dp
+    val bottomNavBorderWidth = 1.25.dp
+    val bottomNavIndicatorGlowWidth = 3.dp
+    val bottomNavIndicatorCoreWidth = 2.dp
 
     // Elevation / Shadows
     val elevationLow = 2.dp

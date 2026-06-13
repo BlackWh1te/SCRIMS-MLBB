@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.scrimslegends.app.ui.theme.Dimens
 
 enum class AppWindowSizeClass {
     Compact,
@@ -53,10 +54,10 @@ fun rememberResponsiveMetrics(): ResponsiveMetrics {
                 cardSpacing = 10.dp,
                 bottomNavHorizontalPadding = 6.dp,
                 bottomNavBottomPadding = 8.dp,
-                bottomNavHeight = 60.dp,
-                bottomNavGlowHeight = 68.dp,
-                bottomNavCornerRadius = 22.dp,
-                bottomNavIconSize = 23.dp,
+                bottomNavHeight = Dimens.bottomNavHeight,
+                bottomNavGlowHeight = Dimens.bottomNavGlowHeight,
+                bottomNavCornerRadius = Dimens.radiusBottomNav,
+                bottomNavIconSize = Dimens.bottomNavIconSize,
                 bottomNavLabelSize = 9.sp,
                 showBottomNavLabels = false,
                 profileAvatarSize = 96.dp,
@@ -69,10 +70,10 @@ fun rememberResponsiveMetrics(): ResponsiveMetrics {
                 cardSpacing = 12.dp,
                 bottomNavHorizontalPadding = 8.dp,
                 bottomNavBottomPadding = 10.dp,
-                bottomNavHeight = 72.dp,
-                bottomNavGlowHeight = 80.dp,
-                bottomNavCornerRadius = 28.dp,
-                bottomNavIconSize = 26.dp,
+                bottomNavHeight = Dimens.bottomNavHeight,
+                bottomNavGlowHeight = Dimens.bottomNavGlowHeight,
+                bottomNavCornerRadius = Dimens.radiusBottomNav,
+                bottomNavIconSize = Dimens.bottomNavIconSize,
                 bottomNavLabelSize = 10.sp,
                 showBottomNavLabels = true,
                 profileAvatarSize = 110.dp,
@@ -85,10 +86,10 @@ fun rememberResponsiveMetrics(): ResponsiveMetrics {
                 cardSpacing = 14.dp,
                 bottomNavHorizontalPadding = 24.dp,
                 bottomNavBottomPadding = 12.dp,
-                bottomNavHeight = 76.dp,
-                bottomNavGlowHeight = 84.dp,
-                bottomNavCornerRadius = 28.dp,
-                bottomNavIconSize = 27.dp,
+                bottomNavHeight = Dimens.bottomNavHeight,
+                bottomNavGlowHeight = Dimens.bottomNavGlowHeight,
+                bottomNavCornerRadius = Dimens.radiusBottomNav,
+                bottomNavIconSize = Dimens.bottomNavIconSize,
                 bottomNavLabelSize = 11.sp,
                 showBottomNavLabels = true,
                 profileAvatarSize = 118.dp,
