@@ -448,10 +448,9 @@ fun ScrimListScreen(
                     displayScrims.isEmpty() -> {
                         EmptyState(
                             icon     = Icons.Default.SportsEsports,
-                            title    = if (selectedStatus != null)
-                                "No ${selectedStatus!!.name.lowercase()} scrims"
-                            else
-                                stringResource(R.string.no_scrims_found),
+                            title    = selectedStatus?.let { status ->
+                                "No ${status.name.lowercase()} scrims"
+                            } ?: stringResource(R.string.no_scrims_found),
                             subtitle = stringResource(R.string.no_scrims_found_explainer),
                             modifier = Modifier.fillMaxSize(),
                             action   = {}

@@ -903,7 +903,8 @@ fun TournamentDetailScreen(
         }
 
         // ── Resolve Dispute Dialog ──
-        if (showDisputeDialog && disputeMatchId != null) {
+        val selectedDisputeMatchId = disputeMatchId
+        if (showDisputeDialog && selectedDisputeMatchId != null) {
             val dm = disputeMatch
             AlertDialog(
                 onDismissRequest = { showDisputeDialog = false },
@@ -984,7 +985,7 @@ fun TournamentDetailScreen(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            onResolveDispute(disputeMatchId!!, if (disputeIsDraw) null else disputeWinnerTeamId, disputeIsDraw, disputeResolution)
+                            onResolveDispute(selectedDisputeMatchId, if (disputeIsDraw) null else disputeWinnerTeamId, disputeIsDraw, disputeResolution)
                             showDisputeDialog = false
                         },
                         enabled = disputeResolution.isNotBlank() && (disputeIsDraw || disputeWinnerTeamId != null)
@@ -997,10 +998,16 @@ fun TournamentDetailScreen(
         }
 
         // ── Roster Picker Dialog ──
-        if (showRosterDialog && rosterMatchId != null && rosterTeamId != null) {
-            val team = myTeams.find { it.id == rosterTeamId }
+        val selectedRosterMatchId = rosterMatchId
+        val selectedRosterTeamId = rosterTeamId
+        if (showRosterDialog && selectedRosterMatchId != null && selectedRosterTeamId != null) {
+            val team = myTeams.find { it.id == selectedRosterTeamId }
             val players = team?.players ?: emptyList()
-            val rosterSet = matchRoster.filter { it.matchId == rosterMatchId && it.teamId == rosterTeamId && it.gameNumber == rosterGameNumber }.map { it.userId }.toSet()
+            val rosterSet = matchRoster.filter {
+                it.matchId == selectedRosterMatchId &&
+                    it.teamId == selectedRosterTeamId &&
+                    it.gameNumber == rosterGameNumber
+            }.map { it.userId }.toSet()
             var selectedPlayerIds by remember(rosterMatchId, rosterTeamId, rosterGameNumber, matchRoster) {
                 mutableStateOf(rosterSet.toMutableSet())
             }
@@ -1074,7 +1081,7 @@ fun TournamentDetailScreen(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            onSetMatchRoster(rosterMatchId!!, rosterTeamId!!, rosterGameNumber, selectedPlayerIds.toList())
+                            onSetMatchRoster(selectedRosterMatchId, selectedRosterTeamId, rosterGameNumber, selectedPlayerIds.toList())
                             showRosterDialog = false
                         },
                         enabled = players.isNotEmpty()
@@ -1715,9 +1722,9 @@ private fun MatchVsCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (match.conversationId != null) {
+                    match.conversationId?.let { conversationId ->
                         OutlinedButton(
-                            onClick = { onNavigateToChat(match.conversationId!!) },
+                            onClick = { onNavigateToChat(conversationId) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),

@@ -51,7 +51,6 @@ fun TournamentHostRequestScreen(
     val isPending = existingRequest?.status == "pending"
     val isApproved = existingRequest?.status == "approved"
     val isRejected = existingRequest?.status == "rejected"
-    val hasExisting = existingRequest != null
 
     Box(
         modifier = Modifier
@@ -86,10 +85,11 @@ fun TournamentHostRequestScreen(
             }
 
             // ── Content ──
-            if (hasExisting && (isPending || isApproved || isRejected)) {
+            val request = existingRequest
+            if (request != null && (isPending || isApproved || isRejected)) {
                 // Show existing request status
                 ExistingRequestStatus(
-                    request = existingRequest!!,
+                    request = request,
                     isApproved = isApproved,
                     isPending = isPending,
                     isRejected = isRejected

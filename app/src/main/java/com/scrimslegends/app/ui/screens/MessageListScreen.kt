@@ -524,13 +524,13 @@ fun MessageListScreen(
         )
     }
 
-    if (reportTarget != null) {
+    reportTarget?.let { target ->
         ReportDialog(
-            targetName  = reportTarget!!.second,
+            targetName  = target.second,
             reasons     = UserReportReason.values().map { it.label },
             onDismiss   = { reportTarget = null },
             onSubmit    = { _, _ ->
-                onReportUser(reportTarget!!.first, reportTarget!!.second)
+                onReportUser(target.first, target.second)
                 reportTarget = null
             }
         )

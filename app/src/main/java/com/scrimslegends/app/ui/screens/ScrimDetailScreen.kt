@@ -585,9 +585,10 @@ fun ScrimDetailScreen(
         )
     }
 
-    if (showPlayerPicker && selectedApplyTeam != null) {
+    selectedApplyTeam?.let { applyTeam ->
+        if (showPlayerPicker) {
         PlayerPickerDialog(
-            team = selectedApplyTeam!!,
+            team = applyTeam,
             selectedPlayerIds = selectedPlayerIds,
             onPlayerToggle = { playerId ->
                 selectedPlayerIds = if (playerId in selectedPlayerIds) {
@@ -597,14 +598,12 @@ fun ScrimDetailScreen(
                 }
             },
             onConfirm = {
-                selectedApplyTeam?.let { team ->
-                    onApplyScrim(
-                        scrim,
-                        team.id,
-                        team.name,
-                        selectedPlayerIds.toList()
-                    )
-                }
+                onApplyScrim(
+                    scrim,
+                    applyTeam.id,
+                    applyTeam.name,
+                    selectedPlayerIds.toList()
+                )
                 showPlayerPicker = false
                 selectedApplyTeam = null
                 selectedPlayerIds = emptySet()
@@ -615,6 +614,7 @@ fun ScrimDetailScreen(
                 selectedPlayerIds = emptySet()
             }
         )
+        }
     }
 }
 

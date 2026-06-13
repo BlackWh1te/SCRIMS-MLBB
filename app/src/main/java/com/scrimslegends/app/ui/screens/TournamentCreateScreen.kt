@@ -526,9 +526,9 @@ fun TournamentCreateScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (validationError != null) {
+                validationError?.let { error ->
                     Text(
-                        text = validationError!!,
+                        text = error,
                         color = ErrorRed,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(bottom = 8.dp)

@@ -1693,10 +1693,10 @@ private fun CreatePostSheet(
                 }
             }
 
-            if (uploadError != null) {
+            uploadError?.let { error ->
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = uploadError!!,
+                    text = error,
                     color = ErrorRed,
                     fontSize = 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally)

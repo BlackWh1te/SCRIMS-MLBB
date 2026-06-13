@@ -290,13 +290,13 @@ fun LeaderboardScreen(
                 }
             }
 
-            if (reportTarget != null) {
+            reportTarget?.let { target ->
                 ReportDialog(
-                    targetName = reportTarget!!.second,
+                    targetName = target.second,
                     reasons = com.scrimslegends.app.ui.components.UserReportReason.values().map { it.label },
                     onDismiss = { reportTarget = null },
-                    onSubmit = { reason, description ->
-                        onReportUser(reportTarget!!.first, reportTarget!!.second, reportTarget!!.third)
+                    onSubmit = { _, _ ->
+                        onReportUser(target.first, target.second, target.third)
                         reportTarget = null
                     }
                 )
