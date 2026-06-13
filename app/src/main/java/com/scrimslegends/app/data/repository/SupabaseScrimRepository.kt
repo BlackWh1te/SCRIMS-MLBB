@@ -121,20 +121,21 @@ class SupabaseScrimRepository(
     override fun getAllScrims(page: Int, pageSize: Int): Flow<Result<List<Scrim>>> = flow {
         try {
             cacheManager.getFlow<List<Scrim>>(
-                key = SupabaseSession.userScopedKey(CACHE_KEY_ALL), memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
+                key = SupabaseSession.userScopedKey("${CACHE_KEY_ALL}_$page"), memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
                 roomLoader = {
                     val c = scrimDao.getAll()
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null
                 },
                 networkLoader = {
-                    // TODO: implement proper pagination (offset/limit) when UI supports it
                     // Cap at 200 rows to avoid unbounded data transfer on initial load
                     val r = api.getScrims(range = "${page * pageSize}-${(page + 1) * pageSize - 1}")
                     if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) } ?: emptyList()
                     else throw Exception("Failed to fetch scrims")
                 },
                 roomSaver = { list ->
-                    scrimDao.deleteAll()
+                    if (page == 0) {
+                        scrimDao.deleteAll()
+                    }
                     scrimDao.insertAll(list.map { mapScrimToEntity(it) })
                 }
             ).collect { scrims ->
@@ -149,7 +150,7 @@ class SupabaseScrimRepository(
 
     override fun getScrimsByTeam(teamId: String): Flow<Result<List<Scrim>>> = flow {
         try {
-            val key = "$CACHE_KEY_TEAM_PREFIX$teamId"
+            val key = SupabaseSession.userScopedKey("$CACHE_KEY_TEAM_PREFIX$teamId")
             cacheManager.getFlow<List<Scrim>>(
                 key = key, memoryTtlMs = MEM_TTL, roomTtlMs = ROOM_TTL,
                 roomLoader = {
@@ -157,14 +158,11 @@ class SupabaseScrimRepository(
                     if (c.isNotEmpty()) c.map { mapEntityToScrim(it) } else null
                 },
                 networkLoader = {
-                    // PostgREST OR filtering (team_id=eq.X OR opponent_team_id=eq.X) would be ideal
-                    // but requires a dedicated RPC or query-string support in the API interface.
-                    // For now we fetch a large slice and filter client-side.
-                    val r = api.getScrims(range = "0-999")
-                    if (r.isSuccessful) r.body()?.map { mapDtoToScrim(it) }?.filter {
-                        it.teamId == teamId || it.opponentTeamId == teamId
-                    } ?: emptyList()
-                    else throw Exception("Failed to fetch team scrims")
+                    // Fetch exclusively this team's scrims from DB directly to avoid global pagination limits truncating history
+                    val r = api.getScrims(orFilter = "(team_id.eq.$teamId,opponent_team_id.eq.$teamId)")
+                    if (r.isSuccessful) {
+                        r.body()?.map { mapDtoToScrim(it) } ?: emptyList()
+                    } else throw Exception("Failed to fetch team scrims")
                 },
                 roomSaver = { list ->
                     // Just insert the ones for this team, don't delete everything
@@ -606,11 +604,12 @@ class SupabaseScrimRepository(
                 return@flow
             }
 
-            // Best-effort downstream: match record, match result, and points awarding.
+            // Best-effort downstream: match record and match result.
+            // PTS is awarded server-side by the scrim completion trigger.
             // These are secondary to scrim completion; failures are logged but do not fail the operation.
             var matchId: String? = null
             try {
-                val emr = api.getMatches(scrimId = scrimId)
+                val emr = api.getMatches(scrimId = PostgrestFilter.eq(scrimId))
                 if (emr.isSuccessful) {
                     val em = emr.body()?.firstOrNull()
                     if (em != null) {
@@ -645,13 +644,6 @@ class SupabaseScrimRepository(
                     }
                 }
             } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to create/update match result", e) }
-
-            try {
-                if (!winnerTeamId.isNullOrBlank()) {
-                    val ar = api.awardScrimPoints(mapOf("p_scrim_id" to scrimId, "p_winner_team_id" to winnerTeamId, "p_pts_per_win" to SupabaseMatchResultRepository.WIN_POINTS, "p_pts_per_loss" to SupabaseMatchResultRepository.LOSS_POINTS_ABS))
-                    if (!ar.isSuccessful) Timber.w("ScrimRepo", "awardScrimPoints failed: ${ar.errorBody()?.string()}")
-                }
-            } catch (e: Exception) { Timber.w("ScrimRepo", "Failed to award scrim points", e) }
 
             invalidateScrimCaches()
             getScrimById(scrimId).collect { result -> emit(result.map { it ?: throw Exception("Scrim not found after completion") }) }
@@ -883,11 +875,13 @@ class SupabaseScrimRepository(
         val parseTs = { raw: String? -> DateUtils.parseIsoToMillis(raw) }
         val teamARoster = rosters.filter { it.teamId == dto.teamId }
         val teamBRoster = rosters.filter { it.teamId == dto.opponentTeamId }
+        val parsedLeaderId = dto.teamInfo?.get("leader_id") ?: ""
+        
         return Scrim(
             id = dto.id,
             teamId = dto.teamId,
             teamName = dto.teamName ?: "",
-            teamLeader = "",
+            teamLeader = parsedLeaderId,
             gameMode = try { GameMode.valueOf(dto.gameMode) } catch (_: Exception) { GameMode.RANKED },
             region = try { Region.valueOf(dto.region) } catch (_: Exception) { try { Region.fromDisplayName(dto.region) } catch (_: Exception) { Region.EU } },
             skillLevel = try { SkillLevel.valueOf(dto.skillLevel) } catch (_: Exception) { SkillLevel.ALL },

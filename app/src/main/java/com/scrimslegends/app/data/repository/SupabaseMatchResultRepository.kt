@@ -8,6 +8,13 @@ import timber.log.Timber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.Collections
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.scrimslegends.app.data.cache.UnifiedCacheManager
+import com.scrimslegends.app.data.local.MatchResultDao
+import com.scrimslegends.app.data.local.MatchResultEntity
+import com.scrimslegends.app.data.local.entityToModel
+import com.scrimslegends.app.data.local.modelToEntity
 
 /**
  * Supabase-backed match result repository.
@@ -19,19 +26,24 @@ import java.util.Collections
  * After:  3 API calls per match result (1 scrim + 1 roster + 1 batch profiles)
  */
 class SupabaseMatchResultRepository(
+    private val cacheManager: UnifiedCacheManager,
+    private val matchResultDao: MatchResultDao,
     private val profileCache: ProfileCacheRepository
 ) : MatchResultRepositoryInterface {
 
     companion object {
-        // Points values: WIN_POINTS is added, LOSS_POINTS_ABS is the magnitude passed to the RPC.
-        // P0-4 FIX: The award_scrim_points RPC negates the loss internally (-p_pts_per_loss),
-        // so we must pass a POSITIVE value. We no longer pass -15; we pass 15.
+        // Points values used for local UI previews. Real PTS changes are awarded server-side.
         const val WIN_POINTS = 25
-        const val LOSS_POINTS = -15                  // used for local UI display only
-        const val LOSS_POINTS_ABS = 15               // used when calling the RPC
+        const val LOSS_POINTS = -15
+
+        private const val CACHE_KEY_ALL = "match_results_ranked_all"
+        private const val CACHE_KEY_TEAM_PREFIX = "match_results_ranked_team_"
+        private const val MEMORY_TTL_MS = 60L * 1000 // 1 minute
+        private const val ROOM_TTL_MS = 5L * 60 * 1000 // 5 minutes
     }
 
     private val api = SupabaseService.api
+    private val gson = Gson()
 
     // ─── Team name cache (avoids repeated fetchTeamName calls) ───
     // HARDENED: Bounded LRU cache (max 50 entries) to prevent unbounded growth
@@ -41,39 +53,59 @@ class SupabaseMatchResultRepository(
         }
     })
 
-    override suspend fun getAllMatchResults(): Flow<Result<List<MatchResult>>> = flow {
+    override suspend fun getAllMatchResults(forceRefresh: Boolean): Flow<Result<List<MatchResult>>> = flow {
         try {
-            // Fetch scrim match results
-            val scrimResults = mutableListOf<MatchResult>()
-            val response = api.getScrims(status = "Completed", order = "created_at.desc")
-            if (response.isSuccessful) {
-                val scrims = response.body() ?: emptyList()
-                scrimResults.addAll(scrims.map { mapScrimToMatchResult(it) })
-            }
-
-            // Fetch completed tournament Swiss matches
-            val tournamentResults = mutableListOf<MatchResult>()
-            try {
-                val swissResponse = api.getTournamentSwissMatches(
-                    select = "*,tournaments(id,title)",
-                    order = "created_at.desc"
-                )
-                if (swissResponse.isSuccessful) {
-                    val swissMatches = swissResponse.body() ?: emptyList()
-                    for (match in swissMatches) {
-                        val status = match["status"]?.toString() ?: ""
-                        if (status == "completed") {
-                            val tournamentMap = match["tournaments"] as? Map<String, Any?>
-                            val tournamentTitle = tournamentMap?.get("title")?.toString()
-                            tournamentResults.add(mapSwissMatchToMatchResult(match, tournamentTitle))
-                        }
+            cacheManager.getFlow(
+                key = CACHE_KEY_ALL,
+                forceRefresh = forceRefresh,
+                memoryTtlMs = MEMORY_TTL_MS,
+                roomTtlMs = ROOM_TTL_MS,
+                roomLoader = {
+                    matchResultDao.getAll().map { entityToModel(it) }
+                },
+                roomSaver = { models ->
+                    matchResultDao.deleteAll()
+                    matchResultDao.insertAll(models.map { modelToEntity(it) })
+                },
+                networkLoader = {
+                    // Fetch scrim match results
+                    val scrimResults = mutableListOf<MatchResult>()
+                    val response = api.getScrims(
+                        status = "eq.Completed",
+                        gameMode = "eq.RANKED",
+                        order = "created_at.desc"
+                    )
+                    if (response.isSuccessful) {
+                        val scrims = response.body() ?: emptyList()
+                        scrimResults.addAll(scrims.map { mapScrimToMatchResult(it) })
                     }
+        
+                    // Fetch completed tournament Swiss matches
+                    val tournamentResults = mutableListOf<MatchResult>()
+                    try {
+                        val swissResponse = api.getTournamentSwissMatches(
+                            select = "*,tournaments(id,title)",
+                            order = "created_at.desc"
+                        )
+                        if (swissResponse.isSuccessful) {
+                            val swissMatches = swissResponse.body() ?: emptyList()
+                            for (match in swissMatches) {
+                                val status = match["status"]?.toString() ?: ""
+                                if (status == "completed") {
+                                    val tournamentMap = match["tournaments"] as? Map<String, Any?>
+                                    val tournamentTitle = tournamentMap?.get("title")?.toString()
+                                    tournamentResults.add(mapSwissMatchToMatchResult(match, tournamentTitle))
+                                }
+                            }
+                        }
+                    } catch (e: Exception) { Timber.w("MatchResultRepo", "Failed to fetch tournament matches for history", e) }
+        
+                    // Merge and sort by createdAt descending
+                    (scrimResults + tournamentResults).sortedByDescending { it.createdAt }
                 }
-            } catch (e: Exception) { Timber.w("MatchResultRepo", "Failed to fetch tournament matches for history", e) }
-
-            // Merge and sort by createdAt descending
-            val allResults = (scrimResults + tournamentResults).sortedByDescending { it.createdAt }
-            emit(Result.success(allResults))
+            ).collect { list ->
+                emit(Result.success(list))
+            }
         } catch (e: Exception) {
             emit(Result.failure(e))
         }
@@ -97,12 +129,20 @@ class SupabaseMatchResultRepository(
                     emit(Result.success(null))
                 }
             } else {
-                // Fallback: find by match id -> scrim
+                // Fallback 1: find by match id -> scrim
                 val matchResponse = api.getMatchById(PostgrestFilter.eq(id))
                 val matchDto = matchResponse.body()?.firstOrNull()
-                val scrim = if (matchDto != null) {
-                    api.getScrimById(PostgrestFilter.eq(matchDto.scrimId)).body()?.firstOrNull()
-                } else null
+                if (matchDto != null) {
+                    val scrim = api.getScrimById(PostgrestFilter.eq(matchDto.scrimId)).body()?.firstOrNull()
+                    if (scrim != null) {
+                        emit(Result.success(mapScrimToMatchResult(scrim)))
+                        return@flow
+                    }
+                }
+                
+                // Fallback 2: The id might just be a scrimId (because matches table is unused)
+                val scrimResponse = api.getScrimById(PostgrestFilter.eq(id))
+                val scrim = scrimResponse.body()?.firstOrNull()
                 if (scrim != null) {
                     emit(Result.success(mapScrimToMatchResult(scrim)))
                 } else {
@@ -117,7 +157,7 @@ class SupabaseMatchResultRepository(
     override suspend fun getMatchResultsForScrim(scrimId: String): Flow<Result<MatchResult?>> = flow {
         try {
             // Find the match by scrim_id, then its match_result
-            val matchResponse = api.getMatches(scrimId = scrimId)
+            val matchResponse = api.getMatches(scrimId = PostgrestFilter.eq(scrimId))
             val matchDto = matchResponse.body()?.firstOrNull()
             if (matchDto != null) {
                 val mrResponse = api.getMatchResults(PostgrestFilter.eq(matchDto.id))
@@ -137,42 +177,61 @@ class SupabaseMatchResultRepository(
         }
     }
 
-    override suspend fun getMatchResultsForTeam(teamId: String): Flow<Result<List<MatchResult>>> = flow {
+    override suspend fun getMatchResultsForTeam(teamId: String, forceRefresh: Boolean): Flow<Result<List<MatchResult>>> = flow {
         try {
-            // HARDENED: Server-side filter instead of fetching ALL matches
-            val matchResponse = api.getMatchesForTeam(
-                orFilter = "(team_a_id.eq.$teamId,team_b_id.eq.$teamId)"
-            )
-            if (matchResponse.isSuccessful) {
-                val matches = matchResponse.body() ?: emptyList()
-                if (matches.isEmpty()) {
-                    emit(Result.success(emptyList()))
-                    return@flow
+            cacheManager.getFlow(
+                key = "$CACHE_KEY_TEAM_PREFIX$teamId",
+                forceRefresh = forceRefresh,
+                memoryTtlMs = MEMORY_TTL_MS,
+                roomTtlMs = ROOM_TTL_MS,
+                roomLoader = {
+                    matchResultDao.getByTeamId(teamId).map { entityToModel(it) }
+                },
+                roomSaver = { models ->
+                    matchResultDao.insertAll(models.map { modelToEntity(it) })
+                },
+                networkLoader = {
+                    // Fetch completed scrims for this team
+                    val scrimResults = mutableListOf<MatchResult>()
+                    // Only fetch scrims where team_id = teamId OR opponent_team_id = teamId, AND status = Completed
+                    val response = api.getScrims(
+                        status = "eq.Completed",
+                        gameMode = "eq.RANKED",
+                        orFilter = "(team_id.eq.$teamId,opponent_team_id.eq.$teamId)"
+                    )
+                    if (response.isSuccessful) {
+                        val teamScrims = response.body() ?: emptyList()
+                        scrimResults.addAll(teamScrims.map { mapScrimToMatchResult(it) })
+                    }
+        
+                    // Fetch completed tournament Swiss matches for this team
+                    val tournamentResults = mutableListOf<MatchResult>()
+                    try {
+                        val swissResponse = api.getTournamentSwissMatches(
+                            select = "*,tournaments(id,title)",
+                            order = "created_at.desc"
+                        )
+                        if (swissResponse.isSuccessful) {
+                            val swissMatches = swissResponse.body() ?: emptyList()
+                            for (match in swissMatches) {
+                                val teamA = match["team_a_id"]?.toString() ?: ""
+                                val teamB = match["team_b_id"]?.toString() ?: ""
+                                val status = match["status"]?.toString() ?: ""
+                                
+                                if (status == "completed" && (teamA == teamId || teamB == teamId)) {
+                                    val tournamentMap = match["tournaments"] as? Map<String, Any?>
+                                    val tournamentTitle = tournamentMap?.get("title")?.toString()
+                                    tournamentResults.add(mapSwissMatchToMatchResult(match, tournamentTitle))
+                                }
+                            }
+                        }
+                    } catch (e: Exception) { Timber.w("MatchResultRepo", "Failed to fetch tournament matches for team", e) }
+        
+                    // Merge and sort
+                    (scrimResults + tournamentResults).sortedByDescending { it.createdAt }
                 }
-
-                // Batch-fetch all scrims by their IDs in ONE call
-                val scrimIds = matches.map { it.scrimId }.distinct()
-                val scrims = if (scrimIds.isNotEmpty()) {
-                    api.getScrimsByIds(PostgrestFilter.inList(scrimIds)).body() ?: emptyList()
-                } else emptyList()
-                val scrimMap = scrims.associateBy { it.id }
-
-                // Batch-fetch all match_results by match IDs in ONE call
-                val matchIds = matches.map { it.id }.distinct()
-                val matchResults = if (matchIds.isNotEmpty()) {
-                    api.getMatchResultsByMatchIds(PostgrestFilter.inList(matchIds)).body() ?: emptyList()
-                } else emptyList()
-                val mrMap = matchResults.associateBy { it.matchId }
-
-                // Map everything without individual API calls
-                val results = matches.mapNotNull { matchDto ->
-                    val scrim = scrimMap[matchDto.scrimId]
-                    val mr = mrMap[matchDto.id]
-                    if (scrim != null) mapScrimToMatchResult(scrim, mr) else null
-                }
-                emit(Result.success(results))
-            } else {
-                emit(Result.failure(Exception("Failed to fetch team match results")))
+            ).collect { list ->
+                emit(Result.success(list))
             }
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -214,7 +273,7 @@ class SupabaseMatchResultRepository(
             val isTeamA = scrim.teamId == teamId
 
             if (existingMr != null) {
-                api.updateMatchResult(
+                val response = api.updateMatchResult(
                     PostgrestFilter.eq(existingMr.id),
                     mutableMapOf<String, Any>("winner_team_id" to reportedWinnerId).apply {
                         screenshotUrl?.let {
@@ -222,8 +281,12 @@ class SupabaseMatchResultRepository(
                         }
                     }
                 )
+                if (!response.isSuccessful) {
+                    emit(Result.failure(Exception("Failed to update match result: ${response.code()}")))
+                    return@flow
+                }
             } else {
-                api.createMatchResult(
+                val response = api.createMatchResult(
                     MatchResultDto(
                         matchId = matchId,  // ← correct FK to matches.id
                         winnerTeamId = reportedWinnerId,
@@ -231,6 +294,10 @@ class SupabaseMatchResultRepository(
                         teamBScreenshotUrl = if (!isTeamA) screenshotUrl else null
                     )
                 )
+                if (!response.isSuccessful) {
+                    emit(Result.failure(Exception("Failed to create match result: ${response.code()}")))
+                    return@flow
+                }
             }
 
             emit(Result.success(mapScrimToMatchResult(scrim)))
@@ -315,7 +382,7 @@ class SupabaseMatchResultRepository(
             val mrResponse = api.getMatchResults(PostgrestFilter.eq(matchResultId))
             val mr = mrResponse.body()?.firstOrNull()
             if (mr != null) {
-                api.updateMatchResult(
+                val updateResponse = api.updateMatchResult(
                     PostgrestFilter.eq(mr.id),
                     mutableMapOf<String, Any>(
                         "winner_team_id" to confirmedWinnerId,
@@ -324,6 +391,10 @@ class SupabaseMatchResultRepository(
                         adminNotes?.let { put("verification_notes", it) }
                     }
                 )
+                if (!updateResponse.isSuccessful) {
+                    emit(Result.failure(Exception("Failed to update match result: ${updateResponse.code()}")))
+                    return@flow
+                }
             }
             // BUGFIX: resolve scrim through match_results -> matches -> scrims chain
             val scrim = if (mr != null) {
@@ -353,7 +424,7 @@ class SupabaseMatchResultRepository(
             if (mr != null) {
                 val currentUserId = com.scrimslegends.app.data.service.SupabaseSession.getUserIdOrNull()
                 // Fetch match to determine which team the user is on
-                val matchResponse = api.getMatches(PostgrestFilter.eq(mr.matchId))
+                val matchResponse = api.getMatchById(PostgrestFilter.eq(mr.matchId))
                 val match = matchResponse.body()?.firstOrNull()
                 val isTeamA = match != null && currentUserId != null && isUserInTeam(match.teamAId, currentUserId)
                 val column = if (isTeamA) "team_a_screenshot_url" else "team_b_screenshot_url"
@@ -416,7 +487,7 @@ class SupabaseMatchResultRepository(
                     role = if (entry.isActive) "Active" else "Sub",
                     isActive = entry.isActive,
                     isWinner = isWinner,
-                    pointsChange = if (entry.isActive) (if (isWinner) WIN_POINTS else LOSS_POINTS) else 0
+                    pointsChange = if (entry.isActive) (if (isWinner) WIN_POINTS * scrimDto.bestOf else LOSS_POINTS * scrimDto.bestOf) else 0
                 )
             }
 
@@ -431,7 +502,7 @@ class SupabaseMatchResultRepository(
                     role = if (entry.isActive) "Active" else "Sub",
                     isActive = entry.isActive,
                     isWinner = isWinner,
-                    pointsChange = if (entry.isActive) (if (isWinner) WIN_POINTS else LOSS_POINTS) else 0
+                    pointsChange = if (entry.isActive) (if (isWinner) WIN_POINTS * scrimDto.bestOf else LOSS_POINTS * scrimDto.bestOf) else 0
                 )
             }
 
@@ -473,6 +544,7 @@ class SupabaseMatchResultRepository(
             adminNotes = mrDto?.verificationNotes,
             resolvedAt = mrDto?.let { DateUtils.parseIsoToMillis(it.createdAt) }
                 ?: scrimDto.resultSubmittedAt?.let { DateUtils.parseIsoToMillis(it) },
+            createdAt = scrimDto.createdAt?.let { DateUtils.parseIsoToMillis(it) } ?: System.currentTimeMillis(),
             teamARoster = teamARoster,
             teamBRoster = teamBRoster
         )

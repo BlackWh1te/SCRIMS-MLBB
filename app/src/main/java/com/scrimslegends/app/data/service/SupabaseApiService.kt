@@ -60,6 +60,7 @@ data class ProfileDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("username") val username: String = "",
     @SerializedName("email") val email: String = "",
+    @SerializedName("short_id") val shortId: String? = null,
     @SerializedName("game_id") val gameId: String? = null,
     @SerializedName("is_admin") val isAdmin: Boolean = false,
     @SerializedName("is_banned") val isBanned: Boolean = false,
@@ -71,7 +72,8 @@ data class ProfileDto(
     @SerializedName("created_at") val createdAt: String = "",
     @SerializedName("role") val role: String? = null,
     @SerializedName("bio") val bio: String? = null,
-    @SerializedName("main_heroes") val mainHeroes: List<String>? = null
+    @SerializedName("main_heroes") val mainHeroes: List<String>? = null,
+    @SerializedName("frozen_until") val frozenUntil: String? = null
 )
 
 data class PlayerStatsDto(
@@ -107,7 +109,8 @@ data class TeamDto(
     @SerializedName("available_time_end") val availableTimeEnd: String? = null,
     @SerializedName("timezone") val timezone: String? = null,
     @SerializedName("logo_url") val logoUrl: String? = null,
-    @SerializedName("is_open_for_applications") val isOpenForApplications: Boolean = false,
+    @SerializedName("invite_code") val inviteCode: String? = null,
+      @SerializedName("is_open_for_applications") val isOpenForApplications: Boolean = false,
     @SerializedName("created_at") val createdAt: String = ""
 )
 
@@ -170,6 +173,7 @@ data class ScrimDto(
     @SerializedName("team_b_ready") val teamBReady: Boolean = false,
     @SerializedName("team_a_ready_at") val teamAReadyAt: String? = null,
     @SerializedName("team_b_ready_at") val teamBReadyAt: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("team_a_screenshot_url") val teamAScreenshotUrl: String? = null,
     @SerializedName("team_b_screenshot_url") val teamBScreenshotUrl: String? = null,
     @SerializedName("team_a_screenshot_uploaded_at") val teamAScreenshotUploadedAt: String? = null,
@@ -184,7 +188,8 @@ data class ScrimDto(
     @SerializedName("region") val region: String = "EU",
     @SerializedName("skill_level") val skillLevel: String = "ALL",
     @SerializedName("max_players") val maxPlayers: Int = 10,
-    @SerializedName("current_players") val currentPlayers: Int = 0
+    @SerializedName("current_players") val currentPlayers: Int = 0,
+    @SerializedName("teams") val teamInfo: Map<String, String>? = null
 )
 
 // ─── Scrim Application DTO ───
@@ -362,6 +367,50 @@ data class NotificationDto(
         get() = message?.takeIf { it.isNotBlank() } ?: body?.takeIf { it.isNotBlank() } ?: ""
 }
 
+// ─── Support Ticket DTOs ───
+
+data class SupportTicketDto(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("user_id") val userId: String = "",
+    @SerializedName("subject") val subject: String = "",
+    @SerializedName("message") val message: String = "",
+    @SerializedName("category") val category: String = "other",
+    @SerializedName("priority") val priority: String = "medium",
+    @SerializedName("status") val status: String = "Open",
+    @SerializedName("admin_notes") val adminNotes: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null
+)
+
+data class SupportMessageDto(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("ticket_id") val ticketId: String = "",
+    @SerializedName("sender_id") val senderId: String = "",
+    @SerializedName("message") val message: String = "",
+    @SerializedName("is_admin_reply") val isAdminReply: Boolean = false,
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
+// ─── User Achievement DTOs ───
+
+data class UserAchievementDto(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("user_id") val userId: String = "",
+    @SerializedName("achievement_id") val achievementId: String = "",
+    @SerializedName("granted_by") val grantedBy: String? = null,
+    @SerializedName("granted_at") val grantedAt: String? = null
+)
+
+data class AchievementAuditLogDto(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("admin_id") val adminId: String? = null,
+    @SerializedName("user_id") val userId: String = "",
+    @SerializedName("achievement_id") val achievementId: String = "",
+    @SerializedName("action") val action: String = "",
+    @SerializedName("reason") val reason: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
 // ─── Message DTO ───
 
 data class MessageDto(
@@ -387,7 +436,7 @@ data class MessageDto(
     @SerializedName("reply_to_snippet") val replyToSnippet: String? = null,
     @SerializedName("reply_to_sender_name") val replyToSenderName: String? = null,
     // ── Soft delete ──
-    @SerializedName("is_deleted") val isDeleted: Boolean = false
+    @SerializedName("is_deleted") val isDeleted: Boolean? = null
 )
 
 data class ConversationDto(
@@ -399,11 +448,13 @@ data class ConversationDto(
     @SerializedName("participant_a_team_id") val participantATeamId: String = "",
     @SerializedName("participant_a_team_name") val participantATeamName: String = "",
     @SerializedName("participant_a_avatar_url") val participantAAvatarUrl: String? = null,
+    @SerializedName("participant_a_last_seen") val participantALastSeen: String? = null,
     @SerializedName("participant_b_id") val participantBId: String = "",
     @SerializedName("participant_b_name") val participantBName: String = "",
     @SerializedName("participant_b_team_id") val participantBTeamId: String = "",
     @SerializedName("participant_b_team_name") val participantBTeamName: String = "",
     @SerializedName("participant_b_avatar_url") val participantBAvatarUrl: String? = null,
+    @SerializedName("participant_b_last_seen") val participantBLastSeen: String? = null,
     @SerializedName("last_message") val lastMessage: String = "",
     @SerializedName("last_message_time") val lastMessageTime: String = "",
     @SerializedName("chat_opens_at") val chatOpensAt: String = "",
@@ -516,21 +567,12 @@ interface SupabaseApiService {
         @Query("user_id") userId: String? = null
     ): Response<List<PlayerStatsDto>>
 
-    @PATCH("player_stats")
-    suspend fun updatePlayerStats(
-        @Query("user_id") userId: String,
-        @Body stats: Map<String, @JvmSuppressWildcards Any>
-    ): Response<List<PlayerStatsDto>>
-
     @GET("player_stats")
     suspend fun getLeaderboard(
         @Query("select") select: String = "*,profiles(username,avatar_url)",
         @Query("order") order: String = "pts.desc",
         @Header("Range") range: String = "0-49"
     ): Response<List<LeaderboardEntryDto>>
-
-    @POST("player_stats")
-    suspend fun createPlayerStats(@Body stats: PlayerStatsDto): Response<List<PlayerStatsDto>>
 
     // ─── Team Endpoints ───
 
@@ -632,6 +674,12 @@ interface SupabaseApiService {
     @DELETE("team_applications")
     suspend fun deleteTeamApplication(@Query("id") id: String): Response<Unit>
 
+    @POST("rpc/apply_to_team_by_team_id")
+    suspend fun applyToTeamByTeamIdRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @POST("rpc/apply_to_team_by_invite_code")
+    suspend fun applyToTeamByInviteCodeRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // ─── Scrim Endpoints ───
 
     @GET("scrims")
@@ -641,7 +689,9 @@ interface SupabaseApiService {
         @Query("game_mode") gameMode: String? = null,
         @Query("region") region: String? = null,
         @Query("skill_level") skillLevel: String? = null,
-        @Query("order") order: String = "created_at.desc"
+        @Query("or", encoded = true) orFilter: String? = null,
+        @Query("order") order: String = "created_at.desc",
+        @Query("select") select: String = "*,teams!team_id(leader_id)"
     ): Response<List<ScrimDto>>
 
     @POST("rpc/clear_conversation_history")
@@ -649,14 +699,14 @@ interface SupabaseApiService {
 
     @GET("scrims")
     suspend fun getScrimById(
-        @Query("id") id: String
+        @Query("id") id: String,
+        @Query("select") select: String = "*,teams!team_id(leader_id)"
     ): Response<List<ScrimDto>>
 
-    // HARDENED: Batch query for scrims by IDs (avoids N+1 in match history)
     @GET("scrims")
     suspend fun getScrimsByIds(
         @Query("id") idFilter: String,
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "*,teams!team_id(leader_id)"
     ): Response<List<ScrimDto>>
 
     @POST("scrims")
@@ -688,7 +738,7 @@ interface SupabaseApiService {
     // HARDENED: Batch query for team match history (avoids fetching ALL matches)
     @GET("matches")
     suspend fun getMatchesForTeam(
-        @Query("or") orFilter: String,
+        @Query("or", encoded = true) orFilter: String,
         @Query("order") order: String = "created_at.desc"
     ): Response<List<MatchDto>>
 
@@ -846,7 +896,7 @@ interface SupabaseApiService {
 
     @GET("conversations")
     suspend fun getConversations(
-        @Query("or") orFilter: String? = null,
+        @Query("or", encoded = true) orFilter: String? = null,
         @Query("id") idFilter: String? = null,
         @Query("participant_a_id") participantAId: String? = null,
         @Query("participant_b_id") participantBId: String? = null,
@@ -898,10 +948,6 @@ interface SupabaseApiService {
     @POST("rpc/get_available_scrims")
     suspend fun getAvailableScrims(@Body params: Map<String, String>): Response<List<ScrimDto>>
 
-    // P0-4 FIX: award_scrim_points — app must pass POSITIVE loss points; RPC negates internally
-    @POST("rpc/award_scrim_points")
-    suspend fun awardScrimPoints(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
-
     // mark_messages_as_read RPC — updates is_read for all unread messages from other sender
     @POST("rpc/mark_messages_as_read")
     suspend fun markConversationAsRead(@Body params: Map<String, String>): Response<Unit>
@@ -946,6 +992,10 @@ interface SupabaseApiService {
     @POST("rpc/cancel_scrim_application")
     suspend fun cancelScrimApplicationRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
 
+    // Atomic create scrim
+    @POST("rpc/create_scrim_atomic")
+    suspend fun createScrimAtomicRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
     // Atomic apply to scrim: locks scrim row, verifies still open, creates app
     @POST("rpc/apply_to_scrim")
     suspend fun applyToScrimRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
@@ -975,6 +1025,16 @@ interface SupabaseApiService {
 
     @POST("rpc/get_conversation_unread_count")
     suspend fun getConversationUnreadCountRpc(@Body params: Map<String, String>): Response<Int>
+
+    // ─── User Blocking RPC ───
+    @POST("rpc/block_user")
+    suspend fun blockUserRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
+
+    @POST("rpc/unblock_user")
+    suspend fun unblockUserRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Unit>
+
+    @POST("rpc/check_if_blocked")
+    suspend fun checkIfBlockedRpc(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, Boolean>>
 
     @POST("rpc/get_or_create_team_conversation")
     suspend fun getOrCreateTeamConversation(@Body params: Map<String, @JvmSuppressWildcards Any>): Response<List<ConversationDto>>
@@ -1221,3 +1281,8 @@ object SupabaseService {
         SupabaseRetrofitClient.retrofit.create(SupabaseApiService::class.java)
     }
 }
+
+
+
+
+
