@@ -8,6 +8,31 @@
 
 ---
 
+## 2026-06-13 23:59 +04:00 — fix(chat): own sent messages rendering on the received side
+
+### Commits
+- `173e757` — fix(chat): render own messages on sent side by deriving currentUserId from auth identity
+
+### Problem
+User report: "when I send a message it visually shows that I receive my own message" — sent messages render on the received (left) side with received styling.
+
+### Root cause
+`ChatScreen` decides ownership with `isFromMe = message.senderId == currentUserId`. The `messages` RLS (`INSERT WITH CHECK (sender_id = auth.uid())`, no default/trigger) guarantees every stored `sender_id` equals the authenticated user id, and `ChatRoomViewModel.sendMessage` stamps the optimistic row with the same `authRepository.getCurrentUser()`. So the message side is correct **iff** `currentUserId` equals that auth identity. But `AuthNavigation` passed `currentUserId = userProfile?.id ?: ""`. When the `userProfile` StateFlow is momentarily null/stale (init, process restore, deep link, profile refetch), `currentUserId` becomes `""`, so every message — including the user's own — compares against `""` and renders as received.
+
+### Fix
+- Added `ChatRoomViewModel.currentUserId()` returning `authRepository.getCurrentUser()` — the exact identity stamped on outgoing messages and enforced by RLS.
+- `AuthNavigation`: both the Chat (`Screen.Chat`) and Messages tab (`Screen.MessageList`) destinations now derive `userId = chatRoomViewModel.currentUserId().ifBlank { userProfile?.id ?: "" }`, tying the "is this mine" identity to the send-side identity instead of a parallel, possibly-null profile id.
+
+### Verification
+- `.\gradlew.bat :app:assembleDebug` — **BUILD SUCCESSFUL** (3m45s), no compile errors.
+- Logic: data path audited end-to-end (send → RLS → DTO `sender_id`→`senderId` → Room entity → paging → render) is consistent; the only divergence was the UI's `currentUserId` source, now fixed.
+
+### Notes
+- `[INTENTIONAL FIX]` — Chat `currentUserId` must come from `authRepository.getCurrentUser()` (auth.uid), NOT solely `userProfile?.id`, because the profile StateFlow can be null/stale while messaging is active. Do NOT revert to `userProfile?.id ?: ""`.
+- If the symptom persists on device, capture a log of `currentUserId` vs a known message `senderId` to confirm whether a deeper identity mismatch exists (e.g., a `profiles.id` row that differs from `auth.uid()`).
+
+---
+
 ## 2026-06-13 20:05 +04:00 — feat(ui): brand fonts + M3 surface-container tiers (foundation pass 1)
 
 ### Commits
