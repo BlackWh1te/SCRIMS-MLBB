@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-06-14 01:28 +04:00 — fix(ui): add theme-aware brand accent
+
+### Commits
+- `651a515` — fix(ui): add theme-aware brand accent
+
+### Problem
+Raw `GoldPrimary` (`#FFD700`) has poor contrast on the light theme’s white and near-white surfaces. Chat and fallback navigation states used the raw gold directly for text, icons, progress indicators, borders, cursor color, and unread separators.
+
+### Fix
+- Added `GoldOnLight = #8A6500` and `appBrandAccentColor()` in `Color.kt`; dark surfaces keep MLBB gold, while light surfaces use the darker gold.
+- Routed chat gold accents through `appBrandAccentColor()` for typing status, loading/progress accents, reply UI, focused input/cursor, send button, delivery/read state, retry action, application message UI, and new-message separator.
+- Routed `AuthNavigation` fallback "Go Back" and deep-link loading spinner through the same brand accent.
+
+### Verification
+- `rg -n "GoldPrimary" app/src/main/java/com/scrimslegends/app/ui` — only the theme definition and `appBrandAccentColor()` fallback remain.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (28s incremental rebuild). Remaining warnings are pre-existing unused/shadowed values.
+
+### Notes
+- `[INTENTIONAL FIX]` — UI code should use `appBrandAccentColor()` for readable brand-gold accents instead of directly using `GoldPrimary` on theme surfaces.
+- `ChatScreen.kt` still has unrelated unstaged presence/status edits in the worktree; the commit staged only the accent routing hunks.
+
+---
+
 ## 2026-06-14 01:17 +04:00 — refactor(ui): consolidate bottom nav dimension tokens
 
 ### Commits
