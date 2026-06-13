@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // ============================================
 // Scrims Legends — Color System
@@ -15,6 +16,7 @@ val PurplePrimary  = Color(0xFF7C4DFF)   // Electric purple
 
 // ── Light Theme Semantic Colors ──────────────
 val GoldPrimary    = Color(0xFFFFD700)
+val GoldOnLight    = Color(0xFF8A6500)
 val LightBackground    = Color(0xFFF8F9FA)
 val LightSurface       = Color(0xFFFFFFFF)
 val LightSurfaceVariant= Color(0xFFF0F4F8)
@@ -200,6 +202,10 @@ fun appTextPrimaryColor(): Color = MaterialTheme.colorScheme.onSurface
 fun appTextSecondaryColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant
 @Composable
 fun appBorderColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+@Composable
+fun appBrandAccentColor(): Color {
+    return if (MaterialTheme.colorScheme.background.luminance() > 0.5f) GoldOnLight else GoldPrimary
+}
 
 fun cardGradientBrush()    : Brush = Brush.verticalGradient(colors = CardGradient)
 fun successGradientBrush() : Brush = Brush.horizontalGradient(colors = SuccessGradient)

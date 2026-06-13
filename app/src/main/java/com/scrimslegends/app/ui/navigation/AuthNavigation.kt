@@ -20,7 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import com.scrimslegends.app.ui.theme.GoldPrimary
+import com.scrimslegends.app.ui.theme.appBrandAccentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -168,6 +168,7 @@ fun AuthNavigation(
     navController: NavHostController = rememberNavController(),
     context: Context
 ) {
+    val brandAccent = appBrandAccentColor()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val isInitializing by viewModel.isInitializing.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
@@ -1202,7 +1203,7 @@ fun AuthNavigation(
                                 TextButton(
                                     onClick = { navController.popBackStack() }
                                 ) {
-                                    Text("Go Back", color = GoldPrimary)
+                                    Text("Go Back", color = brandAccent)
                                 }
                             }
                         }
@@ -1296,7 +1297,7 @@ fun AuthNavigation(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = GoldPrimary)
+                            CircularProgressIndicator(color = brandAccent)
                         }
                     }
                 }

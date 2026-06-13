@@ -316,7 +316,7 @@ fun ChatScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     TypingDots()
                                     Spacer(Modifier.width(6.dp))
-                                    Text(stringResource(R.string.typing_status), fontSize = 12.sp, color = GoldPrimary)
+                                    Text(stringResource(R.string.typing_status), fontSize = 12.sp, color = appBrandAccentColor())
                                 }
                             } else {
                                 if (headerSubtitle.isNotBlank()) {
@@ -496,7 +496,7 @@ fun ChatScreen(
                                         ) {
                                             CircularProgressIndicator(
                                                 modifier = Modifier.size(20.dp),
-                                                color = GoldPrimary,
+                                                color = appBrandAccentColor(),
                                                 strokeWidth = 2.dp
                                             )
                                         }
@@ -519,7 +519,7 @@ fun ChatScreen(
                 ) {
                     SmallFloatingActionButton(
                         onClick        = { scope.launch { listState.animateScrollToItem(0) } },
-                        containerColor = GoldPrimary,
+                        containerColor = appBrandAccentColor(),
                         contentColor   = DarkBlue,
                         shape          = CircleShape,
                         modifier       = Modifier.size(40.dp)
@@ -560,21 +560,21 @@ fun ChatScreen(
                                     .fillMaxWidth()
                                     .padding(bottom = 8.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(GoldPrimary.copy(alpha = 0.08f))
-                                    .border(1.dp, GoldPrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .background(appBrandAccentColor().copy(alpha = 0.08f))
+                                    .border(1.dp, appBrandAccentColor().copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 @Suppress("DEPRECATION")
                                 Icon(
                                     Icons.Default.Reply, null,
-                                    tint = GoldPrimary, modifier = Modifier.size(14.dp)
+                                    tint = appBrandAccentColor(), modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Replying to ${reply.message.senderName}",
-                                        color = GoldPrimary,
+                                        color = appBrandAccentColor(),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -660,13 +660,13 @@ fun ChatScreen(
                             },
                             modifier      = Modifier.weight(1f),
                             colors        = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor      = GoldPrimary.copy(alpha = 0.5f),
+                                focusedBorderColor      = appBrandAccentColor().copy(alpha = 0.5f),
                                 unfocusedBorderColor    = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
                                 focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 focusedTextColor        = MaterialTheme.colorScheme.onSurface,
                                 unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
-                                cursorColor             = GoldPrimary
+                                cursorColor             = appBrandAccentColor()
                             ),
                             shape         = RoundedCornerShape(22.dp),
                             textStyle     = iOSBody.copy(fontSize = 15.sp),
@@ -696,7 +696,7 @@ fun ChatScreen(
                         // Send button
                         val sendEnabled = messageText.isNotBlank()
                         val sendBg by animateColorAsState(
-                            targetValue   = if (sendEnabled) GoldPrimary else MaterialTheme.colorScheme.surfaceVariant,
+                            targetValue   = if (sendEnabled) appBrandAccentColor() else MaterialTheme.colorScheme.surfaceVariant,
                             animationSpec = tween(200),
                             label         = "sendBg"
                         )
@@ -763,7 +763,7 @@ private fun TypingDots() {
             Box(
                 modifier = Modifier
                     .size(5.dp)
-                    .background(GoldPrimary.copy(alpha = alpha), CircleShape)
+                    .background(appBrandAccentColor().copy(alpha = alpha), CircleShape)
             )
         }
     }
@@ -957,7 +957,7 @@ private fun MessageBubble(
                                 deliveryStatus == DeliveryStatus.FAILED  -> ErrorRed
                                 deliveryStatus == DeliveryStatus.SENDING ||
                                 deliveryStatus == DeliveryStatus.PENDING -> WarningOrange.copy(alpha = 0.8f)
-                                message.isRead                           -> GoldPrimary.copy(alpha = 0.85f)
+                                message.isRead                           -> appBrandAccentColor().copy(alpha = 0.85f)
                                 else                                     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f).copy(alpha = 0.7f)
                             },
                             modifier           = Modifier.size(12.dp)
@@ -978,7 +978,7 @@ private fun MessageBubble(
                         "Retry",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GoldPrimary,
+                        color = appBrandAccentColor(),
                         modifier = Modifier.clickable { onRetryMessage(clientMessageId) }
                     )
                     Text(
@@ -1026,7 +1026,7 @@ private fun ReplyContent(senderName: String?, snippet: String?) {
             text = senderName ?: "",
             fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
-            color = GoldPrimary.copy(alpha = 0.8f)
+            color = appBrandAccentColor().copy(alpha = 0.8f)
         )
         Text(
             text = snippet?.take(60) ?: "",
@@ -1056,7 +1056,7 @@ private fun MessageContextMenu(
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     @Suppress("DEPRECATION")
-                    Icon(Icons.Default.Reply, null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Reply, null, tint = appBrandAccentColor(), modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Reply", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                 }
@@ -1097,7 +1097,7 @@ private fun ImageContent(url: String) {
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = GoldPrimary, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = appBrandAccentColor(), strokeWidth = 2.dp)
             }
         }
     )
@@ -1107,9 +1107,9 @@ private fun ImageContent(url: String) {
 private fun ApplyContent(content: String, onView: () -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.EmojiEvents, null, tint = GoldPrimary, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.EmojiEvents, null, tint = appBrandAccentColor(), modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.scrim_application), fontWeight = FontWeight.Bold, color = GoldPrimary, fontSize = 13.sp)
+            Text(stringResource(R.string.scrim_application), fontWeight = FontWeight.Bold, color = appBrandAccentColor(), fontSize = 13.sp)
         }
         Spacer(Modifier.height(6.dp))
         Text(content, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, lineHeight = 18.sp)
@@ -1147,19 +1147,20 @@ private fun NewMessagesSeparator() {
             modifier = Modifier
                 .fillMaxWidth(0.7f)
                 .height(1.dp)
-                .background(GoldPrimary.copy(alpha = 0.35f))
+                .background(appBrandAccentColor().copy(alpha = 0.35f))
         )
         Box(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                .border(1.dp, GoldPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .border(1.dp, appBrandAccentColor().copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 10.dp, vertical = 2.dp)
         ) {
             Text(
                 "New messages",
                 fontSize = 9.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = GoldPrimary.copy(alpha = 0.85f),
+                color = appBrandAccentColor()
+                    .copy(alpha = 0.85f),
                 letterSpacing = 0.8.sp
             )
         }
