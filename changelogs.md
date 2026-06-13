@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-06-14 01:17 +04:00 — refactor(ui): consolidate bottom nav dimension tokens
+
+### Commits
+- `b9b147c` — refactor(ui): consolidate bottom nav dimension tokens
+
+### Problem
+Bottom navigation sizing had drifted across three sources: `Dimens.bottomNavHeight = 64.dp`, `BottomNav.kt` using 65/75dp, and `DESIGN.md` specifying 72dp. `ResponsiveLayout` also carried separate 60/72/76dp nav heights, making the design system unreliable as a single source of truth.
+
+### Fix
+- Set `Dimens.bottomNavHeight` to the DESIGN.md value of **72dp** and added semantic bottom-nav tokens for glow height, icon size, halo size, label height, badge size/offset/elevation, border width, and indicator stroke widths.
+- Updated `ResponsiveLayout` bottom-nav metrics to source nav height/icon/radius/glow values from `Dimens`.
+- Updated `BottomNav.kt` to consume responsive/token values instead of local hardcoded nav dimensions.
+- Updated `Shape.kt` so Material and iOS-style semantic shapes are derived from `Dimens` radius tokens instead of standalone radius literals.
+
+### Verification
+- `rg -n "height\(if \(responsive\.isCompact\)|bottomNavHeight = [0-9]+\.dp|bottomNavIconSize = [0-9]+\.dp|bottomNavCornerRadius = [0-9]+\.dp" app/src/main/java/com/scrimslegends/app/ui` — only `Dimens.kt` owns the bottom-nav height/icon literals now.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (12s incremental rebuild).
+
+### Notes
+- `[INTENTIONAL FIX]` — Bottom-nav height should remain centralized at `Dimens.bottomNavHeight = 72.dp`; do not reintroduce per-breakpoint 60/65/75/76dp nav heights in components.
+
+---
+
 ## 2026-06-14 01:02 +04:00 — fix(ui): remove risky screen null assertions
 
 ### Commits
