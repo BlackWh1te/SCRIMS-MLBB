@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import com.scrimslegends.app.ui.theme.GoldPrimary
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -1337,9 +1338,13 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.MessageList.route) {
-                    val userId = userProfile?.id ?: ""
-                    LaunchedEffect(Unit) {
+                    val userId = chatRoomViewModel.currentUserId().ifBlank { userProfile?.id ?: "" }
+                    DisposableEffect(Unit) {
                         conversationListViewModel.loadConversations(userId)
+                        conversationListViewModel.startPolling(userId)
+                        onDispose {
+                            conversationListViewModel.stopPolling()
+                        }
                     }
                     MessageListScreen(
                         conversations = conversations.filterNot { it.isTeamChat }.toPersistentList(),
@@ -1375,7 +1380,10 @@ fun AuthNavigation(
                         selectedConversation?.id == conversationId -> selectedConversation
                         else -> conversations.find { it.id == conversationId }
                     }
-                    val userId = userProfile?.id ?: ""
+                    // Use the authenticated user id (same identity stamped on outgoing
+                    // messages) so sent messages reliably render as "mine" even if the
+                    // profile StateFlow is momentarily null/stale.
+                    val userId = chatRoomViewModel.currentUserId().ifBlank { userProfile?.id ?: "" }
 
                     // Media Pickers
                     val imageLauncher = androidx.activity.compose.rememberLauncherForActivityResult(

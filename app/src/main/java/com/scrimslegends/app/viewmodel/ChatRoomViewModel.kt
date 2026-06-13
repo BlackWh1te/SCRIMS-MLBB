@@ -23,9 +23,12 @@ import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 
+import com.scrimslegends.app.data.repository.AuthRepositoryInterface
+
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
-    private val messageRepository: MessageRepositoryInterface
+    private val messageRepository: MessageRepositoryInterface,
+    private val authRepository: AuthRepositoryInterface
 ) : ViewModel() {
 
     private var chatSubscriptionJob: Job? = null
@@ -73,6 +76,8 @@ class ChatRoomViewModel @Inject constructor(
                         _messagesPaged.value = pagingData
                         _isLoading.value = false
                     }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load paged messages")
                 _error.value = "Chat disconnected."
@@ -120,17 +125,32 @@ class ChatRoomViewModel @Inject constructor(
         _selectedConversation.value = conversation
     }
 
+    /**
+     * The authenticated user's id — the SAME identity stamped as [Message.senderId] on
+     * outgoing messages and enforced by the messages RLS (`sender_id = auth.uid()`).
+     * The chat UI must use this to decide which messages are "mine"; relying on a
+     * possibly-null/stale profile id makes every message (including the user's own)
+     * compare against an empty string and render on the received side.
+     */
+    fun currentUserId(): String = authRepository.getCurrentUser() ?: ""
+
     fun sendMessage(conversationId: String, content: String) {
-        val clientMessageId = "cm_${UUID.randomUUID()}"
+        val clientMessageId = UUID.randomUUID().toString()
         val replyTarget = _replyingToMessage.value
         _replyingToMessage.value = null
+        val senderId = authRepository.getCurrentUser() ?: ""
 
         viewModelScope.launch {
+            val userProfile = authRepository.getUserProfile()
+            val senderName = userProfile?.username ?: ""
+
             messageRepository.sendMessage(
                 conversationId = conversationId,
                 content = content,
                 type = MessageType.TEXT,
                 clientMessageId = clientMessageId,
+                senderId = senderId,
+                senderName = senderName,
                 replyToId = replyTarget?.message?.id,
                 replyToSnippet = replyTarget?.message?.content?.take(80),
                 replyToSenderName = replyTarget?.message?.senderName
