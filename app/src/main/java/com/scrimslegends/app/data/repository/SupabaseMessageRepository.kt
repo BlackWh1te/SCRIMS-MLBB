@@ -44,6 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.currentCoroutineContext
+import androidx.paging.cachedIn
 import androidx.paging.insertHeaderItem
 import androidx.paging.map
 
@@ -727,7 +728,7 @@ class SupabaseMessageRepository(
             pagingSourceFactory = { messageDao.getMessagesPaged(conversationId) }
         ).flow.map { pagingData ->
             pagingData.map { it.toMessageWithDelivery() }
-        }
+        }.cachedIn(repositoryScope)
 
         return combine(
             pagedMessages,
