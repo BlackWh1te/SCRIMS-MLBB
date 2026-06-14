@@ -43,6 +43,8 @@ import com.scrimslegends.app.data.service.SupabaseStorageUpload
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.ErrorSnackbar
 import com.scrimslegends.app.ui.components.iOSChip
+import com.scrimslegends.app.ui.components.PremiumErrorState
+import com.scrimslegends.app.ui.components.PremiumLoadingState
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.theme.*
 import androidx.compose.ui.res.stringResource
@@ -406,21 +408,18 @@ fun PlayerFinderScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 if (isLoading && posts.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                    }
+                    PremiumLoadingState(
+                        message = "Loading players...",
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else if (error != null && posts.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.ErrorOutline, null, tint = ErrorRed, modifier = Modifier.size(48.dp))
-                            Spacer(Modifier.height(16.dp))
-                            Text(stringResource(R.string.error_loading_data), color = appTextPrimaryColor(), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(8.dp))
-                            Text(error, color = appTextSecondaryColor(), fontSize = 13.sp, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(16.dp))
-                            OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.primary) }
-                        }
-                    }
+                    PremiumErrorState(
+                        title = stringResource(R.string.error_loading_data),
+                        message = error,
+                        actionLabel = stringResource(R.string.retry),
+                        onAction = onRefresh,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else if (filteredPosts.isEmpty()) {
                     EmptyPlayerFinderState(
                         isTeamLeader = isTeamLeader,

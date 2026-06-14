@@ -825,6 +825,92 @@ fun EmptyState(
     }
 }
 
+@Composable
+fun PremiumLoadingState(
+    message: String,
+    modifier: Modifier = Modifier,
+    indicatorSize: androidx.compose.ui.unit.Dp = Dimens.iconSizeLarge
+) {
+    AnimatedEntrance {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = Dimens.paddingXLarge, vertical = Dimens.paddingXXLarge),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                color = appBrandAccentColor(),
+                modifier = Modifier.size(indicatorSize),
+                strokeWidth = 3.dp
+            )
+            Spacer(Modifier.height(Dimens.paddingMedium))
+            Text(
+                text = message,
+                style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun PremiumErrorState(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.ErrorOutline
+) {
+    AnimatedEntrance {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = Dimens.paddingXLarge, vertical = Dimens.paddingXXLarge),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(Dimens.avatarSizeLarge)
+                    .clip(RoundedCornerShape(Dimens.radiusXLarge))
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.70f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(Dimens.iconSizeLarge)
+                )
+            }
+            Spacer(Modifier.height(Dimens.paddingMedium))
+            Text(
+                text = title,
+                style = iOSTitle3.copy(color = MaterialTheme.colorScheme.onSurface),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(Modifier.height(Dimens.paddingSmall))
+            Text(
+                text = message,
+                style = iOSCallout.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            if (actionLabel != null && onAction != null) {
+                Spacer(Modifier.height(Dimens.paddingLarge))
+                iOSSecondaryButton(
+                    text = actionLabel,
+                    onClick = onAction,
+                    borderColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.widthIn(max = 220.dp)
+                )
+            }
+        }
+    }
+}
+
 // ============================================
 // iOS-Style Navigation Bar with Large Title
 // ============================================

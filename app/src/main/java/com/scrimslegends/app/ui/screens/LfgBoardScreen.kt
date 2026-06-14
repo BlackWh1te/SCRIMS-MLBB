@@ -25,6 +25,8 @@ import com.scrimslegends.app.data.model.GameRole
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.GradientButton
+import com.scrimslegends.app.ui.components.PremiumErrorState
+import com.scrimslegends.app.ui.components.PremiumLoadingState
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.theme.*
 import com.scrimslegends.app.R
@@ -94,25 +96,19 @@ fun LfgBoardScreen(
             ) {
                 when {
                     isLoading && posts.isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                        }
+                        PremiumLoadingState(
+                            message = "Loading posts...",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                     error != null && posts.isEmpty() -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.ErrorOutline, null, tint = ErrorRed, modifier = Modifier.size(48.dp))
-                                Spacer(Modifier.height(16.dp))
-                                Text(stringResource(R.string.error_loading_data), color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(8.dp))
-                                Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), fontSize = 13.sp)
-                                Spacer(Modifier.height(16.dp))
-                                OutlinedButton(onClick = onRefresh) { Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.onSurface) }
-                            }
-                        }
+                        PremiumErrorState(
+                            title = stringResource(R.string.error_loading_data),
+                            message = error,
+                            actionLabel = stringResource(R.string.retry),
+                            onAction = onRefresh,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                     posts.isEmpty() -> {
                         EmptyLfgState(onCreatePost = onCreatePost)
