@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-06-14 07:14 +04:00 — feat(auth): improve login form keyboard flow
+
+### Commits
+- `f983cb6` — feat(auth): improve login form keyboard flow
+
+### Problem
+The login form did not support IME Next/Done chaining, the password field did not receive focus from the email keyboard action, and the shared login field never updated its focus state even though it animated focused colors. Autofill hints were also absent from the login fields.
+
+### Fix
+- Added `FocusRequester`/`LocalFocusManager` flow in `LoginScreen` so the email field advances to password and password Done submits the same centralized login path as the button.
+- Added Compose autofill node wiring for email and password fields using `AutofillType.EmailAddress` and `AutofillType.Password`.
+- Updated `LoginField` to handle focus changes, request/cancel autofill on focus transitions, and apply the animated border color.
+- Removed an unused login background animation value that produced a Kotlin warning.
+
+### Verification
+- `git diff --check --cached` — no whitespace errors before commit.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (12s incremental rebuild).
+
+### Notes
+- `[INTENTIONAL]` — Login submit logic is centralized in `submitLogin()` so button click and IME Done stay behaviorally identical.
+- `ChatScreen.kt` still has unrelated unstaged presence/status edits in the worktree; this commit staged only `LoginScreen.kt`.
+
+---
+
 ## 2026-06-14 07:09 +04:00 — refactor(ui): reuse premium loading states
 
 ### Commits
