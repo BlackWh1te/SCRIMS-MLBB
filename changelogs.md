@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-06-14 07:09 +04:00 — refactor(ui): reuse premium loading states
+
+### Commits
+- `e62a943` — refactor(ui): reuse premium loading states
+
+### Problem
+After adding shared Premium loading/error state primitives, several screens still rendered initial loading states with duplicated local spinner/spacing/text blocks. That kept the state UI inconsistent and made future design-token changes harder.
+
+### Fix
+- Replaced the initial empty-list loading state in `MessageListScreen` with `PremiumLoadingState`.
+- Replaced the initial empty-list loading state in `FindTeamsScreen` with `PremiumLoadingState`.
+- Replaced the initial empty-list loading state in `MatchResultListScreen` with `PremiumLoadingState`.
+- Left skeleton loaders and button-level spinners unchanged because they serve different interaction patterns.
+
+### Verification
+- `git diff --check --cached` — no whitespace errors before commit.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (30s incremental rebuild). Remaining warnings are pre-existing unused/deprecated/static-condition warnings.
+
+### Notes
+- `[INTENTIONAL]` — Initial full-screen list loading states should prefer `PremiumLoadingState`; keep specialized skeleton and inline button spinners where they communicate different loading scopes.
+- `ChatScreen.kt` still has unrelated unstaged presence/status edits in the worktree; this commit staged only loading-state reuse.
+
+---
+
 ## 2026-06-14 07:05 +04:00 — refactor(ui): add shared premium state components
 
 ### Commits
