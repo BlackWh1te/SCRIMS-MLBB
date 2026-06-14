@@ -1,7 +1,7 @@
-# MLBB Scrim Host - Design System
+# Scrims Legends - Design System
 
 ## Aesthetic Direction
-**Epic Gaming Fantasy meets iOS Polish** — Inspired by MLBB's heroic fantasy aesthetic with gold/blue color scheme, bold typography, and dynamic elements that convey competitive energy, now enhanced with iOS-style glassmorphism, refined shadows, and smooth animations for a premium, polished feel.
+**Epic Gaming Fantasy meets Premium Mobile Polish** — Inspired by MLBB's heroic fantasy aesthetic with gold/blue color, bold typography, and dynamic elements that convey competitive energy. The current implementation supports both light and dark themes, with tokenized Material 3 surfaces, restrained glass effects, refined shadows, and smooth animations for a premium Android experience.
 
 ## Color Palette
 
@@ -17,6 +17,7 @@ In addition to MLBB colors, iOS system colors are used for native-feeling UI ele
 
 ### Primary Colors (MLBB Official)
 - **Gold Primary**: `#FFD700` — MLBB gold accents
+- **Gold On Light**: `#8A6500` — readable brand accent for light surfaces via `appBrandAccentColor()`
 - **Blue Primary**: `#1E90FF` — MLBB blue
 - **Dark Blue**: `#0A1628` — Deep background
 - **Dark Navy**: `#0D1B2A` — Secondary background
@@ -39,6 +40,11 @@ In addition to MLBB colors, iOS system colors are used for native-feeling UI ele
 - **Tier Gradient**: Varies by rank (Bronze to Grandmaster)
 
 ## Typography
+
+### Current App Fonts
+- **Display**: Rajdhani — screen titles, section headers, team names, tier badges.
+- **Stats/Numbers**: Teko variable — XP, rankings, counts, and compact stat emphasis.
+- **Body**: platform/system sans-serif — readable body copy and small labels.
 
 ### iOS-Style Typography
 Typography now follows iOS conventions with refined letter spacing and line heights:
@@ -101,8 +107,15 @@ Letter spacing is slightly negative (-0.1 to -0.4sp) for a modern, tight look si
 
 ## Components
 
-### iOS-Style Components
-The app now includes iOS-style components for a premium feel:
+### Premium Component Kit
+The app now includes shared Premium components for consistent states and controls:
+- **PremiumLoadingState**: Full-screen loading state using theme-aware brand accent and `Dimens` spacing.
+- **PremiumErrorState**: Full-screen error state using Material error-container roles, retry action support, and `Dimens` spacing.
+- **EmptyState**: Shared full-screen empty state with icon, title, subtitle, and optional action.
+- **PremiumFadeIn / AnimatedEntrance**: Shared entry animation helpers.
+
+### Legacy iOS-Named Components
+Several reusable components still use `iOS*` names from the earlier design pass. Treat these as internal component names for premium mobile styling, not as a platform target:
 - **iOSGlassCard**: Glassmorphism cards with subtle blur and borders
 - **iOSElevatedCard**: Elevated cards with refined shadows
 - **iOSPrimaryButton**: Full-width primary buttons with iOS styling
@@ -208,13 +221,12 @@ Animations follow iOS conventions with cubic bezier easing:
 - Rounded caps and joins
 - Gaming-themed icons (swords, shields, crowns for tiers)
 
-## Dark Mode
+## Theme Modes
 
-**Default**: Dark mode only (gaming aesthetic)
-- Backgrounds: Dark blue/navy
-- Text: White/light gray
-- Accents: Gold/blue
-- No light mode needed
+**Supported**: Light and dark themes are intentional and must both remain usable.
+- **Dark theme**: Deep blue/navy surfaces, white/light-gray text, gold/blue accents.
+- **Light theme**: White and near-white surfaces with darker readable brand gold (`GoldOnLight`) and Material 3 surface-container roles for depth.
+- **Brand accents**: UI code should use `appBrandAccentColor()` when placing gold accents on theme surfaces instead of raw `GoldPrimary`.
 
 ## Screen-Specific Guidelines
 
@@ -277,4 +289,4 @@ The bottom navigation bar follows iOS design patterns:
 | 2026-05-12 | iOS-style design system integration | Enhanced with glassmorphism, refined shadows, iOS typography, and smooth animations for premium feel |
 
 ## Memorable Thing
-"The epic gold and blue fantasy aesthetic meets iOS polish — every interaction feels premium, smooth, and championship-ready."
+"The epic gold and blue fantasy aesthetic meets premium mobile polish — every interaction feels readable, smooth, and championship-ready in light and dark themes."
