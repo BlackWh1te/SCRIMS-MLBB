@@ -206,7 +206,6 @@ private fun MatchHistoryCard(
         VerificationStatus.ADMIN_RESOLVED -> "Resolved"
     }
     val appSurface = appSurfaceColor()
-    val appElevatedSurface = appElevatedSurfaceColor()
     val appTextSecondary = appTextSecondaryColor()
 
     Card(
@@ -261,6 +260,22 @@ private fun MatchHistoryCard(
                             Text(
                                 text = stringResource(R.string.tournament_match),
                                 color = Purple,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    if (match.bestOf > 1) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.bo_format, match.bestOf),
+                                color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )

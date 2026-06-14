@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -279,9 +280,12 @@ private fun CyberNavItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.scale(scale)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.scale(scale)
+            ) {
                 // Subtle glow behind the icon instead of a solid shadow shape
                 if (isSelected) {
                     Box(
@@ -337,11 +341,18 @@ private fun CyberNavItem(
                 Text(
                     text = stringResource(item.labelRes),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
+                    lineHeight = 10.sp,
+                    textAlign = TextAlign.Center,
                     maxLines = 1,
-                    overflow = TextOverflow.Visible,
-                    modifier = Modifier.alpha(labelAlpha).height(labelHeight)
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(labelHeight)
+                        .padding(horizontal = 2.dp)
+                        .alpha(labelAlpha)
                 )
             }
         }

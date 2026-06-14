@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -48,6 +49,7 @@ class MatchResultViewModel @Inject constructor(
 
 
     fun loadMatchResults(isRefresh: Boolean = false) {
+        loadMatchResultsForTeamJob?.cancel()
         loadMatchResultsJob?.cancel()
         loadMatchResultsJob = viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
@@ -86,20 +88,70 @@ class MatchResultViewModel @Inject constructor(
         }
     }
 
-    fun loadMatchResultsForTeam(teamId: String) {
+    fun loadMatchResultsForTeam(teamId: String, isRefresh: Boolean = false) {
+        loadMatchResultsJob?.cancel()
         loadMatchResultsForTeamJob?.cancel()
         loadMatchResultsForTeamJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
             _isLoading.value = true
             _error.value = null
 
-            matchResultRepository.getMatchResultsForTeam(teamId).collect { result ->
+            matchResultRepository.getMatchResultsForTeam(teamId, forceRefresh = isRefresh).collect { result ->
                 result.onSuccess { list ->
                     _matchResults.value = list.toPersistentList()
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }.onFailure { exception ->
                     _error.value = exception.message
                     _isLoading.value = false
+                    _isRefreshing.value = false
                 }
+            }
+        }
+    }
+
+    fun loadMatchResultsForTeams(teamIds: Set<String>, isRefresh: Boolean = false) {
+        val normalizedTeamIds = teamIds.filter { it.isNotBlank() }.sorted()
+        if (normalizedTeamIds.isEmpty()) {
+            loadMatchResults(isRefresh = isRefresh)
+            return
+        }
+
+        loadMatchResultsJob?.cancel()
+        loadMatchResultsForTeamJob?.cancel()
+        loadMatchResultsForTeamJob = viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+                val mergedResults = linkedMapOf<String, MatchResult>()
+                var firstError: String? = null
+
+                normalizedTeamIds.forEach { teamId ->
+                    matchResultRepository.getMatchResultsForTeam(teamId, forceRefresh = isRefresh)
+                        .first()
+                        .onSuccess { list ->
+                            list.forEach { match ->
+                                mergedResults[match.id] = match
+                            }
+                        }
+                        .onFailure { exception ->
+                            if (firstError == null) {
+                                firstError = exception.message
+                            }
+                        }
+                }
+
+                _matchResults.value = mergedResults.values
+                    .sortedByDescending { it.createdAt }
+                    .toPersistentList()
+                _error.value = if (mergedResults.isEmpty()) firstError else null
+            } catch (exception: Exception) {
+                _error.value = exception.message
+            } finally {
+                _isLoading.value = false
+                _isRefreshing.value = false
             }
         }
     }

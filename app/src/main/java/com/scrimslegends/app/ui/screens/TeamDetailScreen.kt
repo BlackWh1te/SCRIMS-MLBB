@@ -723,7 +723,7 @@ fun TeamDetailScreen(
                     item {
                         AnimatedEntrance(delayMillis = 200) {
                             Text(
-                                text = "Ranked match history",
+                                text = "Completed match history",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -768,13 +768,13 @@ fun TeamDetailScreen(
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
-                                            text = "No ranked matches yet",
+                                            text = "No completed matches yet",
                                             color = appTextSecondaryColor(),
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "Classic scrims are not saved in team history.",
+                                            text = "Completed scrims appear here after results are submitted.",
                                             color = appTextSecondaryColor(),
                                             fontSize = 12.sp,
                                             textAlign = TextAlign.Center

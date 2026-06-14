@@ -36,8 +36,8 @@ class SupabaseMatchResultRepository(
         const val WIN_POINTS = 25
         const val LOSS_POINTS = -15
 
-        private const val CACHE_KEY_ALL = "match_results_ranked_all"
-        private const val CACHE_KEY_TEAM_PREFIX = "match_results_ranked_team_"
+        private const val CACHE_KEY_ALL = "match_results_completed_all"
+        private const val CACHE_KEY_TEAM_PREFIX = "match_results_completed_team_"
         private const val MEMORY_TTL_MS = 60L * 1000 // 1 minute
         private const val ROOM_TTL_MS = 5L * 60 * 1000 // 5 minutes
     }
@@ -68,11 +68,10 @@ class SupabaseMatchResultRepository(
                     matchResultDao.insertAll(models.map { modelToEntity(it) })
                 },
                 networkLoader = {
-                    // Fetch scrim match results
+                    // Fetch completed scrim match results.
                     val scrimResults = mutableListOf<MatchResult>()
                     val response = api.getScrims(
                         status = "eq.Completed",
-                        gameMode = "eq.RANKED",
                         order = "created_at.desc"
                     )
                     if (response.isSuccessful) {
@@ -191,12 +190,11 @@ class SupabaseMatchResultRepository(
                     matchResultDao.insertAll(models.map { modelToEntity(it) })
                 },
                 networkLoader = {
-                    // Fetch completed scrims for this team
+                    // Fetch completed scrims for this team.
                     val scrimResults = mutableListOf<MatchResult>()
-                    // Only fetch scrims where team_id = teamId OR opponent_team_id = teamId, AND status = Completed
+                    // Only fetch scrims where team_id = teamId OR opponent_team_id = teamId, AND status = Completed.
                     val response = api.getScrims(
                         status = "eq.Completed",
-                        gameMode = "eq.RANKED",
                         orFilter = "(team_id.eq.$teamId,opponent_team_id.eq.$teamId)"
                     )
                     if (response.isSuccessful) {

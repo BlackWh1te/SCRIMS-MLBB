@@ -1517,11 +1517,24 @@ fun AuthNavigation(
                 }
 
                 composable(Screen.MatchHistory.route) {
+                    val currentUserTeamIds = remember(teams) { teams.map { it.id }.toSet() }
+
+                    LaunchedEffect(currentUserTeamIds) {
+                        if (currentUserTeamIds.isNotEmpty()) {
+                            matchResultViewModel.loadMatchResultsForTeams(
+                                teamIds = currentUserTeamIds,
+                                isRefresh = true
+                            )
+                        } else {
+                            matchResultViewModel.loadMatchResults(isRefresh = true)
+                        }
+                    }
+
                     MatchHistoryScreen(
                         matchResults = matchResults.toPersistentList(),
                         isLoading = matchResultIsLoading,
                         isRefreshing = matchResultIsRefreshing,
-                        currentUserTeamIds = teams.map { it.id }.toSet(),
+                        currentUserTeamIds = currentUserTeamIds,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
@@ -1530,7 +1543,14 @@ fun AuthNavigation(
                             navController.navigate(Screen.MatchResultDetail.createRoute(match.id))
                         },
                         onRefresh = {
-                            matchResultViewModel.loadMatchResults(isRefresh = true)
+                            if (currentUserTeamIds.isNotEmpty()) {
+                                matchResultViewModel.loadMatchResultsForTeams(
+                                    teamIds = currentUserTeamIds,
+                                    isRefresh = true
+                                )
+                            } else {
+                                matchResultViewModel.loadMatchResults(isRefresh = true)
+                            }
                         }
                     )
                 }
