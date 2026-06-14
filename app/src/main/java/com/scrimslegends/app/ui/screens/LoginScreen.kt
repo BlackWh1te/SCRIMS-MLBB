@@ -8,20 +8,33 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -35,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess          : () -> Unit,
@@ -50,6 +64,18 @@ fun LoginScreen(
     var errorMessage   by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val passwordFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val fillAllFields = stringResource(R.string.fill_all_fields)
+
+    fun submitLogin() {
+        if (email.isNotBlank() && password.isNotBlank()) {
+            focusManager.clearFocus()
+            viewModel.signIn(email, password)
+        } else {
+            errorMessage = fillAllFields
+        }
+    }
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -63,15 +89,6 @@ fun LoginScreen(
             is com.scrimslegends.app.data.model.AuthResult.EmailNotVerified -> isLoading = false
         }
     }
-
-    // Animated background gradient shift
-    val infiniteTransition = rememberInfiniteTransition(label = "bgAnim")
-    val gradientOffset by infiniteTransition.animateFloat(
-        initialValue  = 0f,
-        targetValue   = 1f,
-        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Reverse),
-        label         = "gradOffset"
-    )
 
     Box(
         modifier = Modifier
@@ -166,7 +183,12 @@ fun LoginScreen(
                             onValueChange  = { email = it; errorMessage = "" },
                             placeholder    = stringResource(R.string.email),
                             leadingIcon    = Icons.Default.Email,
-                            keyboardType   = KeyboardType.Email
+                            keyboardType   = KeyboardType.Email,
+                            imeAction      = ImeAction.Next,
+                            keyboardActions = KeyboardActions(
+                                onNext = { passwordFocusRequester.requestFocus() }
+                            ),
+                            autofillTypes  = listOf(AutofillType.EmailAddress)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -181,7 +203,13 @@ fun LoginScreen(
                             onTrailingClick     = { passwordVisible = !passwordVisible },
                             visualTransformation = if (passwordVisible) VisualTransformation.None
                                                    else PasswordVisualTransformation(),
-                            keyboardType        = KeyboardType.Password
+                            keyboardType        = KeyboardType.Password,
+                            imeAction           = ImeAction.Done,
+                            keyboardActions     = KeyboardActions(
+                                onDone = { submitLogin() }
+                            ),
+                            autofillTypes       = listOf(AutofillType.Password),
+                            modifier            = Modifier.focusRequester(passwordFocusRequester)
                         )
 
                         // Error
@@ -229,15 +257,8 @@ fun LoginScreen(
                         Spacer(Modifier.height(4.dp))
 
                         // Sign in button
-                        val fillAllFields = stringResource(R.string.fill_all_fields)
                         Button(
-                            onClick = {
-                                if (email.isNotBlank() && password.isNotBlank()) {
-                                    viewModel.signIn(email, password)
-                                } else {
-                                    errorMessage = fillAllFields
-                                }
-                            },
+                            onClick = { submitLogin() },
                             enabled  = !isLoading,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -344,6 +365,7 @@ fun LoginScreen(
 
 // ── Login Field Component ────────────────────────────────────
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun LoginField(
     value               : String,
@@ -353,9 +375,25 @@ private fun LoginField(
     trailingIcon        : androidx.compose.ui.graphics.vector.ImageVector? = null,
     onTrailingClick     : () -> Unit = {},
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardType        : KeyboardType = KeyboardType.Text
+    keyboardType        : KeyboardType = KeyboardType.Text,
+    imeAction           : ImeAction = ImeAction.Done,
+    keyboardActions     : KeyboardActions = KeyboardActions.Default,
+    autofillTypes       : List<AutofillType> = emptyList(),
+    modifier            : Modifier = Modifier
 ) {
     val isFocused = remember { mutableStateOf(false) }
+    val autofill = LocalAutofill.current
+    val autofillTree = LocalAutofillTree.current
+    val autofillNode = remember(autofillTypes) {
+        AutofillNode(
+            autofillTypes = autofillTypes,
+            onFill = onValueChange
+        )
+    }
+    if (autofillTypes.isNotEmpty()) {
+        autofillTree += autofillNode
+    }
+
     val borderColor by animateColorAsState(
         targetValue   = if (isFocused.value) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
         animationSpec = tween(200),
@@ -373,18 +411,37 @@ private fun LoginField(
         },
         trailingIcon         = if (trailingIcon != null) {{
             IconButton(onClick = onTrailingClick) {
-                Icon(trailingIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Icon(trailingIcon, placeholder, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
         }} else null,
         visualTransformation = visualTransformation,
-        modifier             = Modifier
-            .fillMaxWidth(),
+        modifier             = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                if (autofillTypes.isNotEmpty()) {
+                    autofillNode.boundingBox = coordinates.boundsInWindow()
+                }
+            }
+            .onFocusChanged { focusState ->
+                isFocused.value = focusState.isFocused
+                if (autofillTypes.isNotEmpty()) {
+                    if (focusState.isFocused) {
+                        autofill?.requestAutofillForNode(autofillNode)
+                    } else {
+                        autofill?.cancelAutofillForNode(autofillNode)
+                    }
+                }
+            },
         singleLine           = true,
-        keyboardOptions      = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions      = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = imeAction
+        ),
+        keyboardActions      = keyboardActions,
         shape                = RoundedCornerShape(14.dp),
         colors               = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-            unfocusedBorderColor    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            focusedBorderColor      = borderColor,
+            unfocusedBorderColor    = borderColor,
             focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             focusedTextColor        = MaterialTheme.colorScheme.onSurface,
