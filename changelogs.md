@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-06-14 07:05 +04:00 — refactor(ui): add shared premium state components
+
+### Commits
+- `59ea460` — refactor(ui): add shared premium state components
+
+### Problem
+LFG Board and Player Finder carried duplicated full-screen loading/error UI with raw indicators, inline error icons, hardcoded spacing, and per-screen retry buttons. The component kit had an `EmptyState`, but no matching shared loading/error primitives for the ongoing Premium component cleanup.
+
+### Fix
+- Added `PremiumLoadingState` and `PremiumErrorState` to `CommonComponents.kt`, using the existing animated entrance, theme-aware brand accent, Material error container roles, and `Dimens` spacing/size tokens.
+- Replaced the duplicated initial loading/error branches in `LfgBoardScreen` and `PlayerFinderScreen` with the shared state components.
+- Kept existing screen-specific empty states unchanged for this slice.
+
+### Verification
+- `git diff --check --cached` — no whitespace errors before commit.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (relocated build dir). Remaining output is SDK/native-access warnings.
+
+### Notes
+- `[INTENTIONAL]` — Full-screen loading/error states should use the shared Premium components where practical instead of re-adding inline spinner/error/retry blocks in each screen.
+- `ChatScreen.kt` still has unrelated unstaged presence/status edits in the worktree; this commit staged only the shared component slice.
+
+---
+
 ## 2026-06-14 01:28 +04:00 — fix(ui): add theme-aware brand accent
 
 ### Commits
