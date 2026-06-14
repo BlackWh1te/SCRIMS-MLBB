@@ -8,6 +8,34 @@
 
 ---
 
+## 2026-06-14 08:25 +04:00 - fix(ui): repair match history and nav label
+
+### Commits
+- `0077f75` - fix(ui): repair match history and nav label
+
+### Problem
+The selected Player Finder bottom-nav item scaled the whole tab content, so on the 720px MuMu layout the long label could visually blow out and read like only "Find". Match History also opened with stale/empty state because the route did not load results on entry, and the repository was querying only completed ranked scrims even though profile stats count completed scrim results.
+
+### Fix
+- Kept the selected bottom-nav spring scale on the icon/halo only, constrained the label to the tab width, and rendered the selected label as stable centered 10sp text.
+- Added Match History route loading on screen entry and refresh using the current user's team IDs, merging results across teams in `MatchResultViewModel`.
+- Removed the ranked-only scrim filter from match-history queries and moved cache keys to completed-history names so stale ranked caches do not keep the list empty.
+- Updated team history copy from ranked-only wording to completed-match wording.
+- Added a BO badge on multi-game Match History cards so a BO2 match card can explain a profile stat count of two wins.
+
+### Verification
+- `git diff --cached --check` - no whitespace errors before commit.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` - **BUILD SUCCESSFUL** after the final cleanup.
+- Installed `C:\sbuild\app\outputs\apk\debug\app-debug.apk` on MuMu `127.0.0.1:7555` - `Success`.
+- Opened Home -> Match History on MuMu after the data-load fix and saw a `Victory` card for Team Spirit instead of the empty state.
+- After the final install, startup logcat had no `FATAL EXCEPTION`, `Unable to start activity`, or `IllegalStateException`, and selecting the Player Finder tab exposed the full `Find Players` label in the UI hierarchy.
+
+### Notes
+- `[INTENTIONAL FIX]` - Do not restore the old selected-tab behavior that scales the entire bottom-nav column; only the icon/halo should scale so long labels stay readable.
+- `[INTENTIONAL FIX]` - Match History should load on route entry and use completed scrim history, not ranked-only history, so it stays aligned with completed-result stats.
+
+---
+
 ## 2026-06-14 07:56 +04:00 - fix(chat): cache paged messages before outbox merge
 
 ### Commits
