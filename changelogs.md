@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-06-14 07:56 +04:00 - fix(chat): cache paged messages before outbox merge
+
+### Commits
+- `5935530` - fix(chat): cache paged messages before outbox merge
+
+### Problem
+After the outbox delivery-state merge, sending a chat message on MuMu crashed the debug app with:
+`IllegalStateException: Attempt to collect twice from pageEventFlow`.
+The repository combined the Room-backed `Pager.flow` with `pending_messages`; each pending-message emission could wrap and re-emit the same single-use `PagingData` via `insertHeaderItem`.
+
+### Fix
+- Added `cachedIn(repositoryScope)` to the Room-backed paged message stream before combining it with pending outbox rows.
+- Kept the pending/failed outbox merge intact so optimistic messages and retry/cancel UI continue to work.
+
+### Verification
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` - **BUILD SUCCESSFUL** (32s incremental rebuild).
+- Installed `C:\sbuild\app\outputs\apk\debug\app-debug.apk` on MuMu `127.0.0.1:7555` - `Success`.
+- Opened Team Spirit chat, entered `hello`, tapped Send, and checked fresh logcat - no `FATAL EXCEPTION`, no `AndroidRuntime`, and no `pageEventFlow` crash; `MainActivity` remained resumed.
+
+### Notes
+- `[INTENTIONAL FIX]` - Keep the base Room `Pager.flow` cached before pending-message header insertion. Do not move the cache only after the pending outbox combine, or pending emissions can re-collect a single-use PagingData and crash on send.
+
+---
+
 ## 2026-06-14 07:21 +04:00 — docs: refresh design system reality
 
 ### Commits
