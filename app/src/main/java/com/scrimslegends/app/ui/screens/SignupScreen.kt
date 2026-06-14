@@ -9,21 +9,33 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -38,6 +50,7 @@ import com.scrimslegends.app.ui.components.PremiumCaptcha
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
@@ -57,8 +70,35 @@ fun SignupScreen(
     var termsAgreed by remember { mutableStateOf(false) }
     val captchaError = stringResource(R.string.captcha_verify_human)
     val termsError = stringResource(R.string.terms_required)
+    val fillAllFields = stringResource(R.string.fill_all_fields)
+    val passwordsNotMatch = stringResource(R.string.passwords_not_match)
+    val passwordMinLength = stringResource(R.string.password_min_length)
+    val invalidEmail = stringResource(R.string.invalid_email)
+    val emailFocusRequester = remember { FocusRequester() }
+    val inGameIdFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val confirmPasswordFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+
+    fun submitSignup() {
+        when {
+            username.isBlank() || email.isBlank() || inGameId.isBlank() ||
+                password.isBlank() || confirmPassword.isBlank() -> {
+                errorMessage = fillAllFields
+            }
+            password != confirmPassword -> errorMessage = passwordsNotMatch
+            password.length < 6 -> errorMessage = passwordMinLength
+            !email.contains("@") -> errorMessage = invalidEmail
+            !termsAgreed -> errorMessage = termsError
+            !isCaptchaVerified -> errorMessage = captchaError
+            else -> {
+                focusManager.clearFocus()
+                viewModel.signUp(email, password, username, inGameId)
+            }
+        }
+    }
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -171,7 +211,12 @@ fun SignupScreen(
                             value          = username,
                             onValueChange  = { username = it; errorMessage = "" },
                             placeholder    = stringResource(R.string.username),
-                            leadingIcon    = Icons.Default.Person
+                            leadingIcon    = Icons.Default.Person,
+                            imeAction      = ImeAction.Next,
+                            keyboardActions = KeyboardActions(
+                                onNext = { emailFocusRequester.requestFocus() }
+                            ),
+                            autofillTypes  = listOf(AutofillType.Username)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -182,7 +227,13 @@ fun SignupScreen(
                             onValueChange  = { email = it; errorMessage = "" },
                             placeholder    = stringResource(R.string.email),
                             leadingIcon    = Icons.Default.Email,
-                            keyboardType   = KeyboardType.Email
+                            keyboardType   = KeyboardType.Email,
+                            imeAction      = ImeAction.Next,
+                            keyboardActions = KeyboardActions(
+                                onNext = { inGameIdFocusRequester.requestFocus() }
+                            ),
+                            autofillTypes  = listOf(AutofillType.EmailAddress),
+                            modifier       = Modifier.focusRequester(emailFocusRequester)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -192,7 +243,12 @@ fun SignupScreen(
                             value          = inGameId,
                             onValueChange  = { inGameId = it; errorMessage = "" },
                             placeholder    = stringResource(R.string.in_game_id),
-                            leadingIcon    = Icons.Default.Tag
+                            leadingIcon    = Icons.Default.Tag,
+                            imeAction      = ImeAction.Next,
+                            keyboardActions = KeyboardActions(
+                                onNext = { passwordFocusRequester.requestFocus() }
+                            ),
+                            modifier       = Modifier.focusRequester(inGameIdFocusRequester)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -207,7 +263,13 @@ fun SignupScreen(
                             onTrailingClick     = { passwordVisible = !passwordVisible },
                             visualTransformation = if (passwordVisible) VisualTransformation.None
                                                    else PasswordVisualTransformation(),
-                            keyboardType        = KeyboardType.Password
+                            keyboardType        = KeyboardType.Password,
+                            imeAction           = ImeAction.Next,
+                            keyboardActions     = KeyboardActions(
+                                onNext = { confirmPasswordFocusRequester.requestFocus() }
+                            ),
+                            autofillTypes       = listOf(AutofillType.Password),
+                            modifier            = Modifier.focusRequester(passwordFocusRequester)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -222,7 +284,13 @@ fun SignupScreen(
                             onTrailingClick     = { confirmPasswordVisible = !confirmPasswordVisible },
                             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
                                                    else PasswordVisualTransformation(),
-                            keyboardType        = KeyboardType.Password
+                            keyboardType        = KeyboardType.Password,
+                            imeAction           = ImeAction.Done,
+                            keyboardActions     = KeyboardActions(
+                                onDone = { submitSignup() }
+                            ),
+                            autofillTypes       = listOf(AutofillType.Password),
+                            modifier            = Modifier.focusRequester(confirmPasswordFocusRequester)
                         )
 
                         // Error message
@@ -320,11 +388,6 @@ fun SignupScreen(
 
                         Spacer(Modifier.height(20.dp))
 
-                        val fillAllFields = stringResource(R.string.fill_all_fields)
-                        val passwordsNotMatch = stringResource(R.string.passwords_not_match)
-                        val passwordMinLength = stringResource(R.string.password_min_length)
-                        val invalidEmail = stringResource(R.string.invalid_email)
-
                         // ── CTA Button ────────────────────────────────
                         Box(
                             modifier = Modifier
@@ -332,20 +395,7 @@ fun SignupScreen(
                                 .height(52.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(color = MaterialTheme.colorScheme.primary)
-                                .clickable(enabled = !isLoading) {
-                                    when {
-                                        username.isBlank() || email.isBlank() || inGameId.isBlank() ||
-                                        password.isBlank() || confirmPassword.isBlank() -> {
-                                            errorMessage = fillAllFields
-                                        }
-                                        password != confirmPassword -> errorMessage = passwordsNotMatch
-                                        password.length < 6 -> errorMessage = passwordMinLength
-                                        !email.contains("@") -> errorMessage = invalidEmail
-                                        !termsAgreed -> errorMessage = termsError
-                                        !isCaptchaVerified -> errorMessage = captchaError
-                                        else -> viewModel.signUp(email, password, username, inGameId)
-                                    }
-                                },
+                                .clickable(enabled = !isLoading) { submitSignup() },
                             contentAlignment = Alignment.Center
                         ) {
                             if (isLoading) {
@@ -394,6 +444,7 @@ fun SignupScreen(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun SignupField(
     value               : String,
@@ -403,9 +454,24 @@ private fun SignupField(
     trailingIcon        : androidx.compose.ui.graphics.vector.ImageVector? = null,
     onTrailingClick     : () -> Unit = {},
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardType        : KeyboardType = KeyboardType.Text
+    keyboardType        : KeyboardType = KeyboardType.Text,
+    imeAction           : ImeAction = ImeAction.Done,
+    keyboardActions     : KeyboardActions = KeyboardActions.Default,
+    autofillTypes       : List<AutofillType> = emptyList(),
+    modifier            : Modifier = Modifier
 ) {
     val isFocused = remember { mutableStateOf(false) }
+    val autofill = LocalAutofill.current
+    val autofillTree = LocalAutofillTree.current
+    val autofillNode = remember(autofillTypes) {
+        AutofillNode(
+            autofillTypes = autofillTypes,
+            onFill = onValueChange
+        )
+    }
+    if (autofillTypes.isNotEmpty()) {
+        autofillTree += autofillNode
+    }
 
     OutlinedTextField(
         value                = value,
@@ -418,15 +484,33 @@ private fun SignupField(
         },
         trailingIcon         = if (trailingIcon != null) {{
             IconButton(onClick = onTrailingClick) {
-                Icon(trailingIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Icon(trailingIcon, placeholder, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
         }} else null,
         visualTransformation = visualTransformation,
-        modifier             = Modifier
+        modifier             = modifier
             .fillMaxWidth()
-            .onFocusChanged { isFocused.value = it.isFocused },
+            .onGloballyPositioned { coordinates ->
+                if (autofillTypes.isNotEmpty()) {
+                    autofillNode.boundingBox = coordinates.boundsInWindow()
+                }
+            }
+            .onFocusChanged { focusState ->
+                isFocused.value = focusState.isFocused
+                if (autofillTypes.isNotEmpty()) {
+                    if (focusState.isFocused) {
+                        autofill?.requestAutofillForNode(autofillNode)
+                    } else {
+                        autofill?.cancelAutofillForNode(autofillNode)
+                    }
+                }
+            },
         singleLine           = true,
-        keyboardOptions      = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions      = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = imeAction
+        ),
+        keyboardActions      = keyboardActions,
         shape                = RoundedCornerShape(14.dp),
         colors               = OutlinedTextFieldDefaults.colors(
             focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
