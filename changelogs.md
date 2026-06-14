@@ -8,6 +8,32 @@
 
 ---
 
+## 2026-06-14 07:21 +04:00 — docs: refresh design system reality
+
+### Commits
+- `f2c1fdf` — docs: refresh design system reality
+
+### Problem
+`DESIGN.md` still used the old "MLBB Scrim Host" title, framed the design direction as iOS-first, and incorrectly said the app was dark-mode only. That conflicted with the intentional light-theme support, theme-aware brand accent, current font setup, and new shared Premium state components.
+
+### Fix
+- Renamed the document to "Scrims Legends - Design System".
+- Updated the aesthetic direction to "Premium Mobile Polish" and documented intentional light+dark support.
+- Added `GoldOnLight` / `appBrandAccentColor()` guidance.
+- Documented current app fonts: Rajdhani display, Teko stats, platform/system body.
+- Added the shared Premium component kit state primitives and clarified that `iOS*` names are legacy internal component names, not a platform target.
+- Replaced the stale dark-mode-only section with current theme-mode guidance.
+
+### Verification
+- `git diff --check -- DESIGN.md` — no whitespace errors.
+- `rg -n "Dark mode only|No light mode needed|MLBB Scrim Host" DESIGN.md` — no stale matches.
+- Docs-only change; Gradle build was not rerun for this commit.
+
+### Notes
+- `[INTENTIONAL]` — Light-theme support is intentional. Do not restore "dark mode only" guidance or remove `GoldOnLight` / `appBrandAccentColor()` from design docs.
+
+---
+
 ## 2026-06-14 07:18 +04:00 — feat(auth): improve signup form keyboard flow
 
 ### Commits
