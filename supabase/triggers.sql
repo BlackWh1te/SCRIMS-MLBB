@@ -1,7 +1,7 @@
 -- MLBB Scrim Host - Database Triggers
 -- PostgreSQL with Supabase
 
--- Trigger to create profile when user is created
+-- Trigger to create profile and player_stats when user is created
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -11,6 +11,10 @@ BEGIN
     SPLIT_PART(NEW.email, '@', 1),
     NEW.email
   );
+  -- Auto-create player_stats so new users appear on the leaderboard (Bronze tier, 0 pts)
+  INSERT INTO public.player_stats (user_id, pts, wins, losses, matches_play)
+  VALUES (NEW.id, 0, 0, 0, 0)
+  ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -47,6 +51,7 @@ CREATE OR REPLACE FUNCTION public.calculate_division(xp INTEGER, tier TEXT)
 RETURNS INTEGER AS $$
 DECLARE
   tier_min INTEGER;
+  raw_div INTEGER;
 BEGIN
   CASE tier
     WHEN 'Bronze' THEN tier_min := 0;
@@ -58,7 +63,9 @@ BEGIN
     ELSE tier_min := 2000;
   END CASE;
 
-  RETURN FLOOR((xp - tier_min) / 50) + 1;
+  raw_div := FLOOR((xp - tier_min) / 50) + 1;
+  -- Clamp division to valid range [1, 4]
+  RETURN GREATEST(1, LEAST(4, raw_div));
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

@@ -8,25 +8,63 @@ plugins {
     id("dagger.hilt.android.plugin")
 }
 
+// Conditional Firebase plugins — only apply when google-services.json is present.
+// This keeps CI and fresh clones buildable without Firebase credentials.
+val hasGoogleServicesJson = file("google-services.json").exists()
+    || file("src/debug/google-services.json").exists()
+    || file("src/release/google-services.json").exists()
+if (hasGoogleServicesJson) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
 
-val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "\"https://efhbyrhxtsadbqjsfogc.supabase.co\""
-val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY") ?: "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmaGJ5cmh4dHNhZGJxanNmb2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTkzMjQsImV4cCI6MjA5NDE5NTMyNH0.6Ywj8Xxg0mkKnp6umnWG7a6jTqCdH7tJ3EacZpkGl0E\""
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
+    ?: throw GradleException("SUPABASE_URL not found. Create local.properties with SUPABASE_URL=...")
+val supabaseKey = localProperties.getProperty("SUPABASE_ANON_KEY")
+    ?: throw GradleException("SUPABASE_ANON_KEY not found. Create local.properties with SUPABASE_ANON_KEY=...")
+
+// Release signing config (reads from local.properties or environment variables)
+val keystorePath = localProperties.getProperty("KEYSTORE_PATH")
+    ?: localProperties.getProperty("RELEASE_STORE_FILE")
+    ?: System.getenv("KEYSTORE_PATH")
+    ?: System.getenv("RELEASE_STORE_FILE")
+val keystorePassword = localProperties.getProperty("KEYSTORE_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_STORE_PASSWORD")
+    ?: System.getenv("KEYSTORE_PASSWORD")
+    ?: System.getenv("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = localProperties.getProperty("KEY_ALIAS")
+    ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
+    ?: System.getenv("KEY_ALIAS")
+    ?: System.getenv("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = localProperties.getProperty("KEY_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
+    ?: System.getenv("KEY_PASSWORD")
+    ?: System.getenv("RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = keystorePath != null && keystorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null
+val keystoreType = localProperties.getProperty("KEYSTORE_TYPE")
+    ?: localProperties.getProperty("RELEASE_STORE_TYPE")
+    ?: System.getenv("KEYSTORE_TYPE")
+    ?: System.getenv("RELEASE_STORE_TYPE")
+    ?: keystorePath?.substringAfterLast('.', missingDelimiterValue = "")
+        ?.lowercase()
+        ?.let { if (it == "p12" || it == "pfx") "PKCS12" else null }
 
 android {
-    namespace = "com.mlbb.scrim"
-    compileSdk = 34
+    namespace = "com.scrimslegends.app"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.mlbb.scrim"
+        applicationId = "com.scrimslegends.app"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 3
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -35,15 +73,33 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", supabaseUrl)
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseKey)
+        buildConfigField("String", "BACKEND_API_KEY", "\"\"")
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
         jvmTarget = "21"
+    }
+
+    lint {
+        disable += "MissingTranslation"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                storeType = keystoreType
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -51,6 +107,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -79,16 +138,43 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val releaseArtifactTaskRequested = allTasks.any { task ->
+        task.path in setOf(":app:assembleRelease", ":app:bundleRelease", ":app:packageRelease", ":app:signReleaseBundle")
+    }
+    if (releaseArtifactTaskRequested && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is not configured. Set KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD " +
+                "(or RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD) " +
+                "in local.properties or environment variables before building a Play release."
+        )
+    }
+}
+
+// Tell KSP (Room annotation processor) where to write the schema JSON files.
+// Commit the generated app/schemas/ directory to version control so CI can detect
+// missing migration paths before they reach users.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.1")
 
     // Jetpack Compose
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -103,21 +189,27 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
 
     // Image loading
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     // ML Kit Translation (on-device)
-    implementation("com.google.mlkit:translate:17.0.2")
+    implementation("com.google.mlkit:translate:17.0.3")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Room
     val roomVersion = "2.6.1"
@@ -130,8 +222,20 @@ dependencies {
     ksp("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
+    // Firebase Crashlytics (requires google-services.json — see MIGRATION.md)
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.9")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))

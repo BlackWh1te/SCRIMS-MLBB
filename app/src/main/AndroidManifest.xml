@@ -3,20 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- P3-2 FIX: READ/WRITE_EXTERNAL_STORAGE deprecated on Android 13+ (API 33).
-         maxSdkVersion=32 restricts these to older devices only. -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <!-- On Android 13+, use granular media permissions instead -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 13+ (API 33): runtime permission required to post notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".MLBBScrimApplication"
+        android:name=".ScrimsLegendsApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -24,37 +17,39 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MLBBScrimHost"
+        android:theme="@style/Theme.ScrimsLegends"
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:requestLegacyExternalStorage="false"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.MLBBScrimHost">
+            android:theme="@style/Theme.ScrimsLegends">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Deep link for email confirmation (Supabase auth) -->
-            <intent-filter android:autoVerify="true">
+            <!-- Deep link for email confirmation (Supabase auth callback).
+                 Host must match the redirect URL configured in your Supabase project.
+                 Register scrimslegends.app and add /.well-known/assetlinks.json before
+                 re-enabling autoVerify. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="form.jotform.com"
-                    android:pathPrefix="/" />
+                    android:host="scrimslegends.app"
+                    android:pathPrefix="/auth/callback" />
             </intent-filter>
-            <!-- Deep link for match results (https://mlbbscrim.app/match_result/...) -->
-            <intent-filter android:autoVerify="true">
+            <!-- Deep link for match results -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="mlbbscrim.app"
+                    android:host="scrimslegends.app"
                     android:pathPrefix="/match_result/" />
             </intent-filter>
             <!-- App deep links for match history and scrims -->
@@ -63,10 +58,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="mlbbscrim"
+                    android:scheme="scrimslegends"
                     android:host="app" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".notifications.ScrimsFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

@@ -1,7 +1,7 @@
 # MLBB Scrim Host
 
 <p align="center">
-  <img src="teirs.png" width="800" alt="MLBB Scrim Rank Tiers">
+  <img src="assets/teirs.png" width="800" alt="MLBB Scrim Rank Tiers">
 </p>
 
 An Android app for hosting and managing scrims (practice matches) for Mobile Legends: Bang Bang (MLBB). Built with Kotlin, Jetpack Compose, and Supabase.
@@ -11,7 +11,7 @@ An Android app for hosting and managing scrims (practice matches) for Mobile Leg
 The app features a professional, gamified "Trophy Room" with live progress tracking and custom-designed badges.
 
 <p align="center">
-  <img src="achivments.png" width="800" alt="MLBB Scrim Achievements">
+  <img src="assets/achivments-jukebox-bg-removed.png" width="800" alt="MLBB Scrim Achievements">
 </p>
 
 - **Live Progress Tracking**: Real-time progress bars for all milestones.
@@ -19,6 +19,18 @@ The app features a professional, gamified "Trophy Room" with live progress track
 - **Up Next Hero Card**: Automatically displays your closest upcoming milestone.
 - **Role Mastery**: Specific tracking for Jungler, Roamer, and other roles.
 - **Elite Milestones**: Track win streaks (up to 20!) and high-rating consistency.
+
+## 🖥️ Live Admin Panel
+
+The project includes a production-ready management interface for administrators to monitor the ecosystem.
+
+**🌐 Live URL**: [https://mlbb-admin.vercel.app/](https://mlbb-admin.vercel.app/)
+
+- **Luxury Dark UI**: Built with a high-end, modern aesthetic for professional management.
+- **Scrim Verification**: Queue-based system for validating match results and screenshots.
+- **User & Team Management**: Full control over profiles, rankings, and team rosters.
+- **Real-time Monitoring**: Live status of active scrims and system health.
+- **News Engine**: Directly push updates and announcements to the mobile application.
 
 ## 🚀 Features
 
@@ -29,7 +41,7 @@ The app features a professional, gamified "Trophy Room" with live progress track
 - **Real-time Chat**: Communicate with opposing team leaders in a high-performance chat interface.
 - **Match Verification**: Upload game screenshots for admin verification.
 - **Advanced Ranking System**: 7-tier ranking system (Bronze → Mythic) with custom high-end icons.
-- **Admin Dashboard**: Full control over news, health monitoring, and match verification.
+- **Admin Control**: Integrated dashboard for total ecosystem management.
 
 ## 🛠️ Tech Stack
 

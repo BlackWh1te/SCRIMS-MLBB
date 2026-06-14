@@ -9,10 +9,16 @@ CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username TEXT UNIQUE NOT NULL,
     email TEXT NOT NULL,
-    mlbb_id TEXT,
+    mlbb_id TEXT UNIQUE, -- Enforce 1-to-1 Game ID link
     is_admin BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+    is_banned BOOLEAN DEFAULT FALSE,
+    ban_reason TEXT,
+    banned_at TIMESTAMP WITH TIME ZONE,
+    banned_by UUID REFERENCES profiles(id),
+    avatar_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
 -- Teams table
@@ -31,11 +37,12 @@ CREATE TABLE IF NOT EXISTS teams (
     current_tier TEXT DEFAULT 'Bronze',
     current_division INTEGER DEFAULT 1,
     -- P1-5: Team stats (phantom fields now materialized)
-    reputation REAL DEFAULT 5.0,
+    reputation NUMERIC(3,1) DEFAULT 5.0,
     can_post_scrims_until TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     total_scrims INTEGER DEFAULT 0,
     completed_scrims INTEGER DEFAULT 0,
     no_shows INTEGER DEFAULT 0,
+    is_open_for_applications BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -61,6 +68,18 @@ CREATE TABLE IF NOT EXISTS team_invitations (
     UNIQUE(team_id, invited_user_id)
 );
 
+-- Team applications table (players apply to open teams)
+CREATE TABLE IF NOT EXISTS team_applications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+    applicant_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'Pending',
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    responded_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(team_id, applicant_user_id)
+);
+
 -- Player stats table (per-player scrim statistics)
 CREATE TABLE IF NOT EXISTS player_stats (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -84,13 +103,28 @@ CREATE TABLE IF NOT EXISTS app_notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- Ban Appeals table (users can appeal their ban, admins review)
+CREATE TABLE IF NOT EXISTS ban_appeals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    ban_reason TEXT,                          -- the admin's reason for the ban (copied from profiles)
+    appeal_message TEXT NOT NULL,             -- user's appeal text
+    status TEXT NOT NULL DEFAULT 'pending'    -- pending / under_review / approved / rejected
+        CHECK (status IN ('pending', 'under_review', 'approved', 'rejected')),
+    admin_notes TEXT,                         -- admin's notes during review
+    reviewed_by UUID REFERENCES profiles(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
 -- Scrims table (available scrims posted by teams)
 CREATE TABLE IF NOT EXISTS scrims (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
     scheduled_date DATE NOT NULL,
     scheduled_time TIME NOT NULL,
-    best_of INTEGER DEFAULT 1,          -- 1=BO1, 2=BO2, 3=BO3, 4=BO4, 5=BO5
+    best_of INTEGER DEFAULT 1 CHECK (best_of IN (1, 3, 5)),          -- 1=BO1, 3=BO3, 5=BO5
     status TEXT DEFAULT 'Open',
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
@@ -117,7 +151,7 @@ CREATE TABLE IF NOT EXISTS scrims (
     game_mode TEXT DEFAULT 'RANKED',
     region TEXT DEFAULT 'EU',
     skill_level TEXT DEFAULT 'ALL',
-    max_players INTEGER DEFAULT 10,
+    max_players INTEGER DEFAULT 5,
     current_players INTEGER DEFAULT 0
 );
 
@@ -160,6 +194,7 @@ CREATE TABLE IF NOT EXISTS matches (
 -- Messages table (chat between team leaders)
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
     match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
     sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     sender_team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
@@ -167,8 +202,37 @@ CREATE TABLE IF NOT EXISTS messages (
     -- P1-6: Message metadata (phantom fields now materialized)
     sender_name TEXT,
     is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
     type TEXT DEFAULT 'TEXT',
+    image_url TEXT,
+    voice_url TEXT,
+    voice_duration INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Conversations table (chat conversations between scrim participants)
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    scrim_id UUID REFERENCES scrims(id) ON DELETE CASCADE,
+    participant_a_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    participant_a_name TEXT,
+    participant_a_team_id UUID REFERENCES teams(id),
+    participant_a_team_name TEXT,
+    participant_b_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    participant_b_name TEXT,
+    participant_b_team_id UUID REFERENCES teams(id),
+    participant_b_team_name TEXT,
+    last_message TEXT DEFAULT '',
+    last_message_time TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    chat_opens_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    participant_a_typing BOOLEAN DEFAULT FALSE,
+    participant_b_typing BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    -- ── Team group chat ──
+    team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+    is_team_chat BOOLEAN DEFAULT FALSE,
+    is_pinned BOOLEAN DEFAULT FALSE,
+    group_name TEXT
 );
 
 -- Match results table
@@ -211,12 +275,219 @@ CREATE INDEX IF NOT EXISTS idx_matches_team_b ON matches(team_b_id);
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
 CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_a ON conversations(participant_a_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_b ON conversations(participant_b_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_team_id ON conversations(team_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_is_team_chat ON conversations(is_team_chat);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_team_chat ON conversations(team_id)
+    WHERE is_team_chat = TRUE;
+CREATE INDEX IF NOT EXISTS idx_conversations_scrim ON conversations(scrim_id);
 CREATE INDEX IF NOT EXISTS idx_match_results_match ON match_results(match_id);
 CREATE INDEX IF NOT EXISTS idx_team_invitations_team ON team_invitations(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_invitations_user ON team_invitations(invited_user_id);
 CREATE INDEX IF NOT EXISTS idx_player_stats_user ON player_stats(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON app_notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON app_notifications(created_at);
+
+-- ═══════════════════════════════════════════════════════════════
+-- CHECK CONSTRAINTS
+-- ═══════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════
+-- REALTIME — Enable Supabase Realtime for live updates
+-- Run these in the Supabase SQL Editor or via supabase CLI
+-- ═══════════════════════════════════════════════════════════════
+
+-- Enable Realtime publication for key tables
+-- This allows the Android client to subscribe to INSERT/UPDATE/DELETE events
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE scrims;
+ALTER PUBLICATION supabase_realtime ADD TABLE scrim_applications;
+ALTER PUBLICATION supabase_realtime ADD TABLE app_notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE teams;
+ALTER PUBLICATION supabase_realtime ADD TABLE team_invitations;
+ALTER PUBLICATION supabase_realtime ADD TABLE team_members;
+ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+ALTER PUBLICATION supabase_realtime ADD TABLE lfg_posts;
+ALTER PUBLICATION supabase_realtime ADD TABLE player_stats;
+
+-- If the publication doesn't exist yet, create it first:
+-- CREATE PUBLICATION supabase_realtime FOR TABLE messages, scrims, scrim_applications, app_notifications, teams, team_invitations, team_members, conversations;
+
+-- Enable RLS on all Realtime-enabled tables (required for Supabase Realtime)
+-- Users should only see their own messages, notifications, and team data
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scrims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scrim_applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+
+-- ═══════════════════════════════════════════════════════════════
+-- REALTIME RLS Policies — Allow authenticated users to subscribe
+-- ═══════════════════════════════════════════════════════════════
+
+-- Messages: sender OR any participant of the parent conversation OR team member (for team chats) can view
+CREATE POLICY "Conversation members can view messages" ON messages
+    FOR SELECT USING (
+        sender_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM conversations c
+            WHERE c.id = messages.conversation_id
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid()
+                    )
+                )
+            )
+        )
+    );
+
+-- INSERT: sender must be a participant of the parent conversation OR an active team member (for team chats)
+CREATE POLICY "Conversation members can send messages" ON messages
+    FOR INSERT WITH CHECK (
+        sender_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM conversations c
+            WHERE c.id = messages.conversation_id
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid()
+                    )
+                )
+            )
+            AND c.chat_opens_at <= TIMEZONE('utc', NOW())
+        )
+    );
+
+-- UPDATE: only sender can update (e.g. read receipts, edits)
+CREATE POLICY "Message sender can update" ON messages
+    FOR UPDATE USING (sender_id = auth.uid());
+
+-- DELETE: only sender can delete their own message
+CREATE POLICY "Message sender can delete" ON messages
+    FOR DELETE USING (sender_id = auth.uid());
+
+-- Scrims: anyone can see open scrims, participants can see their scrims
+CREATE POLICY "Users can view scrims" ON scrims
+    FOR SELECT USING (
+        status = 'Open'
+        OR team_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM team_members tm
+            WHERE tm.team_id = scrims.team_id AND tm.user_id = auth.uid()
+        )
+        OR EXISTS (
+            SELECT 1 FROM team_members tm
+            WHERE tm.team_id = scrims.opponent_team_id AND tm.user_id = auth.uid()
+        )
+    );
+
+-- Notifications: users can only see their own notifications
+CREATE POLICY "Users can view their notifications" ON app_notifications
+    FOR SELECT USING (user_id = auth.uid());
+
+-- Teams: anyone can view teams, members can see full details
+CREATE POLICY "Users can view teams" ON teams
+    FOR SELECT USING (true);
+
+-- Team invitations: users can see invites they sent or received
+CREATE POLICY "Users can view their invitations" ON team_invitations
+    FOR SELECT USING (
+        invited_user_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM teams t WHERE t.id = team_invitations.team_id AND t.leader_id = auth.uid()
+        )
+    );
+
+-- Team members: anyone can see team membership
+CREATE POLICY "Users can view team members" ON team_members
+    FOR SELECT USING (true);
+
+-- Conversations: participants OR active team members can view
+CREATE POLICY "Conversation participants can view" ON conversations
+    FOR SELECT USING (
+        participant_a_id = auth.uid()
+        OR participant_b_id = auth.uid()
+        OR (
+            is_team_chat = TRUE
+            AND team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = auth.uid()
+            )
+        )
+    );
+
+-- INSERT: authenticated users can create conversations where they are a participant
+CREATE POLICY "Conversation participants can insert" ON conversations
+    FOR INSERT WITH CHECK (
+        participant_a_id = auth.uid() OR participant_b_id = auth.uid()
+    );
+
+-- UPDATE: participants OR active team members can update typing status / last_message
+CREATE POLICY "Conversation participants can update" ON conversations
+    FOR UPDATE USING (
+        participant_a_id = auth.uid()
+        OR participant_b_id = auth.uid()
+        OR (
+            is_team_chat = TRUE
+            AND team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = auth.uid()
+            )
+        )
+    );
+
+-- Scrim applications: team members can see applications for their scrims
+CREATE POLICY "Users can view scrim applications" ON scrim_applications
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM scrims s WHERE s.id = scrim_applications.scrim_id
+            AND (s.team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid())
+                 OR applicant_team_id IN (SELECT team_id FROM team_members WHERE user_id = auth.uid()))
+        )
+    );
+
+-- Player stats: pts cannot go negative
+ALTER TABLE player_stats ADD CONSTRAINT pts_non_negative CHECK (pts >= 0);
+
+-- Scrim status enum
+ALTER TABLE scrims ADD CONSTRAINT valid_scrim_status CHECK (status IN ('Open', 'Pending', 'Accepted', 'Ready', 'In Progress', 'Completed', 'Cancelled'));
+
+-- Match status enum
+ALTER TABLE matches ADD CONSTRAINT valid_match_status CHECK (status IN ('Scheduled', 'In Progress', 'Completed', 'Cancelled'));
+
+-- Scrim application status enum
+ALTER TABLE scrim_applications ADD CONSTRAINT valid_application_status CHECK (status IN ('Pending', 'Accepted', 'Rejected'));
+
+-- Team invitation status enum
+ALTER TABLE team_invitations ADD CONSTRAINT valid_invitation_status CHECK (status IN ('Pending', 'Accepted', 'Rejected'));
+
+-- Team reputation range
+ALTER TABLE teams ADD CONSTRAINT valid_reputation CHECK (reputation >= 0 AND reputation <= 10);
+
+-- Additional performance indexes
+CREATE INDEX IF NOT EXISTS idx_scrims_scheduled_date ON scrims(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_scrims_region ON scrims(region);
+CREATE INDEX IF NOT EXISTS idx_scrims_game_mode ON scrims(game_mode);
+CREATE INDEX IF NOT EXISTS idx_scrims_skill_level ON scrims(skill_level);
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_mlbb_id ON profiles(mlbb_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_is_banned ON profiles(is_banned);
+CREATE INDEX IF NOT EXISTS idx_app_notifications_type ON app_notifications(type);
 
 -- ═══════════════════════════════════════════════════════════════
 -- FUNCTIONS
@@ -252,7 +523,7 @@ BEGIN
             1
         )
         ON CONFLICT (user_id) DO UPDATE SET
-            pts = player_stats.pts + CASE WHEN is_winner THEN p_pts_per_win ELSE -p_pts_per_loss END,
+            pts = GREATEST(player_stats.pts + CASE WHEN is_winner THEN p_pts_per_win ELSE -p_pts_per_loss END, 0),
             wins = player_stats.wins + CASE WHEN is_winner THEN 1 ELSE 0 END,
             losses = player_stats.losses + CASE WHEN is_winner THEN 0 ELSE 1 END,
             matches_play = player_stats.matches_play + 1,
@@ -285,9 +556,9 @@ BEGIN
     RETURN QUERY
     SELECT
         COUNT(*)::BIGINT AS total_scrims,
-        COUNT(*) FILTER (WHERE s.status = 'COMPLETED')::BIGINT AS completed_scrims,
-        COUNT(*) FILTER (WHERE s.winner_team_id = p_team_id AND s.status = 'COMPLETED')::BIGINT AS wins,
-        COUNT(*) FILTER (WHERE s.winner_team_id IS NOT NULL AND s.winner_team_id != p_team_id AND s.status = 'COMPLETED')::BIGINT AS losses,
+        COUNT(*) FILTER (WHERE s.status = 'Completed')::BIGINT AS completed_scrims,
+        COUNT(*) FILTER (WHERE s.winner_team_id = p_team_id AND s.status = 'Completed')::BIGINT AS wins,
+        COUNT(*) FILTER (WHERE s.winner_team_id IS NOT NULL AND s.winner_team_id != p_team_id AND s.status = 'Completed')::BIGINT AS losses,
         COALESCE(SUM(ps.pts) FILTER (WHERE tm.team_id = p_team_id), 0)::BIGINT AS total_points
     FROM scrims s
     LEFT JOIN team_members tm ON tm.team_id = p_team_id
@@ -319,38 +590,490 @@ $$ LANGUAGE plpgsql;
 
 -- P2-3: Mark conversation as read for a user
 CREATE OR REPLACE FUNCTION mark_conversation_as_read(
-    p_match_id UUID,
+    p_conversation_id UUID,
     p_user_id UUID
 )
 RETURNS VOID AS $$
 BEGIN
     UPDATE messages
-    SET is_read = TRUE
-    WHERE match_id = p_match_id
+    SET is_read = TRUE,
+        read_at = TIMEZONE('utc', NOW())
+    WHERE conversation_id = p_conversation_id
       AND sender_id != p_user_id
       AND is_read = FALSE;
 END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Auto-update conversation last_message on new message insert
+CREATE OR REPLACE FUNCTION update_conversation_last_message()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE conversations
+    SET
+        last_message = NEW.content,
+        last_message_time = NEW.created_at
+    WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
 $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_conversation_last_message ON messages;
+CREATE TRIGGER trg_update_conversation_last_message
+    AFTER INSERT ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_last_message();
 
 -- P2-4: Delete user and cascade cleanup
 CREATE OR REPLACE FUNCTION delete_user(p_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
+    -- Delete scrim_applications FIRST (depends on team_members for lookup)
+    DELETE FROM scrim_applications WHERE applicant_team_id IN (
+        SELECT team_id FROM team_members WHERE user_id = p_user_id
+    );
     -- team_members cleanup
     DELETE FROM team_members WHERE user_id = p_user_id;
     -- team_invitations cleanup
     DELETE FROM team_invitations WHERE invited_user_id = p_user_id OR invited_by = p_user_id;
     -- scrim_rosters cleanup
     DELETE FROM scrim_rosters WHERE user_id = p_user_id;
-    -- scrim_applications cleanup (as applicant)
-    DELETE FROM scrim_applications WHERE applicant_team_id IN (
-        SELECT team_id FROM team_members WHERE user_id = p_user_id
-    );
     -- player_stats cleanup
     DELETE FROM player_stats WHERE user_id = p_user_id;
+    -- notifications cleanup
+    DELETE FROM app_notifications WHERE user_id = p_user_id;
     -- profiles cleanup
     DELETE FROM profiles WHERE id = p_user_id;
     -- Finally delete the auth user (requires admin privileges)
     -- This is handled by Supabase Auth API, not here.
 END;
 $$ LANGUAGE plpgsql;
+
+-- ═══════════════════════════════════════════════════════════════
+-- RPC FUNCTIONS (P4 messaging fixes)
+-- ═══════════════════════════════════════════════════════════════
+
+-- Count unread messages per conversation for a user
+CREATE OR REPLACE FUNCTION get_conversation_unread_count(
+    p_conversation_id UUID,
+    p_user_id UUID
+)
+RETURNS INTEGER AS $$
+DECLARE
+    unread_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO unread_count
+    FROM messages
+    WHERE conversation_id = p_conversation_id
+      AND sender_id != p_user_id
+      AND is_read = FALSE;
+    RETURN COALESCE(unread_count, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Get conversations with unread counts for a user (includes team chats)
+CREATE OR REPLACE FUNCTION get_conversations_for_user(p_user_id UUID)
+RETURNS TABLE (
+    id UUID,
+    scrim_id UUID,
+    participant_a_id UUID,
+    participant_a_name TEXT,
+    participant_a_team_id UUID,
+    participant_a_team_name TEXT,
+    participant_a_avatar_url TEXT,
+    participant_b_id UUID,
+    participant_b_name TEXT,
+    participant_b_team_id UUID,
+    participant_b_team_name TEXT,
+    participant_b_avatar_url TEXT,
+    last_message TEXT,
+    last_message_time TIMESTAMP WITH TIME ZONE,
+    chat_opens_at TIMESTAMP WITH TIME ZONE,
+    participant_a_typing BOOLEAN,
+    participant_b_typing BOOLEAN,
+    unread_count BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    team_id UUID,
+    is_team_chat BOOLEAN,
+    is_pinned BOOLEAN,
+    group_name TEXT,
+    participant_count INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        c.id,
+        c.scrim_id,
+        c.participant_a_id,
+        c.participant_a_name,
+        c.participant_a_team_id,
+        c.participant_a_team_name,
+        pa.avatar_url AS participant_a_avatar_url,
+        c.participant_b_id,
+        c.participant_b_name,
+        c.participant_b_team_id,
+        c.participant_b_team_name,
+        pb.avatar_url AS participant_b_avatar_url,
+        c.last_message,
+        c.last_message_time,
+        c.chat_opens_at,
+        c.participant_a_typing,
+        c.participant_b_typing,
+        COALESCE(
+            (SELECT COUNT(*) FROM messages m
+             WHERE m.conversation_id = c.id
+               AND m.sender_id != p_user_id
+               AND m.is_read = FALSE),
+            0
+        )::BIGINT AS unread_count,
+        c.created_at,
+        c.team_id,
+        c.is_team_chat,
+        c.is_pinned,
+        c.group_name,
+        COALESCE(c.participant_count, 2)::INTEGER AS participant_count
+    FROM conversations c
+    LEFT JOIN profiles pa ON pa.id = c.participant_a_id
+    LEFT JOIN profiles pb ON pb.id = c.participant_b_id
+    WHERE
+        (c.participant_a_id = p_user_id OR c.participant_b_id = p_user_id)
+        OR (
+            c.is_team_chat = TRUE
+            AND c.team_id IN (
+                SELECT tm.team_id FROM team_members tm
+                WHERE tm.user_id = p_user_id
+            )
+        )
+    ORDER BY c.is_pinned DESC, c.last_message_time DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Enforce chat gate (server-side lock before chatOpensAt)
+-- Team chats are always open (exempt from gate)
+CREATE OR REPLACE FUNCTION enforce_chat_gate()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM conversations c
+        WHERE c.id = NEW.conversation_id
+          AND c.is_team_chat = FALSE
+          AND c.chat_opens_at > TIMEZONE('utc', NOW())
+    ) THEN
+        RAISE EXCEPTION 'Chat is locked until %', (
+            SELECT c.chat_opens_at FROM conversations c WHERE c.id = NEW.conversation_id
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_enforce_chat_gate ON messages;
+CREATE TRIGGER trg_enforce_chat_gate
+    BEFORE INSERT ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION enforce_chat_gate();
+
+-- ═══════════════════════════════════════════════════════════════
+-- MIGRATIONS — Run these if the column doesn't exist yet
+-- Fix: PGRST204 "could not find is_open_for_applications column"
+-- This happens when the schema was applied before the column was added.
+-- ═══════════════════════════════════════════════════════════════
+
+-- Add is_open_for_applications column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'teams' AND column_name = 'is_open_for_applications'
+    ) THEN
+        ALTER TABLE teams ADD COLUMN is_open_for_applications BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
+-- Add logo_url column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'teams' AND column_name = 'logo_url'
+    ) THEN
+        ALTER TABLE teams ADD COLUMN logo_url TEXT;
+    END IF;
+END $$;
+
+-- Notify PostgREST to reload schema cache after adding columns
+NOTIFY pgrst, 'reload schema';
+
+-- ═══════════════════════════════════════════════════════════════
+-- SECURITY & LOGIC FIXES (2026-05-27 Deep Code Logic Audit)
+-- ═══════════════════════════════════════════════════════════════
+
+-- 1. Unique constraint on direct conversations (prevents duplicate DMs)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_direct_conversation ON conversations (
+    LEAST(participant_a_id, participant_b_id),
+    GREATEST(participant_a_id, participant_b_id)
+) WHERE scrim_id IS NULL;
+
+-- 2. Hardened messages INSERT RLS policy with chat gate check AND team chat support
+-- [DO NOT UNDO] Previous version at lines 355-374 already had team chat support.
+-- This replacement preserves that support while adding the chat gate.
+DROP POLICY IF EXISTS "Conversation members can send messages" ON messages;
+CREATE POLICY "Conversation members can send messages" ON messages
+    FOR INSERT WITH CHECK (
+        sender_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM conversations c
+            WHERE c.id = messages.conversation_id
+            AND (
+                c.participant_a_id = auth.uid()
+                OR c.participant_b_id = auth.uid()
+                OR (
+                    c.is_team_chat = TRUE
+                    AND c.team_id IN (
+                        SELECT tm.team_id FROM team_members tm
+                        WHERE tm.user_id = auth.uid()
+                    )
+                )
+            )
+            AND (
+                c.is_team_chat = TRUE          -- Team chats are always open
+                OR c.chat_opens_at <= TIMEZONE('utc', NOW())
+            )
+        )
+    );
+
+-- 3. Player stats RLS (prevents client-side manipulation of pts/wins/losses)
+ALTER TABLE player_stats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view player stats" ON player_stats
+    FOR SELECT USING (true);
+
+-- Users can create their own initial record, but cannot update/delete
+CREATE POLICY "Users can insert own player stats" ON player_stats
+    FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Direct client updates are BLOCKED; pts must be awarded via award_scrim_points RPC only
+CREATE POLICY "Block direct player_stats updates" ON player_stats
+    FOR UPDATE USING (false);
+
+CREATE POLICY "Block direct player_stats deletes" ON player_stats
+    FOR DELETE USING (false);
+
+-- 4. Add missing columns with safe migration guards
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'is_edited'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN is_edited BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'scrims' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE scrims ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW());
+    END IF;
+END $$;
+
+-- 5. Auto-update triggers for new columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc', NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_messages_updated_at ON messages;
+CREATE TRIGGER trg_messages_updated_at
+    BEFORE UPDATE ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_scrims_updated_at ON scrims;
+CREATE TRIGGER trg_scrims_updated_at
+    BEFORE UPDATE ON scrims
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Migration: Add reply-to and soft-delete columns to messages
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_id'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_snippet'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_snippet TEXT;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'reply_to_sender_name'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'is_deleted'
+    ) THEN
+        ALTER TABLE messages ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
+-- 6. Add missing conversation composite indexes for performance
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_a_time ON conversations(participant_a_id, last_message_time DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_b_time ON conversations(participant_b_id, last_message_time DESC);
+
+-- ═══════════════════════════════════════════════════════════════
+-- TEAM CHAT FIXES (2026-05-31 Audit)
+-- ═══════════════════════════════════════════════════════════════
+
+-- 1. Add participant_count to conversations (for team chat member count)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'conversations' AND column_name = 'participant_count'
+    ) THEN
+        ALTER TABLE conversations ADD COLUMN participant_count INTEGER DEFAULT 2;
+    END IF;
+END $$;
+
+-- 2. Fix enforce_chat_gate trigger: team chats are always open
+CREATE OR REPLACE FUNCTION enforce_chat_gate()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM conversations c
+        WHERE c.id = NEW.conversation_id
+          AND c.is_team_chat = FALSE
+          AND c.chat_opens_at > TIMEZONE('utc', NOW())
+    ) THEN
+        RAISE EXCEPTION 'Chat is locked until %', (
+            SELECT c.chat_opens_at FROM conversations c WHERE c.id = NEW.conversation_id
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. get_or_create_team_conversation RPC
+-- Creates a team group chat if it doesn't exist, returns existing one otherwise.
+CREATE OR REPLACE FUNCTION get_or_create_team_conversation(
+    p_team_id UUID,
+    p_team_name TEXT,
+    p_leader_id UUID,
+    p_leader_name TEXT
+)
+RETURNS TABLE (
+    id UUID,
+    scrim_id UUID,
+    participant_a_id UUID,
+    participant_a_name TEXT,
+    participant_a_team_id UUID,
+    participant_a_team_name TEXT,
+    participant_b_id UUID,
+    participant_b_name TEXT,
+    participant_b_team_id UUID,
+    participant_b_team_name TEXT,
+    last_message TEXT,
+    last_message_time TIMESTAMP WITH TIME ZONE,
+    chat_opens_at TIMESTAMP WITH TIME ZONE,
+    participant_a_typing BOOLEAN,
+    participant_b_typing BOOLEAN,
+    unread_count BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    team_id UUID,
+    is_team_chat BOOLEAN,
+    is_pinned BOOLEAN,
+    group_name TEXT
+) AS $$
+DECLARE
+    v_conversation_id UUID;
+    v_member_count INTEGER;
+BEGIN
+    -- Check if team conversation already exists
+    SELECT c.id INTO v_conversation_id
+    FROM conversations c
+    WHERE c.is_team_chat = TRUE AND c.team_id = p_team_id
+    LIMIT 1;
+
+    IF v_conversation_id IS NOT NULL THEN
+        -- Return existing conversation
+        RETURN QUERY
+        SELECT
+            c.id, c.scrim_id, c.participant_a_id, c.participant_a_name,
+            c.participant_a_team_id, c.participant_a_team_name,
+            c.participant_b_id, c.participant_b_name,
+            c.participant_b_team_id, c.participant_b_team_name,
+            c.last_message, c.last_message_time, c.chat_opens_at,
+            c.participant_a_typing, c.participant_b_typing,
+            0::BIGINT AS unread_count, c.created_at,
+            c.team_id, c.is_team_chat, c.is_pinned, c.group_name
+        FROM conversations c
+        WHERE c.id = v_conversation_id;
+        RETURN;
+    END IF;
+
+    -- Count team members for participant_count
+    SELECT COUNT(*)::INTEGER INTO v_member_count
+    FROM team_members WHERE team_id = p_team_id;
+
+    -- Create new team conversation
+    INSERT INTO conversations (
+        participant_a_id, participant_a_name,
+        last_message, last_message_time, chat_opens_at,
+        team_id, is_team_chat, group_name, participant_count
+    ) VALUES (
+        p_leader_id, p_leader_name,
+        'Team chat created', TIMEZONE('utc', NOW()), TIMEZONE('utc', NOW()),
+        p_team_id, TRUE, p_team_name, v_member_count
+    )
+    RETURNING conversations.id INTO v_conversation_id;
+
+    -- Return created conversation
+    RETURN QUERY
+    SELECT
+        c.id, c.scrim_id, c.participant_a_id, c.participant_a_name,
+        c.participant_a_team_id, c.participant_a_team_name,
+        c.participant_b_id, c.participant_b_name,
+        c.participant_b_team_id, c.participant_b_team_name,
+        c.last_message, c.last_message_time, c.chat_opens_at,
+        c.participant_a_typing, c.participant_b_typing,
+        0::BIGINT AS unread_count, c.created_at,
+        c.team_id, c.is_team_chat, c.is_pinned, c.group_name
+    FROM conversations c
+    WHERE c.id = v_conversation_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

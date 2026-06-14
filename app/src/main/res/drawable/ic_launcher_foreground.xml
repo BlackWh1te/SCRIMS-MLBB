@@ -4,13 +4,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="0.5"
-        android:scaleY="0.5"
-        android:translateX="27"
-        android:translateY="27">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M20,20 L80,20 L80,80 L20,80 Z" />
-    </group>
+    
+    <!-- Background Shield Glow -->
+    <path
+        android:fillColor="#1A2B3C"
+        android:pathData="M54,15 L89,30 L89,65 C89,87 74,102 54,107 C34,102 19,87 19,65 L19,30 L54,15 Z" />
+    
+    <!-- Main Shield Outline (Gold) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M54,20 L84,33 L84,65 C84,85 71,97 54,102 C37,97 24,85 24,65 L24,33 L54,20 Z M54,25 L29,36 L29,65 C29,82 40,92 54,97 C68,92 79,82 79,65 L79,36 L54,25 Z" />
+
+    <!-- Lightning Bolt (Blue) -->
+    <path
+        android:fillColor="#00AEEF"
+        android:pathData="M61,40 L44,65 L54,65 L46,85 L66,57 L56,57 L61,40 Z" />
+
 </vector>

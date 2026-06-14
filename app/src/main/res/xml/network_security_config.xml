@@ -19,12 +19,8 @@
             <!-- Add your Supabase certificate pinning here for additional security -->
             <!-- <certificates src="@raw/supabase_certificate" /> -->
         </trust-anchors>
-        <!-- TODO: Pin the Supabase certificate (get the actual hash from Supabase) -->
-        <!-- For production, uncomment and fill in when certificate pinning is configured:
-        <pin-set>
-            <pin digest="SHA-256">BASE64_HASH_HERE</pin>
-        </pin-set>
-        -->
+        <!-- Certificate pinning intentionally disabled until real primary and backup
+             SPKI pins are generated from the production Supabase certificate chain. -->
     </domain-config>
 
     <!-- Local development backend on the Android emulator -->

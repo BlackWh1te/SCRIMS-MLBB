@@ -1,0 +1,881 @@
+package com.scrimslegends.app.data.repository
+
+import android.content.Context
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import com.scrimslegends.app.data.model.AuthResult
+import com.scrimslegends.app.data.model.RankTier
+import com.scrimslegends.app.data.model.UserProfile
+import com.scrimslegends.app.data.service.*
+import com.scrimslegends.app.security.SecureStorage
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.firstOrNull
+import com.scrimslegends.app.util.DateUtils
+import timber.log.Timber
+
+import com.scrimslegends.app.data.cache.UnifiedCacheManager
+
+/**
+ * Supabase-backed authentication repository.
+ *
+ * Uses Supabase Auth REST API for real user authentication.
+ * Stores JWT tokens securely using encrypted SharedPreferences.
+ */
+class SupabaseAuthRepository(
+    private val context: Context,
+    private val cacheManager: UnifiedCacheManager,
+    private val realtimeManager: com.scrimslegends.app.data.service.RealtimeManager
+) : AuthRepositoryInterface {
+
+    companion object {
+        private const val KEY_ACCESS_TOKEN = "supabase_access_token"
+        private const val KEY_REFRESH_TOKEN = "supabase_refresh_token"
+        private const val KEY_USER_ID = "supabase_user_id"
+        private const val KEY_USER_EMAIL = "supabase_user_email"
+        private const val VERIFICATION_WINDOW_MS = 3_600_000L // 1 hour
+
+        // Shared geo-location client to avoid spawning new thread/connection pools per call.
+        private val geoClient by lazy {
+            okhttp3.OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+        }
+    }
+
+    private val secureStorage = SecureStorage.getInstance(context)
+    private val api = SupabaseService.api
+    private val authApi = SupabaseAuthServiceClient.api
+    private val otpApi = OtpApiClient.service
+
+    private var cachedProfile: UserProfile? = null
+    private var pendingUsername: String = ""
+    private var pendingInGameId: String = ""
+
+    // ─── Token Management ───
+
+    private fun getAccessToken(): String? = secureStorage.getEncrypted(KEY_ACCESS_TOKEN, "")
+        .takeIf { it.isNotBlank() }
+
+    private fun getRefreshToken(): String? = secureStorage.getEncrypted(KEY_REFRESH_TOKEN, "")
+        .takeIf { it.isNotBlank() }
+
+    private fun getUserId(): String? = secureStorage.getEncrypted(KEY_USER_ID, "")
+        .takeIf { it.isNotBlank() }
+
+    private fun saveTokens(accessToken: String, refreshToken: String, userId: String) {
+        secureStorage.storeEncrypted(KEY_ACCESS_TOKEN, accessToken)
+        secureStorage.storeEncrypted(KEY_REFRESH_TOKEN, refreshToken)
+        secureStorage.storeEncrypted(KEY_USER_ID, userId)
+    }
+
+    private suspend fun clearTokens() {
+        secureStorage.remove(KEY_ACCESS_TOKEN)
+        secureStorage.remove(KEY_REFRESH_TOKEN)
+        secureStorage.remove(KEY_USER_ID)
+        secureStorage.remove(KEY_USER_EMAIL)
+        cachedProfile = null
+        // Purge ALL caches on logout to prevent cross-user data leakage
+        try { cacheManager.clearAll() } catch (e: Exception) { Timber.w(e, "clearTokens: cache clear failed") }
+    }
+
+    private fun authHeader(): String? = getAccessToken()?.let { "Bearer $it" }
+
+
+    private fun mapUserProfile(
+        userId: String,
+        profileDto: ProfileDto?,
+        statsDto: PlayerStatsDto?,
+        authUser: SupabaseUser?
+    ): UserProfile {
+        val pts = statsDto?.pts ?: 0
+        val rankXp = pts.coerceAtLeast(0)
+        val fallbackEmail = authUser?.email ?: secureStorage.getEncrypted(KEY_USER_EMAIL, "")
+        val fallbackUsername = (authUser?.userMetadata?.get("username") as? String)
+            ?: fallbackEmail.substringBefore('@', "Player")
+        val fallbackInGameId = (authUser?.userMetadata?.get("game_id") as? String).orEmpty()
+
+        return UserProfile(
+            id = userId,
+            username = profileDto?.username?.takeIf { it.isNotBlank() } ?: fallbackUsername,
+            email = profileDto?.email?.takeIf { it.isNotBlank() } ?: fallbackEmail,
+            inGameId = profileDto?.gameId?.takeIf { it.isNotBlank() } ?: fallbackInGameId,
+            avatarUrl = profileDto?.avatarUrl,
+            createdAt = DateUtils.parseIsoToMillis(profileDto?.createdAt),
+            xp = rankXp,
+            pts = pts,
+            totalMatches = statsDto?.matchesPlay ?: 0,
+            wins = statsDto?.wins ?: 0,
+            losses = statsDto?.losses ?: 0,
+            currentTier = RankTier.fromXp(rankXp),
+            emailVerified = profileDto?.emailVerified == true || authUser?.emailConfirmedAt != null,
+            isBanned = profileDto?.isBanned ?: false,
+            banReason = profileDto?.banReason,
+            bannedAt = profileDto?.bannedAt,
+            mainHeroes = profileDto?.mainHeroes ?: emptyList(),
+            role = profileDto?.role ?: "",
+            bio = profileDto?.bio ?: "",
+            isTournamentHost = profileDto?.isTournamentHost ?: false
+        )
+    }
+
+    private fun mapOtpError(errorBody: String, fallbackPrefix: String): String {
+        return when {
+            errorBody.contains("User already registered", ignoreCase = true) ->
+                "This email is already registered. Please sign in instead."
+            errorBody.contains("validation_failed", ignoreCase = true) ->
+                "Invalid email address. Please check and try again."
+            errorBody.contains("email rate limit exceeded", ignoreCase = true) ||
+                errorBody.contains("over_email_send_rate_limit", ignoreCase = true) ||
+                errorBody.contains("over email send rate limit", ignoreCase = true) ->
+                "Too many verification emails were requested. Please wait a few minutes and try again."
+            else -> "$fallbackPrefix: $errorBody"
+        }
+    }
+
+    // ─── OTP-based Sign-up ───
+
+    override suspend fun sendOtp(email: String, username: String, inGameId: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            // Check if Game ID is already taken or banned
+            val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
+            if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                val profile = checkResponse.body()?.firstOrNull()
+                if (profile?.isBanned == true) {
+                    emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
+                } else {
+                    emit(AuthResult.Error("This Game ID is already linked to another account."))
+                }
+                return@flow
+            }
+
+            pendingUsername = username
+            pendingInGameId = inGameId
+
+            // Use Supabase's built-in OTP — sends email directly from Supabase servers
+            val response = authApi.sendOtp(OtpRequest(email = email, type = "signup"))
+            if (response.isSuccessful) {
+                emit(AuthResult.EmailNotVerified(email))
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                val message = mapOtpError(errorBody, "Failed to send verification code")
+                emit(AuthResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Failed to send verification code: ${e.message}"))
+        }
+    }
+
+    override suspend fun verifyOtp(email: String, token: String, password: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            // Step 1: Verify OTP with Supabase Auth
+            val verifyResponse = authApi.verifyOtp(VerifyOtpRequest(email = email, token = token, type = "signup"))
+            if (verifyResponse.isSuccessful) {
+                val authData = verifyResponse.body()
+                if (authData?.user != null && authData.accessToken != null) {
+                    // OTP verified — user exists in Supabase Auth now
+                    authData.refreshToken?.let { refresh ->
+                        saveTokens(authData.accessToken, refresh, authData.user.id)
+                    }
+                    secureStorage.storeEncrypted(KEY_USER_EMAIL, email)
+
+                    // Step 2: Set password (Supabase OTP signup doesn't set password)
+                    try {
+                        authApi.updateUser(
+                            authHeader = "Bearer ${authData.accessToken}",
+                            request = mapOf("password" to password)
+                        )
+                    } catch (e: Exception) {
+                        Timber.e(e, "verifyOtp: failed to set password after OTP verification")
+                        emit(AuthResult.Error("Account created but password could not be set. Please use 'Forgot Password' to set one."))
+                        return@flow
+                    }
+
+                    // Step 3: Update profile with username and inGameId
+                    // The DB trigger may take a moment to create the profile row after OTP verify,
+                    // so retry with a small delay if the first attempt fails.
+                    var profileCreated = false
+                    try {
+                        val profileUpdate = mapOf(
+                            "username" to (pendingUsername.ifBlank { email.substringBefore("@") }),
+                            "game_id" to (pendingInGameId.ifBlank { "" })
+                        )
+                        val updateResult = api.updateProfile(PostgrestFilter.eq(authData.user.id), profileUpdate)
+                        if (updateResult.isSuccessful) {
+                            profileCreated = true
+                        } else {
+                            // Profile row may not exist yet — try PATCH → POST fallback
+                            kotlinx.coroutines.delay(500)
+                            try {
+                                val createResult = api.createProfile(ProfileDto(
+                                    id = authData.user.id,
+                                    username = pendingUsername.ifBlank { email.substringBefore("@") },
+                                    email = email,
+                                    gameId = pendingInGameId.ifBlank { "" }
+                                ))
+                                if (createResult.isSuccessful) profileCreated = true
+                                else Timber.e("verifyOtp: fallback profile create returned ${createResult.code()}")
+                            } catch (e: Exception) { Timber.e(e, "verifyOtp: fallback profile create failed") }
+                        }
+                    } catch (e: Exception) { Timber.e(e, "verifyOtp: profile update failed") }
+                    if (!profileCreated) {
+                        emit(AuthResult.Error("Account created but profile setup failed. Please contact support."))
+                        return@flow
+                    }
+
+                    pendingUsername = ""
+                    pendingInGameId = ""
+                    emit(AuthResult.Success)
+                } else {
+                    emit(AuthResult.Error("Verification succeeded, but no session was created. Please try logging in."))
+                }
+            } else {
+                val errorBody = verifyResponse.errorBody()?.string() ?: "Unknown error"
+                val message = when {
+                    errorBody.contains("otp_expired", ignoreCase = true) ->
+                        "Code expired. Please request a new one."
+                    errorBody.contains("token_expired", ignoreCase = true) ->
+                        "Code expired. Please request a new one."
+                    errorBody.contains("user_not_found", ignoreCase = true) ->
+                        "User not found. Please sign up again."
+                    else -> "Invalid code. Please try again."
+                }
+                emit(AuthResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Verification failed: ${e.message}"))
+        }
+    }
+
+    // ─── Auth Operations ───
+
+    override suspend fun sendPasswordResetOtp(email: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val response = authApi.sendOtp(OtpRequest(email = email, type = "recovery"))
+            if (response.isSuccessful) {
+                emit(AuthResult.EmailNotVerified(email))
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                val message = mapOtpError(errorBody, "Failed to send password reset code")
+                emit(AuthResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Failed to send password reset code: ${e.message}"))
+        }
+    }
+
+    override suspend fun verifyPasswordResetOtp(email: String, token: String, newPassword: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            if (newPassword.length < 6) {
+                emit(AuthResult.Error("New password must be at least 6 characters."))
+                return@flow
+            }
+
+            val verifyResponse = authApi.verifyOtp(VerifyOtpRequest(email = email, token = token, type = "recovery"))
+            if (!verifyResponse.isSuccessful) {
+                val errorBody = verifyResponse.errorBody()?.string() ?: "Unknown error"
+                val message = when {
+                    errorBody.contains("otp_expired", ignoreCase = true) ||
+                        errorBody.contains("token_expired", ignoreCase = true) ->
+                        "Code expired. Please request a new one."
+                    errorBody.contains("user_not_found", ignoreCase = true) ->
+                        "No account found for this email."
+                    else -> "Invalid code. Please try again."
+                }
+                emit(AuthResult.Error(message))
+                return@flow
+            }
+
+            val authData = verifyResponse.body()
+            val recoveryToken = authData?.accessToken
+            if (recoveryToken.isNullOrBlank()) {
+                emit(AuthResult.Error("Code verified, but no recovery session was created. Please request a new code."))
+                return@flow
+            }
+
+            val updateResponse = authApi.updateUser(
+                authHeader = "Bearer $recoveryToken",
+                request = mapOf("password" to newPassword)
+            )
+            if (updateResponse.isSuccessful) {
+                try {
+                    authApi.signOut("Bearer $recoveryToken")
+                } catch (_: Exception) {
+                    // Recovery sessions are temporary. Local state is still cleared below.
+                }
+                clearTokens()
+                emit(AuthResult.Success)
+            } else {
+                val errorBody = updateResponse.errorBody()?.string()
+                emit(AuthResult.Error("Failed to update password: ${errorBody ?: updateResponse.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Password reset failed: ${e.message}"))
+        }
+    }
+
+    override suspend fun signUp(email: String, password: String, username: String, inGameId: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            // Check if Game ID is already taken or banned
+            val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
+            if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                val profile = checkResponse.body()?.firstOrNull()
+                if (profile?.isBanned == true) {
+                    emit(AuthResult.Error("This Game ID is banned and cannot be used for new accounts."))
+                } else {
+                    emit(AuthResult.Error("This Game ID is already linked to another account."))
+                }
+                return@flow
+            }
+
+            val response = authApi.signUp(SignUpRequest(
+                email = email,
+                password = password,
+                data = mapOf("username" to username, "game_id" to inGameId)
+            ))
+
+            if (response.isSuccessful) {
+                val authData = response.body()
+                if (authData?.user != null) {
+                    // Save tokens
+                    authData.accessToken?.let { token ->
+                        authData.refreshToken?.let { refresh ->
+                            saveTokens(token, refresh, authData.user.id)
+                        }
+                    }
+
+                    // Update profile in database (trigger auto-creates, we just update it)
+                    authData.user.id.let { userId ->
+                        try {
+                            api.updateProfile(PostgrestFilter.eq(userId), mapOf(
+                                "username" to username,
+                                "email" to email,
+                                "game_id" to inGameId
+                            ))
+                        } catch (e: Exception) {
+                            Timber.w(e, "signUp: failed to update profile for $userId")
+                        }
+                    }
+
+                    // Check if email is confirmed
+                    if (authData.user.emailConfirmedAt != null) {
+                        emit(AuthResult.Success)
+                    } else {
+                        emit(AuthResult.EmailNotVerified(email))
+                    }
+                } else {
+                    emit(AuthResult.Error("Sign up failed: No user data returned"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                emit(AuthResult.Error("Sign up failed: $errorBody"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Sign up failed: ${e.message}"))
+        }
+    }
+
+    override suspend fun signIn(email: String, password: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val response = authApi.signIn(SignInRequest(email = email, password = password))
+
+            if (response.isSuccessful) {
+                val authData = response.body()
+                if (authData?.user != null) {
+                    // Save tokens
+                    authData.accessToken?.let { token ->
+                        authData.refreshToken?.let { refresh ->
+                            saveTokens(token, refresh, authData.user.id)
+                        }
+                    }
+                    secureStorage.storeEncrypted(KEY_USER_EMAIL, email)
+
+                    // Check if email is confirmed
+                    if (authData.user.emailConfirmedAt != null) {
+                        emit(AuthResult.Success)
+                    } else {
+                        emit(AuthResult.EmailNotVerified(email))
+                    }
+                } else {
+                    emit(AuthResult.Error("Sign in failed: No user data returned"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                val errorCode = response.code()
+                val friendlyMessage = when {
+                    // Email not verified — must be checked BEFORE the generic 400 guard,
+                    // because Supabase returns HTTP 400 for both "wrong password" and
+                    // "email not confirmed". Without this ordering the branch below would
+                    // swallow the email-not-confirmed case and show the wrong message.
+                    errorBody.contains("Email not confirmed", ignoreCase = true) ->
+                        "Please verify your email address first. Check your inbox for the verification link."
+                    // Account locked or disabled
+                    errorBody.contains("locked", ignoreCase = true) ||
+                    errorBody.contains("disabled", ignoreCase = true) ||
+                    errorBody.contains("blocked", ignoreCase = true) ->
+                        "Your account has been locked. Please try again later or contact support."
+                    // Network/server errors
+                    errorCode == 503 || errorCode == 502 || errorCode == 504 ->
+                        "Service temporarily unavailable. Please try again later."
+                    // Invalid credentials (wrong password or non-existent user)
+                    errorCode == 400 || errorBody.contains("invalid_grant", ignoreCase = true) ||
+                    errorBody.contains("Invalid login credentials", ignoreCase = true) ->
+                        "Invalid email or password. Please check your credentials and try again."
+                    // Fallback for other errors
+                    else -> "Sign in failed: Invalid email or password."
+                }
+                emit(AuthResult.Error(friendlyMessage))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Sign in failed. Please check your internet connection and try again."))
+        }
+    }
+
+    override suspend fun signOut(): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val uid = getUserId()
+            if (uid != null) realtimeManager.stopSubscription(uid)
+            authHeader()?.let { header ->
+                authApi.signOut(header)
+            }
+            clearTokens()
+            emit(AuthResult.Success)
+        } catch (e: Exception) {
+            clearTokens() // Always clear local tokens
+            emit(AuthResult.Success)
+        }
+    }
+
+    override suspend fun deleteAccount(): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val userId = getUserId()
+            val token = getAccessToken()
+            if (userId != null && token != null) {
+                // Step 1: Mark profile as deleted
+                try {
+                    api.deactivateUser(
+                        userId = PostgrestFilter.eq(userId),
+                        body = mapOf("deleted" to true, "deleted_at" to DateUtils.formatIsoUtc(System.currentTimeMillis()))
+                    )
+                } catch (e: Exception) { Timber.w(e, "Failed to mark profile as deleted") }
+
+                // Step 2: Delete auth user via Edge Function (requires service_role key)
+                try {
+                    val edgeFunctionUrl = "${SupabaseConfig.SUPABASE_URL}/functions/v1/delete-user"
+                    val request = okhttp3.Request.Builder()
+                        .url(edgeFunctionUrl)
+                        .addHeader("Authorization", "Bearer $token")
+                        .addHeader("Content-Type", "application/json")
+                        .post(okhttp3.RequestBody.create(
+                            "application/json".toMediaTypeOrNull(),
+                            com.google.gson.Gson().toJson(mapOf("user_id" to userId))
+                        ))
+                        .build()
+                    // Reuse the shared Retrofit OkHttpClient — do NOT create a new
+                    // OkHttpClient() per call (spawns a new thread pool each time, never released).
+                    val sharedClient = SupabaseRetrofitClient.retrofit.callFactory() as? okhttp3.OkHttpClient
+                    if (sharedClient == null) {
+                        Timber.e("deleteAccount: shared OkHttpClient not available")
+                    } else {
+                        val response = sharedClient.newCall(request).execute()
+                        if (!response.isSuccessful) {
+                            Timber.w("Edge Function delete-user returned %s", response.code)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to call delete-user Edge Function")
+                }
+                realtimeManager.stopSubscription(userId)
+            }
+            clearTokens()
+            emit(AuthResult.Success)
+        } catch (e: Exception) {
+            clearTokens()
+            emit(AuthResult.Success) // Always clear local state even if backend fails
+        }
+    }
+
+    override suspend fun confirmEmail(): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            // In Supabase, email is confirmed via deep link. 
+            // This method just checks current user status.
+            authHeader()?.let { header ->
+                val response = authApi.getCurrentUser(header)
+                if (response.isSuccessful) {
+                    val user = response.body()
+                    if (user?.emailConfirmedAt != null) {
+                        emit(AuthResult.Success)
+                    } else {
+                        if (isVerificationExpired()) {
+                            clearTokens()
+                            emit(AuthResult.Error("Verification window expired. Your account has been deleted. Please sign up again."))
+                        } else {
+                            emit(AuthResult.EmailNotVerified(user?.email ?: ""))
+                        }
+                    }
+                } else {
+                    emit(AuthResult.Error("Could not verify email status"))
+                }
+            } ?: emit(AuthResult.Error("Not authenticated"))
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun resendVerificationEmail(email: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val response = otpApi.sendOtp(SendOtpBackendRequest(email))
+            if (response.isSuccessful) {
+                emit(AuthResult.Success)
+            } else {
+                val errorBody = response.errorBody()?.string() ?: response.body()?.message ?: "Unknown error"
+                val message = when {
+                    errorBody.contains("User already registered", ignoreCase = true) ->
+                        "This account is already verified. Please sign in."
+                    else -> mapOtpError(errorBody, "Failed to resend code")
+                }
+                emit(AuthResult.Error(message))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Failed to resend code: ${e.message}"))
+        }
+    }
+
+    // ─── Profile Operations ───
+
+    override suspend fun updateProfile(username: String, inGameId: String, role: String?, bio: String?, mainHeroes: List<String>?): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            getUserId()?.let { userId ->
+                // Check if Game ID is already taken by someone else
+                val checkResponse = api.getProfileByGameId(PostgrestFilter.eq(inGameId))
+                if (checkResponse.isSuccessful && checkResponse.body()?.isNotEmpty() == true) {
+                    val existing = checkResponse.body()?.firstOrNull()
+                    if (existing != null && existing.id != userId) {
+                        emit(AuthResult.Error("This Game ID is already linked to another account."))
+                        return@flow
+                    }
+                }
+
+                val updateMap = mutableMapOf<String, Any>(
+                    "username" to username,
+                    "game_id" to inGameId
+                )
+                if (role != null) updateMap["role"] = role
+                if (bio != null) updateMap["bio"] = bio
+                if (mainHeroes != null) updateMap["main_heroes"] = mainHeroes
+
+                val response = api.updateProfile(PostgrestFilter.eq(userId), updateMap)
+                if (response.isSuccessful) {
+                    cacheManager.invalidate("current_user_profile_$userId")
+                    getUserProfile() // Refresh Room cache
+                    emit(AuthResult.Success)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Timber.e("updateProfile failed: %s body=%s", response.code(), errorBody)
+                    emit(AuthResult.Error("Failed to update profile"))
+                }
+            } ?: emit(AuthResult.Error("Not authenticated"))
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun updateAvatar(avatarUrl: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val userId = getUserId() ?: throw Exception("Not authenticated")
+            val response = api.updateProfile(PostgrestFilter.eq(userId), mapOf("avatar_url" to avatarUrl))
+            if (response.isSuccessful) {
+                cacheManager.invalidate("profile_$userId")
+                emit(AuthResult.Success)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Timber.e("updateAvatar failed: %s body=%s", response.code(), errorBody)
+                emit(AuthResult.Error("Failed to update avatar: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun uploadAndSetAvatar(fileBytes: ByteArray, contentType: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val userId = getUserId() ?: throw Exception("Not authenticated")
+            val path = "avatars/${userId}_${System.currentTimeMillis()}.${if (contentType.contains("jpeg")) "jpg" else "png"}"
+            val uploadResult = SupabaseStorageUpload.uploadFile(
+                bucket = SupabaseConfig.BUCKET_AVATARS,
+                path = path,
+                fileBytes = fileBytes,
+                contentType = contentType
+            )
+            uploadResult.onSuccess { publicUrl ->
+                val updateResponse = api.updateProfile(PostgrestFilter.eq(userId), mapOf("avatar_url" to publicUrl))
+                if (updateResponse.isSuccessful) {
+                    cacheManager.invalidate("profile_$userId")
+                    cacheManager.invalidate("current_user_profile_$userId")
+                    emit(AuthResult.Success)
+                } else {
+                    val errorBody = updateResponse.errorBody()?.string()
+                    Timber.e("uploadAndSetAvatar profile update failed: %s body=%s", updateResponse.code(), errorBody)
+                    emit(AuthResult.Error("Avatar uploaded but profile update failed"))
+                }
+            }.onFailure { e ->
+                emit(AuthResult.Error("Upload failed: ${e.message}"))
+            }
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun updateEmail(newEmail: String, currentPassword: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            val header = authHeader() ?: run {
+                emit(AuthResult.Error("Not authenticated"))
+                return@flow
+            }
+            val userId = getUserId() ?: run {
+                emit(AuthResult.Error("Not authenticated"))
+                return@flow
+            }
+
+            // Step 1: Update the actual Supabase Auth email so the user can log in
+            // with the new address going forward.
+            val authResponse = authApi.updateUser(header, mapOf("email" to newEmail))
+            if (!authResponse.isSuccessful) {
+                val errorBody = authResponse.errorBody()?.string()
+                Timber.e("updateEmail auth failed: %s body=%s", authResponse.code(), errorBody)
+                emit(AuthResult.Error("Failed to update email: ${errorBody ?: authResponse.code()}"))
+                return@flow
+            }
+
+            // Step 2: Mirror the new email to the profiles table for display purposes.
+            try {
+                api.updateProfile(PostgrestFilter.eq(userId), mapOf("email" to newEmail))
+            } catch (e: Exception) {
+                Timber.w(e, "updateEmail: profile table mirror failed (non-fatal)")
+            }
+
+            cacheManager.invalidate("current_user_profile_$userId")
+            secureStorage.storeEncrypted(KEY_USER_EMAIL, newEmail)
+            emit(AuthResult.Success)
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    override suspend fun updatePassword(currentPassword: String, newPassword: String, confirmPassword: String): Flow<AuthResult> = flow {
+        emit(AuthResult.Loading)
+        try {
+            if (newPassword != confirmPassword) {
+                emit(AuthResult.Error("New passwords do not match."))
+                return@flow
+            }
+            if (newPassword.length < 6) {
+                emit(AuthResult.Error("New password must be at least 6 characters."))
+                return@flow
+            }
+            if (currentPassword == newPassword) {
+                emit(AuthResult.Error("New password must be different from current password."))
+                return@flow
+            }
+
+            // Verify the current password by re-authenticating with Supabase before
+            // allowing the change. Without this check anyone who obtains an active JWT
+            // (e.g. a shared device) can silently change the account password.
+            val email = secureStorage.getEncrypted(KEY_USER_EMAIL, "")
+            if (email.isBlank()) {
+                emit(AuthResult.Error("Could not verify identity. Please sign out and sign back in."))
+                return@flow
+            }
+            val reAuthResponse = authApi.signIn(SignInRequest(email = email, password = currentPassword))
+            if (!reAuthResponse.isSuccessful) {
+                emit(AuthResult.Error("Current password is incorrect."))
+                return@flow
+            }
+
+            authHeader()?.let { header ->
+                val response = authApi.updateUser(header, mapOf("password" to newPassword))
+                if (response.isSuccessful) {
+                    emit(AuthResult.Success)
+                } else {
+                    emit(AuthResult.Error("Failed to update password: ${response.errorBody()?.string()}"))
+                }
+            } ?: emit(AuthResult.Error("Not authenticated"))
+        } catch (e: Exception) {
+            emit(AuthResult.Error("Error: ${e.message}"))
+        }
+    }
+
+    // ─── User State ───
+
+    override fun getCurrentUser(): String? = getUserId()
+
+    override suspend fun invalidateProfileCache() {
+        try {
+            cacheManager.invalidateByPrefix("current_user_profile_")
+        } catch (_: Exception) {
+            // Ignore
+        }
+    }
+
+    override suspend fun getUserProfile(forceRefresh: Boolean): UserProfile? {
+        val userId = getUserId() ?: return null
+
+        val db = com.scrimslegends.app.data.local.ScrimsLegendsDatabase.getDatabase(context)
+        val profileDao = db.profileDao()
+
+        return try {
+            cacheManager.get(
+                key = "current_user_profile_$userId",
+                memoryTtlMs = 60_000L, // 1 minute memory
+                roomTtlMs = 300_000L,  // 5 minutes Room
+                roomLoader = {
+                    val local = profileDao.getProfileById(userId).firstOrNull()?.let { mapEntityToProfile(it) }
+                    if (local != null) cachedProfile = local
+                    local
+                },
+                networkLoader = {
+                    val authUser = authHeader()?.let { header ->
+                        authApi.getCurrentUser(header).body()
+                    }
+                    val profileResponse = api.getProfileById(PostgrestFilter.eq(userId))
+                    val statsResponse = api.getPlayerStats(PostgrestFilter.eq(userId))
+
+                    if (!profileResponse.isSuccessful || !statsResponse.isSuccessful) {
+                        throw Exception("Failed to load profile from network")
+                    }
+
+                    val profile = mapUserProfile(
+                        userId = userId,
+                        profileDto = profileResponse.body()?.firstOrNull(),
+                        statsDto = statsResponse.body()?.firstOrNull(),
+                        authUser = authUser
+                    )
+                    cachedProfile = profile
+                    profile
+                },
+                roomSaver = { userProfile ->
+                    profileDao.insertProfile(mapProfileToEntity(userProfile))
+                }
+            )
+        } catch (e: Exception) {
+            // Offline fallback if network fails and cache is empty
+            val fallbackEmail = secureStorage.getEncrypted(KEY_USER_EMAIL, "")
+            UserProfile(
+                id = userId,
+                username = fallbackEmail.substringBefore('@', "Player"),
+                email = fallbackEmail,
+                inGameId = "",
+                emailVerified = true
+            )
+        }
+    }
+
+    private fun mapEntityToProfile(entity: com.scrimslegends.app.data.local.ProfileEntity): UserProfile {
+        return UserProfile(
+            id = entity.id,
+            username = entity.username,
+            email = entity.email ?: "",
+            inGameId = entity.inGameId ?: "",
+            avatarUrl = entity.avatarUrl,
+            currentTier = RankTier.values().find { it.name == entity.rank } ?: RankTier.WARRIOR,
+            pts = entity.points,
+            isBanned = entity.isBanned,
+            banReason = entity.banReason,
+            bannedAt = entity.bannedAt
+        )
+    }
+
+    private fun mapProfileToEntity(profile: UserProfile): com.scrimslegends.app.data.local.ProfileEntity {
+        return com.scrimslegends.app.data.local.ProfileEntity(
+            id = profile.id,
+            username = profile.username,
+            fullName = null,
+            avatarUrl = profile.avatarUrl,
+            email = profile.email,
+            inGameId = profile.inGameId,
+            rank = profile.currentTier.name,
+            role = null,
+            bio = profile.bio,
+            mainHeroes = profile.mainHeroes.joinToString(","),
+            points = profile.pts,
+            isBanned = profile.isBanned,
+            banReason = profile.banReason,
+            bannedAt = profile.bannedAt,
+            lastUpdated = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun isLoggedIn(): Boolean = getAccessToken() != null
+
+    // ─── Verification Window (kept for compatibility) ───
+
+    override fun isVerificationExpired(): Boolean {
+        val profile = cachedProfile ?: return false
+        if (profile.emailVerified) return false
+        val elapsed = System.currentTimeMillis() - profile.createdAt
+        return elapsed > VERIFICATION_WINDOW_MS
+    }
+
+    override fun secondsUntilDeletion(): Long {
+        val profile = cachedProfile ?: return 0L
+        if (profile.emailVerified) return 0L
+        val elapsed = System.currentTimeMillis() - profile.createdAt
+        val remaining = VERIFICATION_WINDOW_MS - elapsed
+        return if (remaining > 0) remaining / 1000 else 0L
+    }
+
+    override suspend fun purgeIfExpired(): Boolean {
+        return if (isVerificationExpired()) {
+            clearTokens()
+            true
+        } else false
+    }
+
+    override suspend fun updateLocationAndLastSeen() {
+        try {
+            val userId = getUserId() ?: return
+
+            val request = okhttp3.Request.Builder()
+                .url("https://get.geojs.io/v1/ip/geo.json")
+                .build()
+
+            geoClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val bodyString = response.body?.string()
+                    if (bodyString != null) {
+                        val jsonObject = org.json.JSONObject(bodyString)
+                        val country = jsonObject.optString("country", "")
+                        val city = jsonObject.optString("city", "")
+                        
+                        if (country.isNotEmpty() || city.isNotEmpty()) {
+                            val nowIso = DateUtils.formatIsoUtcWithMs(System.currentTimeMillis())
+                            
+                            val updateMap = mapOf(
+                                "country" to country,
+                                "city" to city,
+                                "last_seen" to nowIso
+                            )
+                            api.updateProfile(PostgrestFilter.eq(userId), updateMap)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to update location")
+        }
+    }
+}

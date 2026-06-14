@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- Background Shield Glow -->
+    <path
+        android:fillColor="#1A2B3C"
+        android:pathData="M100,10 L170,40 L170,110 C170,155 140,185 100,195 C60,185 30,155 30,110 L30,40 L100,10 Z" />
+    
+    <!-- Main Shield Outline (Gold) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M100,20 L160,45 L160,110 C160,150 135,175 100,185 C65,175 40,150 40,110 L40,45 L100,20 Z M100,30 L50,50 L50,110 C50,145 70,165 100,175 C130,165 150,145 150,110 L150,50 L100,30 Z" />
+
+    <!-- Lightning Bolt (Blue) -->
+    <path
+        android:fillColor="#00AEEF"
+        android:pathData="M115,60 L80,110 L100,110 L85,150 L125,95 L105,95 L115,60 Z" />
+
+    <!-- Accent Lines -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M100,20 L100,30 M160,110 L150,110 M40,110 L50,110" />
+
+</vector>

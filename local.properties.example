@@ -1,0 +1,4 @@
+sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+SUPABASE_URL="https://your-project-id.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
+NEWS_SERVICE_API_KEY="your-news-service-api-key"
