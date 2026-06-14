@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.EmptyState
+import com.scrimslegends.app.ui.components.PremiumLoadingState
 import com.scrimslegends.app.ui.components.SectionHeader
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import java.text.SimpleDateFormat
@@ -100,12 +101,10 @@ fun MatchResultListScreen(
             ) {
                 when {
                     isLoading && matchResults.isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                        }
+                        PremiumLoadingState(
+                            message = "Loading matches...",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                     matchResults.isEmpty() -> {
                         Box(

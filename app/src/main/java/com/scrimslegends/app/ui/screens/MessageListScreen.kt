@@ -46,6 +46,7 @@ import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.GlassBackButton
 import com.scrimslegends.app.ui.components.EmptyState
 import com.scrimslegends.app.ui.components.ErrorSnackbar
+import com.scrimslegends.app.ui.components.PremiumLoadingState
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.components.ReportDialog
 import com.scrimslegends.app.ui.components.UserReportReason
@@ -344,21 +345,10 @@ fun MessageListScreen(
             ) {
                 when {
                     isLoading && !hasAnyConversation -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(
-                                    color       = MaterialTheme.colorScheme.secondary,
-                                    modifier    = Modifier.size(36.dp),
-                                    strokeWidth = 3.dp
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                Text(
-                                    "Loading conversations…",
-                                    color    = appTextSecondary,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
+                        PremiumLoadingState(
+                            message = "Loading conversations...",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     !hasAnyConversation || (filteredConversations.isEmpty() && visibleTeamConversations.isEmpty()) -> {

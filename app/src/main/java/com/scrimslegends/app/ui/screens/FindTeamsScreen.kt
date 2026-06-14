@@ -24,6 +24,7 @@ import com.scrimslegends.app.ui.components.AnimatedEntrance
 import com.scrimslegends.app.ui.components.EmptyState
 import com.scrimslegends.app.ui.components.ErrorSnackbar
 import com.scrimslegends.app.ui.components.GlassBackButton
+import com.scrimslegends.app.ui.components.PremiumLoadingState
 import com.scrimslegends.app.ui.components.PullToRefreshContainer
 import com.scrimslegends.app.ui.theme.*
 import androidx.compose.ui.graphics.Color
@@ -125,9 +126,10 @@ fun FindTeamsScreen(
             ) {
                 when {
                     isLoading && teams.isEmpty() -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                        }
+                        PremiumLoadingState(
+                            message = "Loading teams...",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                     filteredTeams.isEmpty() -> {
                         EmptyState(
