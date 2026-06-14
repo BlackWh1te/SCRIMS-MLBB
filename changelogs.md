@@ -8,6 +8,31 @@
 
 ---
 
+## 2026-06-14 07:18 +04:00 — feat(auth): improve signup form keyboard flow
+
+### Commits
+- `a2ef1d6` — feat(auth): improve signup form keyboard flow
+
+### Problem
+Signup used a five-field form without IME Next/Done chaining, so keyboard users had to manually tap between fields. The create-account button also owned a separate inline validation path, which made keyboard Done behavior harder to keep consistent.
+
+### Fix
+- Added focus requesters for username → email → in-game ID → password → confirm password.
+- Added IME Next/Done keyboard actions so confirm-password Done runs the same submit path as the create-account button.
+- Centralized signup validation in `submitSignup()`.
+- Added Compose autofill node wiring for username, email, password, and confirm-password fields.
+- Updated password visibility icons to expose a non-null content description based on the field label.
+
+### Verification
+- `git diff --check --cached` — no whitespace errors before commit.
+- `.\gradlew.bat :app:assembleDebug --console=plain --no-watch-fs -I "C:\Users\Shukhrat\sbuild-init.gradle"` — **BUILD SUCCESSFUL** (17s incremental rebuild).
+
+### Notes
+- `[INTENTIONAL]` — Signup validation should remain centralized in `submitSignup()` so the CTA and IME Done paths stay identical.
+- `ChatScreen.kt` still has unrelated unstaged presence/status edits in the worktree; this commit staged only `SignupScreen.kt`.
+
+---
+
 ## 2026-06-14 07:14 +04:00 — feat(auth): improve login form keyboard flow
 
 ### Commits
